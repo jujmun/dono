@@ -1,0 +1,43 @@
+{
+  "expo": {
+    "name": "Dono",
+    "slug": "dono",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "dono",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "icon": "./assets/icon.png",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#0d5c4b"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dono.app"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#0d5c4b"
+      },
+      "package": "com.dono.app"
+    },
+    "web": {
+      "bundler": "metro",
+      "output": "single",
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-localization",
+      "posthog-react-native/expo",
+      "expo-font"
+    ],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
