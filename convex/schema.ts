@@ -23,7 +23,7 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
-  authRateLimits: defineTable({
+  appRateLimits: defineTable({
     key: v.string(),
     attempts: v.number(),
     windowStart: v.number(),
