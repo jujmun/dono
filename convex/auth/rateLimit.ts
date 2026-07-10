@@ -14,7 +14,7 @@ export async function assertNotRateLimited(
 ) {
   const now = Date.now();
   const existing = await ctx.db
-    .query("authRateLimits")
+    .query("appRateLimits")
     .withIndex("by_key", (q) => q.eq("key", opts.key))
     .unique();
 
@@ -46,7 +46,7 @@ export async function recordRateLimitAttempt(
 ) {
   const now = Date.now();
   const existing = await ctx.db
-    .query("authRateLimits")
+    .query("appRateLimits")
     .withIndex("by_key", (q) => q.eq("key", opts.key))
     .unique();
 
@@ -62,7 +62,7 @@ export async function recordRateLimitAttempt(
   }
 
   if (!existing) {
-    await ctx.db.insert("authRateLimits", {
+    await ctx.db.insert("appRateLimits", {
       key: opts.key,
       attempts: 1,
       windowStart: now,
