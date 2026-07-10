@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { toFund } from "./lib/mappers";
+import { requireAdmin } from "./lib/authz";
 
 const placeholderFundSlugs = [
   "medical-textbooks",
@@ -30,6 +31,7 @@ export const listFeatured = query({
 export const removePlaceholderFunds = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     let deleted = 0;
 
     for (const slug of placeholderFundSlugs) {

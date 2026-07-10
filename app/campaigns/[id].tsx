@@ -63,7 +63,7 @@ export default function CampaignDetailPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#0d5c4b" />
+          <ActivityIndicator color="#1d242f" />
         </View>
       </AppShell>
     );
@@ -76,7 +76,7 @@ export default function CampaignDetailPage() {
           <Text className="text-center text-dono-muted">Campaign not found.</Text>
           <Link href="/campaigns" asChild>
             <Pressable className="mt-4 items-center">
-              <Text className="font-semibold text-dono-primary">Back to campaigns</Text>
+              <Text className="font-sans-medium text-dono-primary">Back to campaigns</Text>
             </Pressable>
           </Link>
         </View>
@@ -91,7 +91,7 @@ export default function CampaignDetailPage() {
       <View className="mx-auto w-full max-w-7xl px-4 py-6">
         <Link href="/campaigns" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#6b7c7a" />
+            <ArrowLeft size={16} color="#5e6473" />
             <Text className="text-sm text-dono-muted">Back to campaigns</Text>
           </Pressable>
         </Link>
@@ -103,7 +103,7 @@ export default function CampaignDetailPage() {
           {campaign.status === "funded" && (
             <View className="absolute right-4 top-4 flex-row items-center gap-1.5 rounded-full bg-white/90 px-3 py-1">
               <CheckCircle2 size={16} color="#047857" />
-              <Text className="text-sm font-semibold text-emerald-700">Fully Funded</Text>
+              <Text className="text-sm font-semibold text-green-700">Fully Funded</Text>
             </View>
           )}
         </CampaignImage>
@@ -112,19 +112,19 @@ export default function CampaignDetailPage() {
           <VerificationList verifications={campaign.verifications} size="md" />
         </View>
 
-        <Text className="mb-3 text-2xl font-bold text-dono-text">{campaign.title}</Text>
+        <Text className="mb-3 font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
 
         <View className="mb-4 gap-2">
           <View className="flex-row items-center gap-1">
-            <MapPin size={16} color="#6b7c7a" />
+            <MapPin size={16} color="#5e6473" />
             <Text className="text-sm text-dono-muted">
               {campaign.university}
               {campaign.college ? ` · ${campaign.college}` : ""}
             </Text>
           </View>
           <View className="flex-row items-center gap-1">
-            <Clock size={16} color="#6b7c7a" />
-            <Text className="text-sm text-dono-muted">
+            <Clock size={16} color="#5e6473" />
+            <Text className="font-mono text-sm text-dono-muted">
               Deadline:{" "}
               {new Date(campaign.deadline).toLocaleDateString("en-GB", {
                 day: "numeric",
@@ -144,19 +144,19 @@ export default function CampaignDetailPage() {
         />
 
         <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-          <Text className="mb-3 text-lg font-semibold text-dono-text">The Story</Text>
+          <Text className="mb-3 text-lg font-sans-medium text-dono-text">The Story</Text>
           <Text className="leading-relaxed text-dono-muted">{campaign.story}</Text>
         </View>
 
         {campaign.impactItems && (
           <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-            <Text className="mb-3 text-lg font-semibold text-dono-text">
+            <Text className="mb-3 text-lg font-sans-medium text-dono-text">
               What your donation funds
             </Text>
             <View className="gap-2">
               {campaign.impactItems.map((item) => (
                 <View key={item} className="flex-row items-start gap-2">
-                  <CheckCircle2 size={16} color="#0d5c4b" />
+                  <CheckCircle2 size={16} color="#1d242f" />
                   <Text className="flex-1 text-sm text-dono-muted">{item}</Text>
                 </View>
               ))}
@@ -166,7 +166,7 @@ export default function CampaignDetailPage() {
 
         {campaign.updates.length > 0 && (
           <View className="mb-8">
-            <Text className="mb-4 text-lg font-semibold text-dono-text">Updates</Text>
+            <Text className="mb-4 text-lg font-sans-medium text-dono-text">Updates</Text>
             <View className="gap-4">
               {campaign.updates.map((update) => (
                 <View
@@ -174,7 +174,7 @@ export default function CampaignDetailPage() {
                   className="rounded-2xl border border-dono-border bg-white p-5"
                 >
                   <View className="mb-2 flex-row items-center justify-between">
-                    <Text className="font-semibold text-dono-text">{update.title}</Text>
+                    <Text className="font-sans-medium text-dono-text">{update.title}</Text>
                     <Text className="text-xs text-dono-muted">
                       {new Date(update.date).toLocaleDateString("en-GB", {
                         day: "numeric",
@@ -198,7 +198,7 @@ export default function CampaignDetailPage() {
               <Text className="text-sm font-bold text-white">{campaign.creator.avatar}</Text>
             </View>
             <View>
-              <Text className="font-semibold text-dono-text">{campaign.creator.name}</Text>
+              <Text className="font-sans-medium text-dono-text">{campaign.creator.name}</Text>
               <Text className="text-sm capitalize text-dono-muted">
                 {campaign.creator.type}
               </Text>
@@ -208,7 +208,7 @@ export default function CampaignDetailPage() {
 
         <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
           <View className="mb-4 flex-row items-baseline justify-between">
-            <Text className="text-3xl font-bold text-dono-primary">
+            <Text className="font-mono-medium text-3xl text-dono-primary">
               {formatCurrency(campaign.raised)}
             </Text>
             <Text className="text-sm text-dono-muted">
@@ -235,7 +235,7 @@ export default function CampaignDetailPage() {
                     }
                     className="flex-1 items-center rounded-xl border border-dono-border py-2.5"
                   >
-                    <Text className="text-sm font-semibold text-dono-text">£{amount}</Text>
+                    <Text className="font-sans-medium text-sm text-dono-text">£{amount}</Text>
                   </Pressable>
                 ))}
               </View>
@@ -252,7 +252,7 @@ export default function CampaignDetailPage() {
                 className="mb-3 flex-row items-center justify-center gap-2 rounded-full bg-dono-accent py-3"
               >
                 <Gift size={16} color="#fff" />
-                <Text className="text-sm font-semibold text-white">Donate Now</Text>
+                <Text className="font-sans-medium text-sm text-white">Donate Now</Text>
               </Pressable>
             </>
           )}
@@ -268,8 +268,8 @@ export default function CampaignDetailPage() {
               }
               className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
             >
-              <Heart size={16} color="#6b7c7a" />
-              <Text className="text-sm font-medium text-dono-muted">Like</Text>
+              <Heart size={16} color="#5e6473" />
+              <Text className="font-sans-medium text-sm text-dono-muted">Like</Text>
             </Pressable>
             <Pressable
               onPress={() =>
@@ -281,8 +281,8 @@ export default function CampaignDetailPage() {
               }
               className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
             >
-              <UserPlus size={16} color="#6b7c7a" />
-              <Text className="text-sm font-medium text-dono-muted">Follow</Text>
+              <UserPlus size={16} color="#5e6473" />
+              <Text className="font-sans-medium text-sm text-dono-muted">Follow</Text>
             </Pressable>
             <Pressable
               onPress={() =>
@@ -294,16 +294,16 @@ export default function CampaignDetailPage() {
               }
               className="items-center justify-center rounded-xl border border-dono-border px-3 py-2.5"
             >
-              <Share2 size={16} color="#6b7c7a" />
+              <Share2 size={16} color="#5e6473" />
             </Pressable>
           </View>
         </View>
 
-        <View className="mb-8 rounded-2xl border border-emerald-200 bg-emerald-50 p-5">
-          <Text className="mb-2 text-sm font-semibold text-emerald-800">
+        <View className="mb-8 rounded-2xl border border-green-200 bg-green-50 p-5">
+          <Text className="mb-2 text-sm font-semibold text-green-800">
             Trust & Verification
           </Text>
-          <Text className="text-xs leading-relaxed text-emerald-700">
+          <Text className="text-xs leading-relaxed text-green-700">
             This campaign has been verified by its creator&apos;s identity and
             {campaign.verifications.some((v) => v.type === "institutional")
               ? " institutionally endorsed."
@@ -313,7 +313,7 @@ export default function CampaignDetailPage() {
 
         {(related?.length ?? 0) > 0 && (
           <View className="mt-4">
-            <Text className="mb-6 text-xl font-bold text-dono-text">Related Campaigns</Text>
+            <Text className="mb-6 font-display-medium text-xl text-dono-text">Related Campaigns</Text>
             <View className="gap-6">
               {related!.map((c) => (
                 <CampaignCard key={c.id} campaign={c} />

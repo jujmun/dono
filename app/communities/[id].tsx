@@ -27,7 +27,7 @@ export default function CommunityDetailPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#0d5c4b" />
+          <ActivityIndicator color="#1d242f" />
         </View>
       </AppShell>
     );
@@ -40,7 +40,7 @@ export default function CommunityDetailPage() {
           <Text className="text-center text-dono-muted">Community not found.</Text>
           <Link href="/communities" asChild>
             <Pressable className="mt-4 items-center">
-              <Text className="font-semibold text-dono-primary">Back to communities</Text>
+              <Text className="font-sans-medium text-dono-primary">Back to communities</Text>
             </Pressable>
           </Link>
         </View>
@@ -53,7 +53,7 @@ export default function CommunityDetailPage() {
       <View className="mx-auto w-full max-w-7xl px-4 py-6">
         <Link href="/communities" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#6b7c7a" />
+            <ArrowLeft size={16} color="#5e6473" />
             <Text className="text-sm text-dono-muted">Back to communities</Text>
           </Pressable>
         </Link>
@@ -63,11 +63,11 @@ export default function CommunityDetailPage() {
         <View className="mb-8 gap-4">
           <View className="flex-row items-start gap-4">
             <View className="h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="text-xl font-bold text-white">{community.avatar}</Text>
+              <Text className="font-mono-medium text-xl text-white">{community.avatar}</Text>
             </View>
             <View className="flex-1">
               <View className="mb-2 flex-row flex-wrap items-center gap-2">
-                <Text className="text-2xl font-bold text-dono-text">{community.name}</Text>
+                <Text className="font-display-medium text-2xl text-dono-text">{community.name}</Text>
                 {community.verified && community.verificationType && (
                   <VerificationBadge
                     verification={{
@@ -95,7 +95,7 @@ export default function CommunityDetailPage() {
             className="flex-row items-center justify-center gap-2 rounded-full bg-dono-primary px-5 py-2.5"
           >
             <UserPlus size={16} color="#fff" />
-            <Text className="text-sm font-semibold text-white">Follow</Text>
+            <Text className="font-sans-medium text-sm text-white">Follow</Text>
           </Pressable>
         </View>
 
@@ -112,7 +112,7 @@ export default function CommunityDetailPage() {
               key={stat.label}
               className="flex-1 rounded-2xl border border-dono-border bg-white p-4"
             >
-              <Text className="text-center text-xl font-bold text-dono-text">
+              <Text className="text-center font-display-medium text-xl text-dono-text">
                 {stat.value}
               </Text>
               <Text className="text-center text-xs text-dono-muted">{stat.label}</Text>
@@ -122,11 +122,11 @@ export default function CommunityDetailPage() {
 
         <View>
           <View className="mb-4 flex-row items-center gap-2">
-            <Target size={20} color="#0d5c4b" />
-            <Text className="text-lg font-semibold text-dono-text">Active Campaigns</Text>
+            <Target size={20} color="#1d242f" />
+            <Text className="text-lg font-sans-medium text-dono-text">Active Campaigns</Text>
           </View>
           {communityCampaigns === undefined ? (
-            <ActivityIndicator color="#0d5c4b" />
+            <ActivityIndicator color="#1d242f" />
           ) : communityCampaigns.length === 0 ? (
             <View className="rounded-2xl border border-dono-border bg-white p-8">
               <Text className="text-center text-dono-muted">No active campaigns yet.</Text>

@@ -19,6 +19,14 @@ export async function requireAuth(ctx: AnyCtx) {
   return userId;
 }
 
+export async function optionalUserId(ctx: AnyCtx) {
+  return await getAuthUserId(ctx);
+}
+
+export async function requireUserId(ctx: AnyCtx) {
+  return await requireAuth(ctx);
+}
+
 export async function getProfileByUserId(ctx: CtxWithDb, userId: Id<"users">) {
   return await ctx.db
     .query("profiles")
@@ -43,4 +51,28 @@ export async function requireRole(ctx: CtxWithDb, roles: UserRole[]) {
 
 export async function requireAdmin(ctx: CtxWithDb) {
   return await requireRole(ctx, ["admin"]);
+}
+
+export async function requireVerifiedUser(ctx: CtxWithDb) {
+  const userId = await requireAuth(ctx);
+  const user = await ctx.db.get(userId);
+  if (!user) {
+    throw new ConvexError({
+      code: "USER_NOT_FOUND",
+      message: "Authenticated user record is missing.",
+    });
+  }
+
+  const profile = await getProfileByUserId(ctx, userId);
+  const verified =
+    Boolean(user.emailVerificationTime) || Boolean(profile?.emailVerifiedAt);
+
+  if (!verified) {
+    throw new ConvexError({
+      code: "EMAIL_NOT_VERIFIED",
+      message: "Please verify your email before continuing.",
+    });
+  }
+
+  return { userId, user, profile };
 }

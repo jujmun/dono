@@ -15,7 +15,7 @@ export default function FundsPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-7xl px-4 py-8">
         <View className="mb-8">
-          <Text className="text-2xl font-bold text-dono-text">Community Funds</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Community Funds</Text>
           <Text className="mt-1 text-dono-muted">
             Donate across related projects without choosing a single campaign
           </Text>
@@ -37,7 +37,7 @@ export default function FundsPage() {
         </View>
 
         {communityFunds === undefined ? (
-          <ActivityIndicator color="#0d5c4b" />
+          <ActivityIndicator color="#1d242f" />
         ) : communityFunds.length === 0 ? (
           <View className="rounded-2xl border border-dono-border bg-white p-12">
             <Text className="text-center text-dono-muted">
@@ -54,11 +54,11 @@ export default function FundsPage() {
 
         <View className="mt-12 rounded-2xl bg-dono-primary p-8">
           <View className="items-center">
-            <Gift size={32} color="#e8724a" />
-            <Text className="mb-2 mt-4 text-center text-xl font-bold text-white">
+            <Gift size={32} color="#f7f4ed" />
+            <Text className="mb-2 mt-4 text-center font-mono-medium text-xl text-white">
               Can&apos;t decide? Let the community guide you.
             </Text>
-            <Text className="max-w-md text-center text-sm text-emerald-100">
+            <Text className="max-w-md text-center text-sm text-dono-cream">
               Your donation will be distributed to active campaigns within the
               fund&apos;s category, maximising collective impact.
             </Text>

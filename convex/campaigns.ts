@@ -1,7 +1,7 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { toCampaign } from "./lib/mappers";
-import { requireAuth } from "./lib/authz";
+import { requireAdmin, requireVerifiedUser } from "./lib/authz";
 
 function slugify(title: string) {
   return title
@@ -26,6 +26,14 @@ const placeholderCampaignSlugs = [
   "sports-equipment",
   "accessibility-ramp",
 ];
+
+const MAX_TITLE_LENGTH = 120;
+const MAX_CATEGORY_LENGTH = 60;
+const MAX_UNIVERSITY_LENGTH = 120;
+const MAX_DESCRIPTION_LENGTH = 500;
+const MAX_STORY_LENGTH = 5000;
+const MIN_GOAL = 1;
+const MAX_GOAL = 1_000_000;
 
 export const list = query({
   args: {},
@@ -96,11 +104,54 @@ export const create = mutation({
     goal: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await requireAuth(ctx);
+    const { userId } = await requireVerifiedUser(ctx);
+    const title = args.title.trim();
+    const category = args.category.trim();
+    const creatorTypeInput = args.creatorType.trim();
+    const university = args.university.trim();
+    const description = args.description.trim();
+    const story = args.story.trim();
+
+    if (!title || title.length > MAX_TITLE_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Title is required and must be at most 120 characters.",
+      });
+    }
+    if (!category || category.length > MAX_CATEGORY_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Category is required and must be at most 60 characters.",
+      });
+    }
+    if (!university || university.length > MAX_UNIVERSITY_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "University is required and must be at most 120 characters.",
+      });
+    }
+    if (!description || description.length > MAX_DESCRIPTION_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Description is required and must be at most 500 characters.",
+      });
+    }
+    if (!story || story.length > MAX_STORY_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Story is required and must be at most 5000 characters.",
+      });
+    }
+    if (!Number.isFinite(args.goal) || args.goal < MIN_GOAL || args.goal > MAX_GOAL) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Goal must be between 1 and 1,000,000.",
+      });
+    }
 
     const user = await ctx.db.get(userId);
-    const creatorName = user?.name ?? args.creatorType;
-    const creatorType = creatorTypeMap[args.creatorType] ?? "student";
+    const creatorName = user?.name ?? creatorTypeInput;
+    const creatorType = creatorTypeMap[creatorTypeInput] ?? "student";
     const initials = creatorName
       .split(" ")
       .map((part) => part[0])
@@ -108,7 +159,7 @@ export const create = mutation({
       .slice(0, 2)
       .toUpperCase();
 
-    let baseSlug = slugify(args.title);
+    let baseSlug = slugify(title);
     let slug = baseSlug;
     let suffix = 1;
     while (
@@ -121,17 +172,17 @@ export const create = mutation({
       suffix += 1;
     }
 
-    const communityId = slugify(`${args.university}-${creatorType}`);
+    const communityId = slugify(`${university}-${creatorType}`);
     const today = new Date();
     const deadline = new Date(today);
     deadline.setMonth(deadline.getMonth() + 2);
 
     const campaignId = await ctx.db.insert("campaigns", {
       slug,
-      title: args.title,
-      description: args.description,
-      story: args.story,
-      category: args.category,
+      title,
+      description,
+      story,
+      category,
       goal: args.goal,
       raised: 0,
       donors: 0,
@@ -145,7 +196,7 @@ export const create = mutation({
         communityId,
       },
       verifications: [{ type: "student", label: "New Campaign" }],
-      university: args.university,
+      university,
       image: "default",
       createdAt: today.toISOString().slice(0, 10),
       deadline: deadline.toISOString().slice(0, 10),
@@ -162,6 +213,7 @@ export const create = mutation({
 export const removePlaceholderCampaigns = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     let deleted = 0;
 
     for (const slug of placeholderCampaignSlugs) {

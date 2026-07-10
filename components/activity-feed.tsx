@@ -21,7 +21,7 @@ const typeIcons: Record<ActivityItem["type"], React.ElementType> = {
 };
 
 const typeColors: Record<ActivityItem["type"], { bg: string; text: string }> = {
-  donation: { bg: "bg-emerald-100", text: "text-emerald-600" },
+  donation: { bg: "bg-green-100", text: "text-green-700" },
   campaign: { bg: "bg-blue-100", text: "text-blue-600" },
   follow: { bg: "bg-purple-100", text: "text-purple-600" },
   update: { bg: "bg-amber-100", text: "text-amber-600" },
@@ -49,18 +49,18 @@ export function ActivityFeedItem({ item }: ActivityFeedItemProps) {
 
       <View className="min-w-0 flex-1">
         <Text className="text-sm text-dono-text">
-          <Text className="font-semibold">{item.user}</Text>{" "}
+          <Text className="font-sans-medium">{item.user}</Text>{" "}
           <Text className="text-dono-muted">{item.action}</Text>{" "}
           <Text className="font-medium">{item.target}</Text>
           {item.amount != null && (
-            <Text className="font-semibold text-dono-primary">
+            <Text className="font-sans-medium text-dono-primary">
               {" "}
               {formatCurrency(item.amount)}
             </Text>
           )}
         </Text>
         <View className="mt-1 flex-row items-center gap-2">
-          <Icon size={12} color="#6b7c7a" />
+          <Icon size={12} color="#5e6473" />
           <Text className="text-xs text-dono-muted">{item.timestamp}</Text>
         </View>
       </View>
@@ -94,8 +94,8 @@ export function EngagementStats({
     <View className={cn("flex-row flex-wrap items-center gap-4", className)}>
       {stats.map(({ icon: Icon, value, label }) => (
         <View key={label} className="flex-row items-center gap-1.5">
-          <Icon size={16} color="#6b7c7a" />
-          <Text className="text-sm font-medium text-dono-text">{value}</Text>
+          <Icon size={16} color="#5e6473" />
+          <Text className="font-sans-medium text-sm text-dono-text">{value}</Text>
           <Text className="text-sm text-dono-muted">{label}</Text>
         </View>
       ))}

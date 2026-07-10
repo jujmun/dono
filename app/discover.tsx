@@ -23,7 +23,7 @@ export default function DiscoverPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-7xl px-4 py-8">
         <View className="mb-8">
-          <Text className="text-2xl font-bold text-dono-text">Discover</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Discover</Text>
           <Text className="mt-1 text-dono-muted">
             See what&apos;s happening across the Dono community
           </Text>
@@ -32,13 +32,13 @@ export default function DiscoverPage() {
         <View className="gap-8">
           <View>
             <View className="mb-4 flex-row items-center gap-2">
-              <Sparkles size={20} color="#e8724a" />
-              <Text className="text-lg font-semibold text-dono-text">
+              <Sparkles size={20} color="#1d242f" />
+              <Text className="text-lg font-sans-medium text-dono-text">
                 Trending Campaigns
               </Text>
             </View>
             {campaigns === undefined ? (
-              <ActivityIndicator color="#0d5c4b" />
+              <ActivityIndicator color="#1d242f" />
             ) : trending.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white p-6">
                 <Text className="text-center text-dono-muted">
@@ -55,11 +55,11 @@ export default function DiscoverPage() {
           </View>
 
           <View>
-            <Text className="mb-4 text-lg font-semibold text-dono-text">
+            <Text className="mb-4 text-lg font-sans-medium text-dono-text">
               Live Activity
             </Text>
             {activityFeed === undefined ? (
-              <ActivityIndicator color="#0d5c4b" />
+              <ActivityIndicator color="#1d242f" />
             ) : activityFeed.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white p-6">
                 <Text className="text-center text-dono-muted">

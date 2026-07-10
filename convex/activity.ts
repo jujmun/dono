@@ -1,5 +1,6 @@
 import { mutation, query } from "./_generated/server";
 import { toActivityItem } from "./lib/mappers";
+import { requireAdmin } from "./lib/authz";
 
 const placeholderActivitySlugs = ["a1", "a2", "a3", "a4", "a5", "a6"];
 
@@ -14,6 +15,7 @@ export const list = query({
 export const removePlaceholderActivity = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     let deleted = 0;
 
     for (const slug of placeholderActivitySlugs) {

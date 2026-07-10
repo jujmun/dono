@@ -4,7 +4,7 @@ import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
-import { resetRequestSchema } from "@/lib/validation/auth";
+import { requestOtpSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { api } from "@convex/_generated/api";
 
@@ -19,7 +19,7 @@ export default function ForgotPasswordPage() {
   const [sent, setSent] = useState(false);
 
   const requestReset = () => {
-    const parsed = resetRequestSchema.safeParse({ email });
+    const parsed = requestOtpSchema.safeParse({ email });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Invalid email.");
       return;
@@ -31,7 +31,7 @@ export default function ForgotPasswordPage() {
     formData.append("flow", "reset");
 
     void assertAllowed({ flow: "reset", email: parsed.data.email })
-      .then(() => signIn("password", formData))
+      .then(() => signIn("resend", formData))
       .then(() => {
         void recordAttempt({
           flow: "reset",
@@ -60,9 +60,9 @@ export default function ForgotPasswordPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-md px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <Text className="text-2xl font-bold text-dono-text">Reset Password</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Get a New Code</Text>
           <Text className="mt-1 text-sm text-dono-muted">
-            We&apos;ll send a reset code to your email.
+            We&apos;ll send a fresh sign-in code to your email.
           </Text>
 
           <View className="mt-6 gap-4">
@@ -71,8 +71,8 @@ export default function ForgotPasswordPage() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholder="you@university.ac.uk"
-              placeholderTextColor="#6b7c7a"
+              placeholder="you@st-annes.ox.ac.uk"
+              placeholderTextColor="#5e6473"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
             />
 
@@ -83,9 +83,9 @@ export default function ForgotPasswordPage() {
             ) : null}
 
             {sent ? (
-              <View className="rounded-xl bg-emerald-50 px-4 py-3">
-                <Text className="text-sm text-emerald-700">
-                  If an account exists, a reset code has been sent. Use it on the next
+              <View className="rounded-xl bg-green-50 px-4 py-3">
+                <Text className="text-sm text-green-700">
+                  If an account exists, a code has been sent. Use it on the next
                   screen.
                 </Text>
               </View>
@@ -98,15 +98,15 @@ export default function ForgotPasswordPage() {
                 loading ? "opacity-50" : ""
               }`}
             >
-              <Text className="text-sm font-semibold text-white">
-                {loading ? "Sending..." : "Send reset code"}
+              <Text className="font-sans-medium text-sm text-white">
+                {loading ? "Sending..." : "Send code"}
               </Text>
             </Pressable>
 
             <Pressable
               onPress={() =>
                 router.push(
-                  `/reset-password?email=${encodeURIComponent(email)}` as Href,
+                  `/verify-email?email=${encodeURIComponent(email)}` as Href,
                 )
               }
               className="items-center"

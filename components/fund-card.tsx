@@ -21,24 +21,24 @@ export function FundCard({ fund }: FundCardProps) {
         </CampaignImage>
 
         <View className="flex-1 p-4">
-          <Text className="mb-1 font-semibold text-dono-text">{fund.name}</Text>
+          <Text className="mb-1 font-sans-medium text-dono-text">{fund.name}</Text>
           <Text className="mb-3 text-sm text-dono-muted" numberOfLines={2}>
             {fund.description}
           </Text>
 
-          <Text className="mb-3 text-xl font-bold text-dono-primary">
+          <Text className="mb-3 font-mono-medium text-xl text-dono-primary">
             {formatCurrency(fund.totalRaised)}
           </Text>
 
           <View className="flex-row items-center gap-4">
             <View className="flex-row items-center gap-1">
-              <Users size={14} color="#6b7c7a" />
+              <Users size={14} color="#5e6473" />
               <Text className="text-xs text-dono-muted">
                 {fund.donors.toLocaleString()} donors
               </Text>
             </View>
             <View className="flex-row items-center gap-1">
-              <Target size={14} color="#6b7c7a" />
+              <Target size={14} color="#5e6473" />
               <Text className="text-xs text-dono-muted">
                 {fund.campaignsSupported} campaigns
               </Text>

@@ -32,7 +32,7 @@ export default function DashboardPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#0d5c4b" />
+          <ActivityIndicator color="#1d242f" />
           <Text className="mt-4 text-dono-muted">Loading your impact...</Text>
         </View>
       </AppShell>
@@ -61,7 +61,7 @@ export default function DashboardPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-7xl px-4 py-8">
         <View className="mb-8">
-          <Text className="text-2xl font-bold text-dono-text">Your Impact</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Your Impact</Text>
           <Text className="mt-1 text-dono-muted">
             Track your generosity and see the difference you&apos;ve made
           </Text>
@@ -89,8 +89,8 @@ export default function DashboardPage() {
               key={stat.label}
               className="flex-1 rounded-2xl border border-dono-border bg-white p-4"
             >
-              <stat.icon size={20} color="#0d5c4b" />
-              <Text className="mt-2 text-xl font-bold text-dono-text">{stat.value}</Text>
+              <stat.icon size={20} color="#1d242f" />
+              <Text className="mt-2 font-mono-medium text-xl text-dono-text">{stat.value}</Text>
               <Text className="text-xs text-dono-muted">{stat.label}</Text>
             </View>
           ))}
@@ -98,32 +98,32 @@ export default function DashboardPage() {
 
         <View className="mb-8 overflow-hidden rounded-2xl bg-dono-primary p-6">
           <View className="mb-2 flex-row items-center gap-2">
-            <Sparkles size={20} color="#e8724a" />
-            <Text className="text-sm font-semibold uppercase tracking-wider text-emerald-200">
+            <Sparkles size={20} color="#f7f4ed" />
+            <Text className="font-mono uppercase tracking-wider text-dono-cream/80">
               Dono Wrapped {wrapped.year}
             </Text>
           </View>
-          <Text className="mb-2 text-2xl font-bold text-white">{wrapped.rank}</Text>
-          <Text className="leading-relaxed text-emerald-100">{wrapped.impactStatement}</Text>
+          <Text className="mb-2 font-display-medium text-2xl text-white">{wrapped.rank}</Text>
+          <Text className="leading-relaxed text-dono-cream">{wrapped.impactStatement}</Text>
 
           <View className="mt-6 flex-row gap-4 border-t border-white/20 pt-6">
             <View className="flex-1">
-              <Text className="text-lg font-bold text-white">
+              <Text className="font-mono-medium text-lg text-white">
                 {formatCurrency(wrapped.totalDonated)}
               </Text>
-              <Text className="text-xs text-emerald-200">donated</Text>
+              <Text className="text-xs text-dono-cream/80">donated</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-bold text-white">
+              <Text className="font-mono-medium text-lg text-white">
                 {wrapped.campaignsSupported}
               </Text>
-              <Text className="text-xs text-emerald-200">campaigns</Text>
+              <Text className="text-xs text-dono-cream/80">campaigns</Text>
             </View>
             <View className="flex-1">
-              <Text className="text-lg font-bold text-white" numberOfLines={1}>
+              <Text className="font-sans-medium text-lg text-white" numberOfLines={1}>
                 {wrapped.topCommunity}
               </Text>
-              <Text className="text-xs text-emerald-200">top community</Text>
+              <Text className="text-xs text-dono-cream/80">top community</Text>
             </View>
           </View>
         </View>
@@ -131,8 +131,8 @@ export default function DashboardPage() {
         <View className="gap-8">
           <View>
             <View className="mb-4 flex-row items-center gap-2">
-              <TrendingUp size={20} color="#0d5c4b" />
-              <Text className="text-lg font-semibold text-dono-text">Your Impact</Text>
+              <TrendingUp size={20} color="#1d242f" />
+              <Text className="text-lg font-sans-medium text-dono-text">Your Impact</Text>
             </View>
             <View className="gap-3">
               {impact.impactHighlights.length > 0 ? (
@@ -158,8 +158,8 @@ export default function DashboardPage() {
 
           <View>
             <View className="mb-4 flex-row items-center gap-2">
-              <Calendar size={20} color="#0d5c4b" />
-              <Text className="text-lg font-semibold text-dono-text">
+              <Calendar size={20} color="#1d242f" />
+              <Text className="text-lg font-sans-medium text-dono-text">
                 Recent Donations
               </Text>
             </View>
@@ -171,7 +171,7 @@ export default function DashboardPage() {
                     className="flex-row items-center justify-between rounded-xl border border-dono-border bg-white p-4"
                   >
                     <View>
-                      <Text className="text-sm font-medium text-dono-text">
+                      <Text className="font-sans-medium text-sm text-dono-text">
                         {donation.campaign}
                       </Text>
                       <Text className="text-xs text-dono-muted">
@@ -182,7 +182,7 @@ export default function DashboardPage() {
                         })}
                       </Text>
                     </View>
-                    <Text className="text-sm font-bold text-dono-primary">
+                    <Text className="font-mono-medium text-sm text-dono-primary">
                       {formatCurrency(donation.amount)}
                     </Text>
                   </View>
@@ -200,13 +200,13 @@ export default function DashboardPage() {
 
         <View className="mt-8">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-lg font-semibold text-dono-text">
+            <Text className="text-lg font-sans-medium text-dono-text">
               Campaigns You Follow
             </Text>
             <Link href="/campaigns" asChild>
               <Pressable className="flex-row items-center gap-1">
-                <Text className="text-sm font-semibold text-dono-primary">Browse more</Text>
-                <ArrowRight size={16} color="#0d5c4b" />
+                <Text className="font-sans-medium text-sm text-dono-primary">Browse more</Text>
+                <ArrowRight size={16} color="#1d242f" />
               </Pressable>
             </Link>
           </View>

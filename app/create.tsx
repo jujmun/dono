@@ -64,7 +64,7 @@ export default function CreateCampaignPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-2xl px-4 py-8">
         <View className="mb-8 items-center">
-          <Text className="text-2xl font-bold text-dono-text">Start a Campaign</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Start a Campaign</Text>
           <Text className="mt-1 text-center text-dono-muted">
             Free for students. Reach alumni who care about your community.
           </Text>
@@ -107,20 +107,20 @@ export default function CreateCampaignPage() {
           {step === 0 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
                   Campaign Title
                 </Text>
                 <TextInput
                   value={form.title}
                   onChangeText={(v) => update("title", v)}
                   placeholder="e.g. Anatomy Models for Medical Students"
-                  placeholderTextColor="#6b7c7a"
+                  placeholderTextColor="#5e6473"
                   className={inputClass}
                 />
               </View>
 
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">Category</Text>
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">Category</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2">
                     {Object.entries(categoryLabels).map(([key, label]) => (
@@ -134,7 +134,7 @@ export default function CreateCampaignPage() {
                         }`}
                       >
                         <Text
-                          className={`text-xs font-medium ${
+                          className={`font-sans-medium text-xs ${
                             form.category === key
                               ? "text-dono-primary"
                               : "text-dono-muted"
@@ -149,7 +149,7 @@ export default function CreateCampaignPage() {
               </View>
 
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
                   I am creating this as a...
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
@@ -164,7 +164,7 @@ export default function CreateCampaignPage() {
                       }`}
                     >
                       <Text
-                        className={`text-xs font-medium ${
+                        className={`font-sans-medium text-xs ${
                           form.creatorType === type
                             ? "text-dono-primary"
                             : "text-dono-muted"
@@ -178,14 +178,14 @@ export default function CreateCampaignPage() {
               </View>
 
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
                   University
                 </Text>
                 <TextInput
                   value={form.university}
                   onChangeText={(v) => update("university", v)}
                   placeholder="e.g. University of Cambridge"
-                  placeholderTextColor="#6b7c7a"
+                  placeholderTextColor="#5e6473"
                   className={inputClass}
                 />
               </View>
@@ -195,26 +195,26 @@ export default function CreateCampaignPage() {
           {step === 1 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
                   Short Description
                 </Text>
                 <TextInput
                   value={form.description}
                   onChangeText={(v) => update("description", v)}
                   placeholder="One-line summary of your campaign"
-                  placeholderTextColor="#6b7c7a"
+                  placeholderTextColor="#5e6473"
                   className={inputClass}
                 />
               </View>
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
                   Your Story
                 </Text>
                 <TextInput
                   value={form.story}
                   onChangeText={(v) => update("story", v)}
                   placeholder="Tell donors why this matters..."
-                  placeholderTextColor="#6b7c7a"
+                  placeholderTextColor="#5e6473"
                   multiline
                   numberOfLines={6}
                   textAlignVertical="top"
@@ -227,14 +227,14 @@ export default function CreateCampaignPage() {
           {step === 2 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 text-sm font-medium text-dono-text">
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
                   Funding Goal (£)
                 </Text>
                 <TextInput
                   value={form.goal}
                   onChangeText={(v) => update("goal", v)}
                   placeholder="e.g. 3500"
-                  placeholderTextColor="#6b7c7a"
+                  placeholderTextColor="#5e6473"
                   keyboardType="numeric"
                   className={inputClass}
                 />
@@ -242,8 +242,8 @@ export default function CreateCampaignPage() {
                   Dono is optimised for small-to-medium funding needs (£500–£10,000)
                 </Text>
               </View>
-              <View className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
-                <Text className="text-sm text-emerald-800">
+              <View className="rounded-xl border border-green-200 bg-green-50 p-4">
+                <Text className="text-sm text-green-800">
                   Students never pay to create campaigns. Dono takes a small transaction
                   fee on donations to keep the platform running.
                 </Text>
@@ -253,7 +253,7 @@ export default function CreateCampaignPage() {
 
           {step === 3 && (
             <View className="gap-4">
-              <Text className="text-lg font-semibold text-dono-text">
+              <Text className="text-lg font-sans-medium text-dono-text">
                 Review your campaign
               </Text>
               {(
@@ -271,7 +271,7 @@ export default function CreateCampaignPage() {
                   className="flex-row justify-between border-b border-dono-border pb-3"
                 >
                   <Text className="text-sm text-dono-muted">{label}</Text>
-                  <Text className="max-w-[60%] text-right text-sm font-medium text-dono-text">
+                  <Text className="max-w-[60%] text-right font-sans-medium text-sm text-dono-text">
                     {value}
                   </Text>
                 </View>
@@ -288,7 +288,7 @@ export default function CreateCampaignPage() {
                 onPress={() => setStep(step - 1)}
                 className="rounded-full border border-dono-border px-5 py-2.5"
               >
-                <Text className="text-sm font-medium text-dono-muted">Back</Text>
+                <Text className="font-sans-medium text-sm text-dono-muted">Back</Text>
               </Pressable>
             ) : (
               <View />
@@ -302,7 +302,7 @@ export default function CreateCampaignPage() {
                   !canProceed() ? "opacity-50" : ""
                 }`}
               >
-                <Text className="text-sm font-semibold text-white">Continue</Text>
+                <Text className="font-sans-medium text-sm text-white">Continue</Text>
                 <ArrowRight size={16} color="#fff" />
               </Pressable>
             ) : (
@@ -341,7 +341,7 @@ export default function CreateCampaignPage() {
                   submitting ? "opacity-50" : ""
                 }`}
               >
-                <Text className="text-sm font-semibold text-white">
+                <Text className="font-sans-medium text-sm text-white">
                   {submitting ? "Launching..." : "Launch Campaign"}
                 </Text>
               </Pressable>

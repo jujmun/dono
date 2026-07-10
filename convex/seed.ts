@@ -1,5 +1,6 @@
 import type { Doc } from "./_generated/dataModel";
 import { mutation } from "./_generated/server";
+import { requireAdmin } from "./lib/authz";
 import {
   seedActivity,
   seedCampaigns,
@@ -13,6 +14,7 @@ type ActivityInsert = Omit<Doc<"activityItems">, "_id" | "_creationTime">;
 export const seed = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     const existing = await ctx.db.query("campaigns").first();
     if (existing) {
       return { seeded: false, message: "Database already has campaigns" };

@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { toCommunity } from "./lib/mappers";
+import { requireAdmin } from "./lib/authz";
 
 const placeholderCommunitySlugs = [
   "medsoc-cambridge",
@@ -42,6 +43,7 @@ export const getBySlug = query({
 export const removePlaceholderCommunities = mutation({
   args: {},
   handler: async (ctx) => {
+    await requireAdmin(ctx);
     let deleted = 0;
 
     for (const slug of placeholderCommunitySlugs) {

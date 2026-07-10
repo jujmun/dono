@@ -1,0 +1,151 @@
+import { useState } from "react";
+import { View, Text, TextInput, Pressable } from "react-native";
+import { type Href, useRouter } from "expo-router";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
+import { usePostHog } from "posthog-react-native";
+import { AppShell } from "@/components/app-shell";
+import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { requestOtpSchema } from "@/lib/validation/auth";
+import { api } from "@convex/_generated/api";
+
+const hasPostHog = Boolean(process.env.EXPO_PUBLIC_POSTHOG_API_KEY);
+
+export type OtpRequestFlow = "signIn" | "signUp";
+
+type OtpRequestFormProps = {
+  flow: OtpRequestFlow;
+  title: string;
+  subtitle: string;
+  submitLabel: string;
+  footer?: React.ReactNode;
+  onSuccess?: (email: string) => void;
+};
+
+function OtpRequestFormInner({
+  flow,
+  title,
+  subtitle,
+  submitLabel,
+  footer,
+  onSuccess,
+}: OtpRequestFormProps) {
+  const { signIn } = useAuthActions();
+  const assertAllowed = useMutation(api.security.assertAllowed);
+  const recordAttempt = useMutation(api.security.record);
+  const router = useRouter();
+  const [email, setEmail] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const canSubmit = normalizedEmail.length > 0;
+
+  const handleSubmit = () => {
+    const parsed = requestOtpSchema.safeParse({ email: normalizedEmail });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Please check your input.");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    const formData = new FormData();
+    formData.append("email", parsed.data.email.toLowerCase());
+
+    void assertAllowed({ flow, email: normalizedEmail })
+      .then(() => signIn("resend", formData))
+      .then(() => {
+        onSuccess?.(parsed.data.email);
+        void recordAttempt({ flow, email: normalizedEmail, success: true });
+        router.push(
+          `/verify-email?email=${encodeURIComponent(normalizedEmail)}` as Href,
+        );
+      })
+      .catch((err: Error) => {
+        void recordAttempt({ flow, email: normalizedEmail, success: false });
+        setError(getFriendlyAuthError(err));
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  };
+
+  return (
+    <AppShell>
+      <View className="mx-auto w-full max-w-md px-4 py-12">
+        <View className="rounded-2xl border border-dono-border bg-white p-8">
+          <View className="mb-8 items-center">
+            <Text className="font-display-medium text-2xl text-dono-text">{title}</Text>
+            <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
+          </View>
+
+          <View className="gap-4">
+            <View>
+              <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                Email
+              </Text>
+              <TextInput
+                value={email}
+                onChangeText={setEmail}
+                autoCapitalize="none"
+                keyboardType="email-address"
+                autoComplete="email"
+                placeholder="you@st-annes.ox.ac.uk"
+                placeholderTextColor="#5e6473"
+                className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+              />
+              <Text className="mt-1 text-xs text-dono-muted">
+                Only Oxford email addresses (ending in ox.ac.uk) are accepted.
+              </Text>
+            </View>
+
+            {error && (
+              <View className="rounded-xl bg-rose-50 px-4 py-3">
+                <Text className="text-sm text-rose-700">{error}</Text>
+              </View>
+            )}
+
+            <Pressable
+              onPress={handleSubmit}
+              disabled={loading || !canSubmit}
+              className={`items-center rounded-full bg-dono-primary py-3 ${
+                loading || !canSubmit ? "opacity-50" : ""
+              }`}
+            >
+              <Text className="font-sans-medium text-sm text-white">
+                {loading ? "Please wait..." : submitLabel}
+              </Text>
+            </Pressable>
+            <Text className="text-center text-xs text-dono-muted">
+              We&apos;ll send a 6-digit one-time code to your email.
+            </Text>
+          </View>
+
+          {footer}
+        </View>
+      </View>
+    </AppShell>
+  );
+}
+
+function OtpRequestFormWithPostHog(props: OtpRequestFormProps) {
+  const posthog = usePostHog();
+  return (
+    <OtpRequestFormInner
+      {...props}
+      onSuccess={(email) => {
+        posthog?.capture(
+          props.flow === "signIn" ? "user_signed_in" : "user_signed_up",
+        );
+        props.onSuccess?.(email);
+      }}
+    />
+  );
+}
+
+export function OtpRequestForm(props: OtpRequestFormProps) {
+  if (hasPostHog) {
+    return <OtpRequestFormWithPostHog {...props} />;
+  }
+  return <OtpRequestFormInner {...props} />;
+}

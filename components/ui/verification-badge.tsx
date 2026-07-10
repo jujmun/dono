@@ -23,8 +23,8 @@ const styleMap: Record<VerificationType, { container: string; text: string }> = 
   college: { container: "bg-indigo-50 border-indigo-200", text: "text-indigo-700" },
   university: { container: "bg-slate-50 border-slate-200", text: "text-slate-700" },
   institutional: {
-    container: "bg-emerald-50 border-emerald-200",
-    text: "text-emerald-700",
+    container: "bg-green-50 border-green-200",
+    text: "text-green-700",
   },
 };
 
@@ -49,7 +49,7 @@ export function VerificationBadge({
         size === "sm" ? "px-2 py-0.5" : "px-3 py-1"
       )}
     >
-      <Icon size={iconSize} color="#0d5c4b" />
+      <Icon size={iconSize} color="#1d242f" />
       <Text
         className={cn(
           "font-medium",

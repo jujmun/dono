@@ -1,17 +1,11 @@
 import { ConvexError, v } from "convex/values";
 import {
-  action,
   internalMutation,
   mutation,
   query,
 } from "./_generated/server";
-import {
-  getAuthUserId,
-  modifyAccountCredentials,
-  retrieveAccount,
-} from "@convex-dev/auth/server";
-import { requireAdmin, requireAuth } from "./lib/authz";
-import { validatePasswordRequirements } from "./auth/passwordPolicy";
+import { getAuthUserId } from "@convex-dev/auth/server";
+import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
 
 export const me = query({
   args: {},
@@ -45,7 +39,20 @@ export const updateProfile = mutation({
     avatarUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const userId = await requireAuth(ctx);
+    const { userId } = await requireVerifiedUser(ctx);
+    const trimmedName = args.name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 80) {
+      throw new ConvexError({
+        code: "INVALID_NAME",
+        message: "Name must be between 2 and 80 characters.",
+      });
+    }
+    if (args.avatarUrl && args.avatarUrl.length > 2048) {
+      throw new ConvexError({
+        code: "INVALID_AVATAR_URL",
+        message: "Avatar URL is too long.",
+      });
+    }
     const profile = await ctx.db
       .query("profiles")
       .withIndex("by_userId", (q) => q.eq("userId", userId))
@@ -63,7 +70,7 @@ export const updateProfile = mutation({
       await ctx.db.insert("profiles", {
         userId,
         email: user.email,
-        name: args.name.trim(),
+        name: trimmedName,
         avatarUrl: args.avatarUrl,
         role: "user",
         emailVerifiedAt: user.emailVerificationTime ?? undefined,
@@ -72,39 +79,9 @@ export const updateProfile = mutation({
       });
     } else {
       await ctx.db.patch(profile._id, {
-        name: args.name.trim(),
+        name: trimmedName,
         avatarUrl: args.avatarUrl,
         updatedAt: now,
-      });
-    }
-  },
-});
-
-export const changePassword = action({
-  args: {
-    email: v.string(),
-    currentPassword: v.string(),
-    newPassword: v.string(),
-  },
-  handler: async (ctx, args) => {
-    const userId = await requireAuth(ctx);
-    const email = args.email.trim().toLowerCase();
-
-    try {
-      validatePasswordRequirements(args.newPassword);
-      await retrieveAccount(ctx, {
-        provider: "password",
-        account: { id: email, secret: args.currentPassword },
-      });
-      await modifyAccountCredentials(ctx, {
-        provider: "password",
-        account: { id: email, secret: args.newPassword },
-      });
-      return { ok: true, userId };
-    } catch {
-      throw new ConvexError({
-        code: "PASSWORD_CHANGE_FAILED",
-        message: "Current password is incorrect or new password is invalid.",
       });
     }
   },
@@ -146,7 +123,7 @@ export const ensureProfile = internalMutation({
 export const ensureMyProfile = mutation({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireAuth(ctx);
+    const userId = await requireUserId(ctx);
     const user = await ctx.db.get(userId);
     if (!user?.email) return;
 
@@ -206,7 +183,17 @@ export const setUserRole = mutation({
 export const bootstrapFirstAdmin = mutation({
   args: { email: v.string() },
   handler: async (ctx, args) => {
+    const { user, profile: requesterProfile } = await requireVerifiedUser(ctx);
     const normalized = args.email.trim().toLowerCase();
+    const requesterEmail = (requesterProfile?.email ?? user.email ?? "").trim().toLowerCase();
+
+    if (!requesterEmail || normalized !== requesterEmail) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You can only bootstrap admin for your own verified account.",
+      });
+    }
+
     const admins = await ctx.db
       .query("profiles")
       .withIndex("by_role", (q) => q.eq("role", "admin"))
@@ -218,18 +205,14 @@ export const bootstrapFirstAdmin = mutation({
       });
     }
 
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_email", (q) => q.eq("email", normalized))
-      .unique();
-    if (!profile) {
+    if (!requesterProfile) {
       throw new ConvexError({
         code: "PROFILE_NOT_FOUND",
-        message: "No profile found for that email. Sign in first.",
+        message: "No profile found for your account. Sign in first.",
       });
     }
 
-    await ctx.db.patch(profile._id, { role: "admin", updatedAt: Date.now() });
+    await ctx.db.patch(requesterProfile._id, { role: "admin", updatedAt: Date.now() });
     return { ok: true };
   },
 });

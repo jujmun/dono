@@ -32,7 +32,7 @@ Press `w` in the Expo CLI for web, or scan the QR code for a device.
 
 ## Authentication Setup (Production)
 
-Dono uses Convex Auth with password credentials, email verification OTP, and password reset OTP.
+Dono uses Convex Auth with passwordless email OTP (Resend delivery + Oslo token generation) and a required onboarding step after verification.
 
 ### 1) Install and run
 
@@ -48,15 +48,21 @@ Set these in `.env.local` (see `.env.local.example`):
 - `EXPO_PUBLIC_CONVEX_URL`
 - `EXPO_PUBLIC_CONVEX_SITE_URL`
 - `AUTH_RESEND_KEY`
-- `AUTH_EMAIL_FROM`
+- `AUTH_EMAIL_FROM` (optional; defaults to `Dono <auth@dono.app>`)
+
+Sign-in is restricted to University of Oxford email addresses (`ox.ac.uk` and
+its subdomains). The check is enforced server-side in
+`convex/auth/ResendEmailOTP.ts` and mirrored client-side in
+`lib/validation/auth.ts`.
 
 ### 3) Auth flows available
 
-- `/signin` — email/password sign in & sign up
-- `/verify-email` — OTP verification
-- `/forgot-password` — request reset OTP
-- `/reset-password` — submit reset OTP + new password
-- `/account` — profile settings + password change
+- `/signin` — request OTP for sign-in/sign-up
+- `/verify-email` — submit OTP to complete auth
+- `/onboarding` — required after first verified sign-in (profile completion)
+- `/forgot-password` — request a fresh OTP with anti-enumeration messaging
+- `/reset-password` — OTP verification fallback entry
+- `/account` — profile settings
 
 ### 4) Role-based access control
 
@@ -71,22 +77,25 @@ After first bootstrap, role changes should be made via admin-only mutation (`use
 
 ### 5) Security controls
 
-- Password strength validation on client + server
 - Server-side authorization checks for sensitive mutations
-- Anti-enumeration user messaging on password reset requests
-- OTP verification/reset delivered via Resend
+- Verified-user guards (`requireVerifiedUser`) for protected writes
+- Anti-enumeration user messaging on OTP resend/reset requests
+- Rate limiting for request/verify/reset flows
+- OTP generation via Oslo and delivery via Resend (10-minute token validity)
 - Convex Auth session handling and secure token storage (`lib/auth-storage.ts`)
 
 ### 6) OTP manual QA checklist
 
-1. Sign up via `/signin` (Create account).
-2. Confirm verification OTP email arrives from `AUTH_EMAIL_FROM`.
-3. Complete `/verify-email` with the OTP and verify redirect to `/dashboard`.
-4. Go to `/forgot-password`, request reset for the same email.
-5. Confirm reset OTP email arrives.
-6. Complete `/reset-password` with code + new password.
-7. Sign in using the new password.
-8. Try invalid OTP repeatedly and verify lockout/rate-limit messaging appears.
+1. Open `/signin`, request a code with a valid email.
+2. Confirm OTP email arrives from the configured sender.
+3. Complete `/verify-email` with the code and confirm redirect to `/onboarding`.
+4. Submit onboarding name and confirm redirect to `/dashboard`.
+5. Open `/forgot-password`, request code for both known and unknown emails and verify response text remains neutral.
+6. Complete `/reset-password` with email + code and confirm redirect into authenticated flow.
+7. Attempt invalid or expired codes and confirm friendly error messaging.
+8. Trigger repeated attempts and confirm rate-limit messaging/lockout behavior.
+9. Confirm unauthenticated access to protected pages redirects to `/signin`.
+10. Confirm authenticated users without profile name are redirected to `/onboarding`.
 
 ### 7) Resend deliverability requirements
 

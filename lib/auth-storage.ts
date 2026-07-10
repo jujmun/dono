@@ -15,16 +15,30 @@ const secureStoreStorage: TokenStorage = {
 
 const webStorage: TokenStorage = {
   getItem: (key) => {
-    if (typeof localStorage === "undefined") return null;
-    return localStorage.getItem(key);
+    if (typeof sessionStorage !== "undefined") {
+      return sessionStorage.getItem(key);
+    }
+    if (typeof localStorage !== "undefined") {
+      return localStorage.getItem(key);
+    }
+    return null;
   },
   setItem: (key, value) => {
-    if (typeof localStorage === "undefined") return;
-    localStorage.setItem(key, value);
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.setItem(key, value);
+      return;
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.setItem(key, value);
+    }
   },
   removeItem: (key) => {
-    if (typeof localStorage === "undefined") return;
-    localStorage.removeItem(key);
+    if (typeof sessionStorage !== "undefined") {
+      sessionStorage.removeItem(key);
+    }
+    if (typeof localStorage !== "undefined") {
+      localStorage.removeItem(key);
+    }
   },
 };
 

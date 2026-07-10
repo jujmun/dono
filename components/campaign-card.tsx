@@ -1,38 +1,81 @@
 import { Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
-import { Heart, Users, MessageCircle } from "lucide-react-native";
+import { Users } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency, getProgress } from "@/lib/constants";
-import { CampaignImage } from "./ui/campaign-image";
-import { VerificationList } from "./ui/verification-badge";
-import { ProgressBar } from "./ui/progress-bar";
-import { CategoryBadge } from "./ui/category-badge";
+import { buildReceiptLines, getReceiptSubtitle } from "@/lib/receipt";
 
 interface CampaignCardProps {
   campaign: Campaign;
   variant?: "default" | "compact";
 }
 
+function ReceiptDivider() {
+  return <View className="my-4 border-t border-dashed border-dono-border" />;
+}
+
+function ReceiptLineRow({
+  label,
+  amount,
+  muted,
+}: {
+  label: string;
+  amount: number;
+  muted?: boolean;
+}) {
+  return (
+    <View className="mb-2 flex-row items-baseline justify-between gap-4">
+      <Text
+        className={`flex-1 font-mono text-sm ${muted ? "text-dono-muted" : "text-dono-text"}`}
+        numberOfLines={1}
+      >
+        {label}
+      </Text>
+      <Text
+        className={`font-mono text-sm ${muted ? "text-dono-muted" : "text-dono-text"}`}
+      >
+        {formatCurrency(amount)}
+      </Text>
+    </View>
+  );
+}
+
 export function CampaignCard({ campaign, variant = "default" }: CampaignCardProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const href = `/campaigns/${campaign.id}` as const;
+  const receiptLines = buildReceiptLines(campaign);
+  const subtitle = getReceiptSubtitle(campaign);
 
   if (variant === "compact") {
     return (
       <Link href={href} asChild>
-        <Pressable className="flex-row gap-3 rounded-xl border border-dono-border bg-white p-3 active:opacity-90">
-          <CampaignImage image={campaign.image} className="h-16 w-16 shrink-0 rounded-lg" />
-          <View className="min-w-0 flex-1">
-            <Text className="text-sm font-semibold text-dono-text" numberOfLines={1}>
-              {campaign.title}
-            </Text>
-            <Text className="text-xs text-dono-muted">{campaign.university}</Text>
-            <View className="mt-1.5">
-              <ProgressBar value={progress} />
+        <Pressable className="rounded-lg border border-dono-border bg-white p-4 active:opacity-90">
+          <View className="mb-2 flex-row items-start justify-between gap-3">
+            <View className="min-w-0 flex-1">
+              <Text className="font-display-medium text-sm text-dono-text" numberOfLines={1}>
+                {campaign.title}
+              </Text>
+              <Text className="text-xs text-dono-muted" numberOfLines={1}>
+                {subtitle}
+              </Text>
             </View>
-            <Text className="mt-1 text-xs font-medium text-dono-primary">
+            <Text className="font-mono text-xs text-dono-muted">{progress}% funded</Text>
+          </View>
+          <ReceiptDivider />
+          {receiptLines.slice(0, 3).map((line) => (
+            <ReceiptLineRow key={line.label} {...line} />
+          ))}
+          <ReceiptDivider />
+          <View className="flex-row items-center justify-between">
+            <Text className="font-mono text-xs text-dono-text">
               {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
             </Text>
+            <View className="flex-row items-center gap-1">
+              <Users size={12} color="#5e6473" />
+              <Text className="font-mono text-xs text-dono-muted">
+                {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+              </Text>
+            </View>
           </View>
         </Pressable>
       </Link>
@@ -41,56 +84,40 @@ export function CampaignCard({ campaign, variant = "default" }: CampaignCardProp
 
   return (
     <Link href={href} asChild>
-      <Pressable className="overflow-hidden rounded-2xl border border-dono-border bg-white active:opacity-95">
-        <CampaignImage image={campaign.image} className="h-44">
-          <View className="absolute left-3 top-3">
-            <CategoryBadge category={campaign.category} />
-          </View>
-          {campaign.status === "funded" && (
-            <View className="absolute right-3 top-3 rounded-full bg-white/90 px-2.5 py-0.5">
-              <Text className="text-xs font-semibold text-emerald-700">Fully Funded</Text>
+      <Pressable className="active:opacity-95">
+        <Text className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-dono-muted">
+          Active Campaign
+        </Text>
+        <View className="rounded-lg border border-dono-border bg-white p-5">
+          <View className="flex-row items-start justify-between gap-4">
+            <View className="min-w-0 flex-1">
+              <Text className="font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
+              {subtitle ? (
+                <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
+              ) : null}
             </View>
-          )}
-        </CampaignImage>
-
-        <View className="flex-1 p-4">
-          <View className="mb-2">
-            <VerificationList verifications={campaign.verifications.slice(0, 1)} />
+            <Text className="font-mono text-sm text-dono-muted">
+              {campaign.status === "funded" ? "Fully funded" : `${progress}% funded`}
+            </Text>
           </View>
 
-          <Text className="mb-1 text-base font-semibold text-dono-text" numberOfLines={2}>
-            {campaign.title}
-          </Text>
+          <ReceiptDivider />
 
-          <Text className="mb-3 text-sm text-dono-muted" numberOfLines={2}>
-            {campaign.description}
-          </Text>
+          {receiptLines.map((line) => (
+            <ReceiptLineRow key={line.label} {...line} />
+          ))}
 
-          <View>
-            <ProgressBar value={progress} className="mb-2" />
-            <View className="flex-row items-center justify-between">
-              <View>
-                <Text className="text-sm font-bold text-dono-primary">
-                  {formatCurrency(campaign.raised)}
-                </Text>
-                <Text className="text-xs text-dono-muted">
-                  of {formatCurrency(campaign.goal)} goal
-                </Text>
-              </View>
-              <View className="flex-row items-center gap-3">
-                <View className="flex-row items-center gap-1">
-                  <Users size={14} color="#6b7c7a" />
-                  <Text className="text-xs text-dono-muted">{campaign.donors}</Text>
-                </View>
-                <View className="flex-row items-center gap-1">
-                  <Heart size={14} color="#6b7c7a" />
-                  <Text className="text-xs text-dono-muted">{campaign.likes}</Text>
-                </View>
-                <View className="flex-row items-center gap-1">
-                  <MessageCircle size={14} color="#6b7c7a" />
-                  <Text className="text-xs text-dono-muted">{campaign.comments}</Text>
-                </View>
-              </View>
+          <ReceiptDivider />
+
+          <View className="flex-row items-center justify-between">
+            <Text className="font-mono text-sm text-dono-text">
+              {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+            </Text>
+            <View className="flex-row items-center gap-1.5">
+              <Users size={14} color="#5e6473" />
+              <Text className="font-mono text-sm text-dono-muted">
+                {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+              </Text>
             </View>
           </View>
         </View>

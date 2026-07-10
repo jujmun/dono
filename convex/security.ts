@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation } from "./_generated/server";
 import {
   assertNotRateLimited,
@@ -21,6 +21,17 @@ const FLOW_LIMITS = {
   },
 } as const;
 
+function normalizeAndValidateEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+    throw new ConvexError({
+      code: "INVALID_EMAIL",
+      message: "Please use a valid email address.",
+    });
+  }
+  return normalized;
+}
+
 export const assertAllowed = mutation({
   args: {
     flow: v.union(
@@ -33,7 +44,8 @@ export const assertAllowed = mutation({
     email: v.string(),
   },
   handler: async (ctx, args) => {
-    const key = `${args.flow}:${args.email.trim().toLowerCase()}`;
+    const email = normalizeAndValidateEmail(args.email);
+    const key = `${args.flow}:${email}`;
     await assertNotRateLimited(ctx, { key, ...FLOW_LIMITS[args.flow] });
   },
 });
@@ -51,7 +63,8 @@ export const record = mutation({
     success: v.boolean(),
   },
   handler: async (ctx, args) => {
-    const key = `${args.flow}:${args.email.trim().toLowerCase()}`;
+    const email = normalizeAndValidateEmail(args.email);
+    const key = `${args.flow}:${email}`;
     await recordRateLimitAttempt(ctx, { key, ...FLOW_LIMITS[args.flow] }, args.success);
   },
 });

@@ -45,14 +45,11 @@ export function Header() {
   };
 
   return (
-    <View className="z-50 border-b border-dono-border bg-white/95">
+    <View className="z-50 border-b border-dono-border bg-dono-bg/95">
       <View className="mx-auto h-16 w-full max-w-7xl flex-row items-center justify-between px-4">
         <Link href="/" asChild>
           <Pressable className="flex-row items-center gap-2">
-            <View className="h-8 w-8 items-center justify-center rounded-lg bg-dono-primary">
-              <Text className="text-sm font-bold text-white">D</Text>
-            </View>
-            <Text className="text-xl font-bold text-dono-text">Dono</Text>
+            <Text className="font-display-medium text-xl text-dono-text">Dono</Text>
           </Pressable>
         </Link>
 
@@ -71,7 +68,7 @@ export function Header() {
                   >
                     <Text
                       className={cn(
-                        "text-sm font-medium",
+                        "font-sans-medium text-sm",
                         active ? "text-dono-primary" : "text-dono-muted"
                       )}
                     >
@@ -90,13 +87,13 @@ export function Header() {
               <Link href="/create" asChild>
                 <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
                   <Plus size={16} color="#fff" />
-                  <Text className="text-sm font-semibold text-white">Start a Campaign</Text>
+                  <Text className="font-sans-medium text-sm text-white">Start a Campaign</Text>
                 </Pressable>
               </Link>
 
               <Link href="/dashboard" asChild>
                 <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-dono-primary/10">
-                  <Text className="text-sm font-bold text-dono-primary">Y</Text>
+                  <Text className="font-mono-medium text-sm text-dono-primary">Y</Text>
                 </Pressable>
               </Link>
 
@@ -106,13 +103,13 @@ export function Header() {
                     onPress={handleSignOut}
                     className="flex-row items-center gap-1.5 rounded-full border border-dono-border px-3 py-2"
                   >
-                    <LogOut size={16} color="#6b7c7a" />
-                    <Text className="text-sm font-medium text-dono-muted">Sign out</Text>
+                    <LogOut size={16} color="#5e6473" />
+                    <Text className="font-sans-medium text-sm text-dono-muted">Sign out</Text>
                   </Pressable>
                 ) : (
                   <Link href="/signin" asChild>
                     <Pressable className="rounded-full border border-dono-border px-4 py-2">
-                      <Text className="text-sm font-medium text-dono-muted">Sign in</Text>
+                      <Text className="font-sans-medium text-sm text-dono-muted">Sign in</Text>
                     </Pressable>
                   </Link>
                 ))}
@@ -126,9 +123,9 @@ export function Header() {
               accessibilityLabel="Toggle menu"
             >
               {mobileOpen ? (
-                <X size={20} color="#6b7c7a" />
+                <X size={20} color="#5e6473" />
               ) : (
-                <Menu size={20} color="#6b7c7a" />
+                <Menu size={20} color="#5e6473" />
               )}
             </Pressable>
           )}
@@ -136,7 +133,7 @@ export function Header() {
       </View>
 
       {mobileOpen && !isWide && (
-        <View className="border-t border-dono-border bg-white px-4 py-3">
+        <View className="border-t border-dono-border bg-dono-bg px-4 py-3">
           {navItems.map((item) => {
             const active = pathname === item.href;
             return (
@@ -150,11 +147,11 @@ export function Header() {
                 >
                   <item.icon
                     size={16}
-                    color={active ? "#0d5c4b" : "#6b7c7a"}
+                    color={active ? "#1d242f" : "#5e6473"}
                   />
                   <Text
                     className={cn(
-                      "text-sm font-medium",
+                      "font-sans-medium text-sm",
                       active ? "text-dono-primary" : "text-dono-muted"
                     )}
                   >
@@ -170,7 +167,7 @@ export function Header() {
               className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-accent px-4 py-2.5"
             >
               <Plus size={16} color="#fff" />
-              <Text className="text-sm font-semibold text-white">Start a Campaign</Text>
+              <Text className="font-sans-medium text-sm text-white">Start a Campaign</Text>
             </Pressable>
           </Link>
           {!isLoading &&
@@ -182,8 +179,8 @@ export function Header() {
                 }}
                 className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border px-4 py-2.5"
               >
-                <LogOut size={16} color="#6b7c7a" />
-                <Text className="text-sm font-medium text-dono-muted">Sign out</Text>
+                <LogOut size={16} color="#5e6473" />
+                <Text className="font-sans-medium text-sm text-dono-muted">Sign out</Text>
               </Pressable>
             ) : (
               <Link href="/signin" asChild>
@@ -191,7 +188,7 @@ export function Header() {
                   onPress={() => setMobileOpen(false)}
                   className="mt-2 items-center rounded-full border border-dono-border px-4 py-2.5"
                 >
-                  <Text className="text-sm font-medium text-dono-muted">Sign in</Text>
+                  <Text className="font-sans-medium text-sm text-dono-muted">Sign in</Text>
                 </Pressable>
               </Link>
             ))}
@@ -208,7 +205,7 @@ export function MobileNav() {
   if (isWide) return null;
 
   return (
-    <View className="absolute bottom-0 left-0 right-0 z-50 border-t border-dono-border bg-white/95">
+    <View className="absolute bottom-0 left-0 right-0 z-50 border-t border-dono-border bg-dono-bg/95">
       <View className="mx-auto w-full max-w-lg flex-row items-center justify-around px-2 py-1">
         {navItems.map((item) => {
           const isActive =
@@ -220,12 +217,12 @@ export function MobileNav() {
               <Pressable className="items-center gap-0.5 px-3 py-2">
                 <item.icon
                   size={20}
-                  color={isActive ? "#0d5c4b" : "#6b7c7a"}
+                  color={isActive ? "#1d242f" : "#5e6473"}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <Text
                   className={cn(
-                    "text-xs font-medium",
+                    "font-sans-medium text-xs",
                     isActive ? "text-dono-primary" : "text-dono-muted"
                   )}
                 >
@@ -249,10 +246,7 @@ export function Footer() {
         <View className={cn("gap-8", isWide ? "flex-row flex-wrap" : "")}>
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
             <View className="mb-4 flex-row items-center gap-2">
-              <View className="h-8 w-8 items-center justify-center rounded-lg bg-dono-primary">
-                <Text className="text-sm font-bold text-white">D</Text>
-              </View>
-              <Text className="text-lg font-bold text-dono-text">Dono</Text>
+              <Text className="font-display-medium text-lg text-dono-text">Dono</Text>
             </View>
             <Text className="text-sm text-dono-muted">
               Community infrastructure for transparent university giving.
@@ -260,7 +254,7 @@ export function Footer() {
           </View>
 
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
-            <Text className="mb-3 text-sm font-semibold text-dono-text">Platform</Text>
+            <Text className="mb-3 font-sans-medium text-sm text-dono-text">Platform</Text>
             {(
               [
                 ["/campaigns", "Campaigns"],
@@ -278,7 +272,7 @@ export function Footer() {
           </View>
 
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
-            <Text className="mb-3 text-sm font-semibold text-dono-text">Principles</Text>
+            <Text className="mb-3 font-sans-medium text-sm text-dono-text">Principles</Text>
             {[
               "Radical transparency",
               "Small donations, big impact",

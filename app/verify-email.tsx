@@ -1,22 +1,38 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
-import { useRouter } from "expo-router";
+import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
-import { verifyEmailSchema } from "@/lib/validation/auth";
+import { verifyEmailSchema, requestOtpSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { api } from "@convex/_generated/api";
 
+const RESEND_COOLDOWN_SECONDS = 30;
+
 export default function VerifyEmailPage() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ email?: string }>();
+  const defaultEmail = useMemo(
+    () => (typeof params.email === "string" ? params.email : ""),
+    [params.email],
+  );
   const { signIn } = useAuthActions();
   const assertAllowed = useMutation(api.security.assertAllowed);
   const recordAttempt = useMutation(api.security.record);
-  const [email, setEmail] = useState("");
+  const [email, setEmail] = useState(defaultEmail);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [resending, setResending] = useState(false);
+  const [cooldown, setCooldown] = useState(0);
+
+  useEffect(() => {
+    if (cooldown <= 0) return;
+    const timer = setTimeout(() => setCooldown((s) => s - 1), 1000);
+    return () => clearTimeout(timer);
+  }, [cooldown]);
 
   const onSubmit = () => {
     const parsed = verifyEmailSchema.safeParse({ email, code });
@@ -27,13 +43,14 @@ export default function VerifyEmailPage() {
 
     setLoading(true);
     setError(null);
+    setInfo(null);
     const formData = new FormData();
     formData.append("email", parsed.data.email.toLowerCase());
     formData.append("code", parsed.data.code.trim());
     formData.append("flow", "email-verification");
 
     void assertAllowed({ flow: "email-verification", email: parsed.data.email })
-      .then(() => signIn("password", formData))
+      .then(() => signIn("resend", formData))
       .then(() => router.replace("/dashboard"))
       .then(() =>
         recordAttempt({
@@ -53,13 +70,51 @@ export default function VerifyEmailPage() {
       .finally(() => setLoading(false));
   };
 
+  const onResend = () => {
+    const parsed = requestOtpSchema.safeParse({ email });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Enter a valid email first.");
+      return;
+    }
+
+    setResending(true);
+    setError(null);
+    setInfo(null);
+    const normalizedEmail = parsed.data.email.toLowerCase();
+    const formData = new FormData();
+    formData.append("email", normalizedEmail);
+
+    void assertAllowed({ flow: "signIn", email: normalizedEmail })
+      .then(() => signIn("resend", formData))
+      .then(() => {
+        void recordAttempt({
+          flow: "signIn",
+          email: normalizedEmail,
+          success: true,
+        });
+        setInfo("A new code is on its way to your inbox.");
+        setCooldown(RESEND_COOLDOWN_SECONDS);
+      })
+      .catch((err) => {
+        void recordAttempt({
+          flow: "signIn",
+          email: normalizedEmail,
+          success: false,
+        });
+        setError(getFriendlyAuthError(err));
+      })
+      .finally(() => setResending(false));
+  };
+
+  const resendDisabled = resending || cooldown > 0;
+
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-md px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <Text className="text-2xl font-bold text-dono-text">Verify Email</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Verify Email</Text>
           <Text className="mt-1 text-sm text-dono-muted">
-            Enter the verification code sent to your inbox.
+            Enter the 6-digit code sent to your inbox.
           </Text>
 
           <View className="mt-6 gap-4">
@@ -68,21 +123,31 @@ export default function VerifyEmailPage() {
               onChangeText={setEmail}
               autoCapitalize="none"
               keyboardType="email-address"
-              placeholder="you@university.ac.uk"
-              placeholderTextColor="#6b7c7a"
+              autoComplete="email"
+              placeholder="you@st-annes.ox.ac.uk"
+              placeholderTextColor="#5e6473"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
             />
             <TextInput
               value={code}
               onChangeText={setCode}
+              keyboardType="number-pad"
+              maxLength={6}
+              autoComplete="one-time-code"
               placeholder="6-digit code"
-              placeholderTextColor="#6b7c7a"
+              placeholderTextColor="#5e6473"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
             />
 
             {error ? (
               <View className="rounded-xl bg-rose-50 px-4 py-3">
                 <Text className="text-sm text-rose-700">{error}</Text>
+              </View>
+            ) : null}
+
+            {info ? (
+              <View className="rounded-xl bg-green-50 px-4 py-3">
+                <Text className="text-sm text-green-700">{info}</Text>
               </View>
             ) : null}
 
@@ -93,8 +158,22 @@ export default function VerifyEmailPage() {
                 loading ? "opacity-50" : ""
               }`}
             >
-              <Text className="text-sm font-semibold text-white">
+              <Text className="font-sans-medium text-sm text-white">
                 {loading ? "Verifying..." : "Verify email"}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              onPress={onResend}
+              disabled={resendDisabled}
+              className={`items-center ${resendDisabled ? "opacity-50" : ""}`}
+            >
+              <Text className="text-sm text-dono-primary">
+                {resending
+                  ? "Sending..."
+                  : cooldown > 0
+                    ? `Resend code in ${cooldown}s`
+                    : "Resend code"}
               </Text>
             </Pressable>
           </View>

@@ -10,6 +10,7 @@
 
 import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
+import type * as auth_ResendEmailOTP from "../auth/ResendEmailOTP.js";
 import type * as auth_ResendOTP from "../auth/ResendOTP.js";
 import type * as auth_ResendPasswordResetOTP from "../auth/ResendPasswordResetOTP.js";
 import type * as auth_otpConfig from "../auth/otpConfig.js";
@@ -37,6 +38,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
   auth: typeof auth;
+  "auth/ResendEmailOTP": typeof auth_ResendEmailOTP;
   "auth/ResendOTP": typeof auth_ResendOTP;
   "auth/ResendPasswordResetOTP": typeof auth_ResendPasswordResetOTP;
   "auth/otpConfig": typeof auth_otpConfig;

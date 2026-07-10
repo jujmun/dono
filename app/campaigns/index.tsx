@@ -37,7 +37,7 @@ export default function CampaignsPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-7xl px-4 py-8">
         <View className="mb-8">
-          <Text className="text-2xl font-bold text-dono-text">Campaigns</Text>
+          <Text className="font-display-medium text-2xl text-dono-text">Campaigns</Text>
           <Text className="mt-1 text-dono-muted">
             Support specific, tangible projects at universities across the UK
           </Text>
@@ -46,11 +46,11 @@ export default function CampaignsPage() {
         <View className="mb-6">
           <View className="relative">
             <View className="absolute left-3 top-3 z-10">
-              <Search size={16} color="#6b7c7a" />
+              <Search size={16} color="#5e6473" />
             </View>
             <TextInput
               placeholder="Search campaigns, universities..."
-              placeholderTextColor="#6b7c7a"
+              placeholderTextColor="#5e6473"
               value={search}
               onChangeText={setSearch}
               className="w-full rounded-xl border border-dono-border bg-white py-2.5 pl-10 pr-4 text-sm text-dono-text"
@@ -64,7 +64,7 @@ export default function CampaignsPage() {
           className="mb-6"
           contentContainerClassName="items-center gap-2"
         >
-          <SlidersHorizontal size={16} color="#6b7c7a" />
+          <SlidersHorizontal size={16} color="#5e6473" />
           {categories.map((cat) => (
             <Pressable
               key={cat}
@@ -76,7 +76,7 @@ export default function CampaignsPage() {
               }`}
             >
               <Text
-                className={`text-xs font-medium ${
+                className={`font-sans-medium text-xs ${
                   category === cat ? "text-white" : "text-dono-muted"
                 }`}
               >
@@ -87,7 +87,7 @@ export default function CampaignsPage() {
         </ScrollView>
 
         {campaigns === undefined ? (
-          <ActivityIndicator color="#0d5c4b" />
+          <ActivityIndicator color="#1d242f" />
         ) : filtered.length === 0 ? (
           <View className="rounded-2xl border border-dono-border bg-white p-12">
             <Text className="text-center text-dono-muted">

@@ -1,6 +1,9 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import { requireAuth } from "./lib/authz";
+import { requireUserId, requireVerifiedUser } from "./lib/authz";
+
+const MIN_DONATION_AMOUNT = 1;
+const MAX_DONATION_AMOUNT = 100_000;
 
 export const donate = mutation({
   args: {
@@ -8,24 +11,46 @@ export const donate = mutation({
     amount: v.number(),
   },
   handler: async (ctx, args) => {
-    const userId = await requireAuth(ctx);
+    const { userId } = await requireVerifiedUser(ctx);
+    const campaignSlug = args.campaignSlug.trim().toLowerCase();
+    const amount = Number(args.amount);
+
+    if (!campaignSlug) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Campaign is required.",
+      });
+    }
+    if (
+      !Number.isFinite(amount) ||
+      amount < MIN_DONATION_AMOUNT ||
+      amount > MAX_DONATION_AMOUNT
+    ) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Donation amount must be between 1 and 100000.",
+      });
+    }
 
     const campaign = await ctx.db
       .query("campaigns")
-      .withIndex("by_slug", (q) => q.eq("slug", args.campaignSlug))
+      .withIndex("by_slug", (q) => q.eq("slug", campaignSlug))
       .unique();
     if (!campaign) {
-      throw new Error("Campaign not found");
+      throw new ConvexError({
+        code: "CAMPAIGN_NOT_FOUND",
+        message: "Campaign not found.",
+      });
     }
 
     await ctx.db.insert("donations", {
       userId,
       campaignId: campaign._id,
-      amount: args.amount,
+      amount,
       createdAt: Date.now(),
     });
 
-    const raised = campaign.raised + args.amount;
+    const raised = campaign.raised + amount;
     const donors = campaign.donors + 1;
     const status =
       raised >= campaign.goal
@@ -43,7 +68,7 @@ export const donate = mutation({
 export const getDonorImpact = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireAuth(ctx);
+    const userId = await requireUserId(ctx);
 
     const donations = await ctx.db
       .query("donations")
@@ -108,7 +133,7 @@ export const getDonorImpact = query({
 export const getDonoWrapped = query({
   args: {},
   handler: async (ctx) => {
-    const userId = await requireAuth(ctx);
+    const userId = await requireUserId(ctx);
 
     const donations = await ctx.db
       .query("donations")
