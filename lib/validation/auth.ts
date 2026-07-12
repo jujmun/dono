@@ -5,12 +5,23 @@ function isOxfordEmail(email: string) {
   return domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
 }
 
+// Dev-only bypass mirroring convex/auth/ResendEmailOTP.ts's server-side
+// TEST_MODE_EMAIL check. Set via EXPO_PUBLIC_TEST_MODE_EMAIL in .env.local
+// only — never in a real build's environment.
+function isTestModeEmail(email: string) {
+  const testEmail = process.env.EXPO_PUBLIC_TEST_MODE_EMAIL?.trim().toLowerCase();
+  return Boolean(testEmail) && email === testEmail;
+}
+
 export const emailSchema = z
   .string()
   .trim()
   .email("Enter a valid email.")
   .transform((value) => value.toLowerCase())
-  .refine(isOxfordEmail, "Use your Oxford email address (ending in ox.ac.uk).");
+  .refine(
+    (email) => isOxfordEmail(email) || isTestModeEmail(email),
+    "Use your Oxford email address (ending in ox.ac.uk).",
+  );
 
 export const requestOtpSchema = z.object({
   email: emailSchema,
