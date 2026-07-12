@@ -23,7 +23,10 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
-  authRateLimits: defineTable({
+  // Named distinctly from @convex-dev/auth's own built-in `authRateLimits`
+  // table (spread in via ...authTables above) — reusing that name here would
+  // silently shadow it and break Convex Auth's internal OTP verification.
+  otpRateLimits: defineTable({
     key: v.string(),
     attempts: v.number(),
     windowStart: v.number(),
