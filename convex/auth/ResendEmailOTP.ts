@@ -20,8 +20,20 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
+// Dev-only bypass: set TEST_MODE_EMAIL via `npx convex env set` on your local
+// deployment only. Never set this on a preview or production deployment —
+// it exempts exactly this one address from the Oxford-domain check below.
+function isTestModeEmail(email: string) {
+  const testEmail = process.env.TEST_MODE_EMAIL?.trim().toLowerCase();
+  return Boolean(testEmail) && email === testEmail;
+}
+
 // Only University of Oxford addresses (ox.ac.uk and its subdomains) may sign in.
 function assertAllowedDomain(email: string) {
+  if (isTestModeEmail(email)) {
+    return;
+  }
+
   const domain = email.split("@")[1]?.toLowerCase();
   const isOxford =
     domain === "ox.ac.uk" || Boolean(domain?.endsWith(".ox.ac.uk"));
@@ -44,6 +56,13 @@ export const ResendEmailOTP = Resend({
   async sendVerificationRequest({ identifier, provider, token }) {
     const email = normalizeEmail(identifier);
     assertAllowedDomain(email);
+
+    if (isTestModeEmail(email)) {
+      console.log(
+        `[TEST MODE] Dono sign-in code for ${email}: ${token} (expires in 10 min)`,
+      );
+      return;
+    }
 
     const resend = new ResendClient(provider.apiKey);
     const from = process.env.AUTH_EMAIL_FROM ?? "Dono <auth@dono.app>";
