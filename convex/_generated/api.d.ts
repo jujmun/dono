@@ -10,9 +10,11 @@
 
 import type * as activity from "../activity.js";
 import type * as auth from "../auth.js";
+import type * as auth_AdminEmailOTP from "../auth/AdminEmailOTP.js";
 import type * as auth_ResendEmailOTP from "../auth/ResendEmailOTP.js";
 import type * as auth_ResendOTP from "../auth/ResendOTP.js";
 import type * as auth_ResendPasswordResetOTP from "../auth/ResendPasswordResetOTP.js";
+import type * as auth_adminConfig from "../auth/adminConfig.js";
 import type * as auth_otpConfig from "../auth/otpConfig.js";
 import type * as auth_passwordPolicy from "../auth/passwordPolicy.js";
 import type * as auth_rateLimit from "../auth/rateLimit.js";
@@ -38,9 +40,11 @@ import type {
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
   auth: typeof auth;
+  "auth/AdminEmailOTP": typeof auth_AdminEmailOTP;
   "auth/ResendEmailOTP": typeof auth_ResendEmailOTP;
   "auth/ResendOTP": typeof auth_ResendOTP;
   "auth/ResendPasswordResetOTP": typeof auth_ResendPasswordResetOTP;
+  "auth/adminConfig": typeof auth_adminConfig;
   "auth/otpConfig": typeof auth_otpConfig;
   "auth/passwordPolicy": typeof auth_passwordPolicy;
   "auth/rateLimit": typeof auth_rateLimit;
