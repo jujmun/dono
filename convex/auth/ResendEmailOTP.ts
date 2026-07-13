@@ -7,6 +7,18 @@ const OTP_ALPHABET = "0123456789";
 const OTP_LENGTH = 6;
 const OTP_MAX_AGE_SECONDS = 60 * 10;
 
+/** Dev-only fixed OTP when AUTH_ADMIN_OTP_BYPASS=true. Never enable in production. */
+export const ADMIN_BYPASS_OTP = "000000";
+export const ADMIN_BYPASS_EMAIL = "admin@ox.ac.uk";
+
+export function isAdminOtpBypassEnabled() {
+  return process.env.AUTH_ADMIN_OTP_BYPASS === "true";
+}
+
+export function isBypassAdminEmail(email: string) {
+  return normalizeEmail(email) === ADMIN_BYPASS_EMAIL;
+}
+
 function generateOtpToken() {
   const random: RandomReader = {
     read(bytes) {
@@ -39,11 +51,21 @@ export const ResendEmailOTP = Resend({
   maxAge: OTP_MAX_AGE_SECONDS,
   apiKey: process.env.AUTH_RESEND_KEY,
   async generateVerificationToken() {
+    // With bypass enabled on a private dev deployment, all OTPs are fixed so the
+    // client can auto-submit for admin@ox.ac.uk. Do not set this in production.
+    if (isAdminOtpBypassEnabled()) {
+      return ADMIN_BYPASS_OTP;
+    }
     return generateOtpToken();
   },
   async sendVerificationRequest({ identifier, provider, token }) {
     const email = normalizeEmail(identifier);
     assertAllowedDomain(email);
+
+    if (isAdminOtpBypassEnabled() && isBypassAdminEmail(email)) {
+      // Skip Resend entirely for the temporary admin shortcut.
+      return;
+    }
 
     const resend = new ResendClient(provider.apiKey);
     const from = process.env.AUTH_EMAIL_FROM ?? "Dono <auth@dono.app>";

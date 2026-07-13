@@ -11,6 +11,12 @@ import { api } from "@convex/_generated/api";
 
 const hasPostHog = Boolean(process.env.EXPO_PUBLIC_POSTHOG_API_KEY);
 
+/** Must match server ADMIN_BYPASS_EMAIL. Only used when EXPO_PUBLIC_AUTH_ADMIN_OTP_BYPASS=true. */
+const ADMIN_BYPASS_EMAIL = "admin@ox.ac.uk";
+const ADMIN_BYPASS_OTP = "000000";
+const adminOtpBypassEnabled =
+  process.env.EXPO_PUBLIC_AUTH_ADMIN_OTP_BYPASS === "true";
+
 export type OtpRequestFlow = "signIn" | "signUp";
 
 type OtpRequestFormProps = {
@@ -49,20 +55,44 @@ function OtpRequestFormInner({
     }
     setError(null);
     setLoading(true);
+    const emailValue = parsed.data.email.toLowerCase();
     const formData = new FormData();
-    formData.append("email", parsed.data.email.toLowerCase());
+    formData.append("email", emailValue);
 
-    void assertAllowed({ flow, email: normalizedEmail })
+    const useAdminBypass =
+      adminOtpBypassEnabled && emailValue === ADMIN_BYPASS_EMAIL;
+
+    void assertAllowed({ flow, email: emailValue })
       .then(() => signIn("resend", formData))
-      .then(() => {
+      .then(async () => {
         onSuccess?.(parsed.data.email);
-        void recordAttempt({ flow, email: normalizedEmail, success: true });
+        void recordAttempt({ flow, email: emailValue, success: true });
+
+        if (useAdminBypass) {
+          const verifyData = new FormData();
+          verifyData.append("email", emailValue);
+          verifyData.append("code", ADMIN_BYPASS_OTP);
+          verifyData.append("flow", "email-verification");
+          await assertAllowed({
+            flow: "email-verification",
+            email: emailValue,
+          });
+          await signIn("resend", verifyData);
+          void recordAttempt({
+            flow: "email-verification",
+            email: emailValue,
+            success: true,
+          });
+          router.replace("/dashboard");
+          return;
+        }
+
         router.push(
-          `/verify-email?email=${encodeURIComponent(normalizedEmail)}` as Href,
+          `/verify-email?email=${encodeURIComponent(emailValue)}` as Href,
         );
       })
       .catch((err: Error) => {
-        void recordAttempt({ flow, email: normalizedEmail, success: false });
+        void recordAttempt({ flow, email: emailValue, success: false });
         setError(getFriendlyAuthError(err));
       })
       .finally(() => {
