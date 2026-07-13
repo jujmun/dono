@@ -51,8 +51,10 @@ export const ResendEmailOTP = Resend({
   maxAge: OTP_MAX_AGE_SECONDS,
   apiKey: process.env.AUTH_RESEND_KEY,
   async generateVerificationToken() {
-    // With bypass enabled on a private dev deployment, all OTPs are fixed so the
-    // client can auto-submit for admin@ox.ac.uk. Do not set this in production.
+    // Dev bypass uses a fixed OTP so the client can auto-submit for
+    // admin@ox.ac.uk. convex-auth looks codes up with .unique() on the hash, so
+    // callers must clear prior hash(000000) rows before issuing a new code.
+    // Do not enable AUTH_ADMIN_OTP_BYPASS in production.
     if (isAdminOtpBypassEnabled()) {
       return ADMIN_BYPASS_OTP;
     }

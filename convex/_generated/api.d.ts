@@ -21,6 +21,7 @@ import type * as auth_rateLimit from "../auth/rateLimit.js";
 import type * as campaigns from "../campaigns.js";
 import type * as communities from "../communities.js";
 import type * as donations from "../donations.js";
+import type * as fixedOtpCleanup from "../fixedOtpCleanup.js";
 import type * as funds from "../funds.js";
 import type * as http from "../http.js";
 import type * as lib_authz from "../lib/authz.js";
@@ -51,6 +52,7 @@ declare const fullApi: ApiFromModules<{
   campaigns: typeof campaigns;
   communities: typeof communities;
   donations: typeof donations;
+  fixedOtpCleanup: typeof fixedOtpCleanup;
   funds: typeof funds;
   http: typeof http;
   "lib/authz": typeof lib_authz;
