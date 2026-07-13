@@ -9,6 +9,7 @@ import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { api } from "@convex/_generated/api";
 
 const RESEND_COOLDOWN_SECONDS = 30;
+const FIXED_BYPASS_OTP = "000000";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -20,6 +21,10 @@ export default function VerifyEmailPage() {
   const { signIn } = useAuthActions();
   const assertAllowed = useMutation(api.security.assertAllowed);
   const recordAttempt = useMutation(api.security.record);
+  const keepNewestFixedOtpCode = useMutation(
+    api.fixedOtpCleanup.keepNewestFixedOtpCode,
+  );
+  const clearFixedOtpCodes = useMutation(api.fixedOtpCleanup.clearFixedOtpCodes);
   const [email, setEmail] = useState(defaultEmail);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -48,26 +53,35 @@ export default function VerifyEmailPage() {
     formData.append("email", parsed.data.email.toLowerCase());
     formData.append("code", parsed.data.code.trim());
     formData.append("flow", "email-verification");
+    const isBypassCode = parsed.data.code.trim() === FIXED_BYPASS_OTP;
 
-    void assertAllowed({ flow: "email-verification", email: parsed.data.email })
-      .then(() => signIn("resend", formData))
-      .then(() => router.replace("/dashboard"))
-      .then(() =>
-        recordAttempt({
+    void (async () => {
+      try {
+        if (isBypassCode) {
+          await keepNewestFixedOtpCode({});
+        }
+        await assertAllowed({
+          flow: "email-verification",
+          email: parsed.data.email,
+        });
+        await signIn("resend", formData);
+        router.replace("/dashboard");
+        await recordAttempt({
           flow: "email-verification",
           email: parsed.data.email,
           success: true,
-        }),
-      )
-      .catch((err) => {
+        });
+      } catch (err) {
         void recordAttempt({
           flow: "email-verification",
           email: parsed.data.email,
           success: false,
         });
         setError(getFriendlyAuthError(err));
-      })
-      .finally(() => setLoading(false));
+      } finally {
+        setLoading(false);
+      }
+    })();
   };
 
   const onResend = () => {
@@ -84,7 +98,8 @@ export default function VerifyEmailPage() {
     const formData = new FormData();
     formData.append("email", normalizedEmail);
 
-    void assertAllowed({ flow: "signIn", email: normalizedEmail })
+    void clearFixedOtpCodes({})
+      .then(() => assertAllowed({ flow: "signIn", email: normalizedEmail }))
       .then(() => signIn("resend", formData))
       .then(() => {
         void recordAttempt({

@@ -1,6 +1,6 @@
 import { Link } from "expo-router";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import {
   Gift,
   Heart,
@@ -17,18 +17,22 @@ import type { Campaign, DonorImpact, DonoWrapped } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
 export default function DashboardPage() {
-  const donorImpact = useQuery(api.donations.getDonorImpact) as
-    | DonorImpact
-    | null
-    | undefined;
-  const donoWrapped = useQuery(api.donations.getDonoWrapped) as
-    | DonoWrapped
-    | null
-    | undefined;
+  const { isAuthenticated } = useConvexAuth();
+  const donorImpact = useQuery(
+    api.donations.getDonorImpact,
+    isAuthenticated ? {} : "skip",
+  ) as DonorImpact | null | undefined;
+  const donoWrapped = useQuery(
+    api.donations.getDonoWrapped,
+    isAuthenticated ? {} : "skip",
+  ) as DonoWrapped | null | undefined;
   const campaigns = (useQuery(api.campaigns.list) ?? []) as Campaign[];
   const followedCampaigns = campaigns.slice(0, 2);
 
-  if (donorImpact === undefined || donoWrapped === undefined) {
+  if (
+    isAuthenticated &&
+    (donorImpact === undefined || donoWrapped === undefined)
+  ) {
     return (
       <AppShell>
         <View className="items-center py-16">

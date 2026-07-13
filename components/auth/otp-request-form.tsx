@@ -39,6 +39,7 @@ function OtpRequestFormInner({
   const { signIn } = useAuthActions();
   const assertAllowed = useMutation(api.security.assertAllowed);
   const recordAttempt = useMutation(api.security.record);
+  const clearFixedOtpCodes = useMutation(api.fixedOtpCleanup.clearFixedOtpCodes);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -62,9 +63,13 @@ function OtpRequestFormInner({
     const useAdminBypass =
       adminOtpBypassEnabled && emailValue === ADMIN_BYPASS_EMAIL;
 
-    void assertAllowed({ flow, email: emailValue })
-      .then(() => signIn("resend", formData))
-      .then(async () => {
+    void (async () => {
+      try {
+        // Fixed OTP bypass stores the same code hash for every request; clear
+        // collisions before issuing a new one so verify's .unique() can succeed.
+        await clearFixedOtpCodes({});
+        await assertAllowed({ flow, email: emailValue });
+        await signIn("resend", formData);
         onSuccess?.(parsed.data.email);
         void recordAttempt({ flow, email: emailValue, success: true });
 
@@ -90,14 +95,13 @@ function OtpRequestFormInner({
         router.push(
           `/verify-email?email=${encodeURIComponent(emailValue)}` as Href,
         );
-      })
-      .catch((err: Error) => {
+      } catch (err) {
         void recordAttempt({ flow, email: emailValue, success: false });
-        setError(getFriendlyAuthError(err));
-      })
-      .finally(() => {
+        setError(getFriendlyAuthError(err as Error));
+      } finally {
         setLoading(false);
-      });
+      }
+    })();
   };
 
   return (

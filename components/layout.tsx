@@ -39,8 +39,9 @@ export function Header() {
   const { signOut } = useAuthActions();
 
   const handleSignOut = () => {
+    setMobileOpen(false);
     void signOut().then(() => {
-      router.push("/");
+      router.replace("/signin");
     });
   };
 
@@ -173,10 +174,7 @@ export function Header() {
           {!isLoading &&
             (isAuthenticated ? (
               <Pressable
-                onPress={() => {
-                  setMobileOpen(false);
-                  handleSignOut();
-                }}
+                onPress={handleSignOut}
                 className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border px-4 py-2.5"
               >
                 <LogOut size={16} color="#5e6473" />
