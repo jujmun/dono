@@ -29,6 +29,16 @@ function normalizeAndValidateEmail(email: string) {
       message: "Please use a valid email address.",
     });
   }
+
+  const domain = normalized.split("@")[1] ?? "";
+  const isOxford = domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
+  if (!isOxford) {
+    throw new ConvexError({
+      code: "EMAIL_DOMAIN_NOT_ALLOWED",
+      message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",
+    });
+  }
+
   return normalized;
 }
 

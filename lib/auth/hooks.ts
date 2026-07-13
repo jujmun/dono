@@ -8,7 +8,3 @@ export function useCurrentProfile() {
 export function useUpdateProfile() {
   return useMutation(api.users.updateProfile);
 }
-
-export function useBootstrapAdmin() {
-  return useMutation(api.users.bootstrapFirstAdmin);
-}

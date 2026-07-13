@@ -180,17 +180,19 @@ export const setUserRole = mutation({
   },
 });
 
-export const bootstrapFirstAdmin = mutation({
+/** Promote the first admin. Client apps cannot call this — run from CLI:
+ * `npx convex run users:bootstrapFirstAdmin '{"email":"you@college.ox.ac.uk"}'`
+ */
+export const bootstrapFirstAdmin = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, args) => {
-    const { user, profile: requesterProfile } = await requireVerifiedUser(ctx);
     const normalized = args.email.trim().toLowerCase();
-    const requesterEmail = (requesterProfile?.email ?? user.email ?? "").trim().toLowerCase();
-
-    if (!requesterEmail || normalized !== requesterEmail) {
+    const domain = normalized.split("@")[1] ?? "";
+    const isOxford = domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
+    if (!isOxford) {
       throw new ConvexError({
-        code: "FORBIDDEN",
-        message: "You can only bootstrap admin for your own verified account.",
+        code: "EMAIL_DOMAIN_NOT_ALLOWED",
+        message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",
       });
     }
 
@@ -205,14 +207,18 @@ export const bootstrapFirstAdmin = mutation({
       });
     }
 
-    if (!requesterProfile) {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .unique();
+    if (!profile) {
       throw new ConvexError({
         code: "PROFILE_NOT_FOUND",
-        message: "No profile found for your account. Sign in first.",
+        message: "No profile found for that email. Sign in once first.",
       });
     }
 
-    await ctx.db.patch(requesterProfile._id, { role: "admin", updatedAt: Date.now() });
+    await ctx.db.patch(profile._id, { role: "admin", updatedAt: Date.now() });
     return { ok: true };
   },
 });
