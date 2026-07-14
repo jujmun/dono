@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { type Href, Link, usePathname, useRouter } from "expo-router";
-import { View, Text, Pressable, useWindowDimensions } from "react-native";
+import { View, Text, Pressable, Image, useWindowDimensions } from "react-native";
 import {
   Home,
   Compass,
@@ -15,6 +15,7 @@ import {
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { cn } from "@/lib/utils";
+import { useCurrentProfile } from "@/lib/auth/hooks";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
@@ -37,6 +38,8 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
+  const profile = useCurrentProfile();
+  const initials = (profile?.name || profile?.email || "D").trim().charAt(0).toUpperCase();
 
   const handleSignOut = () => {
     setMobileOpen(false);
@@ -95,10 +98,19 @@ export function Header() {
               </Link>
 
               <Link href="/dashboard" asChild>
-                <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-dono-primary/10">
-                  <Text className="font-mono-medium text-sm text-dono-primary">
-                    Y
-                  </Text>
+                <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
+                  {profile?.avatarUrl ? (
+                    <Image
+                      source={{ uri: profile.avatarUrl }}
+                      style={{ width: "100%", height: "100%" }}
+                      resizeMode="cover"
+                      accessibilityLabel="Your profile picture"
+                    />
+                  ) : (
+                    <Text className="font-mono-medium text-sm text-dono-primary">
+                      {initials}
+                    </Text>
+                  )}
                 </Pressable>
               </Link>
 
