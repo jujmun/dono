@@ -14,7 +14,7 @@ import { AppShell } from "@/components/app-shell";
 import { categoryLabels } from "@/lib/constants";
 import { api } from "@convex/_generated/api";
 
-const steps = ["Details", "Story", "Goal", "Review"];
+const steps = ["Details", "Story", "Goal", "Review", "Submit"];
 
 const creatorTypes = [
   "Individual Student",
@@ -282,6 +282,20 @@ export default function CreateCampaignPage() {
             </View>
           )}
 
+          {step === 4 && (
+            <View className="gap-5">
+              <Text className="text-lg font-sans-medium text-dono-text">
+                Before your campaign goes live
+              </Text>
+              <Text className="text-sm leading-relaxed text-dono-muted">
+                We take moderation seriously. Every campaign is reviewed by our team to
+                make sure it meets Dono's guidelines and has the best possible chance of
+                reaching alumni and getting funded. We'll reach out directly if anything
+                needs adjusting.
+              </Text>
+            </View>
+          )}
+
           <View className="mt-8 flex-row justify-between">
             {step > 0 ? (
               <Pressable
@@ -294,7 +308,7 @@ export default function CreateCampaignPage() {
               <View />
             )}
 
-            {step < steps.length - 1 ? (
+            {step < 3 ? (
               <Pressable
                 onPress={() => setStep(step + 1)}
                 disabled={!canProceed()}
@@ -304,6 +318,13 @@ export default function CreateCampaignPage() {
               >
                 <Text className="font-sans-medium text-sm text-white">Continue</Text>
                 <ArrowRight size={16} color="#fff" />
+              </Pressable>
+            ) : step === 3 ? (
+              <Pressable
+                onPress={() => setStep(4)}
+                className="rounded-full bg-dono-accent px-6 py-2.5"
+              >
+                <Text className="font-sans-medium text-sm text-white">Verify Campaign</Text>
               </Pressable>
             ) : (
               <Pressable
@@ -342,7 +363,7 @@ export default function CreateCampaignPage() {
                 }`}
               >
                 <Text className="font-sans-medium text-sm text-white">
-                  {submitting ? "Launching..." : "Launch Campaign"}
+                  {submitting ? "Completing..." : "Complete"}
                 </Text>
               </Pressable>
             )}
