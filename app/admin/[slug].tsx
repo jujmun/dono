@@ -69,7 +69,7 @@ export default function AdminCampaignReviewPage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
           <Text className="mt-4 text-dono-muted">Loading review...</Text>
         </View>
       </AdminShell>
@@ -186,7 +186,7 @@ export default function AdminCampaignReviewPage() {
           asChild
         >
           <Pressable className="mb-6 flex-row items-center gap-2">
-            <ArrowLeft size={16} color="#5e6473" />
+            <ArrowLeft size={16} color="#56615A" />
             <Text className="text-sm text-dono-muted">
               {pending ? "Back to queue" : "Back to discover"}
             </Text>
@@ -296,7 +296,7 @@ export default function AdminCampaignReviewPage() {
             multiline
             numberOfLines={4}
             placeholder="Ask for changes, clarify requirements, or share next steps..."
-            placeholderTextColor="#5e6473"
+            placeholderTextColor="#56615A"
             className="mt-4 min-h-[100px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
             textAlignVertical="top"
           />

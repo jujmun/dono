@@ -82,7 +82,7 @@ function AdminHeader() {
               onPress={handleSignOut}
               className="ml-2 flex-row items-center gap-1.5 rounded-full border border-dono-border px-3 py-2"
             >
-              <LogOut size={16} color="#5e6473" />
+              <LogOut size={16} color="#56615A" />
               <Text className="font-sans-medium text-sm text-dono-muted">
                 Sign out
               </Text>
@@ -95,9 +95,9 @@ function AdminHeader() {
             accessibilityLabel="Toggle menu"
           >
             {mobileOpen ? (
-              <X size={20} color="#5e6473" />
+              <X size={20} color="#56615A" />
             ) : (
-              <Menu size={20} color="#5e6473" />
+              <Menu size={20} color="#56615A" />
             )}
           </Pressable>
         )}
@@ -118,7 +118,7 @@ function AdminHeader() {
                 >
                   <item.icon
                     size={16}
-                    color={active ? "#1d242f" : "#5e6473"}
+                    color={active ? "#168456" : "#56615A"}
                   />
                   <Text
                     className={cn(
@@ -136,7 +136,7 @@ function AdminHeader() {
             onPress={handleSignOut}
             className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border px-4 py-2.5"
           >
-            <LogOut size={16} color="#5e6473" />
+            <LogOut size={16} color="#56615A" />
             <Text className="font-sans-medium text-sm text-dono-muted">
               Sign out
             </Text>
@@ -163,7 +163,7 @@ function AdminMobileNav() {
               <Pressable className="items-center gap-0.5 px-3 py-2">
                 <item.icon
                   size={20}
-                  color={isActive ? "#1d242f" : "#5e6473"}
+                  color={isActive ? "#168456" : "#56615A"}
                   strokeWidth={isActive ? 2.5 : 2}
                 />
                 <Text

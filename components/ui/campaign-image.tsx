@@ -26,7 +26,7 @@ interface CampaignImageProps extends ViewProps {
 }
 
 export function CampaignImage({ image, className, children, style, ...rest }: CampaignImageProps) {
-  const colors = gradients[image] || ["#1d242f", "#151a22"];
+  const colors = gradients[image] || ["#168456", "#126E49"];
 
   return (
     <View className={cn("relative overflow-hidden", className)} style={style} {...rest}>

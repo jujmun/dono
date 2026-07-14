@@ -60,7 +60,7 @@ export function ActivityFeedItem({ item }: ActivityFeedItemProps) {
           )}
         </Text>
         <View className="mt-1 flex-row items-center gap-2">
-          <Icon size={12} color="#5e6473" />
+          <Icon size={12} color="#56615A" />
           <Text className="text-xs text-dono-muted">{item.timestamp}</Text>
         </View>
       </View>
@@ -94,7 +94,7 @@ export function EngagementStats({
     <View className={cn("flex-row flex-wrap items-center gap-4", className)}>
       {stats.map(({ icon: Icon, value, label }) => (
         <View key={label} className="flex-row items-center gap-1.5">
-          <Icon size={16} color="#5e6473" />
+          <Icon size={16} color="#56615A" />
           <Text className="font-sans-medium text-sm text-dono-text">{value}</Text>
           <Text className="text-sm text-dono-muted">{label}</Text>
         </View>

@@ -27,7 +27,7 @@ export default function AdminDiscoverPage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AdminShell>
     );
@@ -57,7 +57,7 @@ export default function AdminDiscoverPage() {
 
         {campaigns === undefined ? (
           <View className="items-center py-12">
-            <ActivityIndicator color="#1d242f" />
+            <ActivityIndicator color="#17211B" />
           </View>
         ) : campaigns.length === 0 ? (
           <View className="mt-8 rounded-2xl border border-dono-border bg-white px-6 py-10">
@@ -96,7 +96,7 @@ export default function AdminDiscoverPage() {
                       {campaign.description}
                     </Text>
                   </View>
-                  <ChevronRight size={20} color="#5e6473" />
+                  <ChevronRight size={20} color="#56615A" />
                 </View>
               </Pressable>
             ))}

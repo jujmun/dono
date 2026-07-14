@@ -36,7 +36,7 @@ export default function DashboardPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
           <Text className="mt-4 text-dono-muted">Loading your impact...</Text>
         </View>
       </AppShell>
@@ -93,7 +93,7 @@ export default function DashboardPage() {
               key={stat.label}
               className="flex-1 rounded-2xl border border-dono-border bg-white p-4"
             >
-              <stat.icon size={20} color="#1d242f" />
+              <stat.icon size={20} color="#17211B" />
               <Text className="mt-2 font-mono-medium text-xl text-dono-text">{stat.value}</Text>
               <Text className="text-xs text-dono-muted">{stat.label}</Text>
             </View>
@@ -102,7 +102,7 @@ export default function DashboardPage() {
 
         <View className="mb-8 overflow-hidden rounded-2xl bg-dono-primary p-6">
           <View className="mb-2 flex-row items-center gap-2">
-            <Sparkles size={20} color="#f7f4ed" />
+            <Sparkles size={20} color="#F7FAF8" />
             <Text className="font-mono uppercase tracking-wider text-dono-cream/80">
               Dono Wrapped {wrapped.year}
             </Text>
@@ -135,7 +135,7 @@ export default function DashboardPage() {
         <View className="gap-8">
           <View>
             <View className="mb-4 flex-row items-center gap-2">
-              <TrendingUp size={20} color="#1d242f" />
+              <TrendingUp size={20} color="#17211B" />
               <Text className="text-lg font-sans-medium text-dono-text">Your Impact</Text>
             </View>
             <View className="gap-3">
@@ -162,7 +162,7 @@ export default function DashboardPage() {
 
           <View>
             <View className="mb-4 flex-row items-center gap-2">
-              <Calendar size={20} color="#1d242f" />
+              <Calendar size={20} color="#17211B" />
               <Text className="text-lg font-sans-medium text-dono-text">
                 Recent Donations
               </Text>
@@ -210,7 +210,7 @@ export default function DashboardPage() {
             <Link href="/campaigns" asChild>
               <Pressable className="flex-row items-center gap-1">
                 <Text className="font-sans-medium text-sm text-dono-primary">Browse more</Text>
-                <ArrowRight size={16} color="#1d242f" />
+                <ArrowRight size={16} color="#168456" />
               </Pressable>
             </Link>
           </View>

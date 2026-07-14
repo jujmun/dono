@@ -71,7 +71,7 @@ export function CampaignCard({ campaign, variant = "default" }: CampaignCardProp
               {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
             </Text>
             <View className="flex-row items-center gap-1">
-              <Users size={12} color="#5e6473" />
+              <Users size={12} color="#56615A" />
               <Text className="font-mono text-xs text-dono-muted">
                 {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
               </Text>
@@ -114,7 +114,7 @@ export function CampaignCard({ campaign, variant = "default" }: CampaignCardProp
               {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
             </Text>
             <View className="flex-row items-center gap-1.5">
-              <Users size={14} color="#5e6473" />
+              <Users size={14} color="#56615A" />
               <Text className="font-mono text-sm text-dono-muted">
                 {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
               </Text>

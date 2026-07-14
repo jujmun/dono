@@ -27,7 +27,7 @@ export default function AdminPortalPage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
           <Text className="mt-4 text-dono-muted">Loading admin portal...</Text>
         </View>
       </AdminShell>
@@ -77,7 +77,7 @@ export default function AdminPortalPage() {
 
         {pending === undefined ? (
           <View className="items-center py-12">
-            <ActivityIndicator color="#1d242f" />
+            <ActivityIndicator color="#17211B" />
             <Text className="mt-4 text-dono-muted">Loading pending campaigns...</Text>
           </View>
         ) : pending.length === 0 ? (
@@ -121,7 +121,7 @@ export default function AdminPortalPage() {
                       {campaign.description}
                     </Text>
                   </View>
-                  <ChevronRight size={20} color="#5e6473" />
+                  <ChevronRight size={20} color="#56615A" />
                 </View>
               </Pressable>
             ))}
