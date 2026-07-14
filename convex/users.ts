@@ -11,6 +11,7 @@ import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
+import { toCampaign } from "./lib/mappers";
 
 function roleForEmail(email: string): "user" | "admin" {
   return isAdminIdentityEmail(email) ? "admin" : "user";
@@ -48,6 +49,40 @@ export const me = query({
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
+    };
+  },
+});
+
+/** Admin-only: student profile + their campaigns for moderation context. */
+export const getStudentForAdmin = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+    if (!profile) return null;
+
+    const storageUrl = profile.avatarStorageId
+      ? await ctx.storage.getUrl(profile.avatarStorageId)
+      : null;
+
+    const campaigns = await ctx.db.query("campaigns").collect();
+    const theirs = campaigns
+      .filter((c) => c.createdBy === args.userId)
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .map(toCampaign);
+
+    return {
+      userId: profile.userId,
+      name: profile.name ?? "",
+      email: profile.email,
+      avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
+      role: profile.role,
+      emailVerifiedAt: profile.emailVerifiedAt ?? null,
+      createdAt: profile.createdAt,
+      campaigns: theirs,
     };
   },
 });

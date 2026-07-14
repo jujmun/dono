@@ -28,6 +28,10 @@ export function toCampaign(campaign: CampaignDoc) {
     status: campaign.status,
     updates: campaign.updates,
     impactItems: campaign.impactItems,
+    moderationNote: campaign.moderationNote,
+    moderatedAt: campaign.moderatedAt,
+    moderationAction: campaign.moderationAction,
+    restoredAt: campaign.restoredAt,
   };
 }
 

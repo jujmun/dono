@@ -56,6 +56,11 @@ export interface Campaign {
   status: "pending" | "rejected" | "active" | "funded" | "completed";
   updates: CampaignUpdate[];
   impactItems?: string[];
+  /** Admin moderation fields (optional; present on admin payloads). */
+  moderationNote?: string;
+  moderatedAt?: number;
+  moderationAction?: "rejected" | "taken_down";
+  restoredAt?: number;
 }
 
 export interface CampaignUpdate {

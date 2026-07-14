@@ -3,6 +3,7 @@ import { type Href, Link, usePathname, useRouter } from "expo-router";
 import { View, Text, Pressable, ScrollView, useWindowDimensions } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import {
+  Archive,
   ClipboardCheck,
   Compass,
   LogOut,
@@ -13,8 +14,27 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { cn } from "@/lib/utils";
 
 const adminNavItems = [
-  { href: "/admin", label: "Review", icon: ClipboardCheck, exact: true },
-  { href: "/admin/discover", label: "Discover", icon: Compass, exact: false },
+  {
+    href: "/admin",
+    label: "Needs review",
+    shortLabel: "Needs review",
+    icon: ClipboardCheck,
+    exact: true,
+  },
+  {
+    href: "/admin/discover",
+    label: "Live posts",
+    shortLabel: "Live",
+    icon: Compass,
+    exact: false,
+  },
+  {
+    href: "/admin/archive",
+    label: "Removed",
+    shortLabel: "Removed",
+    icon: Archive,
+    exact: false,
+  },
 ] as const;
 
 function useIsWide() {
@@ -172,7 +192,7 @@ function AdminMobileNav() {
                     isActive ? "text-dono-primary" : "text-dono-muted",
                   )}
                 >
-                  {item.label}
+                  {item.shortLabel}
                 </Text>
               </Pressable>
             </Link>

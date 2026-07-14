@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { type Href, Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
 import { Users } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
@@ -8,6 +8,8 @@ import { buildReceiptLines, getReceiptSubtitle } from "@/lib/receipt";
 interface CampaignCardProps {
   campaign: Campaign;
   variant?: "default" | "compact";
+  /** Override destination (defaults to the public campaign page). */
+  href?: Href;
 }
 
 function ReceiptDivider() {
@@ -40,15 +42,19 @@ function ReceiptLineRow({
   );
 }
 
-export function CampaignCard({ campaign, variant = "default" }: CampaignCardProps) {
+export function CampaignCard({
+  campaign,
+  variant = "default",
+  href,
+}: CampaignCardProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
-  const href = `/campaigns/${campaign.id}` as const;
+  const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
   const receiptLines = buildReceiptLines(campaign);
   const subtitle = getReceiptSubtitle(campaign);
 
   if (variant === "compact") {
     return (
-      <Link href={href} asChild>
+      <Link href={destination} asChild>
         <Pressable className="rounded-lg border border-dono-border bg-white p-4 active:opacity-90">
           <View className="mb-2 flex-row items-start justify-between gap-3">
             <View className="min-w-0 flex-1">
@@ -83,7 +89,7 @@ export function CampaignCard({ campaign, variant = "default" }: CampaignCardProp
   }
 
   return (
-    <Link href={href} asChild>
+    <Link href={destination} asChild>
       <Pressable className="active:opacity-95">
         <Text className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-dono-muted">
           Active Campaign

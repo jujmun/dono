@@ -50,6 +50,13 @@ export const campaignFields = {
   updates: v.array(campaignUpdateValidator),
   impactItems: v.optional(v.array(v.string())),
   createdBy: v.optional(v.id("users")),
+  moderationNote: v.optional(v.string()),
+  moderatedAt: v.optional(v.number()),
+  moderatedBy: v.optional(v.id("users")),
+  moderationAction: v.optional(
+    v.union(v.literal("rejected"), v.literal("taken_down")),
+  ),
+  restoredAt: v.optional(v.number()),
 };
 
 export const communityFields = {

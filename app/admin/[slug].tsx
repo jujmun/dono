@@ -9,10 +9,24 @@ import {
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { type Href, Link, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Check, Send, Trash2, X } from "lucide-react-native";
+import {
+  ArrowLeft,
+  Check,
+  ChevronRight,
+  RotateCcw,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
 import { CategoryBadge } from "@/components/ui/category-badge";
+import {
+  AdminStatusChip,
+  humanCampaignStatus,
+  moderationActionLabel,
+  statusChipTone,
+} from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -57,12 +71,17 @@ export default function AdminCampaignReviewPage() {
   const approve = useMutation(api.campaigns.approve);
   const reject = useMutation(api.campaigns.reject);
   const takeDown = useMutation(api.campaigns.takeDown);
+  const restore = useMutation(api.campaigns.restore);
   const sendComment = useMutation(api.reviewMessages.send);
   const [comment, setComment] = useState("");
+  const [reason, setReason] = useState("");
+  const [reasonMode, setReasonMode] = useState<"reject" | "takedown" | null>(
+    null,
+  );
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState<
-    "approve" | "reject" | "comment" | "takedown" | null
+    "approve" | "reject" | "comment" | "takedown" | "restore" | null
   >(null);
 
   if (profile === undefined || (adminUser && detail === undefined)) {
@@ -104,7 +123,7 @@ export default function AdminCampaignReviewPage() {
           <Link href={"/admin" as Href} asChild>
             <Pressable className="mt-4 items-center">
               <Text className="font-sans-medium text-dono-primary">
-                Back to review queue
+                Back to waiting posts
               </Text>
             </Pressable>
           </Link>
@@ -117,28 +136,62 @@ export default function AdminCampaignReviewPage() {
   const student = detail.student;
   const messages = detail.messages;
   const pending = campaign.status === "pending";
+  const moderated = campaign.status === "rejected";
   const isLive =
     campaign.status === "active" ||
     campaign.status === "funded" ||
     campaign.status === "completed";
 
-  const handleDecision = async (decision: "approve" | "reject") => {
+  const backHref = pending
+    ? ("/admin" as Href)
+    : moderated
+      ? ("/admin/archive" as Href)
+      : ("/admin/discover" as Href);
+  const backLabel = pending
+    ? "Back to waiting posts"
+    : moderated
+      ? "Back to removed"
+      : "Back to live posts";
+
+  const handleApprove = async () => {
     setError(null);
     setInfo(null);
-    setBusy(decision);
+    setBusy("approve");
     try {
-      if (decision === "approve") {
-        await approve({ slug: campaign.id });
-        setInfo("Campaign accepted and now public.");
-      } else {
-        await reject({ slug: campaign.id });
-        setInfo("Campaign denied.");
-      }
+      await approve({ slug: campaign.id });
+      setInfo("Post approved and now live.");
       router.replace("/admin");
     } catch (err) {
       setError(getFriendlyAuthError(err));
     } finally {
       setBusy(null);
+    }
+  };
+
+  const submitReason = async () => {
+    const trimmed = reason.trim();
+    if (!trimmed) {
+      setError("A reason is required.");
+      return;
+    }
+    if (!reasonMode) return;
+    setError(null);
+    setInfo(null);
+    setBusy(reasonMode === "reject" ? "reject" : "takedown");
+    try {
+      if (reasonMode === "reject") {
+        await reject({ slug: campaign.id, reason: trimmed });
+        router.replace("/admin");
+      } else {
+        await takeDown({ slug: campaign.id, reason: trimmed });
+        router.replace("/admin/archive" as Href);
+      }
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setBusy(null);
+      setReasonMode(null);
+      setReason("");
     }
   };
 
@@ -162,13 +215,13 @@ export default function AdminCampaignReviewPage() {
     }
   };
 
-  const handleTakeDown = async () => {
+  const handleRestore = async () => {
     setError(null);
     setInfo(null);
-    setBusy("takedown");
+    setBusy("restore");
     try {
-      await takeDown({ slug: campaign.id });
-      router.replace("/admin/discover");
+      await restore({ slug: campaign.id });
+      router.replace("/admin/discover" as Href);
     } catch (err) {
       setError(getFriendlyAuthError(err));
     } finally {
@@ -176,28 +229,33 @@ export default function AdminCampaignReviewPage() {
     }
   };
 
+  const statusLabel = humanCampaignStatus(campaign);
+  const actionBadge = moderated
+    ? moderationActionLabel(campaign.moderationAction)
+    : null;
+
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <Link
-          href={
-            (pending ? "/admin" : "/admin/discover") as Href
-          }
-          asChild
-        >
+        <Link href={backHref} asChild>
           <Pressable className="mb-6 flex-row items-center gap-2">
             <ArrowLeft size={16} color="#5e6473" />
-            <Text className="text-sm text-dono-muted">
-              {pending ? "Back to queue" : "Back to discover"}
-            </Text>
+            <Text className="text-sm text-dono-muted">{backLabel}</Text>
           </Pressable>
         </Link>
 
         <View className="mb-6 flex-row flex-wrap items-center gap-2">
           <CategoryBadge category={campaign.category as CampaignCategory} />
-          <Text className="text-xs uppercase text-dono-muted">
-            {campaign.status}
-          </Text>
+          <AdminStatusChip
+            label={statusLabel}
+            tone={statusChipTone(statusLabel)}
+          />
+          {actionBadge ? (
+            <AdminStatusChip
+              label={actionBadge}
+              tone={statusChipTone(actionBadge)}
+            />
+          ) : null}
         </View>
 
         <Text className="font-display-medium text-2xl text-dono-text">
@@ -208,12 +266,37 @@ export default function AdminCampaignReviewPage() {
           {campaign.university}
         </Text>
 
+        {moderated && campaign.moderationNote ? (
+          <View className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5">
+            <Text className="font-sans-medium text-base text-rose-800">
+              Why it was removed
+            </Text>
+            <Text className="mt-2 text-sm text-rose-900">
+              {campaign.moderationNote}
+            </Text>
+            {campaign.moderatedAt ? (
+              <Text className="mt-2 text-xs text-rose-700/80">
+                {formatMessageTime(campaign.moderatedAt)}
+              </Text>
+            ) : null}
+          </View>
+        ) : null}
+
         <View className="mt-8 rounded-2xl border border-dono-border bg-white p-5">
           <Text className="font-sans-medium text-base text-dono-text">
-            Student profile
+            Student
           </Text>
           {student ? (
-            <View className="mt-4 flex-row items-center gap-4">
+            <Pressable
+              onPress={() =>
+                router.push(
+                  `/admin/students/${encodeURIComponent(student.userId)}` as Href,
+                )
+              }
+              className="mt-4 flex-row items-center gap-4"
+              accessibilityRole="button"
+              accessibilityLabel={`View student ${student.name || student.email}`}
+            >
               {student.avatarUrl ? (
                 <Image
                   source={{ uri: student.avatarUrl }}
@@ -236,14 +319,14 @@ export default function AdminCampaignReviewPage() {
                   {student.email}
                 </Text>
                 <Text className="mt-1 text-xs text-dono-muted">
-                  Listed as {campaign.creator.name} ({campaign.creator.type})
+                  View student
                 </Text>
               </View>
-            </View>
+              <ChevronRight size={20} color="#5e6473" />
+            </Pressable>
           ) : (
             <Text className="mt-3 text-sm text-dono-muted">
-              No linked student profile for this campaign. Creator shown as{" "}
-              {campaign.creator.name}.
+              No linked student account. Shown as {campaign.creator.name}.
             </Text>
           )}
         </View>
@@ -300,25 +383,29 @@ export default function AdminCampaignReviewPage() {
             className="mt-4 min-h-[100px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
             textAlignVertical="top"
           />
-          <Pressable
-            onPress={() => {
-              void handleSendComment();
-            }}
-            disabled={busy !== null || !student}
-            className={`mt-3 flex-row items-center justify-center gap-2 rounded-full bg-dono-primary py-3 ${
-              busy !== null || !student ? "opacity-50" : ""
-            }`}
-          >
-            <Send size={16} color="#fff" />
-            <Text className="font-sans-medium text-sm text-white">
-              {busy === "comment" ? "Sending..." : "Send comment"}
-            </Text>
-          </Pressable>
-          {!student ? (
-            <Text className="mt-2 text-xs text-dono-muted">
-              Comments need a linked student account with an email address.
-            </Text>
-          ) : null}
+          <View className="mt-3 flex-row items-center justify-between gap-3">
+            {!student ? (
+              <Text className="flex-1 text-xs text-dono-muted">
+                Comments need a linked student account with an email address.
+              </Text>
+            ) : (
+              <View className="flex-1" />
+            )}
+            <Pressable
+              onPress={() => {
+                void handleSendComment();
+              }}
+              disabled={busy !== null || !student || !comment.trim()}
+              className={`flex-row items-center gap-2 rounded-xl border border-dono-border bg-dono-surface-muted px-4 py-2.5 ${
+                busy !== null || !student || !comment.trim() ? "opacity-50" : ""
+              }`}
+            >
+              <Send size={15} color="#1d242f" />
+              <Text className="font-sans-medium text-sm text-dono-text">
+                {busy === "comment" ? "Sending..." : "Send"}
+              </Text>
+            </Pressable>
+          </View>
         </View>
 
         {error ? (
@@ -332,54 +419,151 @@ export default function AdminCampaignReviewPage() {
           </View>
         ) : null}
 
-        {pending ? (
-          <View className="mt-6 flex-row gap-3">
-            <Pressable
-              onPress={() => {
-                void handleDecision("approve");
-              }}
-              disabled={busy !== null}
-              className={`flex-1 flex-row items-center justify-center gap-2 rounded-full bg-dono-primary py-3 ${
-                busy !== null ? "opacity-50" : ""
-              }`}
-            >
-              <Check size={16} color="#fff" />
-              <Text className="font-sans-medium text-sm text-white">
-                {busy === "approve" ? "Working..." : "Accept"}
-              </Text>
-            </Pressable>
-            <Pressable
-              onPress={() => {
-                void handleDecision("reject");
-              }}
-              disabled={busy !== null}
-              className={`flex-1 flex-row items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 py-3 ${
-                busy !== null ? "opacity-50" : ""
-              }`}
-            >
-              <X size={16} color="#be123c" />
-              <Text className="font-sans-medium text-sm text-rose-700">
-                {busy === "reject" ? "Working..." : "Deny"}
-              </Text>
-            </Pressable>
+        {reasonMode ? (
+          <View className="mt-8 rounded-2xl border border-rose-200 bg-white p-5">
+            <Text className="font-sans-medium text-base text-dono-text">
+              {reasonMode === "reject"
+                ? "Why are you denying this?"
+                : "Why are you removing this?"}
+            </Text>
+            <Text className="mt-1 text-sm text-dono-muted">
+              Required. The student will get this by email.
+            </Text>
+            <TextInput
+              value={reason}
+              onChangeText={setReason}
+              multiline
+              numberOfLines={4}
+              placeholder="Explain what needs to change or why this was removed…"
+              placeholderTextColor="#5e6473"
+              className="mt-4 min-h-[100px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
+              textAlignVertical="top"
+              maxLength={1000}
+            />
+            <View className="mt-4 flex-row justify-end gap-2">
+              <Pressable
+                onPress={() => {
+                  setReasonMode(null);
+                  setReason("");
+                  setError(null);
+                }}
+                disabled={busy !== null}
+                className="rounded-xl px-4 py-2.5"
+              >
+                <Text className="font-sans-medium text-sm text-dono-muted">
+                  Cancel
+                </Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  void submitReason();
+                }}
+                disabled={busy !== null || !reason.trim()}
+                className={`flex-row items-center gap-2 rounded-xl bg-rose-600 px-4 py-2.5 ${
+                  busy !== null || !reason.trim() ? "opacity-50" : ""
+                }`}
+              >
+                {reasonMode === "reject" ? (
+                  <X size={15} color="#fff" />
+                ) : (
+                  <Trash2 size={15} color="#fff" />
+                )}
+                <Text className="font-sans-medium text-sm text-white">
+                  {busy === "reject" || busy === "takedown"
+                    ? "Working..."
+                    : reasonMode === "reject"
+                      ? "Confirm deny"
+                      : "Confirm remove"}
+                </Text>
+              </Pressable>
+            </View>
           </View>
         ) : null}
 
-        {isLive ? (
-          <Pressable
-            onPress={() => {
-              void handleTakeDown();
-            }}
-            disabled={busy !== null}
-            className={`mt-6 flex-row items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 py-3 ${
-              busy !== null ? "opacity-50" : ""
-            }`}
-          >
-            <Trash2 size={16} color="#be123c" />
-            <Text className="font-sans-medium text-sm text-rose-700">
-              {busy === "takedown" ? "Taking down..." : "Take down campaign"}
+        {(pending || isLive || moderated) && !reasonMode ? (
+          <View className="mt-8 rounded-2xl border border-dono-border bg-white p-5">
+            <Text className="font-sans-medium text-base text-dono-text">
+              Your decision
             </Text>
-          </Pressable>
+            <Text className="mt-1 text-sm text-dono-muted">
+              {pending
+                ? "Approve to publish, or deny with a reason."
+                : moderated
+                  ? "Put this post back on the site."
+                  : "Remove this post from the site."}
+            </Text>
+
+            {pending ? (
+              <View className="mt-4 flex-row gap-2">
+                <Pressable
+                  onPress={() => {
+                    void handleApprove();
+                  }}
+                  disabled={busy !== null}
+                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-dono-primary py-3 ${
+                    busy !== null ? "opacity-50" : ""
+                  }`}
+                >
+                  <Check size={16} color="#fff" />
+                  <Text className="font-sans-medium text-sm text-white">
+                    {busy === "approve" ? "Working..." : "Approve"}
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setError(null);
+                    setReason("");
+                    setReasonMode("reject");
+                  }}
+                  disabled={busy !== null}
+                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 py-3 ${
+                    busy !== null ? "opacity-50" : ""
+                  }`}
+                >
+                  <X size={16} color="#be123c" />
+                  <Text className="font-sans-medium text-sm text-rose-700">
+                    Deny
+                  </Text>
+                </Pressable>
+              </View>
+            ) : null}
+
+            {isLive ? (
+              <Pressable
+                onPress={() => {
+                  setError(null);
+                  setReason("");
+                  setReasonMode("takedown");
+                }}
+                disabled={busy !== null}
+                className={`mt-4 flex-row items-center justify-center gap-2 rounded-xl border border-rose-200 bg-rose-50 py-3 ${
+                  busy !== null ? "opacity-50" : ""
+                }`}
+              >
+                <Trash2 size={16} color="#be123c" />
+                <Text className="font-sans-medium text-sm text-rose-700">
+                  Remove from site
+                </Text>
+              </Pressable>
+            ) : null}
+
+            {moderated ? (
+              <Pressable
+                onPress={() => {
+                  void handleRestore();
+                }}
+                disabled={busy !== null}
+                className={`mt-4 flex-row items-center justify-center gap-2 rounded-xl bg-emerald-700 py-3 ${
+                  busy !== null ? "opacity-50" : ""
+                }`}
+              >
+                <RotateCcw size={16} color="#fff" />
+                <Text className="font-sans-medium text-sm text-white">
+                  {busy === "restore" ? "Working..." : "Put back live"}
+                </Text>
+              </Pressable>
+            ) : null}
+          </View>
         ) : null}
       </View>
     </AdminShell>
