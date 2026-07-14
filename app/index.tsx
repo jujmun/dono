@@ -17,9 +17,8 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { CampaignCard } from "@/components/campaign-card";
 import { CommunityCard } from "@/components/community-card";
-import { FundCard } from "@/components/fund-card";
 import { api } from "@convex/_generated/api";
-import type { Campaign, Community, CommunityFund } from "@/lib/types";
+import type { Campaign, Community } from "@/lib/types";
 
 export default function HomePage() {
   const { width } = useWindowDimensions();
@@ -30,14 +29,9 @@ export default function HomePage() {
   const featuredCommunities = (useQuery(api.communities.listFeatured, {
     limit: 3,
   }) ?? undefined) as Community[] | undefined;
-  const featuredFunds = (useQuery(api.funds.listFeatured, {
-    limit: 3,
-  }) ?? undefined) as CommunityFund[] | undefined;
 
   const loading =
-    featuredCampaigns === undefined ||
-    featuredCommunities === undefined ||
-    featuredFunds === undefined;
+    featuredCampaigns === undefined || featuredCommunities === undefined;
 
   return (
     <AppShell>
@@ -127,22 +121,6 @@ export default function HomePage() {
             </View>
           )}
         </View>
-      </View>
-
-      <View className="mx-auto w-full max-w-7xl px-4 py-16">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">Community Funds</Text>
-          <Text className="mt-1 text-dono-muted">
-            Donate across related projects without choosing a single campaign
-          </Text>
-        </View>
-        {!loading && (
-          <View className="gap-6">
-            {featuredFunds!.map((fund) => (
-              <FundCard key={fund.id} fund={fund} />
-            ))}
-          </View>
-        )}
       </View>
 
       <View className="mx-auto w-full max-w-7xl px-4 pb-20">

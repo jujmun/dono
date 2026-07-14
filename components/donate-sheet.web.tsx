@@ -3,6 +3,7 @@ import {
   ActivityIndicator,
   Modal,
   Pressable,
+  ScrollView,
   Text,
   View,
 } from "react-native";
@@ -85,20 +86,30 @@ function PaymentForm({
       : `Pay £${selectedAmount}`;
 
   return (
-    <View>
-      <PaymentElement />
-      {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
-      <Pressable
-        onPress={() => void handleDonate()}
-        disabled={loading || !stripe || !elements}
-        className="mt-6 flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+    <View className="flex-1">
+      <ScrollView
+        className="flex-1"
+        keyboardShouldPersistTaps="handled"
+        contentContainerStyle={{ paddingBottom: 16 }}
+        showsVerticalScrollIndicator
       >
-        {loading ? (
-          <ActivityIndicator color="#fff" />
-        ) : (
-          <Text className="font-sans-medium text-sm text-white">{payLabel}</Text>
-        )}
-      </Pressable>
+        <PaymentElement />
+        {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
+      </ScrollView>
+
+      <View className="border-t border-dono-border pt-4">
+        <Pressable
+          onPress={() => void handleDonate()}
+          disabled={loading || !stripe || !elements}
+          className="flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+        >
+          {loading ? (
+            <ActivityIndicator color="#fff" />
+          ) : (
+            <Text className="font-sans-medium text-sm text-white">{payLabel}</Text>
+          )}
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -177,7 +188,7 @@ export function DonateSheet({
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/40">
-        <View className="max-h-[90%] rounded-t-3xl bg-white p-6">
+        <View className="h-[90%] max-h-[90%] rounded-t-3xl bg-white px-6 pb-6 pt-6">
           <Text className="font-display-medium text-xl text-dono-text">Donate to campaign</Text>
           <Text className="mt-1 text-sm text-dono-muted">{campaignTitle}</Text>
           <Text className="mt-4 font-mono-medium text-3xl text-dono-primary">
@@ -186,16 +197,16 @@ export function DonateSheet({
               <Text className="text-base text-dono-muted">/month</Text>
             ) : null}
           </Text>
-          <Text className="mt-1 text-sm text-dono-muted">{frequencyLabel}</Text>
+          <Text className="mt-1 mb-4 text-sm text-dono-muted">{frequencyLabel}</Text>
 
           {loading ? (
-            <View className="items-center py-8">
+            <View className="flex-1 items-center justify-center py-8">
               <ActivityIndicator color="#1d242f" />
             </View>
           ) : error ? (
             <Text className="mt-4 text-sm text-red-600">{error}</Text>
           ) : clientSecret && stripePromise ? (
-            <View className="mt-4">
+            <View className="min-h-0 flex-1">
               <Elements stripe={stripePromise} options={{ clientSecret }}>
                 <PaymentForm
                   visible={visible}

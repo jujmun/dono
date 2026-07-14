@@ -38,5 +38,4 @@ export const updateProfileSchema = z.object({
     .trim()
     .min(2, "Name should be at least 2 characters.")
     .max(80, "Name should be at most 80 characters."),
-  avatarUrl: z.string().url().optional().or(z.literal("")),
 });

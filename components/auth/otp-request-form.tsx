@@ -65,9 +65,11 @@ function OtpRequestFormInner({
 
     void (async () => {
       try {
-        // Fixed OTP bypass stores the same code hash for every request; clear
-        // collisions before issuing a new one so verify's .unique() can succeed.
-        await clearFixedOtpCodes({});
+        // Only the admin bypass path uses a fixed OTP hash; clear collisions
+        // before issuing so verify's .unique() can succeed.
+        if (useAdminBypass) {
+          await clearFixedOtpCodes({});
+        }
         await assertAllowed({ flow, email: emailValue });
         await signIn("resend", formData);
         onSuccess?.(parsed.data.email);

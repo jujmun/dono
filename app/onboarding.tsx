@@ -15,7 +15,7 @@ export default function OnboardingPage() {
   const [error, setError] = useState<string | null>(null);
 
   const completeOnboarding = () => {
-    const parsed = updateProfileSchema.safeParse({ name, avatarUrl: "" });
+    const parsed = updateProfileSchema.safeParse({ name });
     if (!parsed.success) {
       setError(parsed.error.issues[0]?.message ?? "Please check your details.");
       return;
@@ -25,7 +25,6 @@ export default function OnboardingPage() {
     setError(null);
     void updateProfile({
       name: parsed.data.name,
-      avatarUrl: undefined,
     })
       .then(() => router.replace("/dashboard"))
       .catch((err) => setError(getFriendlyAuthError(err)))

@@ -257,7 +257,6 @@ export function Footer() {
               [
                 ["/campaigns", "Campaigns"],
                 ["/communities", "Communities"],
-                ["/funds", "Community Funds"],
                 ["/discover", "Discover"],
               ] as const
             ).map(([href, label]) => (

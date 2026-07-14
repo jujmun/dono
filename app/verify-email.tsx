@@ -10,6 +10,9 @@ import { api } from "@convex/_generated/api";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 const FIXED_BYPASS_OTP = "000000";
+const ADMIN_BYPASS_EMAIL = "admin@ox.ac.uk";
+const adminOtpBypassEnabled =
+  process.env.EXPO_PUBLIC_AUTH_ADMIN_OTP_BYPASS === "true";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -53,11 +56,15 @@ export default function VerifyEmailPage() {
     formData.append("email", parsed.data.email.toLowerCase());
     formData.append("code", parsed.data.code.trim());
     formData.append("flow", "email-verification");
-    const isBypassCode = parsed.data.code.trim() === FIXED_BYPASS_OTP;
+    const normalizedSubmitEmail = parsed.data.email.toLowerCase();
+    const isAdminBypassVerify =
+      adminOtpBypassEnabled &&
+      normalizedSubmitEmail === ADMIN_BYPASS_EMAIL &&
+      parsed.data.code.trim() === FIXED_BYPASS_OTP;
 
     void (async () => {
       try {
-        if (isBypassCode) {
+        if (isAdminBypassVerify) {
           await keepNewestFixedOtpCode({});
         }
         await assertAllowed({
@@ -98,7 +105,12 @@ export default function VerifyEmailPage() {
     const formData = new FormData();
     formData.append("email", normalizedEmail);
 
-    void clearFixedOtpCodes({})
+    const maybeClear =
+      adminOtpBypassEnabled && normalizedEmail === ADMIN_BYPASS_EMAIL
+        ? clearFixedOtpCodes({})
+        : Promise.resolve(null);
+
+    void maybeClear
       .then(() => assertAllowed({ flow: "signIn", email: normalizedEmail }))
       .then(() => signIn("resend", formData))
       .then(() => {

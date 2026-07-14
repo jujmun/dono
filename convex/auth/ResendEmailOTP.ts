@@ -1,7 +1,8 @@
-import Resend from "@auth/core/providers/resend";
 import { Resend as ResendClient } from "resend";
+import Resend from "@auth/core/providers/resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
+import { internal } from "../_generated/api";
 
 const OTP_ALPHABET = "0123456789";
 const OTP_LENGTH = 6;
@@ -51,31 +52,36 @@ export const ResendEmailOTP = Resend({
   maxAge: OTP_MAX_AGE_SECONDS,
   apiKey: process.env.AUTH_RESEND_KEY,
   async generateVerificationToken() {
-    // Dev bypass uses a fixed OTP so the client can auto-submit for
-    // admin@ox.ac.uk. convex-auth looks codes up with .unique() on the hash, so
-    // callers must clear prior hash(000000) rows before issuing a new code.
-    // Do not enable AUTH_ADMIN_OTP_BYPASS in production.
-    if (isAdminOtpBypassEnabled()) {
-      return ADMIN_BYPASS_OTP;
-    }
+    // Always random. Admin-only fixed OTP is applied later in
+    // sendVerificationRequest (where the email is known) by rewriting
+    // the just-stored code for admin@ox.ac.uk only.
     return generateOtpToken();
   },
-  async sendVerificationRequest({ identifier, provider, token }) {
-    const email = normalizeEmail(identifier);
+  // Convex Auth passes `ctx` as a second argument (Auth.js types omit it).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async sendVerificationRequest(params: any, ctx?: any) {
+    const email = normalizeEmail(String(params.identifier));
     assertAllowedDomain(email);
 
     if (isAdminOtpBypassEnabled() && isBypassAdminEmail(email)) {
-      // Skip Resend entirely for the temporary admin shortcut.
+      // Token generation cannot see the email, so a random code was stored.
+      // Rewrite only this admin account's row to the fixed bypass OTP.
+      if (ctx && typeof ctx.runMutation === "function") {
+        await ctx.runMutation(
+          internal.fixedOtpCleanup.setFixedBypassCodeForEmail,
+          { email },
+        );
+      }
       return;
     }
 
-    const resend = new ResendClient(provider.apiKey);
+    const resend = new ResendClient(params.provider.apiKey);
     const from = process.env.AUTH_EMAIL_FROM ?? "Dono <auth@dono.app>";
     const { error } = await resend.emails.send({
       from,
       to: [email],
       subject: "Your Dono sign-in code",
-      text: `Your Dono code is ${token}. It expires in 10 minutes.`,
+      text: `Your Dono code is ${params.token}. It expires in 10 minutes.`,
     });
 
     if (error) {

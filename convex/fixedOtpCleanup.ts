@@ -1,5 +1,11 @@
-import { mutation } from "./_generated/server";
-import { ADMIN_BYPASS_OTP, isAdminOtpBypassEnabled } from "./auth/ResendEmailOTP";
+import { v } from "convex/values";
+import { internalMutation, mutation } from "./_generated/server";
+import {
+  ADMIN_BYPASS_EMAIL,
+  ADMIN_BYPASS_OTP,
+  isAdminOtpBypassEnabled,
+  isBypassAdminEmail,
+} from "./auth/ResendEmailOTP";
 
 async function sha256Hex(input: string) {
   const digest = await crypto.subtle.digest(
@@ -56,5 +62,50 @@ export const keepNewestFixedOtpCode = mutation({
       deleted,
       kept: matches.length > 0 ? 1 : 0,
     };
+  },
+});
+
+/**
+ * After a random OTP is stored for admin@ox.ac.uk, rewrite that account's
+ * verification code to the fixed bypass OTP. No-ops unless bypass is enabled
+ * and email is exactly admin@ox.ac.uk.
+ */
+export const setFixedBypassCodeForEmail = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    if (!isAdminOtpBypassEnabled() || !isBypassAdminEmail(args.email)) {
+      return { updated: false };
+    }
+
+    const email = args.email.trim().toLowerCase();
+    const bypassHash = await sha256Hex(ADMIN_BYPASS_OTP);
+
+    // Drop any leftover fixed-OTP rows first so .unique() lookup stays clean.
+    const fixedRows = (
+      await ctx.db.query("authVerificationCodes").collect()
+    ).filter((row) => row.code === bypassHash);
+    for (const row of fixedRows) {
+      await ctx.db.delete(row._id);
+    }
+
+    const rows = (await ctx.db.query("authVerificationCodes").collect()).filter(
+      (row) =>
+        (row.emailVerified ?? "").trim().toLowerCase() === email ||
+        (row.emailVerified ?? "").trim().toLowerCase() === ADMIN_BYPASS_EMAIL,
+    );
+
+    if (rows.length === 0) {
+      return { updated: false };
+    }
+
+    // Keep a single row for this email and point it at the fixed OTP.
+    const [newest, ...older] = rows.sort(
+      (a, b) => b._creationTime - a._creationTime,
+    );
+    for (const row of older) {
+      await ctx.db.delete(row._id);
+    }
+    await ctx.db.patch(newest._id, { code: bypassHash });
+    return { updated: true };
   },
 });
