@@ -5,6 +5,7 @@ import type { QueryCtx } from "./_generated/server";
 import { toCampaign } from "./lib/mappers";
 import { requireAdmin, requireVerifiedUser } from "./lib/authz";
 import { clampLimit } from "./lib/pagination";
+import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 
 function slugify(title: string) {
   return title
@@ -15,6 +16,37 @@ function slugify(title: string) {
 
 function isPublicStatus(status: string) {
   return status === "active" || status === "funded" || status === "completed";
+}
+
+const MAX_REASON_LENGTH = 1000;
+
+function requireModerationReason(reason: string) {
+  const trimmed = reason.trim();
+  if (!trimmed || trimmed.length > MAX_REASON_LENGTH) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message: "A reason between 1 and 1000 characters is required.",
+    });
+  }
+  return trimmed;
+}
+
+function matchesSearch(
+  campaign: {
+    title: string;
+    university: string;
+    creator: { name: string };
+  },
+  search: string | undefined,
+) {
+  if (!search) return true;
+  const q = search.trim().toLowerCase();
+  if (!q) return true;
+  return (
+    campaign.title.toLowerCase().includes(q) ||
+    campaign.university.toLowerCase().includes(q) ||
+    campaign.creator.name.toLowerCase().includes(q)
+  );
 }
 
 const creatorTypeMap: Record<string, string> = {
@@ -107,13 +139,42 @@ export const listRelated = query({
 });
 
 export const listPendingForAdmin = query({
+  args: { search: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    return campaigns
+      .filter((c) => c.status === "pending" && matchesSearch(c, args.search))
+      .map(toCampaign);
+  },
+});
+
+export const listModeratedForAdmin = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
-      .filter((c) => c.status === "pending")
+      .filter((c) => c.status === "rejected")
+      .sort((a, b) => (b.moderatedAt ?? 0) - (a.moderatedAt ?? 0))
       .map(toCampaign);
+  },
+});
+
+export const getAdminStats = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    let pending = 0;
+    let live = 0;
+    let moderated = 0;
+    for (const c of campaigns) {
+      if (c.status === "pending") pending += 1;
+      else if (isPublicStatus(c.status)) live += 1;
+      else if (c.status === "rejected") moderated += 1;
+    }
+    return { pending, live, moderated };
   },
 });
 
@@ -189,9 +250,10 @@ export const approve = mutation({
 });
 
 export const reject = mutation({
-  args: { slug: v.string() },
+  args: { slug: v.string(), reason: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const reason = requireModerationReason(args.reason);
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -202,16 +264,29 @@ export const reject = mutation({
         message: "Pending campaign not found.",
       });
     }
-    await ctx.db.patch(campaign._id, { status: "rejected" });
+    await ctx.db.patch(campaign._id, {
+      status: "rejected",
+      moderationNote: reason,
+      moderatedAt: Date.now(),
+      moderatedBy: adminUserId,
+      moderationAction: "rejected",
+    });
+    const refreshed = (await ctx.db.get(campaign._id))!;
+    await insertReviewMessageAndScheduleEmail(ctx, {
+      campaign: refreshed,
+      adminUserId,
+      body: `Your campaign was not approved.\n\nReason: ${reason}`,
+    });
     return null;
   },
 });
 
 /** Remove a live campaign from public browse (active/funded/completed → rejected). */
 export const takeDown = mutation({
-  args: { slug: v.string() },
+  args: { slug: v.string(), reason: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const reason = requireModerationReason(args.reason);
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -222,7 +297,41 @@ export const takeDown = mutation({
         message: "Published campaign not found.",
       });
     }
-    await ctx.db.patch(campaign._id, { status: "rejected" });
+    await ctx.db.patch(campaign._id, {
+      status: "rejected",
+      moderationNote: reason,
+      moderatedAt: Date.now(),
+      moderatedBy: adminUserId,
+      moderationAction: "taken_down",
+    });
+    const refreshed = (await ctx.db.get(campaign._id))!;
+    await insertReviewMessageAndScheduleEmail(ctx, {
+      campaign: refreshed,
+      adminUserId,
+      body: `Your campaign was taken down from public browse.\n\nReason: ${reason}`,
+    });
+    return null;
+  },
+});
+
+export const restore = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.status !== "rejected") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Moderated campaign not found.",
+      });
+    }
+    await ctx.db.patch(campaign._id, {
+      status: "active",
+      restoredAt: Date.now(),
+    });
     return null;
   },
 });

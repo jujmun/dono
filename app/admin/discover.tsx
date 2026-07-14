@@ -1,27 +1,49 @@
+import { useState } from "react";
 import {
   View,
   Text,
-  Pressable,
+  TextInput,
   ActivityIndicator,
 } from "react-native";
 import { useQuery } from "convex/react";
-import { type Href, useRouter } from "expo-router";
-import { ChevronRight } from "lucide-react-native";
+import { type Href } from "expo-router";
+import { Search } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
+import { ActivityFeedItem } from "@/components/activity-feed";
+import { CampaignCard } from "@/components/campaign-card";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
-import { formatCurrency } from "@/lib/constants";
-import type { Campaign } from "@/lib/types";
+import type { ActivityItem, Campaign } from "@/lib/types";
+
+function matchesCampaignSearch(campaign: Campaign, query: string) {
+  if (!query) return true;
+  const q = query.toLowerCase();
+  return (
+    campaign.title.toLowerCase().includes(q) ||
+    campaign.university.toLowerCase().includes(q) ||
+    campaign.creator.name.toLowerCase().includes(q) ||
+    campaign.description.toLowerCase().includes(q)
+  );
+}
 
 export default function AdminDiscoverPage() {
-  const router = useRouter();
   const profile = useCurrentProfile();
   const adminUser = isPortalAdmin(profile);
-  const campaigns = useQuery(
+  const [search, setSearch] = useState("");
+  const trimmedSearch = search.trim();
+  const campaigns = (useQuery(
     api.campaigns.list,
     adminUser ? {} : "skip",
-  ) as Campaign[] | undefined;
+  ) ?? undefined) as Campaign[] | undefined;
+  const activityFeed = (useQuery(
+    api.activity.list,
+    adminUser && !trimmedSearch ? {} : "skip",
+  ) ?? undefined) as ActivityItem[] | undefined;
+
+  const liveCampaigns = [...(campaigns ?? []).filter((c) =>
+    matchesCampaignSearch(c, trimmedSearch),
+  )].sort((a, b) => b.likes + b.donors - (a.likes + a.donors));
 
   if (profile === undefined) {
     return (
@@ -47,61 +69,75 @@ export default function AdminDiscoverPage() {
 
   return (
     <AdminShell>
-      <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <Text className="font-display-medium text-2xl text-dono-text">
-          Discover
-        </Text>
-        <Text className="mt-1 text-dono-muted">
-          Published campaigns. Open one to take it down or send feedback.
-        </Text>
+      <View className="mx-auto w-full max-w-7xl px-4 py-8">
+        <View className="mb-8">
+          <Text className="font-display-medium text-2xl text-dono-text">
+            Live posts
+          </Text>
+          <Text className="mt-1 text-dono-muted">
+            Already published — search and open a post to remove it if needed
+          </Text>
+        </View>
 
-        {campaigns === undefined ? (
-          <View className="items-center py-12">
-            <ActivityIndicator color="#1d242f" />
-          </View>
-        ) : campaigns.length === 0 ? (
-          <View className="mt-8 rounded-2xl border border-dono-border bg-white px-6 py-10">
-            <Text className="font-sans-medium text-base text-dono-text">
-              No published campaigns
+        <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
+          <Search size={16} color="#5e6473" />
+          <TextInput
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search by name or title…"
+            placeholderTextColor="#5e6473"
+            className="flex-1 py-2 text-sm text-dono-text"
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+        </View>
+
+        <View className="gap-8">
+          <View>
+            <Text className="mb-4 text-lg font-sans-medium text-dono-text">
+              {trimmedSearch ? "Matching posts" : "All live posts"}
             </Text>
-            <Text className="mt-2 text-sm text-dono-muted">
-              Approved campaigns will appear here.
-            </Text>
+            {campaigns === undefined ? (
+              <ActivityIndicator color="#1d242f" />
+            ) : liveCampaigns.length === 0 ? (
+              <View className="rounded-2xl border border-dono-border bg-white p-6">
+                <Text className="text-center font-sans-medium text-dono-text">
+                  {trimmedSearch ? "No matches" : "No live posts yet"}
+                </Text>
+                <Text className="mt-2 text-center text-sm text-dono-muted">
+                  {trimmedSearch
+                    ? "Try a different name or title."
+                    : "Approved posts will appear here."}
+                </Text>
+              </View>
+            ) : (
+              <View className="gap-6">
+                {liveCampaigns.map((campaign) => (
+                  <CampaignCard
+                    key={campaign.id}
+                    campaign={campaign}
+                    href={`/admin/${campaign.id}` as Href}
+                  />
+                ))}
+              </View>
+            )}
           </View>
-        ) : (
-          <View className="mt-6 gap-4">
-            {campaigns.map((campaign) => (
-              <Pressable
-                key={campaign.id}
-                onPress={() =>
-                  router.push(
-                    `/admin/${encodeURIComponent(campaign.id)}` as Href,
-                  )
-                }
-                className="rounded-2xl border border-dono-border bg-white p-5"
-              >
-                <View className="flex-row items-start justify-between gap-3">
-                  <View className="flex-1">
-                    <Text className="font-display-medium text-lg text-dono-text">
-                      {campaign.title}
-                    </Text>
-                    <Text className="mt-1 text-sm text-dono-muted">
-                      {campaign.creator.name} · {campaign.university} ·{" "}
-                      {formatCurrency(campaign.raised)} raised · {campaign.status}
-                    </Text>
-                    <Text
-                      className="mt-3 text-sm text-dono-text"
-                      numberOfLines={2}
-                    >
-                      {campaign.description}
-                    </Text>
-                  </View>
-                  <ChevronRight size={20} color="#5e6473" />
-                </View>
-              </Pressable>
-            ))}
-          </View>
-        )}
+
+          {!trimmedSearch &&
+          activityFeed !== undefined &&
+          activityFeed.length > 0 ? (
+            <View>
+              <Text className="mb-4 text-lg font-sans-medium text-dono-text">
+                Recent activity
+              </Text>
+              <View className="gap-3">
+                {activityFeed.map((item) => (
+                  <ActivityFeedItem key={item.id} item={item} />
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </View>
       </View>
     </AdminShell>
   );
