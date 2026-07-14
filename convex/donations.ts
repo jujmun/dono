@@ -1,9 +1,12 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireUserId, requireVerifiedUser } from "./lib/authz";
-
-const MIN_DONATION_AMOUNT = 1;
-const MAX_DONATION_AMOUNT = 100_000;
+import {
+  DONATION_CURRENCY,
+  normalizeCampaignSlug,
+  validateDonationAmount,
+} from "./lib/donationAmounts";
+import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
 
 export const donate = mutation({
   args: {
@@ -12,7 +15,7 @@ export const donate = mutation({
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
-    const campaignSlug = args.campaignSlug.trim().toLowerCase();
+    const campaignSlug = normalizeCampaignSlug(args.campaignSlug);
     const amount = Number(args.amount);
 
     if (!campaignSlug) {
@@ -21,14 +24,11 @@ export const donate = mutation({
         message: "Campaign is required.",
       });
     }
-    if (
-      !Number.isFinite(amount) ||
-      amount < MIN_DONATION_AMOUNT ||
-      amount > MAX_DONATION_AMOUNT
-    ) {
+    const amountValidation = validateDonationAmount(amount);
+    if (!amountValidation.valid) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: "Donation amount must be between 1 and 100000.",
+        message: amountValidation.message,
       });
     }
 
@@ -47,17 +47,21 @@ export const donate = mutation({
       userId,
       campaignId: campaign._id,
       amount,
+      currency: DONATION_CURRENCY,
+      type: "one_time",
+      paymentStatus: "succeeded",
       createdAt: Date.now(),
     });
 
-    const raised = campaign.raised + amount;
-    const donors = campaign.donors + 1;
-    const status =
-      raised >= campaign.goal
-        ? "funded"
-        : campaign.status === "completed"
-          ? "completed"
-          : "active";
+    const { raised, donors, status } = computeCampaignAfterDonation(
+      {
+        raised: campaign.raised,
+        donors: campaign.donors,
+        goal: campaign.goal,
+        status: campaign.status,
+      },
+      amount,
+    );
 
     await ctx.db.patch(campaign._id, { raised, donors, status });
 
