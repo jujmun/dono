@@ -7,6 +7,7 @@ import {
   Users,
   PiggyBank,
   User,
+  Sparkles,
   Plus,
   Menu,
   X,
@@ -22,8 +23,8 @@ const navItems = [
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
   { href: "/communities", label: "Communities", icon: Users },
-  { href: "/account", label: "Account", icon: User },
-  { href: "/dashboard", label: "You", icon: User },
+  { href: "/dashboard", label: "Impact", icon: Sparkles },
+  { href: "/account", label: "You", icon: User },
 ] as const;
 
 function useIsWide() {
@@ -97,7 +98,7 @@ export function Header() {
                 </Pressable>
               </Link>
 
-              <Link href="/dashboard" asChild>
+              <Link href="/account" asChild>
                 <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
                   {profile?.avatarUrl ? (
                     <Image
