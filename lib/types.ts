@@ -53,7 +53,7 @@ export interface Campaign {
   image: string;
   createdAt: string;
   deadline: string;
-  status: "active" | "funded" | "completed";
+  status: "pending" | "rejected" | "active" | "funded" | "completed";
   updates: CampaignUpdate[];
   impactItems?: string[];
 }

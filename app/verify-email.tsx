@@ -3,18 +3,34 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { AppShell } from "@/components/app-shell";
+import {
+  getAuthProviderId,
+  type AuthProviderId,
+} from "@/lib/auth/admin";
 import { verifyEmailSchema, requestOtpSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 
 const RESEND_COOLDOWN_SECONDS = 30;
 
+function resolveProvider(
+  email: string,
+  param: string | undefined,
+): AuthProviderId {
+  if (param === "admin-email" || param === "resend") {
+    return param;
+  }
+  return getAuthProviderId(email);
+}
+
 export default function VerifyEmailPage() {
   const router = useRouter();
-  const params = useLocalSearchParams<{ email?: string }>();
+  const params = useLocalSearchParams<{ email?: string; provider?: string }>();
   const defaultEmail = useMemo(
     () => (typeof params.email === "string" ? params.email : ""),
     [params.email],
   );
+  const providerParam =
+    typeof params.provider === "string" ? params.provider : undefined;
   const { signIn } = useAuthActions();
   const [email, setEmail] = useState(defaultEmail);
   const [code, setCode] = useState("");
@@ -40,15 +56,17 @@ export default function VerifyEmailPage() {
     setLoading(true);
     setError(null);
     setInfo(null);
+    const normalizedEmail = parsed.data.email.toLowerCase();
+    const provider = resolveProvider(normalizedEmail, providerParam);
     const formData = new FormData();
-    formData.append("email", parsed.data.email.toLowerCase());
+    formData.append("email", normalizedEmail);
     formData.append("code", parsed.data.code.trim());
     formData.append("flow", "email-verification");
 
     void (async () => {
       try {
-        await signIn("resend", formData);
-        router.replace("/dashboard");
+        await signIn(provider, formData);
+        router.replace(provider === "admin-email" ? "/admin" : "/dashboard");
       } catch (err) {
         setError(getFriendlyAuthError(err));
       } finally {
@@ -68,10 +86,11 @@ export default function VerifyEmailPage() {
     setError(null);
     setInfo(null);
     const normalizedEmail = parsed.data.email.toLowerCase();
+    const provider = resolveProvider(normalizedEmail, providerParam);
     const formData = new FormData();
     formData.append("email", normalizedEmail);
 
-    void signIn("resend", formData)
+    void signIn(provider, formData)
       .then(() => {
         setInfo("A new code is on its way to your inbox.");
         setCooldown(RESEND_COOLDOWN_SECONDS);

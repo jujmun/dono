@@ -20,6 +20,7 @@ import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { authStorage } from "@/lib/auth-storage";
 import { StripeAppProvider } from "@/lib/stripe/provider";
 import { api } from "@convex/_generated/api";
@@ -64,9 +65,14 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       root === "forgot-password" ||
       root === "verify-email";
     const inAdmin = root === "admin";
-    const needsOnboarding = isAuthenticated && profile !== undefined && !profile?.name;
+    const adminUser = isPortalAdmin(profile);
+    const needsOnboarding =
+      isAuthenticated &&
+      profile !== undefined &&
+      !profile?.name &&
+      !adminUser;
 
-    if ((inProtected || inOnboarding) && !isAuthenticated) {
+    if ((inProtected || inOnboarding || inAdmin) && !isAuthenticated) {
       router.replace("/signin");
       return;
     }
@@ -77,16 +83,31 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     }
 
     if (inAuthPublic && isAuthenticated && profile && !needsOnboarding) {
-      router.replace("/dashboard");
+      router.replace(adminUser ? "/admin" : "/dashboard");
       return;
     }
 
     if (inOnboarding && isAuthenticated && profile?.name) {
-      router.replace("/dashboard");
+      router.replace(adminUser ? "/admin" : "/dashboard");
+      return;
     }
 
-    if (inAdmin && isAuthenticated && profile?.role !== "admin") {
+    if (inAdmin && isAuthenticated && profile !== undefined && !adminUser) {
       router.replace("/dashboard");
+      return;
+    }
+
+    // Outreach admins only use Review + Discover (campaign detail via Discover is fine).
+    if (
+      adminUser &&
+      isAuthenticated &&
+      profile !== undefined &&
+      !inAdmin &&
+      root !== "discover" &&
+      root !== "campaigns" &&
+      !inAuthPublic
+    ) {
+      router.replace("/admin");
     }
   }, [isAuthenticated, isLoading, segments, router, profile]);
 

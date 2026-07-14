@@ -1,8 +1,13 @@
 import { z } from "zod";
+import { isAdminLoginEmail } from "@/lib/auth/admin";
 
 function isOxfordEmail(email: string) {
   const domain = email.split("@")[1] ?? "";
   return domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
+}
+
+function isAllowedSignInEmail(email: string) {
+  return isOxfordEmail(email) || isAdminLoginEmail(email);
 }
 
 export const emailSchema = z
@@ -10,7 +15,10 @@ export const emailSchema = z
   .trim()
   .email("Enter a valid email.")
   .transform((value) => value.toLowerCase())
-  .refine(isOxfordEmail, "Use your Oxford email address (ending in ox.ac.uk).");
+  .refine(
+    isAllowedSignInEmail,
+    "Use your Oxford email address (ending in ox.ac.uk).",
+  );
 
 export const requestOtpSchema = z.object({
   email: emailSchema,

@@ -6,10 +6,15 @@ import {
 } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
+import { isAdminIdentityEmail } from "./auth/adminConfig";
 import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
+
+function roleForEmail(email: string): "user" | "admin" {
+  return isAdminIdentityEmail(email) ? "admin" : "user";
+}
 
 const AVATAR_UPLOAD_LIMIT = {
   maxAttempts: 10,
@@ -142,7 +147,7 @@ export const updateProfile = mutation({
         name: trimmedName,
         avatarUrl: args.avatarUrl,
         avatarStorageId: args.avatarStorageId,
-        role: "user",
+        role: roleForEmail(user.email),
         emailVerifiedAt: user.emailVerificationTime ?? undefined,
         createdAt: now,
         updatedAt: now,
@@ -182,6 +187,7 @@ export const ensureProfile = internalMutation({
       await ctx.db.patch(existing._id, {
         email: user.email,
         emailVerifiedAt: user.emailVerificationTime ?? existing.emailVerifiedAt,
+        ...(isAdminIdentityEmail(user.email) ? { role: "admin" as const } : {}),
         updatedAt: Date.now(),
       });
       return;
@@ -193,7 +199,7 @@ export const ensureProfile = internalMutation({
       email: user.email,
       name: user.name,
       avatarUrl: user.image,
-      role: "user",
+      role: roleForEmail(user.email),
       emailVerifiedAt: user.emailVerificationTime ?? undefined,
       createdAt: now,
       updatedAt: now,
@@ -220,6 +226,7 @@ export const ensureMyProfile = mutation({
         name: existing.name ?? user.name,
         avatarUrl: existing.avatarUrl ?? user.image,
         emailVerifiedAt: user.emailVerificationTime ?? existing.emailVerifiedAt,
+        ...(isAdminIdentityEmail(user.email) ? { role: "admin" as const } : {}),
         updatedAt: now,
       });
       return;
@@ -230,7 +237,7 @@ export const ensureMyProfile = mutation({
       email: user.email,
       name: user.name,
       avatarUrl: user.image,
-      role: "user",
+      role: roleForEmail(user.email),
       emailVerifiedAt: user.emailVerificationTime ?? undefined,
       createdAt: now,
       updatedAt: now,

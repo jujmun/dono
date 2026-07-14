@@ -32,6 +32,7 @@ import type * as lib_pagination from "../lib/pagination.js";
 import type * as lib_redirect from "../lib/redirect.js";
 import type * as lib_stripeOwnership from "../lib/stripeOwnership.js";
 import type * as lib_webhookIdempotency from "../lib/webhookIdempotency.js";
+import type * as reviewMessages from "../reviewMessages.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
@@ -72,6 +73,7 @@ declare const fullApi: ApiFromModules<{
   "lib/redirect": typeof lib_redirect;
   "lib/stripeOwnership": typeof lib_stripeOwnership;
   "lib/webhookIdempotency": typeof lib_webhookIdempotency;
+  reviewMessages: typeof reviewMessages;
   security: typeof security;
   seed: typeof seed;
   seedData: typeof seedData;

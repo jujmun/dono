@@ -23,6 +23,7 @@ export default function AccountPage() {
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
   const recurringDonations = useQuery(api.donations.listMyRecurringDonations);
+  const reviewMessages = useQuery(api.reviewMessages.listMine);
   const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
 
   const [name, setName] = useState("");
@@ -222,6 +223,42 @@ export default function AccountPage() {
               </Text>
             </Pressable>
           </View>
+        </View>
+
+        <View className="rounded-2xl border border-dono-border bg-white p-6">
+          <Text className="text-lg font-sans-medium text-dono-text">
+            Review feedback
+          </Text>
+          <Text className="mt-1 text-sm text-dono-muted">
+            Comments from the Dono team about your campaigns.
+          </Text>
+
+          {reviewMessages === undefined ? (
+            <View className="items-center py-6">
+              <ActivityIndicator color="#1d242f" />
+            </View>
+          ) : reviewMessages.length === 0 ? (
+            <Text className="mt-4 text-sm text-dono-muted">
+              No review comments yet.
+            </Text>
+          ) : (
+            <View className="mt-4 gap-3">
+              {reviewMessages.map((message) => (
+                <View
+                  key={message.id}
+                  className="rounded-xl border border-dono-border p-4"
+                >
+                  <Text className="font-sans-medium text-dono-text">
+                    {message.campaignTitle}
+                  </Text>
+                  <Text className="mt-2 text-sm text-dono-text">{message.body}</Text>
+                  <Text className="mt-2 text-xs text-dono-muted">
+                    {new Date(message.createdAt).toLocaleString("en-GB")}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          )}
         </View>
 
         <View className="rounded-2xl border border-dono-border bg-white p-6">
