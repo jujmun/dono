@@ -4,9 +4,10 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
+  TextInput,
 } from "react-native";
 import { useQuery } from "convex/react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import {
   Heart,
   Share2,
@@ -28,12 +29,18 @@ import { CampaignCard } from "@/components/campaign-card";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
+import { DonateSheet } from "@/components/donate-sheet";
+import { PRESET_DONATION_AMOUNTS } from "@/components/donate-sheet-types";
 
-const donationAmounts = [10, 25, 50, 100];
+const donationAmounts = [...PRESET_DONATION_AMOUNTS];
 
 export default function CampaignDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const posthog = usePostHog();
+  const [selectedAmount, setSelectedAmount] = useState(25);
+  const [customAmount, setCustomAmount] = useState("");
+  const [donateSheetOpen, setDonateSheetOpen] = useState(false);
+  const [donationMessage, setDonationMessage] = useState<string | null>(null);
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
   }) as Campaign | null | undefined;
@@ -85,6 +92,22 @@ export default function CampaignDetailPage() {
   }
 
   const progress = getProgress(campaign.raised, campaign.goal);
+  const resolvedAmount = customAmount
+    ? Number(customAmount)
+    : selectedAmount;
+
+  const openDonateSheet = () => {
+    setDonationMessage(null);
+    posthog?.capture("donation_started", {
+      campaign_id: campaign.id,
+      campaign_title: campaign.title,
+      campaign_category: campaign.category,
+      campaign_goal: campaign.goal,
+      campaign_raised: campaign.raised,
+      amount: resolvedAmount,
+    });
+    setDonateSheetOpen(true);
+  };
 
   return (
     <AppShell>
@@ -226,34 +249,54 @@ export default function CampaignDetailPage() {
                 {donationAmounts.map((amount) => (
                   <Pressable
                     key={amount}
-                    onPress={() =>
+                    onPress={() => {
+                      setCustomAmount("");
+                      setSelectedAmount(amount);
                       posthog?.capture("donation_amount_selected", {
                         campaign_id: campaign.id,
                         campaign_title: campaign.title,
                         amount,
-                      })
-                    }
-                    className="flex-1 items-center rounded-xl border border-dono-border py-2.5"
+                      });
+                    }}
+                    className={`flex-1 items-center rounded-xl border py-2.5 ${
+                      !customAmount && selectedAmount === amount
+                        ? "border-dono-primary bg-dono-primary/5"
+                        : "border-dono-border"
+                    }`}
                   >
                     <Text className="font-sans-medium text-sm text-dono-text">£{amount}</Text>
                   </Pressable>
                 ))}
               </View>
+              <TextInput
+                value={customAmount}
+                onChangeText={setCustomAmount}
+                keyboardType="numeric"
+                placeholder="Custom amount (£)"
+                className="mb-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
+              />
+              {donationMessage ? (
+                <Text className="mb-3 text-sm text-green-700">{donationMessage}</Text>
+              ) : null}
               <Pressable
-                onPress={() =>
-                  posthog?.capture("donation_started", {
-                    campaign_id: campaign.id,
-                    campaign_title: campaign.title,
-                    campaign_category: campaign.category,
-                    campaign_goal: campaign.goal,
-                    campaign_raised: campaign.raised,
-                  })
-                }
+                onPress={openDonateSheet}
                 className="mb-3 flex-row items-center justify-center gap-2 rounded-full bg-dono-accent py-3"
               >
                 <Gift size={16} color="#fff" />
                 <Text className="font-sans-medium text-sm text-white">Donate Now</Text>
               </Pressable>
+              <DonateSheet
+                visible={donateSheetOpen}
+                campaignId={campaign.id}
+                campaignTitle={campaign.title}
+                selectedAmount={resolvedAmount}
+                onClose={() => setDonateSheetOpen(false)}
+                onSuccess={(amount: number) => {
+                  setDonationMessage(
+                    `Thank you! Your £${amount} donation is being processed.`,
+                  );
+                }}
+              />
             </>
           )}
 

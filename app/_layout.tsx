@@ -22,6 +22,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import * as SecureStore from "expo-secure-store";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { StripeAppProvider } from "@/lib/stripe/provider";
 import { api } from "@convex/_generated/api";
 
 const convex = new ConvexReactClient(
@@ -142,7 +143,9 @@ export default function RootLayout() {
           : undefined
       }
     >
-      <AppTree />
+      <StripeAppProvider>
+        <AppTree />
+      </StripeAppProvider>
     </ConvexAuthProvider>
   );
 

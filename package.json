@@ -23,6 +23,8 @@
     "@expo-google-fonts/inter": "^0.4.2",
     "@expo-google-fonts/jetbrains-mono": "^0.4.1",
     "@react-native-async-storage/async-storage": "2.1.2",
+    "@stripe/react-stripe-js": "^6.7.0",
+    "@stripe/stripe-js": "^9.9.0",
     "@stripe/stripe-react-native": "^0.68.0",
     "convex": "^1.42.1",
     "expo": "~53.0.0",
