@@ -1,5 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import type { QueryCtx } from "./_generated/server";
 import { toCampaign } from "./lib/mappers";
 import { requireAdmin, requireVerifiedUser } from "./lib/authz";
 import { clampLimit } from "./lib/pagination";
@@ -9,6 +11,10 @@ function slugify(title: string) {
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "-")
     .replace(/^-|-$/g, "");
+}
+
+function isPublicStatus(status: string) {
+  return status === "active" || status === "funded" || status === "completed";
 }
 
 const creatorTypeMap: Record<string, string> = {
@@ -40,7 +46,7 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns.map(toCampaign);
+    return campaigns.filter((c) => isPublicStatus(c.status)).map(toCampaign);
   },
 });
 
@@ -48,8 +54,11 @@ export const listFeatured = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 3);
-    const campaigns = await ctx.db.query("campaigns").take(limit);
-    return campaigns.map(toCampaign);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    return campaigns
+      .filter((c) => isPublicStatus(c.status))
+      .slice(0, limit)
+      .map(toCampaign);
   },
 });
 
@@ -60,7 +69,10 @@ export const getBySlug = query({
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
-    return campaign ? toCampaign(campaign) : null;
+    if (!campaign || !isPublicStatus(campaign.status)) {
+      return null;
+    }
+    return toCampaign(campaign);
   },
 });
 
@@ -73,7 +85,7 @@ export const listByCommunity = query({
         q.eq("creator.communityId", args.communityId),
       )
       .collect();
-    return campaigns.map(toCampaign);
+    return campaigns.filter((c) => isPublicStatus(c.status)).map(toCampaign);
   },
 });
 
@@ -81,16 +93,137 @@ export const listRelated = query({
   args: { slug: v.string(), category: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 2);
-    const campaigns = await ctx.db
-      .query("campaigns")
-      .filter((q) =>
-        q.and(
-          q.neq(q.field("slug"), args.slug),
-          q.eq(q.field("category"), args.category),
-        ),
+    const campaigns = await ctx.db.query("campaigns").collect();
+    return campaigns
+      .filter(
+        (c) =>
+          isPublicStatus(c.status) &&
+          c.slug !== args.slug &&
+          c.category === args.category,
       )
-      .take(limit);
-    return campaigns.map(toCampaign);
+      .slice(0, limit)
+      .map(toCampaign);
+  },
+});
+
+export const listPendingForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    return campaigns
+      .filter((c) => c.status === "pending")
+      .map(toCampaign);
+  },
+});
+
+async function resolveStudentProfile(
+  ctx: QueryCtx,
+  createdBy: Id<"users"> | undefined,
+) {
+  if (!createdBy) return null;
+  const profile = await ctx.db
+    .query("profiles")
+    .withIndex("by_userId", (q) => q.eq("userId", createdBy))
+    .unique();
+  if (!profile) return null;
+  const storageUrl = profile.avatarStorageId
+    ? await ctx.storage.getUrl(profile.avatarStorageId)
+    : null;
+  return {
+    userId: profile.userId,
+    name: profile.name ?? "",
+    email: profile.email,
+    avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
+  };
+}
+
+export const getForAdmin = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) return null;
+
+    const student = await resolveStudentProfile(ctx, campaign.createdBy);
+    const messages = await ctx.db
+      .query("campaignReviewMessages")
+      .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+      .collect();
+
+    return {
+      campaign: toCampaign(campaign),
+      student,
+      messages: messages
+        .sort((a, b) => a.createdAt - b.createdAt)
+        .map((m) => ({
+          id: m._id,
+          body: m.body,
+          createdAt: m.createdAt,
+          emailSentAt: m.emailSentAt ?? null,
+        })),
+    };
+  },
+});
+
+export const approve = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.status !== "pending") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Pending campaign not found.",
+      });
+    }
+    await ctx.db.patch(campaign._id, { status: "active" });
+    return null;
+  },
+});
+
+export const reject = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.status !== "pending") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Pending campaign not found.",
+      });
+    }
+    await ctx.db.patch(campaign._id, { status: "rejected" });
+    return null;
+  },
+});
+
+/** Remove a live campaign from public browse (active/funded/completed → rejected). */
+export const takeDown = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || !isPublicStatus(campaign.status)) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Published campaign not found.",
+      });
+    }
+    await ctx.db.patch(campaign._id, { status: "rejected" });
+    return null;
   },
 });
 
@@ -201,7 +334,7 @@ export const create = mutation({
       image: "default",
       createdAt: today.toISOString().slice(0, 10),
       deadline: deadline.toISOString().slice(0, 10),
-      status: "active",
+      status: "pending",
       updates: [],
       impactItems: [],
       createdBy: userId,

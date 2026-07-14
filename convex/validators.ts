@@ -41,6 +41,8 @@ export const campaignFields = {
   createdAt: v.string(),
   deadline: v.string(),
   status: v.union(
+    v.literal("pending"),
+    v.literal("rejected"),
     v.literal("active"),
     v.literal("funded"),
     v.literal("completed"),

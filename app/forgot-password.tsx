@@ -3,6 +3,7 @@ import { View, Text, TextInput, Pressable } from "react-native";
 import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { AppShell } from "@/components/app-shell";
+import { getAuthProviderId } from "@/lib/auth/admin";
 import { requestOtpSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 
@@ -22,12 +23,16 @@ export default function ForgotPasswordPage() {
     }
     setError(null);
     setLoading(true);
+    const normalizedEmail = parsed.data.email.toLowerCase();
+    const provider = getAuthProviderId(normalizedEmail);
     const formData = new FormData();
-    formData.append("email", parsed.data.email.toLowerCase());
-    formData.append("flow", "reset");
+    formData.append("email", normalizedEmail);
+    if (provider === "resend") {
+      formData.append("flow", "reset");
+    }
 
     // Rate limits are enforced server-side in sendVerificationRequest.
-    void signIn("resend", formData)
+    void signIn(provider, formData)
       .then(() => {
         setSent(true);
       })
@@ -90,11 +95,15 @@ export default function ForgotPasswordPage() {
             </Pressable>
 
             <Pressable
-              onPress={() =>
-                router.push(
-                  `/verify-email?email=${encodeURIComponent(email)}` as Href,
-                )
-              }
+              onPress={() => {
+                const normalized = email.trim().toLowerCase();
+                const provider = getAuthProviderId(normalized);
+                const params = new URLSearchParams({ email: normalized });
+                if (provider === "admin-email") {
+                  params.set("provider", provider);
+                }
+                router.push(`/verify-email?${params.toString()}` as Href);
+              }}
               className="items-center"
             >
               <Text className="text-sm text-dono-primary">I already have a code</Text>

@@ -11,18 +11,26 @@ import {
   Menu,
   X,
   LogOut,
+  ClipboardCheck,
 } from "lucide-react-native";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useCurrentProfile } from "@/lib/auth/hooks";
+import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const studentNavItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
   { href: "/communities", label: "Communities", icon: Users },
   { href: "/account", label: "Account", icon: User },
   { href: "/dashboard", label: "You", icon: User },
+] as const;
+
+const adminNavItems = [
+  { href: "/admin", label: "Review", icon: ClipboardCheck },
+  { href: "/discover", label: "Discover", icon: Compass },
 ] as const;
 
 function useIsWide() {
@@ -37,6 +45,10 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
+  const profile = useCurrentProfile();
+  const adminUser = isPortalAdmin(profile);
+  const navItems = adminUser ? adminNavItems : studentNavItems;
+  const brandHref = (adminUser ? "/admin" : "/") as Href;
 
   const handleSignOut = () => {
     setMobileOpen(false);
@@ -48,7 +60,7 @@ export function Header() {
   return (
     <View className="z-50 border-b border-dono-border bg-dono-bg/95">
       <View className="mx-auto h-16 w-full max-w-7xl flex-row items-center justify-between px-4">
-        <Link href="/" asChild>
+        <Link href={brandHref} asChild>
           <Pressable className="flex-row items-center gap-2">
             <Text className="font-display-medium text-xl text-dono-text">Dono</Text>
           </Pressable>
@@ -56,7 +68,7 @@ export function Header() {
 
         {isWide && (
           <View className="flex-row items-center gap-1">
-            {navItems.slice(1, -1).map((item) => {
+            {(adminUser ? navItems : studentNavItems.slice(1, -1)).map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(item.href + "/");
               return (
@@ -64,13 +76,13 @@ export function Header() {
                   <Pressable
                     className={cn(
                       "rounded-lg px-3 py-2",
-                      active ? "bg-dono-primary/10" : ""
+                      active ? "bg-dono-primary/10" : "",
                     )}
                   >
                     <Text
                       className={cn(
                         "font-sans-medium text-sm",
-                        active ? "text-dono-primary" : "text-dono-muted"
+                        active ? "text-dono-primary" : "text-dono-muted",
                       )}
                     >
                       {item.label}
@@ -85,18 +97,26 @@ export function Header() {
         <View className="flex-row items-center gap-2">
           {isWide && (
             <>
-              <Link href="/create" asChild>
-                <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
-                  <Plus size={16} color="#fff" />
-                  <Text className="font-sans-medium text-sm text-white">Start a Campaign</Text>
-                </Pressable>
-              </Link>
+              {!adminUser ? (
+                <>
+                  <Link href="/create" asChild>
+                    <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
+                      <Plus size={16} color="#fff" />
+                      <Text className="font-sans-medium text-sm text-white">
+                        Start a Campaign
+                      </Text>
+                    </Pressable>
+                  </Link>
 
-              <Link href="/dashboard" asChild>
-                <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-dono-primary/10">
-                  <Text className="font-mono-medium text-sm text-dono-primary">Y</Text>
-                </Pressable>
-              </Link>
+                  <Link href="/dashboard" asChild>
+                    <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-dono-primary/10">
+                      <Text className="font-mono-medium text-sm text-dono-primary">
+                        Y
+                      </Text>
+                    </Pressable>
+                  </Link>
+                </>
+              ) : null}
 
               {!isLoading &&
                 (isAuthenticated ? (
@@ -105,12 +125,16 @@ export function Header() {
                     className="flex-row items-center gap-1.5 rounded-full border border-dono-border px-3 py-2"
                   >
                     <LogOut size={16} color="#5e6473" />
-                    <Text className="font-sans-medium text-sm text-dono-muted">Sign out</Text>
+                    <Text className="font-sans-medium text-sm text-dono-muted">
+                      Sign out
+                    </Text>
                   </Pressable>
                 ) : (
                   <Link href="/signin" asChild>
                     <Pressable className="rounded-full border border-dono-border px-4 py-2">
-                      <Text className="font-sans-medium text-sm text-dono-muted">Sign in</Text>
+                      <Text className="font-sans-medium text-sm text-dono-muted">
+                        Sign in
+                      </Text>
                     </Pressable>
                   </Link>
                 ))}
@@ -136,14 +160,15 @@ export function Header() {
       {mobileOpen && !isWide && (
         <View className="border-t border-dono-border bg-dono-bg px-4 py-3">
           {navItems.map((item) => {
-            const active = pathname === item.href;
+            const active =
+              pathname === item.href || pathname.startsWith(item.href + "/");
             return (
               <Link key={item.href} href={item.href as Href} asChild>
                 <Pressable
                   onPress={() => setMobileOpen(false)}
                   className={cn(
                     "flex-row items-center gap-3 rounded-lg px-3 py-2.5",
-                    active ? "bg-dono-primary/10" : ""
+                    active ? "bg-dono-primary/10" : "",
                   )}
                 >
                   <item.icon
@@ -153,7 +178,7 @@ export function Header() {
                   <Text
                     className={cn(
                       "font-sans-medium text-sm",
-                      active ? "text-dono-primary" : "text-dono-muted"
+                      active ? "text-dono-primary" : "text-dono-muted",
                     )}
                   >
                     {item.label}
@@ -162,15 +187,19 @@ export function Header() {
               </Link>
             );
           })}
-          <Link href="/create" asChild>
-            <Pressable
-              onPress={() => setMobileOpen(false)}
-              className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-accent px-4 py-2.5"
-            >
-              <Plus size={16} color="#fff" />
-              <Text className="font-sans-medium text-sm text-white">Start a Campaign</Text>
-            </Pressable>
-          </Link>
+          {!adminUser ? (
+            <Link href="/create" asChild>
+              <Pressable
+                onPress={() => setMobileOpen(false)}
+                className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-accent px-4 py-2.5"
+              >
+                <Plus size={16} color="#fff" />
+                <Text className="font-sans-medium text-sm text-white">
+                  Start a Campaign
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null}
           {!isLoading &&
             (isAuthenticated ? (
               <Pressable
@@ -178,7 +207,9 @@ export function Header() {
                 className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border px-4 py-2.5"
               >
                 <LogOut size={16} color="#5e6473" />
-                <Text className="font-sans-medium text-sm text-dono-muted">Sign out</Text>
+                <Text className="font-sans-medium text-sm text-dono-muted">
+                  Sign out
+                </Text>
               </Pressable>
             ) : (
               <Link href="/signin" asChild>
@@ -186,7 +217,9 @@ export function Header() {
                   onPress={() => setMobileOpen(false)}
                   className="mt-2 items-center rounded-full border border-dono-border px-4 py-2.5"
                 >
-                  <Text className="font-sans-medium text-sm text-dono-muted">Sign in</Text>
+                  <Text className="font-sans-medium text-sm text-dono-muted">
+                    Sign in
+                  </Text>
                 </Pressable>
               </Link>
             ))}
@@ -199,6 +232,9 @@ export function Header() {
 export function MobileNav() {
   const pathname = usePathname();
   const isWide = useIsWide();
+  const profile = useCurrentProfile();
+  const adminUser = isPortalAdmin(profile);
+  const navItems = adminUser ? adminNavItems : studentNavItems;
 
   if (isWide) return null;
 
@@ -221,7 +257,7 @@ export function MobileNav() {
                 <Text
                   className={cn(
                     "font-sans-medium text-xs",
-                    isActive ? "text-dono-primary" : "text-dono-muted"
+                    isActive ? "text-dono-primary" : "text-dono-muted",
                   )}
                 >
                   {item.label}
@@ -237,6 +273,18 @@ export function MobileNav() {
 
 export function Footer() {
   const isWide = useIsWide();
+  const profile = useCurrentProfile();
+  const adminUser = isPortalAdmin(profile);
+  const platformLinks = adminUser
+    ? ([
+        ["/admin", "Review"],
+        ["/discover", "Discover"],
+      ] as const)
+    : ([
+        ["/campaigns", "Campaigns"],
+        ["/communities", "Communities"],
+        ["/discover", "Discover"],
+      ] as const);
 
   return (
     <View className="border-t border-dono-border bg-dono-surface-muted">
@@ -252,14 +300,10 @@ export function Footer() {
           </View>
 
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
-            <Text className="mb-3 font-sans-medium text-sm text-dono-text">Platform</Text>
-            {(
-              [
-                ["/campaigns", "Campaigns"],
-                ["/communities", "Communities"],
-                ["/discover", "Discover"],
-              ] as const
-            ).map(([href, label]) => (
+            <Text className="mb-3 font-sans-medium text-sm text-dono-text">
+              Platform
+            </Text>
+            {platformLinks.map(([href, label]) => (
               <Link key={href} href={href} asChild>
                 <Pressable className="py-1">
                   <Text className="text-sm text-dono-muted">{label}</Text>
@@ -269,7 +313,9 @@ export function Footer() {
           </View>
 
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
-            <Text className="mb-3 font-sans-medium text-sm text-dono-text">Principles</Text>
+            <Text className="mb-3 font-sans-medium text-sm text-dono-text">
+              Principles
+            </Text>
             {[
               "Radical transparency",
               "Small donations, big impact",
@@ -285,7 +331,8 @@ export function Footer() {
 
         <View className="mt-8 border-t border-dono-border pt-8">
           <Text className="text-center text-xs text-dono-muted">
-            © 2026 Dono. Making university giving transparent, social and rewarding.
+            © 2026 Dono. Making university giving transparent, social and
+            rewarding.
           </Text>
         </View>
       </View>

@@ -1,17 +1,18 @@
 export type AuthProviderId = "resend" | "admin-email";
 
+/** Sole non-Oxford address allowed for outreach admin portal login. */
+export const OUTREACH_ADMIN_EMAIL = "dono.outreach@gmail.com";
+
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
 export function getPublicAdminEmail() {
-  return process.env.EXPO_PUBLIC_ADMIN_EMAIL?.trim().toLowerCase() ?? "";
+  return OUTREACH_ADMIN_EMAIL;
 }
 
 export function isAdminLoginEmail(email: string) {
-  const adminEmail = getPublicAdminEmail();
-  if (!adminEmail) return false;
-  return normalizeEmail(email) === adminEmail;
+  return normalizeEmail(email) === OUTREACH_ADMIN_EMAIL;
 }
 
 export function getAuthProviderId(email: string): AuthProviderId {

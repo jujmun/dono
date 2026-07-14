@@ -2,6 +2,9 @@ export function getFriendlyPaymentError(error: unknown) {
   const message =
     error instanceof Error ? error.message : "Something went wrong. Please retry.";
 
+  if (/ADMIN_CANNOT_DONATE|admin accounts cannot donate/i.test(message)) {
+    return "Admin accounts cannot donate to campaigns.";
+  }
   if (/EMAIL_NOT_VERIFIED|verify your email/i.test(message)) {
     return "Please verify your email before donating.";
   }

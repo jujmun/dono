@@ -4,6 +4,11 @@ import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
+import {
+  getAuthProviderId,
+  OUTREACH_ADMIN_EMAIL,
+  type AuthProviderId,
+} from "@/lib/auth/admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { requestOtpSchema } from "@/lib/validation/auth";
 
@@ -27,6 +32,14 @@ type OtpRequestFormProps = {
   footer?: React.ReactNode;
   onSuccess?: (email: string) => void;
 };
+
+function verifyHref(email: string, provider: AuthProviderId): Href {
+  const params = new URLSearchParams({ email });
+  if (provider === "admin-email") {
+    params.set("provider", provider);
+  }
+  return `/verify-email?${params.toString()}` as Href;
+}
 
 function OtpRequestFormInner({
   flow,
@@ -59,11 +72,13 @@ function OtpRequestFormInner({
 
     const useAdminBypass =
       adminOtpBypassEnabled && emailValue === ADMIN_BYPASS_EMAIL;
+    // Bypass always uses resend; outreach portal uses admin-email when configured.
+    const provider = useAdminBypass ? "resend" : getAuthProviderId(emailValue);
 
     void (async () => {
       try {
         // Rate limits are enforced server-side in sendVerificationRequest.
-        await signIn("resend", formData);
+        await signIn(provider, formData);
         onSuccess?.(parsed.data.email);
 
         if (useAdminBypass) {
@@ -76,9 +91,7 @@ function OtpRequestFormInner({
           return;
         }
 
-        router.push(
-          `/verify-email?email=${encodeURIComponent(emailValue)}` as Href,
-        );
+        router.push(verifyHref(emailValue, provider));
       } catch (err) {
         setError(getFriendlyAuthError(err as Error));
       } finally {
@@ -112,7 +125,8 @@ function OtpRequestFormInner({
                 className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
               />
               <Text className="mt-1 text-xs text-dono-muted">
-                Only Oxford email addresses (ending in ox.ac.uk) are accepted.
+                Oxford emails (ending in ox.ac.uk). Exception:{" "}
+                {OUTREACH_ADMIN_EMAIL}.
               </Text>
             </View>
 

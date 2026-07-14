@@ -51,9 +51,11 @@ Set these in `.env.local` (see `.env.local.example`):
 - `AUTH_EMAIL_FROM` (optional; defaults to `Dono <auth@dono.app>`)
 
 Sign-in is restricted to University of Oxford email addresses (`ox.ac.uk` and
-its subdomains). The check is enforced server-side in
-`convex/auth/ResendEmailOTP.ts` and mirrored client-side in
-`lib/validation/auth.ts`.
+its subdomains), with one hard-coded exception: `dono.outreach@gmail.com`
+(outreach admin portal). Oxford OTP is enforced in
+`convex/auth/ResendEmailOTP.ts`; outreach admin OTP uses
+`convex/auth/AdminEmailOTP.ts`. Client validation mirrors this in
+`lib/validation/auth.ts` / `lib/auth/admin.ts`.
 
 ### 3) Auth flows available
 
@@ -74,6 +76,38 @@ npx convex run users:bootstrapFirstAdmin '{"email":"you@example.com"}'
 ```
 
 After first bootstrap, role changes should be made via admin-only mutation (`users:setUserRole`).
+
+### 4b) Outreach admin portal (backend handoff)
+
+The `/admin` campaign-review UI is frontend-ready. These **Convex changes are required**
+before accept/deny works end-to-end. Do not confuse with the local OTP bypass.
+
+**Separate identities**
+
+| Email | Purpose |
+|-------|---------|
+| `admin@ox.ac.uk` | Local/dev OTP bypass only (`AUTH_ADMIN_OTP_BYPASS`). Leaves `resend` + fixed code `000000` unchanged. Does **not** open `/admin`. |
+| `dono.outreach@gmail.com` | Real outreach admin. Signs in via `admin-email` provider → `/admin`. |
+
+**Env (set on the Convex deployment + client)**
+
+```bash
+npx convex env set ADMIN_EMAIL dono.outreach@gmail.com
+npx convex env set ADMIN_CODE_RECIPIENT dono.outreach@gmail.com
+```
+
+In `.env.local` the client no longer needs `EXPO_PUBLIC_ADMIN_EMAIL` — it
+hardcodes `dono.outreach@gmail.com` in `lib/auth/admin.ts` as the sole
+non-Oxford sign-in exception.
+
+**Backend checklist**
+
+1. In `ensureMyProfile` / profile creation: if email equals `ADMIN_EMAIL`, set `role: "admin"` (today `bootstrapFirstAdmin` rejects non-Oxford emails).
+2. Extend campaign `status` to `"pending" | "rejected" | "active" | "funded" | "completed"`.
+3. `campaigns.create` inserts `status: "pending"`.
+4. Public campaign queries return only `active` | `funded` | `completed`.
+5. Admin-only: `campaigns.listPendingForAdmin`, `campaigns.approve` (`pending` → `active`), `campaigns.reject` (`pending` → `rejected`) — args use `{ slug: string }` to match client campaign `id`.
+6. Leave `AUTH_ADMIN_OTP_BYPASS` / `admin@ox.ac.uk` bypass logic alone.
 
 ### 5) Security controls
 

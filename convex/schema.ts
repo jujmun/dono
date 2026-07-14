@@ -93,4 +93,17 @@ export default defineSchema({
   })
     .index("by_storageId", ["storageId"])
     .index("by_user", ["userId"]),
+  /** Admin review comments sent to campaign creators. */
+  campaignReviewMessages: defineTable({
+    campaignId: v.id("campaigns"),
+    campaignSlug: v.string(),
+    studentUserId: v.id("users"),
+    adminUserId: v.id("users"),
+    body: v.string(),
+    createdAt: v.number(),
+    emailSentAt: v.optional(v.number()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_student", ["studentUserId"])
+    .index("by_slug", ["campaignSlug"]),
 });

@@ -7,7 +7,24 @@ import {
   validateDonationAmount,
 } from "./lib/donationAmounts";
 import { getProfileByUserId } from "./lib/authz";
+import { isAdminIdentityEmail } from "./auth/adminConfig";
 import { getRecurringDonationForUserHandler } from "./lib/stripeOwnership";
+
+export const assertNotAdminDonor = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const profile = await getProfileByUserId(ctx, args.userId);
+    const isAdmin =
+      profile?.role === "admin" ||
+      isAdminIdentityEmail(profile?.email ?? "");
+    if (isAdmin) {
+      throw new ConvexError({
+        code: "ADMIN_CANNOT_DONATE",
+        message: "Admin accounts cannot donate to campaigns.",
+      });
+    }
+  },
+});
 
 export const countPendingDonationsForUser = internalQuery({
   args: { userId: v.id("users") },

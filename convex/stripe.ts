@@ -134,6 +134,8 @@ async function requireSignedInDonationContext(
     { userId },
   );
 
+  await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
+
   return { userId, userContext, campaign, amount: validAmount };
 }
 
@@ -196,6 +198,7 @@ export const createPaymentIntent = action({
     let receiptEmail = donorEmail;
 
     if (userId) {
+      await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
       const userContext = await ctx.runQuery(
         internal.stripeInternal.getVerifiedUserContext,
         { userId },
