@@ -30,7 +30,10 @@ import { formatCurrency, getProgress } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
-import { PRESET_DONATION_AMOUNTS } from "@/components/donate-sheet-types";
+import {
+  PRESET_DONATION_AMOUNTS,
+  type DonationFrequency,
+} from "@/components/donate-sheet-types";
 
 const donationAmounts = [...PRESET_DONATION_AMOUNTS];
 
@@ -39,6 +42,8 @@ export default function CampaignDetailPage() {
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState("");
+  const [donationFrequency, setDonationFrequency] =
+    useState<DonationFrequency>("one_time");
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [donationMessage, setDonationMessage] = useState<string | null>(null);
   const campaign = useQuery(api.campaigns.getBySlug, {
@@ -105,6 +110,7 @@ export default function CampaignDetailPage() {
       campaign_goal: campaign.goal,
       campaign_raised: campaign.raised,
       amount: resolvedAmount,
+      donation_type: donationFrequency === "monthly" ? "recurring" : "one_time",
     });
     setDonateSheetOpen(true);
   };
@@ -246,6 +252,28 @@ export default function CampaignDetailPage() {
           {campaign.status !== "funded" && (
             <>
               <View className="mb-4 mt-4 flex-row gap-2">
+                <Pressable
+                  onPress={() => setDonationFrequency("one_time")}
+                  className={`flex-1 items-center rounded-xl border py-2.5 ${
+                    donationFrequency === "one_time"
+                      ? "border-dono-primary bg-dono-primary/5"
+                      : "border-dono-border"
+                  }`}
+                >
+                  <Text className="font-sans-medium text-sm text-dono-text">One-time</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => setDonationFrequency("monthly")}
+                  className={`flex-1 items-center rounded-xl border py-2.5 ${
+                    donationFrequency === "monthly"
+                      ? "border-dono-primary bg-dono-primary/5"
+                      : "border-dono-border"
+                  }`}
+                >
+                  <Text className="font-sans-medium text-sm text-dono-text">Monthly</Text>
+                </Pressable>
+              </View>
+              <View className="mb-4 flex-row gap-2">
                 {donationAmounts.map((amount) => (
                   <Pressable
                     key={amount}
@@ -293,9 +321,12 @@ export default function CampaignDetailPage() {
                 onClose={() => setDonateSheetOpen(false)}
                 onSuccess={(amount: number) => {
                   setDonationMessage(
-                    `Thank you! Your £${amount} donation is being processed.`,
+                    donationFrequency === "monthly"
+                      ? `Thank you! Your £${amount}/month subscription is being set up.`
+                      : `Thank you! Your £${amount} donation is being processed.`,
                   );
                 }}
+                frequency={donationFrequency}
               />
             </>
           )}

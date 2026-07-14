@@ -18,14 +18,22 @@ export function DonateSheet({
   campaignId,
   campaignTitle,
   selectedAmount,
+  frequency,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
+  const createRecurringDonationSubscription = useAction(
+    api.stripe.createRecurringDonationSubscription,
+  );
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const posthog = usePostHog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const donationType = frequency === "monthly" ? "recurring" : "one_time";
+  const frequencyLabel =
+    frequency === "monthly" ? "Monthly donation" : "One-time donation";
 
   const handleDonate = async () => {
     setLoading(true);
@@ -36,13 +44,19 @@ export function DonateSheet({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: "one_time",
+        donation_type: donationType,
       });
 
-      const { clientSecret } = await createPaymentIntent({
-        campaignSlug: campaignId,
-        amount: selectedAmount,
-      });
+      const { clientSecret } =
+        frequency === "monthly"
+          ? await createRecurringDonationSubscription({
+              campaignSlug: campaignId,
+              amount: selectedAmount,
+            })
+          : await createPaymentIntent({
+              campaignSlug: campaignId,
+              amount: selectedAmount,
+            });
 
       const initResult = await initPaymentSheet({
         paymentIntentClientSecret: clientSecret,
@@ -66,7 +80,7 @@ export function DonateSheet({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: "one_time",
+        donation_type: donationType,
       });
 
       onSuccess(selectedAmount);
@@ -86,8 +100,11 @@ export function DonateSheet({
           <Text className="mt-1 text-sm text-dono-muted">{campaignTitle}</Text>
           <Text className="mt-4 font-mono-medium text-3xl text-dono-primary">
             £{selectedAmount}
+            {frequency === "monthly" ? (
+              <Text className="text-base text-dono-muted">/month</Text>
+            ) : null}
           </Text>
-          <Text className="mt-1 text-sm text-dono-muted">One-time donation</Text>
+          <Text className="mt-1 text-sm text-dono-muted">{frequencyLabel}</Text>
 
           {error ? (
             <Text className="mt-4 text-sm text-red-600">{error}</Text>

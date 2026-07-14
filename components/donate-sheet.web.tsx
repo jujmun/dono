@@ -26,6 +26,7 @@ function PaymentForm({
   campaignId,
   campaignTitle,
   selectedAmount,
+  frequency,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -34,6 +35,7 @@ function PaymentForm({
   const posthog = usePostHog();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const donationType = frequency === "monthly" ? "recurring" : "one_time";
 
   const handleDonate = async () => {
     if (!stripe || !elements) return;
@@ -46,7 +48,7 @@ function PaymentForm({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: "one_time",
+        donation_type: donationType,
       });
 
       const result = await stripe.confirmPayment({
@@ -65,7 +67,7 @@ function PaymentForm({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: "one_time",
+        donation_type: donationType,
       });
 
       onSuccess(selectedAmount);
@@ -76,6 +78,11 @@ function PaymentForm({
       setLoading(false);
     }
   };
+
+  const payLabel =
+    frequency === "monthly"
+      ? `Subscribe £${selectedAmount}/month`
+      : `Pay £${selectedAmount}`;
 
   return (
     <View>
@@ -89,7 +96,7 @@ function PaymentForm({
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="font-sans-medium text-sm text-white">Pay £{selectedAmount}</Text>
+          <Text className="font-sans-medium text-sm text-white">{payLabel}</Text>
         )}
       </Pressable>
     </View>
@@ -101,13 +108,20 @@ export function DonateSheet({
   campaignId,
   campaignTitle,
   selectedAmount,
+  frequency,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
+  const createRecurringDonationSubscription = useAction(
+    api.stripe.createRecurringDonationSubscription,
+  );
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const frequencyLabel =
+    frequency === "monthly" ? "Monthly donation" : "One-time donation";
 
   useEffect(() => {
     if (!visible) {
@@ -120,10 +134,18 @@ export function DonateSheet({
     setLoading(true);
     setError(null);
 
-    void createPaymentIntent({
-      campaignSlug: campaignId,
-      amount: selectedAmount,
-    })
+    const createPayment =
+      frequency === "monthly"
+        ? createRecurringDonationSubscription({
+            campaignSlug: campaignId,
+            amount: selectedAmount,
+          })
+        : createPaymentIntent({
+            campaignSlug: campaignId,
+            amount: selectedAmount,
+          });
+
+    void createPayment
       .then((result) => {
         if (!cancelled) {
           setClientSecret(result.clientSecret);
@@ -143,7 +165,14 @@ export function DonateSheet({
     return () => {
       cancelled = true;
     };
-  }, [visible, campaignId, selectedAmount, createPaymentIntent]);
+  }, [
+    visible,
+    campaignId,
+    selectedAmount,
+    frequency,
+    createPaymentIntent,
+    createRecurringDonationSubscription,
+  ]);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -153,8 +182,11 @@ export function DonateSheet({
           <Text className="mt-1 text-sm text-dono-muted">{campaignTitle}</Text>
           <Text className="mt-4 font-mono-medium text-3xl text-dono-primary">
             £{selectedAmount}
+            {frequency === "monthly" ? (
+              <Text className="text-base text-dono-muted">/month</Text>
+            ) : null}
           </Text>
-          <Text className="mt-1 text-sm text-dono-muted">One-time donation</Text>
+          <Text className="mt-1 text-sm text-dono-muted">{frequencyLabel}</Text>
 
           {loading ? (
             <View className="items-center py-8">
@@ -170,6 +202,7 @@ export function DonateSheet({
                   campaignId={campaignId}
                   campaignTitle={campaignTitle}
                   selectedAmount={selectedAmount}
+                  frequency={frequency}
                   onClose={onClose}
                   onSuccess={onSuccess}
                 />

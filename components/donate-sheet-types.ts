@@ -5,7 +5,7 @@ export type DonateSheetProps = {
   campaignId: string;
   campaignTitle: string;
   selectedAmount: number;
-  frequency?: DonationFrequency;
+  frequency: DonationFrequency;
   onClose: () => void;
   onSuccess: (amount: number) => void;
 };
