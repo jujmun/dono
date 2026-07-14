@@ -55,9 +55,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const inProtected =
       root === "dashboard" ||
       root === "create" ||
-      root === "account" ||
-      root === "discover" ||
-      root === "communities" ||
       root === "funds";
     const inAuthPublic =
       root === "signin" ||

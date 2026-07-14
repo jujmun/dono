@@ -8,9 +8,10 @@ import {
   Image,
   Platform,
 } from "react-native";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import { AppShell } from "@/components/app-shell";
+import { LoginGate } from "@/components/login-gate";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
 import { updateProfileSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -19,11 +20,10 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
 export default function AccountPage() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
-  const recurringDonations = useQuery(api.donations.listMyRecurringDonations);
-  const reviewMessages = useQuery(api.reviewMessages.listMine);
   const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
 
   const [name, setName] = useState("");
@@ -130,6 +130,24 @@ export default function AccountPage() {
       .catch((err) => setRecurringError(getFriendlyPaymentError(err)))
       .finally(() => setCancelingId(null));
   };
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <View className="items-center py-16">
+          <ActivityIndicator color="#1d242f" />
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AppShell>
+        <LoginGate message="To access your account, you need to log in." />
+      </AppShell>
+    );
+  }
 
   if (profile === undefined) {
     return (

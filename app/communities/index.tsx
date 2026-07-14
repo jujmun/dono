@@ -7,10 +7,11 @@ import {
   ActivityIndicator,
   ScrollView,
 } from "react-native";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Search } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CommunityCard } from "@/components/community-card";
+import { LoginGate } from "@/components/login-gate";
 import { api } from "@convex/_generated/api";
 import type { Community } from "@/lib/types";
 
@@ -22,6 +23,7 @@ const typeFilters = [
 ];
 
 export default function CommunitiesPage() {
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const communities = (useQuery(api.communities.list) ?? undefined) as
     | Community[]
     | undefined;
@@ -35,6 +37,24 @@ export default function CommunitiesPage() {
     const matchesType = type === "all" || c.type === type;
     return matchesSearch && matchesType;
   });
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <View className="items-center py-16">
+          <ActivityIndicator color="#1d242f" />
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AppShell>
+        <LoginGate message="To access your communities, you need to log in." />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
