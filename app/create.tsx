@@ -24,6 +24,16 @@ const creatorTypes = [
   "University",
 ];
 
+const initialForm = {
+  title: "",
+  category: "",
+  creatorType: "",
+  university: "",
+  description: "",
+  story: "",
+  goal: "",
+};
+
 export default function CreateCampaignPage() {
   const router = useRouter();
   const posthog = usePostHog();
@@ -31,15 +41,7 @@ export default function CreateCampaignPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState({
-    title: "",
-    category: "",
-    creatorType: "",
-    university: "",
-    description: "",
-    story: "",
-    goal: "",
-  });
+  const [form, setForm] = useState(initialForm);
 
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -349,6 +351,9 @@ export default function CreateCampaignPage() {
                         campaign_university: form.university,
                         campaign_goal: Number(form.goal),
                       });
+                      setForm(initialForm);
+                      setStep(0);
+                      setError(null);
                       router.push(`/campaigns/${result.slug}`);
                     })
                     .catch((err: Error) => {
