@@ -28,6 +28,9 @@ import type * as lib_applyDonationToCampaign from "../lib/applyDonationToCampaig
 import type * as lib_authz from "../lib/authz.js";
 import type * as lib_donationAmounts from "../lib/donationAmounts.js";
 import type * as lib_mappers from "../lib/mappers.js";
+import type * as lib_pagination from "../lib/pagination.js";
+import type * as lib_redirect from "../lib/redirect.js";
+import type * as lib_stripeOwnership from "../lib/stripeOwnership.js";
 import type * as lib_webhookIdempotency from "../lib/webhookIdempotency.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
@@ -65,6 +68,9 @@ declare const fullApi: ApiFromModules<{
   "lib/authz": typeof lib_authz;
   "lib/donationAmounts": typeof lib_donationAmounts;
   "lib/mappers": typeof lib_mappers;
+  "lib/pagination": typeof lib_pagination;
+  "lib/redirect": typeof lib_redirect;
+  "lib/stripeOwnership": typeof lib_stripeOwnership;
   "lib/webhookIdempotency": typeof lib_webhookIdempotency;
   security: typeof security;
   seed: typeof seed;

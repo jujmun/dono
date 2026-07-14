@@ -6,7 +6,7 @@ export function getFriendlyPaymentError(error: unknown) {
     return "Please verify your email before donating.";
   }
   if (/UNAUTHENTICATED|sign in/i.test(message)) {
-    return "Please sign in to continue.";
+    return "Please sign in to continue. Monthly donations require an account.";
   }
   if (/CAMPAIGN_NOT_FOUND/i.test(message)) {
     return "This campaign could not be found.";

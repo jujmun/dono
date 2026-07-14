@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { internalMutation, mutation } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import {
   ADMIN_BYPASS_EMAIL,
   ADMIN_BYPASS_OTP,
@@ -20,9 +20,9 @@ async function sha256Hex(input: string) {
 /**
  * Deletes every stored hash of the fixed bypass OTP so the next request can
  * insert exactly one. Needed because convex-auth verifies with .unique() on code.
- * No-ops unless AUTH_ADMIN_OTP_BYPASS=true.
+ * Internal-only — never callable by clients.
  */
-export const clearFixedOtpCodes = mutation({
+export const clearFixedOtpCodes = internalMutation({
   args: {},
   handler: async (ctx) => {
     if (!isAdminOtpBypassEnabled()) {
@@ -41,9 +41,9 @@ export const clearFixedOtpCodes = mutation({
 
 /**
  * If multiple fixed-OTP rows exist, keep the newest so verify's .unique() works.
- * No-ops unless AUTH_ADMIN_OTP_BYPASS=true.
+ * Internal-only — never callable by clients.
  */
-export const keepNewestFixedOtpCode = mutation({
+export const keepNewestFixedOtpCode = internalMutation({
   args: {},
   handler: async (ctx) => {
     if (!isAdminOtpBypassEnabled()) {
@@ -98,7 +98,6 @@ export const setFixedBypassCodeForEmail = internalMutation({
       return { updated: false };
     }
 
-    // Keep a single row for this email and point it at the fixed OTP.
     const [newest, ...older] = rows.sort(
       (a, b) => b._creationTime - a._creationTime,
     );

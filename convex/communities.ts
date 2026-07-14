@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { toCommunity } from "./lib/mappers";
 import { requireAdmin } from "./lib/authz";
+import { clampLimit } from "./lib/pagination";
 
 const placeholderCommunitySlugs = [
   "medsoc-cambridge",
@@ -23,7 +24,7 @@ export const list = query({
 export const listFeatured = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 3;
+    const limit = clampLimit(args.limit, 3);
     const communities = await ctx.db.query("communities").take(limit);
     return communities.map(toCommunity);
   },

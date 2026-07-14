@@ -2,17 +2,13 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
 import { requestOtpSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
-import { api } from "@convex/_generated/api";
 
 export default function ForgotPasswordPage() {
   const router = useRouter();
   const { signIn } = useAuthActions();
-  const assertAllowed = useMutation(api.security.assertAllowed);
-  const recordAttempt = useMutation(api.security.record);
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -30,22 +26,12 @@ export default function ForgotPasswordPage() {
     formData.append("email", parsed.data.email.toLowerCase());
     formData.append("flow", "reset");
 
-    void assertAllowed({ flow: "reset", email: parsed.data.email })
-      .then(() => signIn("resend", formData))
+    // Rate limits are enforced server-side in sendVerificationRequest.
+    void signIn("resend", formData)
       .then(() => {
-        void recordAttempt({
-          flow: "reset",
-          email: parsed.data.email,
-          success: true,
-        });
         setSent(true);
       })
       .catch((err) => {
-        void recordAttempt({
-          flow: "reset",
-          email: parsed.data.email,
-          success: false,
-        });
         if (String(err).toLowerCase().includes("rate")) {
           setError(getFriendlyAuthError(err));
           return;

@@ -4,8 +4,10 @@ import {
   Modal,
   Pressable,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import { Link } from "expo-router";
 import { useAction } from "convex/react";
 import { useStripe } from "@stripe/stripe-react-native";
 import { usePostHog } from "posthog-react-native";
@@ -19,6 +21,9 @@ export function DonateSheet({
   campaignTitle,
   selectedAmount,
   frequency,
+  isAuthenticated,
+  donorEmail,
+  onDonorEmailChange,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -34,8 +39,11 @@ export function DonateSheet({
   const donationType = frequency === "monthly" ? "recurring" : "one_time";
   const frequencyLabel =
     frequency === "monthly" ? "Monthly donation" : "One-time donation";
+  const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
 
   const handleDonate = async () => {
+    if (monthlyBlockedForGuest) return;
+
     setLoading(true);
     setError(null);
 
@@ -56,6 +64,7 @@ export function DonateSheet({
           : await createPaymentIntent({
               campaignSlug: campaignId,
               amount: selectedAmount,
+              donorEmail: donorEmail.trim() || undefined,
             });
 
       const initResult = await initPaymentSheet({
@@ -106,21 +115,49 @@ export function DonateSheet({
           </Text>
           <Text className="mt-1 text-sm text-dono-muted">{frequencyLabel}</Text>
 
-          {error ? (
-            <Text className="mt-4 text-sm text-red-600">{error}</Text>
+          {!isAuthenticated && frequency === "one_time" ? (
+            <TextInput
+              value={donorEmail}
+              onChangeText={onDonorEmailChange}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Email for receipt (optional)"
+              placeholderTextColor="#5e6473"
+              className="mt-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
+            />
           ) : null}
 
-          <Pressable
-            onPress={() => void handleDonate()}
-            disabled={loading}
-            className="mt-6 flex-row items-center justify-center rounded-full bg-dono-accent py-3"
-          >
-            {loading ? (
-              <ActivityIndicator color="#fff" />
-            ) : (
-              <Text className="font-sans-medium text-sm text-white">Continue to payment</Text>
-            )}
-          </Pressable>
+          {monthlyBlockedForGuest ? (
+            <View className="mt-4">
+              <Text className="text-sm text-dono-muted">
+                Monthly donations require an account so you can manage or cancel your
+                subscription later.
+              </Text>
+              <Link href="/signin" asChild>
+                <Pressable className="mt-4 items-center rounded-full bg-dono-primary py-3">
+                  <Text className="font-sans-medium text-sm text-white">Sign in to continue</Text>
+                </Pressable>
+              </Link>
+            </View>
+          ) : (
+            <>
+              {error ? (
+                <Text className="mt-4 text-sm text-red-600">{error}</Text>
+              ) : null}
+
+              <Pressable
+                onPress={() => void handleDonate()}
+                disabled={loading}
+                className="mt-6 flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+              >
+                {loading ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <Text className="font-sans-medium text-sm text-white">Continue to payment</Text>
+                )}
+              </Pressable>
+            </>
+          )}
 
           <Pressable onPress={onClose} className="mt-3 items-center py-2">
             <Text className="text-sm text-dono-muted">Cancel</Text>

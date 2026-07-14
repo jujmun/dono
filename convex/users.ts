@@ -6,6 +6,16 @@ import {
 } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
+import {
+  assertNotRateLimited,
+  recordRateLimitAttempt,
+} from "./auth/rateLimit";
+
+const AVATAR_UPLOAD_LIMIT = {
+  maxAttempts: 10,
+  windowMs: 15 * 60 * 1000,
+  lockoutMs: 15 * 60 * 1000,
+};
 
 export const me = query({
   args: {},
@@ -40,7 +50,10 @@ export const me = query({
 export const generateAvatarUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    await requireVerifiedUser(ctx);
+    const { userId } = await requireVerifiedUser(ctx);
+    const opts = { key: `avatarUpload:${userId}`, ...AVATAR_UPLOAD_LIMIT };
+    await assertNotRateLimited(ctx, opts);
+    await recordRateLimitAttempt(ctx, opts, false);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -84,6 +97,28 @@ export const updateProfile = mutation({
         throw new ConvexError({
           code: "INVALID_AVATAR",
           message: "Avatar must be 5MB or smaller.",
+        });
+      }
+
+      const owner = await ctx.db
+        .query("storageOwners")
+        .withIndex("by_storageId", (q) =>
+          q.eq("storageId", args.avatarStorageId!),
+        )
+        .unique();
+
+      if (owner && owner.userId !== userId) {
+        throw new ConvexError({
+          code: "FORBIDDEN",
+          message: "You do not have permission for this action.",
+        });
+      }
+
+      if (!owner) {
+        await ctx.db.insert("storageOwners", {
+          userId,
+          storageId: args.avatarStorageId,
+          createdAt: Date.now(),
         });
       }
     }

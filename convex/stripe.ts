@@ -25,6 +25,19 @@ function getStripeClient() {
   return new Stripe(secretKey);
 }
 
+function normalizeDonorEmail(email: string | undefined) {
+  if (!email) return undefined;
+  const trimmed = email.trim().toLowerCase();
+  if (!trimmed) return undefined;
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message: "Please enter a valid email address for your receipt.",
+    });
+  }
+  return trimmed;
+}
+
 async function getOrCreateStripeCustomer(
   ctx: ActionCtx,
   userId: Id<"users">,
@@ -72,19 +85,7 @@ function getSubscriptionPaymentIntentClientSecret(
   return paymentIntent.client_secret;
 }
 
-async function requireDonationContext(
-  ctx: ActionCtx,
-  campaignSlug: string,
-  amount: number,
-) {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
-    throw new ConvexError({
-      code: "UNAUTHENTICATED",
-      message: "You must be signed in to perform this action.",
-    });
-  }
-
+async function validateCampaignAndAmount(ctx: ActionCtx, campaignSlug: string, amount: number) {
   const normalizedSlug = normalizeCampaignSlug(campaignSlug);
   if (!normalizedSlug) {
     throw new ConvexError({
@@ -101,41 +102,117 @@ async function requireDonationContext(
     });
   }
 
-  const userContext = await ctx.runQuery(
-    internal.stripeInternal.getVerifiedUserContext,
-    { userId },
-  );
   const campaign = await ctx.runQuery(
     internal.stripeInternal.getCampaignForDonation,
     { campaignSlug: normalizedSlug },
   );
 
-  return { userId, userContext, campaign, amount };
+  return { campaign, amount };
+}
+
+async function requireSignedInDonationContext(
+  ctx: ActionCtx,
+  campaignSlug: string,
+  amount: number,
+) {
+  const userId = await getAuthUserId(ctx);
+  if (!userId) {
+    throw new ConvexError({
+      code: "UNAUTHENTICATED",
+      message: "You must be signed in to perform this action.",
+    });
+  }
+
+  const { campaign, amount: validAmount } = await validateCampaignAndAmount(
+    ctx,
+    campaignSlug,
+    amount,
+  );
+
+  const userContext = await ctx.runQuery(
+    internal.stripeInternal.getVerifiedUserContext,
+    { userId },
+  );
+
+  return { userId, userContext, campaign, amount: validAmount };
+}
+
+const STRIPE_CREATE_LIMIT = {
+  maxAttempts: 10,
+  windowMs: 15 * 60 * 1000,
+  lockoutMs: 15 * 60 * 1000,
+};
+
+const MAX_PENDING_DONATIONS = 10;
+
+async function enforceStripeCreateQuota(
+  ctx: ActionCtx,
+  key: string,
+  userId?: Id<"users">,
+) {
+  await ctx.runMutation(internal.security.consumeQuota, {
+    key,
+    ...STRIPE_CREATE_LIMIT,
+  });
+
+  if (!userId) return;
+
+  const pending = await ctx.runQuery(
+    internal.stripeInternal.countPendingDonationsForUser,
+    { userId },
+  );
+  if (pending >= MAX_PENDING_DONATIONS) {
+    throw new ConvexError({
+      code: "RATE_LIMITED",
+      message: "Too many pending donations. Please finish or wait before trying again.",
+    });
+  }
 }
 
 export const createPaymentIntent = action({
   args: {
     campaignSlug: v.string(),
     amount: v.number(),
+    donorEmail: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const { userId, userContext, campaign, amount } =
-      await requireDonationContext(ctx, args.campaignSlug, Number(args.amount));
-
-    const stripe = getStripeClient();
-    const stripeCustomerId = await getOrCreateStripeCustomer(
+    const amount = Number(args.amount);
+    const donorEmail = normalizeDonorEmail(args.donorEmail);
+    const { campaign, amount: validAmount } = await validateCampaignAndAmount(
       ctx,
-      userId,
-      userContext,
+      args.campaignSlug,
+      amount,
     );
 
+    const stripe = getStripeClient();
+    const userId = await getAuthUserId(ctx);
+
+    const quotaKey = userId
+      ? `stripePi:${userId}`
+      : `stripePi:guest:${donorEmail ?? "anonymous"}`;
+    await enforceStripeCreateQuota(ctx, quotaKey, userId ?? undefined);
+
+    let stripeCustomerId: string | undefined;
+    let receiptEmail = donorEmail;
+
+    if (userId) {
+      const userContext = await ctx.runQuery(
+        internal.stripeInternal.getVerifiedUserContext,
+        { userId },
+      );
+      stripeCustomerId = await getOrCreateStripeCustomer(ctx, userId, userContext);
+      receiptEmail = receiptEmail || userContext.email || undefined;
+    }
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: donationAmountToStripeMinorUnits(amount),
+      amount: donationAmountToStripeMinorUnits(validAmount),
       currency: "gbp",
-      customer: stripeCustomerId,
+      ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
+      ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
       automatic_payment_methods: { enabled: true },
       metadata: {
-        userId,
+        ...(userId ? { userId } : {}),
+        ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
         campaignId: campaign.campaignId,
         campaignSlug: campaign.campaignSlug,
         donationType: "one_time",
@@ -150,9 +227,10 @@ export const createPaymentIntent = action({
     }
 
     await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
-      userId,
+      userId: userId ?? undefined,
+      donorEmail: receiptEmail,
       campaignId: campaign.campaignId,
-      amount,
+      amount: validAmount,
       stripePaymentIntentId: paymentIntent.id,
     });
 
@@ -170,7 +248,13 @@ export const createRecurringDonationSubscription = action({
   },
   handler: async (ctx, args) => {
     const { userId, userContext, campaign, amount } =
-      await requireDonationContext(ctx, args.campaignSlug, Number(args.amount));
+      await requireSignedInDonationContext(
+        ctx,
+        args.campaignSlug,
+        Number(args.amount),
+      );
+
+    await enforceStripeCreateQuota(ctx, `stripeSub:${userId}`, userId);
 
     const stripe = getStripeClient();
     const stripeCustomerId = await getOrCreateStripeCustomer(

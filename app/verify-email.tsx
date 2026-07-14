@@ -2,17 +2,11 @@ import { useEffect, useMemo, useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
 import { verifyEmailSchema, requestOtpSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
-import { api } from "@convex/_generated/api";
 
 const RESEND_COOLDOWN_SECONDS = 30;
-const FIXED_BYPASS_OTP = "000000";
-const ADMIN_BYPASS_EMAIL = "admin@ox.ac.uk";
-const adminOtpBypassEnabled =
-  process.env.EXPO_PUBLIC_AUTH_ADMIN_OTP_BYPASS === "true";
 
 export default function VerifyEmailPage() {
   const router = useRouter();
@@ -22,12 +16,6 @@ export default function VerifyEmailPage() {
     [params.email],
   );
   const { signIn } = useAuthActions();
-  const assertAllowed = useMutation(api.security.assertAllowed);
-  const recordAttempt = useMutation(api.security.record);
-  const keepNewestFixedOtpCode = useMutation(
-    api.fixedOtpCleanup.keepNewestFixedOtpCode,
-  );
-  const clearFixedOtpCodes = useMutation(api.fixedOtpCleanup.clearFixedOtpCodes);
   const [email, setEmail] = useState(defaultEmail);
   const [code, setCode] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,34 +44,12 @@ export default function VerifyEmailPage() {
     formData.append("email", parsed.data.email.toLowerCase());
     formData.append("code", parsed.data.code.trim());
     formData.append("flow", "email-verification");
-    const normalizedSubmitEmail = parsed.data.email.toLowerCase();
-    const isAdminBypassVerify =
-      adminOtpBypassEnabled &&
-      normalizedSubmitEmail === ADMIN_BYPASS_EMAIL &&
-      parsed.data.code.trim() === FIXED_BYPASS_OTP;
 
     void (async () => {
       try {
-        if (isAdminBypassVerify) {
-          await keepNewestFixedOtpCode({});
-        }
-        await assertAllowed({
-          flow: "email-verification",
-          email: parsed.data.email,
-        });
         await signIn("resend", formData);
         router.replace("/dashboard");
-        await recordAttempt({
-          flow: "email-verification",
-          email: parsed.data.email,
-          success: true,
-        });
       } catch (err) {
-        void recordAttempt({
-          flow: "email-verification",
-          email: parsed.data.email,
-          success: false,
-        });
         setError(getFriendlyAuthError(err));
       } finally {
         setLoading(false);
@@ -105,29 +71,12 @@ export default function VerifyEmailPage() {
     const formData = new FormData();
     formData.append("email", normalizedEmail);
 
-    const maybeClear =
-      adminOtpBypassEnabled && normalizedEmail === ADMIN_BYPASS_EMAIL
-        ? clearFixedOtpCodes({})
-        : Promise.resolve(null);
-
-    void maybeClear
-      .then(() => assertAllowed({ flow: "signIn", email: normalizedEmail }))
-      .then(() => signIn("resend", formData))
+    void signIn("resend", formData)
       .then(() => {
-        void recordAttempt({
-          flow: "signIn",
-          email: normalizedEmail,
-          success: true,
-        });
         setInfo("A new code is on its way to your inbox.");
         setCooldown(RESEND_COOLDOWN_SECONDS);
       })
       .catch((err) => {
-        void recordAttempt({
-          flow: "signIn",
-          email: normalizedEmail,
-          success: false,
-        });
         setError(getFriendlyAuthError(err));
       })
       .finally(() => setResending(false));

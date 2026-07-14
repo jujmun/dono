@@ -5,8 +5,10 @@ import {
   Pressable,
   ScrollView,
   Text,
+  TextInput,
   View,
 } from "react-native";
+import { Link } from "expo-router";
 import { useAction } from "convex/react";
 import {
   Elements,
@@ -120,6 +122,9 @@ export function DonateSheet({
   campaignTitle,
   selectedAmount,
   frequency,
+  isAuthenticated,
+  donorEmail,
+  onDonorEmailChange,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -133,10 +138,18 @@ export function DonateSheet({
 
   const frequencyLabel =
     frequency === "monthly" ? "Monthly donation" : "One-time donation";
+  const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
 
   useEffect(() => {
     if (!visible) {
       setClientSecret(null);
+      setError(null);
+      return;
+    }
+
+    if (monthlyBlockedForGuest) {
+      setClientSecret(null);
+      setLoading(false);
       setError(null);
       return;
     }
@@ -154,6 +167,7 @@ export function DonateSheet({
         : createPaymentIntent({
             campaignSlug: campaignId,
             amount: selectedAmount,
+            donorEmail: donorEmail.trim() || undefined,
           });
 
     void createPayment
@@ -176,11 +190,15 @@ export function DonateSheet({
     return () => {
       cancelled = true;
     };
+    // donorEmail is read when the sheet opens / amount changes; avoid recreating
+    // the PaymentIntent on every keystroke.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
   }, [
     visible,
     campaignId,
     selectedAmount,
     frequency,
+    monthlyBlockedForGuest,
     createPaymentIntent,
     createRecurringDonationSubscription,
   ]);
@@ -199,7 +217,31 @@ export function DonateSheet({
           </Text>
           <Text className="mt-1 mb-4 text-sm text-dono-muted">{frequencyLabel}</Text>
 
-          {loading ? (
+          {!isAuthenticated && frequency === "one_time" ? (
+            <TextInput
+              value={donorEmail}
+              onChangeText={onDonorEmailChange}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              placeholder="Email for receipt (optional)"
+              placeholderTextColor="#5e6473"
+              className="mb-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
+            />
+          ) : null}
+
+          {monthlyBlockedForGuest ? (
+            <View className="flex-1">
+              <Text className="text-sm text-dono-muted">
+                Monthly donations require an account so you can manage or cancel your
+                subscription later.
+              </Text>
+              <Link href="/signin" asChild>
+                <Pressable className="mt-4 items-center rounded-full bg-dono-primary py-3">
+                  <Text className="font-sans-medium text-sm text-white">Sign in to continue</Text>
+                </Pressable>
+              </Link>
+            </View>
+          ) : loading ? (
             <View className="flex-1 items-center justify-center py-8">
               <ActivityIndicator color="#1d242f" />
             </View>
@@ -214,6 +256,9 @@ export function DonateSheet({
                   campaignTitle={campaignTitle}
                   selectedAmount={selectedAmount}
                   frequency={frequency}
+                  isAuthenticated={isAuthenticated}
+                  donorEmail={donorEmail}
+                  onDonorEmailChange={onDonorEmailChange}
                   onClose={onClose}
                   onSuccess={onSuccess}
                 />

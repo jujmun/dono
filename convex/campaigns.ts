@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { toCampaign } from "./lib/mappers";
 import { requireAdmin, requireVerifiedUser } from "./lib/authz";
+import { clampLimit } from "./lib/pagination";
 
 function slugify(title: string) {
   return title
@@ -46,7 +47,7 @@ export const list = query({
 export const listFeatured = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 3;
+    const limit = clampLimit(args.limit, 3);
     const campaigns = await ctx.db.query("campaigns").take(limit);
     return campaigns.map(toCampaign);
   },
@@ -79,7 +80,7 @@ export const listByCommunity = query({
 export const listRelated = query({
   args: { slug: v.string(), category: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 2;
+    const limit = clampLimit(args.limit, 2);
     const campaigns = await ctx.db
       .query("campaigns")
       .filter((q) =>

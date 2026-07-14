@@ -6,6 +6,9 @@ export type DonateSheetProps = {
   campaignTitle: string;
   selectedAmount: number;
   frequency: DonationFrequency;
+  isAuthenticated: boolean;
+  donorEmail: string;
+  onDonorEmailChange: (email: string) => void;
   onClose: () => void;
   onSuccess: (amount: number) => void;
 };
