@@ -35,7 +35,21 @@
       "expo-localization",
       "posthog-react-native/expo",
       "expo-font",
-      "expo-asset"
+      "expo-asset",
+      "expo-dev-client",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Allow Dono to access your photos for your profile picture."
+        }
+      ],
+      [
+        "@stripe/stripe-react-native",
+        {
+          "merchantIdentifier": "merchant.com.dono.app",
+          "enableGooglePay": false
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true

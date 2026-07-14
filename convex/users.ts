@@ -22,14 +22,26 @@ export const me = query({
       return null;
     }
 
+    const storageUrl = profile.avatarStorageId
+      ? await ctx.storage.getUrl(profile.avatarStorageId)
+      : null;
+
     return {
       id: user._id,
       email: profile.email,
       name: profile.name ?? user.name ?? "",
-      avatarUrl: profile.avatarUrl,
+      avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
     };
+  },
+});
+
+export const generateAvatarUploadUrl = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireVerifiedUser(ctx);
+    return await ctx.storage.generateUploadUrl();
   },
 });
 
@@ -37,6 +49,7 @@ export const updateProfile = mutation({
   args: {
     name: v.string(),
     avatarUrl: v.optional(v.string()),
+    avatarStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -52,6 +65,27 @@ export const updateProfile = mutation({
         code: "INVALID_AVATAR_URL",
         message: "Avatar URL is too long.",
       });
+    }
+    if (args.avatarStorageId) {
+      const metadata = await ctx.db.system.get("_storage", args.avatarStorageId);
+      if (!metadata) {
+        throw new ConvexError({
+          code: "INVALID_AVATAR",
+          message: "Uploaded image was not found.",
+        });
+      }
+      if (metadata.contentType && !metadata.contentType.startsWith("image/")) {
+        throw new ConvexError({
+          code: "INVALID_AVATAR",
+          message: "Avatar must be an image file.",
+        });
+      }
+      if (metadata.size > 5 * 1024 * 1024) {
+        throw new ConvexError({
+          code: "INVALID_AVATAR",
+          message: "Avatar must be 5MB or smaller.",
+        });
+      }
     }
     const profile = await ctx.db
       .query("profiles")
@@ -72,15 +106,27 @@ export const updateProfile = mutation({
         email: user.email,
         name: trimmedName,
         avatarUrl: args.avatarUrl,
+        avatarStorageId: args.avatarStorageId,
         role: "user",
         emailVerifiedAt: user.emailVerificationTime ?? undefined,
         createdAt: now,
         updatedAt: now,
       });
     } else {
+      if (
+        args.avatarStorageId &&
+        profile.avatarStorageId &&
+        profile.avatarStorageId !== args.avatarStorageId
+      ) {
+        await ctx.storage.delete(profile.avatarStorageId);
+      }
+
       await ctx.db.patch(profile._id, {
         name: trimmedName,
-        avatarUrl: args.avatarUrl,
+        ...(args.avatarUrl !== undefined ? { avatarUrl: args.avatarUrl } : {}),
+        ...(args.avatarStorageId !== undefined
+          ? { avatarStorageId: args.avatarStorageId, avatarUrl: undefined }
+          : {}),
         updatedAt: now,
       });
     }

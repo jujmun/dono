@@ -1,28 +1,49 @@
 import { useEffect, useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
+import {
+  View,
+  Text,
+  TextInput,
+  Pressable,
+  ActivityIndicator,
+  Image,
+  Platform,
+} from "react-native";
+import { useAction, useMutation, useQuery } from "convex/react";
+import * as ImagePicker from "expo-image-picker";
 import { AppShell } from "@/components/app-shell";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
 import { updateProfileSchema } from "@/lib/validation/auth";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { getFriendlyPaymentError } from "@/lib/stripe/errors";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 
 export default function AccountPage() {
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
+  const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const recurringDonations = useQuery(api.donations.listMyRecurringDonations);
+  const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
 
   const [name, setName] = useState("");
-  const [avatarUrl, setAvatarUrl] = useState("");
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cancelingId, setCancelingId] = useState<Id<"recurringDonations"> | null>(
+    null,
+  );
+  const [recurringError, setRecurringError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
     setName(profile.name ?? "");
-    setAvatarUrl(profile.avatarUrl ?? "");
+    setAvatarPreview(profile.avatarUrl ?? null);
   }, [profile]);
 
   const saveProfile = () => {
-    const parsed = updateProfileSchema.safeParse({ name, avatarUrl });
+    const parsed = updateProfileSchema.safeParse({ name });
     if (!parsed.success) {
       setProfileError(parsed.error.issues[0]?.message ?? "Invalid profile.");
       return;
@@ -32,11 +53,81 @@ export default function AccountPage() {
     setProfileSuccess(null);
     void updateProfile({
       name: parsed.data.name,
-      avatarUrl: parsed.data.avatarUrl || undefined,
     })
       .then(() => setProfileSuccess("Profile updated."))
       .catch((err) => setProfileError(getFriendlyAuthError(err)))
       .finally(() => setSavingProfile(false));
+  };
+
+  const uploadAvatar = async () => {
+    setProfileError(null);
+    setProfileSuccess(null);
+
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setProfileError("Photo library permission is required to upload a profile picture.");
+      return;
+    }
+
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.8,
+    });
+
+    if (result.canceled || !result.assets[0]) {
+      return;
+    }
+
+    const asset = result.assets[0];
+    if (asset.fileSize && asset.fileSize > 5 * 1024 * 1024) {
+      setProfileError("Avatar must be 5MB or smaller.");
+      return;
+    }
+
+    setUploadingAvatar(true);
+    try {
+      const uploadUrl = await generateAvatarUploadUrl({});
+      const response = await fetch(asset.uri);
+      const blob = await response.blob();
+      const contentType = blob.type || asset.mimeType || "image/jpeg";
+
+      const uploadResult = await fetch(uploadUrl, {
+        method: "POST",
+        headers: { "Content-Type": contentType },
+        body: blob,
+      });
+
+      if (!uploadResult.ok) {
+        throw new Error("Upload failed.");
+      }
+
+      const { storageId } = (await uploadResult.json()) as {
+        storageId: Id<"_storage">;
+      };
+
+      const currentName = (name || profile?.name || "Member").trim();
+      await updateProfile({
+        name: currentName,
+        avatarStorageId: storageId,
+      });
+
+      setAvatarPreview(asset.uri);
+      setProfileSuccess("Profile picture updated.");
+    } catch (err) {
+      setProfileError(getFriendlyAuthError(err));
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
+
+  const handleCancelRecurring = (recurringDonationId: Id<"recurringDonations">) => {
+    setCancelingId(recurringDonationId);
+    setRecurringError(null);
+    void cancelRecurringDonation({ recurringDonationId })
+      .catch((err) => setRecurringError(getFriendlyPaymentError(err)))
+      .finally(() => setCancelingId(null));
   };
 
   if (profile === undefined) {
@@ -48,6 +139,11 @@ export default function AccountPage() {
       </AppShell>
     );
   }
+
+  const initials = (profile?.name || profile?.email || "D")
+    .trim()
+    .charAt(0)
+    .toUpperCase();
 
   return (
     <AppShell>
@@ -62,18 +158,49 @@ export default function AccountPage() {
         <View className="rounded-2xl border border-dono-border bg-white p-6">
           <Text className="text-lg font-sans-medium text-dono-text">Profile</Text>
           <View className="mt-4 gap-3">
+            <View className="items-center gap-3">
+              <View className="h-24 w-24 overflow-hidden rounded-full border border-dono-border bg-dono-surface-muted">
+                {avatarPreview ? (
+                  <Image
+                    source={{ uri: avatarPreview }}
+                    style={{ width: "100%", height: "100%" }}
+                    resizeMode="cover"
+                    accessibilityLabel="Profile picture"
+                  />
+                ) : (
+                  <View className="h-full w-full items-center justify-center">
+                    <Text className="font-display-medium text-3xl text-dono-text">
+                      {initials}
+                    </Text>
+                  </View>
+                )}
+              </View>
+              <Pressable
+                onPress={() => void uploadAvatar()}
+                disabled={uploadingAvatar || savingProfile}
+                className={`rounded-full border border-dono-border px-4 py-2 ${
+                  uploadingAvatar ? "opacity-50" : ""
+                }`}
+              >
+                <Text className="font-sans-medium text-sm text-dono-text">
+                  {uploadingAvatar
+                    ? "Uploading..."
+                    : avatarPreview
+                      ? "Change photo"
+                      : "Upload photo"}
+                </Text>
+              </Pressable>
+              {Platform.OS === "web" ? (
+                <Text className="text-center text-xs text-dono-muted">
+                  JPG or PNG, up to 5MB
+                </Text>
+              ) : null}
+            </View>
+
             <TextInput
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor="#5e6473"
-              className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
-            />
-            <TextInput
-              value={avatarUrl}
-              onChangeText={setAvatarUrl}
-              autoCapitalize="none"
-              placeholder="Avatar URL (optional)"
               placeholderTextColor="#5e6473"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
             />
@@ -85,7 +212,7 @@ export default function AccountPage() {
             ) : null}
             <Pressable
               onPress={saveProfile}
-              disabled={savingProfile}
+              disabled={savingProfile || uploadingAvatar}
               className={`items-center rounded-full bg-dono-primary py-3 ${
                 savingProfile ? "opacity-50" : ""
               }`}
@@ -97,6 +224,55 @@ export default function AccountPage() {
           </View>
         </View>
 
+        <View className="rounded-2xl border border-dono-border bg-white p-6">
+          <Text className="text-lg font-sans-medium text-dono-text">
+            Recurring Donations
+          </Text>
+          <Text className="mt-1 text-sm text-dono-muted">
+            Manage your monthly campaign subscriptions.
+          </Text>
+
+          {recurringError ? (
+            <Text className="mt-3 text-sm text-rose-700">{recurringError}</Text>
+          ) : null}
+
+          {recurringDonations === undefined ? (
+            <View className="items-center py-6">
+              <ActivityIndicator color="#1d242f" />
+            </View>
+          ) : recurringDonations.length === 0 ? (
+            <Text className="mt-4 text-sm text-dono-muted">
+              You do not have any active monthly donations yet.
+            </Text>
+          ) : (
+            <View className="mt-4 gap-3">
+              {recurringDonations.map((donation) => (
+                <View
+                  key={donation.id}
+                  className="rounded-xl border border-dono-border p-4"
+                >
+                  <Text className="font-sans-medium text-dono-text">
+                    {donation.campaignTitle}
+                  </Text>
+                  <Text className="mt-1 text-sm text-dono-muted">
+                    £{donation.amount}/month · {donation.status.replace("_", " ")}
+                  </Text>
+                  {donation.status !== "canceled" ? (
+                    <Pressable
+                      onPress={() => handleCancelRecurring(donation.id)}
+                      disabled={cancelingId === donation.id}
+                      className="mt-3 items-center rounded-full border border-dono-border py-2"
+                    >
+                      <Text className="font-sans-medium text-sm text-dono-muted">
+                        {cancelingId === donation.id ? "Canceling..." : "Cancel subscription"}
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+              ))}
+            </View>
+          )}
+        </View>
       </View>
     </AppShell>
   );

@@ -1,79 +1,21 @@
-import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { requireUserId, requireVerifiedUser } from "./lib/authz";
+import { query } from "./_generated/server";
+import { requireUserId } from "./lib/authz";
 
-const MIN_DONATION_AMOUNT = 1;
-const MAX_DONATION_AMOUNT = 100_000;
-
-export const donate = mutation({
-  args: {
-    campaignSlug: v.string(),
-    amount: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
-    const campaignSlug = args.campaignSlug.trim().toLowerCase();
-    const amount = Number(args.amount);
-
-    if (!campaignSlug) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Campaign is required.",
-      });
-    }
-    if (
-      !Number.isFinite(amount) ||
-      amount < MIN_DONATION_AMOUNT ||
-      amount > MAX_DONATION_AMOUNT
-    ) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Donation amount must be between 1 and 100000.",
-      });
-    }
-
-    const campaign = await ctx.db
-      .query("campaigns")
-      .withIndex("by_slug", (q) => q.eq("slug", campaignSlug))
-      .unique();
-    if (!campaign) {
-      throw new ConvexError({
-        code: "CAMPAIGN_NOT_FOUND",
-        message: "Campaign not found.",
-      });
-    }
-
-    await ctx.db.insert("donations", {
-      userId,
-      campaignId: campaign._id,
-      amount,
-      createdAt: Date.now(),
-    });
-
-    const raised = campaign.raised + amount;
-    const donors = campaign.donors + 1;
-    const status =
-      raised >= campaign.goal
-        ? "funded"
-        : campaign.status === "completed"
-          ? "completed"
-          : "active";
-
-    await ctx.db.patch(campaign._id, { raised, donors, status });
-
-    return { raised, donors, status };
-  },
-});
+function getSucceededDonations<T extends { paymentStatus: string }>(donations: T[]) {
+  return donations.filter((donation) => donation.paymentStatus === "succeeded");
+}
 
 export const getDonorImpact = query({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
 
-    const donations = await ctx.db
-      .query("donations")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const donations = getSucceededDonations(
+      await ctx.db
+        .query("donations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    );
 
     if (donations.length === 0) {
       return {
@@ -135,10 +77,12 @@ export const getDonoWrapped = query({
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
 
-    const donations = await ctx.db
-      .query("donations")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const donations = getSucceededDonations(
+      await ctx.db
+        .query("donations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    );
 
     const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0);
     const campaignIds = [...new Set(donations.map((d) => d.campaignId))];
@@ -189,3 +133,33 @@ function campaignSlugToName(slug: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
+
+export const listMyRecurringDonations = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+
+    const recurringDonations = await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const results = await Promise.all(
+      recurringDonations.map(async (recurringDonation) => {
+        const campaign = await ctx.db.get(recurringDonation.campaignId);
+        return {
+          id: recurringDonation._id,
+          amount: recurringDonation.amount,
+          currency: recurringDonation.currency,
+          status: recurringDonation.status,
+          createdAt: recurringDonation.createdAt,
+          canceledAt: recurringDonation.canceledAt,
+          campaignTitle: campaign?.title ?? "Unknown campaign",
+          campaignSlug: campaign?.slug ?? "",
+        };
+      }),
+    );
+
+    return results.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
