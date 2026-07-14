@@ -202,10 +202,7 @@ export const markDonationSucceeded = internalMutation({
       .unique();
 
     if (!donation) {
-      throw new ConvexError({
-        code: "DONATION_NOT_FOUND",
-        message: "Donation not found for payment intent.",
-      });
+      return { alreadyProcessed: true };
     }
 
     if (donation.paymentStatus === "succeeded") {
@@ -257,5 +254,182 @@ export const markDonationFailed = internalMutation({
 
     await ctx.db.patch(donation._id, { paymentStatus: "failed" });
     return { updated: true };
+  },
+});
+
+export const createRecurringDonationRecord = internalMutation({
+  args: {
+    userId: v.id("users"),
+    campaignId: v.id("campaigns"),
+    amount: v.number(),
+    stripeSubscriptionId: v.string(),
+    stripePriceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const amountValidation = validateDonationAmount(args.amount);
+    if (!amountValidation.valid) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: amountValidation.message,
+      });
+    }
+
+    return await ctx.db.insert("recurringDonations", {
+      userId: args.userId,
+      campaignId: args.campaignId,
+      amount: args.amount,
+      currency: DONATION_CURRENCY,
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      stripePriceId: args.stripePriceId,
+      status: "active",
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const getRecurringDonationBySubscription = internalQuery({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+  },
+});
+
+export const getDonationByInvoiceId = internalQuery({
+  args: { stripeInvoiceId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("donations")
+      .withIndex("by_invoice", (q) => q.eq("stripeInvoiceId", args.stripeInvoiceId))
+      .unique();
+  },
+});
+
+export const recordRecurringInvoicePayment = internalMutation({
+  args: {
+    stripeInvoiceId: v.string(),
+    stripeSubscriptionId: v.string(),
+    amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const existingDonation = await ctx.db
+      .query("donations")
+      .withIndex("by_invoice", (q) => q.eq("stripeInvoiceId", args.stripeInvoiceId))
+      .unique();
+
+    if (existingDonation) {
+      return { alreadyProcessed: true };
+    }
+
+    const recurringDonation = await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+
+    if (!recurringDonation) {
+      return { alreadyProcessed: true };
+    }
+
+    const campaign = await ctx.db.get(recurringDonation.campaignId);
+    if (!campaign) {
+      throw new ConvexError({
+        code: "CAMPAIGN_NOT_FOUND",
+        message: "Campaign not found for recurring donation.",
+      });
+    }
+
+    await ctx.db.insert("donations", {
+      userId: recurringDonation.userId,
+      campaignId: recurringDonation.campaignId,
+      amount: args.amount,
+      currency: DONATION_CURRENCY,
+      type: "recurring",
+      paymentStatus: "succeeded",
+      stripeInvoiceId: args.stripeInvoiceId,
+      recurringDonationId: recurringDonation._id,
+      createdAt: Date.now(),
+    });
+
+    if (recurringDonation.status !== "active") {
+      await ctx.db.patch(recurringDonation._id, { status: "active" });
+    }
+
+    const { raised, donors, status } = computeCampaignAfterDonation(
+      {
+        raised: campaign.raised,
+        donors: campaign.donors,
+        goal: campaign.goal,
+        status: campaign.status,
+      },
+      args.amount,
+    );
+    await ctx.db.patch(campaign._id, { raised, donors, status });
+
+    return { alreadyProcessed: false };
+  },
+});
+
+export const markRecurringDonationPastDue = internalMutation({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    const recurringDonation = await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+
+    if (!recurringDonation || recurringDonation.status === "canceled") {
+      return { updated: false };
+    }
+
+    await ctx.db.patch(recurringDonation._id, { status: "past_due" });
+    return { updated: true };
+  },
+});
+
+export const cancelRecurringDonationRecord = internalMutation({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    const recurringDonation = await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+
+    if (!recurringDonation) {
+      return { updated: false };
+    }
+
+    if (recurringDonation.status === "canceled") {
+      return { updated: false };
+    }
+
+    await ctx.db.patch(recurringDonation._id, {
+      status: "canceled",
+      canceledAt: Date.now(),
+    });
+    return { updated: true };
+  },
+});
+
+export const getRecurringDonationForUser = internalQuery({
+  args: {
+    recurringDonationId: v.id("recurringDonations"),
+    userId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const recurringDonation = await ctx.db.get(args.recurringDonationId);
+    if (!recurringDonation || recurringDonation.userId !== args.userId) {
+      return null;
+    }
+    return recurringDonation;
   },
 });

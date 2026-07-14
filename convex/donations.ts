@@ -193,3 +193,33 @@ function campaignSlugToName(slug: string) {
     .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
     .join(" ");
 }
+
+export const listMyRecurringDonations = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+
+    const recurringDonations = await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const results = await Promise.all(
+      recurringDonations.map(async (recurringDonation) => {
+        const campaign = await ctx.db.get(recurringDonation.campaignId);
+        return {
+          id: recurringDonation._id,
+          amount: recurringDonation.amount,
+          currency: recurringDonation.currency,
+          status: recurringDonation.status,
+          createdAt: recurringDonation.createdAt,
+          canceledAt: recurringDonation.canceledAt,
+          campaignTitle: campaign?.title ?? "Unknown campaign",
+          campaignSlug: campaign?.slug ?? "",
+        };
+      }),
+    );
+
+    return results.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});

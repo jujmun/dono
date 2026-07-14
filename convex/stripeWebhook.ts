@@ -68,6 +68,47 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
       });
       break;
     }
+    case "invoice.paid": {
+      const invoice = event.data.object as Stripe.Invoice & {
+        subscription?: string | Stripe.Subscription | null;
+      };
+      const subscriptionId =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id;
+
+      if (subscriptionId && invoice.id) {
+        await ctx.runMutation(internal.stripeInternal.recordRecurringInvoicePayment, {
+          stripeInvoiceId: invoice.id,
+          stripeSubscriptionId: subscriptionId,
+          amount: (invoice.amount_paid ?? 0) / 100,
+        });
+      }
+      break;
+    }
+    case "invoice.payment_failed": {
+      const invoice = event.data.object as Stripe.Invoice & {
+        subscription?: string | Stripe.Subscription | null;
+      };
+      const subscriptionId =
+        typeof invoice.subscription === "string"
+          ? invoice.subscription
+          : invoice.subscription?.id;
+
+      if (subscriptionId) {
+        await ctx.runMutation(internal.stripeInternal.markRecurringDonationPastDue, {
+          stripeSubscriptionId: subscriptionId,
+        });
+      }
+      break;
+    }
+    case "customer.subscription.deleted": {
+      const subscription = event.data.object as Stripe.Subscription;
+      await ctx.runMutation(internal.stripeInternal.cancelRecurringDonationRecord, {
+        stripeSubscriptionId: subscription.id,
+      });
+      break;
+    }
     default:
       break;
   }
