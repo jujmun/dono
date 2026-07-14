@@ -2,6 +2,7 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { toFund } from "./lib/mappers";
 import { requireAdmin } from "./lib/authz";
+import { clampLimit } from "./lib/pagination";
 
 const placeholderFundSlugs = [
   "medical-textbooks",
@@ -22,7 +23,7 @@ export const list = query({
 export const listFeatured = query({
   args: { limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
-    const limit = args.limit ?? 3;
+    const limit = clampLimit(args.limit, 3);
     const funds = await ctx.db.query("communityFunds").take(limit);
     return funds.map(toFund);
   },

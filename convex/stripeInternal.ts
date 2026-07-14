@@ -7,6 +7,18 @@ import {
   validateDonationAmount,
 } from "./lib/donationAmounts";
 import { getProfileByUserId } from "./lib/authz";
+import { getRecurringDonationForUserHandler } from "./lib/stripeOwnership";
+
+export const countPendingDonationsForUser = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const donations = await ctx.db
+      .query("donations")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+    return donations.filter((d) => d.paymentStatus === "pending").length;
+  },
+});
 
 export const getVerifiedUserContext = internalQuery({
   args: { userId: v.id("users") },
@@ -113,7 +125,8 @@ export const saveStripeCustomer = internalMutation({
 
 export const createPendingDonation = internalMutation({
   args: {
-    userId: v.id("users"),
+    userId: v.optional(v.id("users")),
+    donorEmail: v.optional(v.string()),
     campaignId: v.id("campaigns"),
     amount: v.number(),
     stripePaymentIntentId: v.string(),
@@ -129,6 +142,7 @@ export const createPendingDonation = internalMutation({
 
     return await ctx.db.insert("donations", {
       userId: args.userId,
+      donorEmail: args.donorEmail,
       campaignId: args.campaignId,
       amount: args.amount,
       currency: DONATION_CURRENCY,
@@ -427,9 +441,9 @@ export const getRecurringDonationForUser = internalQuery({
   },
   handler: async (ctx, args) => {
     const recurringDonation = await ctx.db.get(args.recurringDonationId);
-    if (!recurringDonation || recurringDonation.userId !== args.userId) {
-      return null;
-    }
-    return recurringDonation;
+    return getRecurringDonationForUserHandler({
+      recurringDonation,
+      callerUserId: args.userId,
+    });
   },
 });

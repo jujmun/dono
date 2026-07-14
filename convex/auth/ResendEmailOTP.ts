@@ -8,12 +8,23 @@ const OTP_ALPHABET = "0123456789";
 const OTP_LENGTH = 6;
 const OTP_MAX_AGE_SECONDS = 60 * 10;
 
-/** Dev-only fixed OTP when AUTH_ADMIN_OTP_BYPASS=true. Never enable in production. */
+/** Dev-only fixed OTP when AUTH_ADMIN_OTP_BYPASS=true on a non-prod deployment. */
 export const ADMIN_BYPASS_OTP = "000000";
 export const ADMIN_BYPASS_EMAIL = "admin@ox.ac.uk";
 
+/**
+ * Bypass is only active when AUTH_ADMIN_OTP_BYPASS=true and the Convex
+ * deployment is not a production (`prod:`) deployment.
+ */
 export function isAdminOtpBypassEnabled() {
-  return process.env.AUTH_ADMIN_OTP_BYPASS === "true";
+  if (process.env.AUTH_ADMIN_OTP_BYPASS !== "true") {
+    return false;
+  }
+  const deployment = process.env.CONVEX_DEPLOYMENT ?? "";
+  if (deployment.startsWith("prod:")) {
+    return false;
+  }
+  return true;
 }
 
 export function isBypassAdminEmail(email: string) {
@@ -33,7 +44,6 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-// Only University of Oxford addresses (ox.ac.uk and its subdomains) may sign in.
 function assertAllowedDomain(email: string) {
   const domain = email.split("@")[1]?.toLowerCase();
   const isOxford =
@@ -63,9 +73,12 @@ export const ResendEmailOTP = Resend({
     const email = normalizeEmail(String(params.identifier));
     assertAllowedDomain(email);
 
+    if (ctx && typeof ctx.runMutation === "function") {
+      // Enforce OTP send rate limits server-side (clients cannot skip/reset).
+      await ctx.runMutation(internal.security.consumeOtpSend, { email });
+    }
+
     if (isAdminOtpBypassEnabled() && isBypassAdminEmail(email)) {
-      // Token generation cannot see the email, so a random code was stored.
-      // Rewrite only this admin account's row to the fixed bypass OTP.
       if (ctx && typeof ctx.runMutation === "function") {
         await ctx.runMutation(
           internal.fixedOtpCleanup.setFixedBypassCodeForEmail,

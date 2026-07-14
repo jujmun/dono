@@ -15,13 +15,12 @@ import {
   Inter_400Regular,
   Inter_500Medium,
 } from "@expo-google-fonts/inter";
-import { Platform } from "react-native";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
-import * as SecureStore from "expo-secure-store";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { authStorage } from "@/lib/auth-storage";
 import { StripeAppProvider } from "@/lib/stripe/provider";
 import { api } from "@convex/_generated/api";
 
@@ -33,12 +32,6 @@ const convex = new ConvexReactClient(
 const posthogApiKey = process.env.EXPO_PUBLIC_POSTHOG_API_KEY;
 const posthogHost =
   process.env.EXPO_PUBLIC_POSTHOG_HOST ?? "https://eu.i.posthog.com";
-
-const secureStorage = {
-  getItem: SecureStore.getItemAsync,
-  setItem: SecureStore.setItemAsync,
-  removeItem: SecureStore.deleteItemAsync,
-};
 
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
@@ -63,7 +56,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       root === "create" ||
       root === "account" ||
       root === "discover" ||
-      root === "campaigns" ||
       root === "communities" ||
       root === "funds";
     const inAuthPublic =
@@ -135,14 +127,7 @@ export default function RootLayout() {
   });
 
   const tree = (
-    <ConvexAuthProvider
-      client={convex}
-      storage={
-        Platform.OS === "android" || Platform.OS === "ios"
-          ? secureStorage
-          : undefined
-      }
-    >
+    <ConvexAuthProvider client={convex} storage={authStorage}>
       <StripeAppProvider>
         <AppTree />
       </StripeAppProvider>
@@ -153,6 +138,8 @@ export default function RootLayout() {
     return null;
   }
 
+  // Autocapture is off so auth inputs (email/OTP) are never captured as PII.
+  // Capture intentional product events only via posthog.capture(...).
   return (
     <SafeAreaProvider>
       {posthogApiKey ? (
@@ -162,7 +149,7 @@ export default function RootLayout() {
             host: posthogHost,
             enableSessionReplay: false,
           }}
-          autocapture
+          autocapture={false}
         >
           {tree}
         </PostHogProvider>

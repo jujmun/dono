@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import {
   Heart,
@@ -39,11 +39,13 @@ const donationAmounts = [...PRESET_DONATION_AMOUNTS];
 
 export default function CampaignDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
+  const { isAuthenticated } = useConvexAuth();
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState("");
   const [donationFrequency, setDonationFrequency] =
     useState<DonationFrequency>("one_time");
+  const [donorEmail, setDonorEmail] = useState("");
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [donationMessage, setDonationMessage] = useState<string | null>(null);
   const campaign = useQuery(api.campaigns.getBySlug, {
@@ -273,6 +275,12 @@ export default function CampaignDetailPage() {
                   <Text className="font-sans-medium text-sm text-dono-text">Monthly</Text>
                 </Pressable>
               </View>
+              {!isAuthenticated && donationFrequency === "monthly" ? (
+                <Text className="mb-3 text-sm text-dono-muted">
+                  Monthly giving requires an account. Choose One-time to donate without
+                  signing in, or open Donate and sign in for monthly.
+                </Text>
+              ) : null}
               <View className="mb-4 flex-row gap-2">
                 {donationAmounts.map((amount) => (
                   <Pressable
@@ -318,6 +326,9 @@ export default function CampaignDetailPage() {
                 campaignId={campaign.id}
                 campaignTitle={campaign.title}
                 selectedAmount={resolvedAmount}
+                isAuthenticated={isAuthenticated}
+                donorEmail={donorEmail}
+                onDonorEmailChange={setDonorEmail}
                 onClose={() => setDonateSheetOpen(false)}
                 onSuccess={(amount: number) => {
                   setDonationMessage(

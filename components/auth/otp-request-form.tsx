@@ -2,19 +2,19 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useMutation } from "convex/react";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { requestOtpSchema } from "@/lib/validation/auth";
-import { api } from "@convex/_generated/api";
 
 const hasPostHog = Boolean(process.env.EXPO_PUBLIC_POSTHOG_API_KEY);
 
-/** Must match server ADMIN_BYPASS_EMAIL. Only used when EXPO_PUBLIC_AUTH_ADMIN_OTP_BYPASS=true. */
+/** Must match server ADMIN_BYPASS_EMAIL. Only used in __DEV__ with public flag. */
 const ADMIN_BYPASS_EMAIL = "admin@ox.ac.uk";
 const ADMIN_BYPASS_OTP = "000000";
 const adminOtpBypassEnabled =
+  typeof __DEV__ !== "undefined" &&
+  __DEV__ &&
   process.env.EXPO_PUBLIC_AUTH_ADMIN_OTP_BYPASS === "true";
 
 export type OtpRequestFlow = "signIn" | "signUp";
@@ -37,9 +37,6 @@ function OtpRequestFormInner({
   onSuccess,
 }: OtpRequestFormProps) {
   const { signIn } = useAuthActions();
-  const assertAllowed = useMutation(api.security.assertAllowed);
-  const recordAttempt = useMutation(api.security.record);
-  const clearFixedOtpCodes = useMutation(api.fixedOtpCleanup.clearFixedOtpCodes);
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -65,31 +62,16 @@ function OtpRequestFormInner({
 
     void (async () => {
       try {
-        // Only the admin bypass path uses a fixed OTP hash; clear collisions
-        // before issuing so verify's .unique() can succeed.
-        if (useAdminBypass) {
-          await clearFixedOtpCodes({});
-        }
-        await assertAllowed({ flow, email: emailValue });
+        // Rate limits are enforced server-side in sendVerificationRequest.
         await signIn("resend", formData);
         onSuccess?.(parsed.data.email);
-        void recordAttempt({ flow, email: emailValue, success: true });
 
         if (useAdminBypass) {
           const verifyData = new FormData();
           verifyData.append("email", emailValue);
           verifyData.append("code", ADMIN_BYPASS_OTP);
           verifyData.append("flow", "email-verification");
-          await assertAllowed({
-            flow: "email-verification",
-            email: emailValue,
-          });
           await signIn("resend", verifyData);
-          void recordAttempt({
-            flow: "email-verification",
-            email: emailValue,
-            success: true,
-          });
           router.replace("/dashboard");
           return;
         }
@@ -98,7 +80,6 @@ function OtpRequestFormInner({
           `/verify-email?email=${encodeURIComponent(emailValue)}` as Href,
         );
       } catch (err) {
-        void recordAttempt({ flow, email: emailValue, success: false });
         setError(getFriendlyAuthError(err as Error));
       } finally {
         setLoading(false);
