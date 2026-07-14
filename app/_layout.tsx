@@ -94,14 +94,12 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    // Outreach admins only use Review + Discover (campaign detail via Discover is fine).
+    // Outreach admins stay entirely inside /admin — never the student app.
     if (
       adminUser &&
       isAuthenticated &&
       profile !== undefined &&
       !inAdmin &&
-      root !== "discover" &&
-      root !== "campaigns" &&
       !inAuthPublic
     ) {
       router.replace("/admin");

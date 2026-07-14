@@ -24,6 +24,14 @@ export default function AccountPage() {
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const recurringDonations = useQuery(
+    api.donations.listMyRecurringDonations,
+    isAuthenticated ? {} : "skip",
+  );
+  const reviewMessages = useQuery(
+    api.reviewMessages.listMine,
+    isAuthenticated ? {} : "skip",
+  );
   const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
 
   const [name, setName] = useState("");

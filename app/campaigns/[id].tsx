@@ -1,4 +1,4 @@
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, useLocalSearchParams } from "expo-router";
 import {
   View,
   Text,
@@ -6,7 +6,7 @@ import {
   ActivityIndicator,
   TextInput,
 } from "react-native";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
 import {
   Heart,
@@ -17,7 +17,6 @@ import {
   MapPin,
   CheckCircle2,
   ArrowLeft,
-  Trash2,
 } from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
@@ -35,19 +34,12 @@ import {
   PRESET_DONATION_AMOUNTS,
   type DonationFrequency,
 } from "@/components/donate-sheet-types";
-import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
-import { getFriendlyAuthError } from "@/lib/auth/errors";
 
 const donationAmounts = [...PRESET_DONATION_AMOUNTS];
 
 export default function CampaignDetailPage() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const router = useRouter();
   const { isAuthenticated } = useConvexAuth();
-  const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
-  const takeDown = useMutation(api.campaigns.takeDown);
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState("");
@@ -56,8 +48,6 @@ export default function CampaignDetailPage() {
   const [donorEmail, setDonorEmail] = useState("");
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [donationMessage, setDonationMessage] = useState<string | null>(null);
-  const [takeDownError, setTakeDownError] = useState<string | null>(null);
-  const [takingDown, setTakingDown] = useState(false);
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
   }) as Campaign | null | undefined;
@@ -114,7 +104,6 @@ export default function CampaignDetailPage() {
     : selectedAmount;
 
   const openDonateSheet = () => {
-    if (adminUser) return;
     setDonationMessage(null);
     posthog?.capture("donation_started", {
       campaign_id: campaign.id,
@@ -126,19 +115,6 @@ export default function CampaignDetailPage() {
       donation_type: donationFrequency === "monthly" ? "recurring" : "one_time",
     });
     setDonateSheetOpen(true);
-  };
-
-  const handleTakeDown = () => {
-    setTakeDownError(null);
-    setTakingDown(true);
-    void takeDown({ slug: campaign.id })
-      .then(() => {
-        router.replace("/discover");
-      })
-      .catch((err) => {
-        setTakeDownError(getFriendlyAuthError(err));
-      })
-      .finally(() => setTakingDown(false));
   };
 
   return (
@@ -275,31 +251,7 @@ export default function CampaignDetailPage() {
             {campaign.donors} donors · {campaign.followers} followers
           </Text>
 
-          {campaign.status !== "funded" && adminUser ? (
-            <View className="mt-4">
-              <Text className="mb-3 text-sm text-dono-muted">
-                Admin accounts cannot donate. You can remove this campaign from
-                public browse.
-              </Text>
-              {takeDownError ? (
-                <Text className="mb-3 text-sm text-rose-700">{takeDownError}</Text>
-              ) : null}
-              <Pressable
-                onPress={handleTakeDown}
-                disabled={takingDown}
-                className={`mb-3 flex-row items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 py-3 ${
-                  takingDown ? "opacity-50" : ""
-                }`}
-              >
-                <Trash2 size={16} color="#be123c" />
-                <Text className="font-sans-medium text-sm text-rose-700">
-                  {takingDown ? "Taking down..." : "Take down campaign"}
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
-
-          {campaign.status !== "funded" && !adminUser ? (
+          {campaign.status !== "funded" && (
             <>
               <View className="mb-4 mt-4 flex-row gap-2">
                 <Pressable
@@ -388,27 +340,7 @@ export default function CampaignDetailPage() {
                 frequency={donationFrequency}
               />
             </>
-          ) : null}
-
-          {campaign.status === "funded" && adminUser ? (
-            <View className="mt-4">
-              {takeDownError ? (
-                <Text className="mb-3 text-sm text-rose-700">{takeDownError}</Text>
-              ) : null}
-              <Pressable
-                onPress={handleTakeDown}
-                disabled={takingDown}
-                className={`mb-3 flex-row items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 py-3 ${
-                  takingDown ? "opacity-50" : ""
-                }`}
-              >
-                <Trash2 size={16} color="#be123c" />
-                <Text className="font-sans-medium text-sm text-rose-700">
-                  {takingDown ? "Taking down..." : "Take down campaign"}
-                </Text>
-              </Pressable>
-            </View>
-          ) : null}
+          )}
 
           <View className="flex-row gap-2">
             <Pressable

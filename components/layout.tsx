@@ -11,26 +11,18 @@ import {
   Menu,
   X,
   LogOut,
-  ClipboardCheck,
 } from "lucide-react-native";
 import { useConvexAuth } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
-import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { cn } from "@/lib/utils";
 
-const studentNavItems = [
+const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/discover", label: "Discover", icon: Compass },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
   { href: "/communities", label: "Communities", icon: Users },
   { href: "/account", label: "Account", icon: User },
   { href: "/dashboard", label: "You", icon: User },
-] as const;
-
-const adminNavItems = [
-  { href: "/admin", label: "Review", icon: ClipboardCheck },
-  { href: "/discover", label: "Discover", icon: Compass },
 ] as const;
 
 function useIsWide() {
@@ -45,10 +37,6 @@ export function Header() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
-  const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
-  const navItems = adminUser ? adminNavItems : studentNavItems;
-  const brandHref = (adminUser ? "/admin" : "/") as Href;
 
   const handleSignOut = () => {
     setMobileOpen(false);
@@ -60,7 +48,7 @@ export function Header() {
   return (
     <View className="z-50 border-b border-dono-border bg-dono-bg/95">
       <View className="mx-auto h-16 w-full max-w-7xl flex-row items-center justify-between px-4">
-        <Link href={brandHref} asChild>
+        <Link href="/" asChild>
           <Pressable className="flex-row items-center gap-2">
             <Text className="font-display-medium text-xl text-dono-text">Dono</Text>
           </Pressable>
@@ -68,7 +56,7 @@ export function Header() {
 
         {isWide && (
           <View className="flex-row items-center gap-1">
-            {(adminUser ? navItems : studentNavItems.slice(1, -1)).map((item) => {
+            {navItems.slice(1, -1).map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(item.href + "/");
               return (
@@ -97,26 +85,22 @@ export function Header() {
         <View className="flex-row items-center gap-2">
           {isWide && (
             <>
-              {!adminUser ? (
-                <>
-                  <Link href="/create" asChild>
-                    <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
-                      <Plus size={16} color="#fff" />
-                      <Text className="font-sans-medium text-sm text-white">
-                        Start a Campaign
-                      </Text>
-                    </Pressable>
-                  </Link>
+              <Link href="/create" asChild>
+                <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
+                  <Plus size={16} color="#fff" />
+                  <Text className="font-sans-medium text-sm text-white">
+                    Start a Campaign
+                  </Text>
+                </Pressable>
+              </Link>
 
-                  <Link href="/dashboard" asChild>
-                    <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-dono-primary/10">
-                      <Text className="font-mono-medium text-sm text-dono-primary">
-                        Y
-                      </Text>
-                    </Pressable>
-                  </Link>
-                </>
-              ) : null}
+              <Link href="/dashboard" asChild>
+                <Pressable className="h-9 w-9 items-center justify-center rounded-full bg-dono-primary/10">
+                  <Text className="font-mono-medium text-sm text-dono-primary">
+                    Y
+                  </Text>
+                </Pressable>
+              </Link>
 
               {!isLoading &&
                 (isAuthenticated ? (
@@ -160,8 +144,7 @@ export function Header() {
       {mobileOpen && !isWide && (
         <View className="border-t border-dono-border bg-dono-bg px-4 py-3">
           {navItems.map((item) => {
-            const active =
-              pathname === item.href || pathname.startsWith(item.href + "/");
+            const active = pathname === item.href;
             return (
               <Link key={item.href} href={item.href as Href} asChild>
                 <Pressable
@@ -187,19 +170,17 @@ export function Header() {
               </Link>
             );
           })}
-          {!adminUser ? (
-            <Link href="/create" asChild>
-              <Pressable
-                onPress={() => setMobileOpen(false)}
-                className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-accent px-4 py-2.5"
-              >
-                <Plus size={16} color="#fff" />
-                <Text className="font-sans-medium text-sm text-white">
-                  Start a Campaign
-                </Text>
-              </Pressable>
-            </Link>
-          ) : null}
+          <Link href="/create" asChild>
+            <Pressable
+              onPress={() => setMobileOpen(false)}
+              className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-accent px-4 py-2.5"
+            >
+              <Plus size={16} color="#fff" />
+              <Text className="font-sans-medium text-sm text-white">
+                Start a Campaign
+              </Text>
+            </Pressable>
+          </Link>
           {!isLoading &&
             (isAuthenticated ? (
               <Pressable
@@ -232,9 +213,6 @@ export function Header() {
 export function MobileNav() {
   const pathname = usePathname();
   const isWide = useIsWide();
-  const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
-  const navItems = adminUser ? adminNavItems : studentNavItems;
 
   if (isWide) return null;
 
@@ -273,18 +251,6 @@ export function MobileNav() {
 
 export function Footer() {
   const isWide = useIsWide();
-  const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
-  const platformLinks = adminUser
-    ? ([
-        ["/admin", "Review"],
-        ["/discover", "Discover"],
-      ] as const)
-    : ([
-        ["/campaigns", "Campaigns"],
-        ["/communities", "Communities"],
-        ["/discover", "Discover"],
-      ] as const);
 
   return (
     <View className="border-t border-dono-border bg-dono-surface-muted">
@@ -303,7 +269,13 @@ export function Footer() {
             <Text className="mb-3 font-sans-medium text-sm text-dono-text">
               Platform
             </Text>
-            {platformLinks.map(([href, label]) => (
+            {(
+              [
+                ["/campaigns", "Campaigns"],
+                ["/communities", "Communities"],
+                ["/discover", "Discover"],
+              ] as const
+            ).map(([href, label]) => (
               <Link key={href} href={href} asChild>
                 <Pressable className="py-1">
                   <Text className="text-sm text-dono-muted">{label}</Text>
