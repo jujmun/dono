@@ -5,12 +5,14 @@ import {
   TextInput,
   Pressable,
   ScrollView,
+  ActivityIndicator,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useMutation } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import { CheckCircle2, ArrowRight } from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
+import { LoginGate } from "@/components/login-gate";
 import { categoryLabels } from "@/lib/constants";
 import { api } from "@convex/_generated/api";
 
@@ -37,6 +39,7 @@ const initialForm = {
 export default function CreateCampaignPage() {
   const router = useRouter();
   const posthog = usePostHog();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -61,6 +64,24 @@ export default function CreateCampaignPage() {
 
   const inputClass =
     "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+
+  if (isLoading) {
+    return (
+      <AppShell>
+        <View className="items-center py-16">
+          <ActivityIndicator color="#1d242f" />
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AppShell>
+        <LoginGate message="If you're a student, sign in with your Oxford email to create a campaign." />
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
