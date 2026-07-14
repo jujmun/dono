@@ -11,6 +11,7 @@
     "android": "expo start --android",
     "run:ios": "expo run:ios",
     "run:android": "expo run:android",
+    "export:web": "expo export -p web",
     "dev:backend": "convex dev",
     "lint": "eslint",
     "seed": "convex run seed:seed",
