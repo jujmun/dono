@@ -9,9 +9,9 @@ import {
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { type Href, Link, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Check, Send, X } from "lucide-react-native";
+import { ArrowLeft, Check, Send, Trash2, X } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
-import { AppShell } from "@/components/app-shell";
+import { AdminShell } from "@/components/admin-shell";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
@@ -56,28 +56,29 @@ export default function AdminCampaignReviewPage() {
   ) as AdminReviewPayload | null | undefined;
   const approve = useMutation(api.campaigns.approve);
   const reject = useMutation(api.campaigns.reject);
+  const takeDown = useMutation(api.campaigns.takeDown);
   const sendComment = useMutation(api.reviewMessages.send);
   const [comment, setComment] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
-  const [busy, setBusy] = useState<"approve" | "reject" | "comment" | null>(
-    null,
-  );
+  const [busy, setBusy] = useState<
+    "approve" | "reject" | "comment" | "takedown" | null
+  >(null);
 
   if (profile === undefined || (adminUser && detail === undefined)) {
     return (
-      <AppShell>
+      <AdminShell>
         <View className="items-center py-16">
           <ActivityIndicator color="#1d242f" />
           <Text className="mt-4 text-dono-muted">Loading review...</Text>
         </View>
-      </AppShell>
+      </AdminShell>
     );
   }
 
   if (!adminUser) {
     return (
-      <AppShell>
+      <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
           <Text className="font-display-medium text-2xl text-dono-text">
             Access denied
@@ -91,13 +92,13 @@ export default function AdminCampaignReviewPage() {
             </Text>
           </Pressable>
         </View>
-      </AppShell>
+      </AdminShell>
     );
   }
 
   if (!detail) {
     return (
-      <AppShell>
+      <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
           <Text className="text-center text-dono-muted">Campaign not found.</Text>
           <Link href={"/admin" as Href} asChild>
@@ -108,7 +109,7 @@ export default function AdminCampaignReviewPage() {
             </Pressable>
           </Link>
         </View>
-      </AppShell>
+      </AdminShell>
     );
   }
 
@@ -116,6 +117,10 @@ export default function AdminCampaignReviewPage() {
   const student = detail.student;
   const messages = detail.messages;
   const pending = campaign.status === "pending";
+  const isLive =
+    campaign.status === "active" ||
+    campaign.status === "funded" ||
+    campaign.status === "completed";
 
   const handleDecision = async (decision: "approve" | "reject") => {
     setError(null);
@@ -157,13 +162,34 @@ export default function AdminCampaignReviewPage() {
     }
   };
 
+  const handleTakeDown = async () => {
+    setError(null);
+    setInfo(null);
+    setBusy("takedown");
+    try {
+      await takeDown({ slug: campaign.id });
+      router.replace("/admin/discover");
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
   return (
-    <AppShell>
+    <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <Link href={"/admin" as Href} asChild>
+        <Link
+          href={
+            (pending ? "/admin" : "/admin/discover") as Href
+          }
+          asChild
+        >
           <Pressable className="mb-6 flex-row items-center gap-2">
             <ArrowLeft size={16} color="#5e6473" />
-            <Text className="text-sm text-dono-muted">Back to queue</Text>
+            <Text className="text-sm text-dono-muted">
+              {pending ? "Back to queue" : "Back to discover"}
+            </Text>
           </Pressable>
         </Link>
 
@@ -338,7 +364,24 @@ export default function AdminCampaignReviewPage() {
             </Pressable>
           </View>
         ) : null}
+
+        {isLive ? (
+          <Pressable
+            onPress={() => {
+              void handleTakeDown();
+            }}
+            disabled={busy !== null}
+            className={`mt-6 flex-row items-center justify-center gap-2 rounded-full border border-rose-200 bg-rose-50 py-3 ${
+              busy !== null ? "opacity-50" : ""
+            }`}
+          >
+            <Trash2 size={16} color="#be123c" />
+            <Text className="font-sans-medium text-sm text-rose-700">
+              {busy === "takedown" ? "Taking down..." : "Take down campaign"}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
-    </AppShell>
+    </AdminShell>
   );
 }

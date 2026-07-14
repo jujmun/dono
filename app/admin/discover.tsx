@@ -14,12 +14,12 @@ import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 
-export default function AdminPortalPage() {
+export default function AdminDiscoverPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
   const adminUser = isPortalAdmin(profile);
-  const pending = useQuery(
-    api.campaigns.listPendingForAdmin,
+  const campaigns = useQuery(
+    api.campaigns.list,
     adminUser ? {} : "skip",
   ) as Campaign[] | undefined;
 
@@ -28,30 +28,18 @@ export default function AdminPortalPage() {
       <AdminShell>
         <View className="items-center py-16">
           <ActivityIndicator color="#1d242f" />
-          <Text className="mt-4 text-dono-muted">Loading admin portal...</Text>
         </View>
       </AdminShell>
     );
   }
 
-  if (!adminUser || profile === null) {
+  if (!adminUser) {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
           <Text className="font-display-medium text-2xl text-dono-text">
             Access denied
           </Text>
-          <Text className="mt-2 text-dono-muted">
-            This portal is only available to outreach admins.
-          </Text>
-          <Pressable
-            onPress={() => router.replace("/dashboard")}
-            className="mt-6 items-center rounded-full bg-dono-primary py-3"
-          >
-            <Text className="font-sans-medium text-sm text-white">
-              Back to dashboard
-            </Text>
-          </Pressable>
         </View>
       </AdminShell>
     );
@@ -60,43 +48,35 @@ export default function AdminPortalPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">
-            Review
-          </Text>
-          <Text className="mt-1 text-dono-muted">
-            Tap a campaign to read the full story, view the student profile, and
-            send feedback.
-          </Text>
-          {profile.email ? (
-            <Text className="mt-2 text-xs text-dono-muted">
-              Signed in as {profile.email}
-            </Text>
-          ) : null}
-        </View>
+        <Text className="font-display-medium text-2xl text-dono-text">
+          Discover
+        </Text>
+        <Text className="mt-1 text-dono-muted">
+          Published campaigns. Open one to take it down or send feedback.
+        </Text>
 
-        {pending === undefined ? (
+        {campaigns === undefined ? (
           <View className="items-center py-12">
             <ActivityIndicator color="#1d242f" />
-            <Text className="mt-4 text-dono-muted">Loading pending campaigns...</Text>
           </View>
-        ) : pending.length === 0 ? (
-          <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
+        ) : campaigns.length === 0 ? (
+          <View className="mt-8 rounded-2xl border border-dono-border bg-white px-6 py-10">
             <Text className="font-sans-medium text-base text-dono-text">
-              No campaigns waiting for review
+              No published campaigns
             </Text>
             <Text className="mt-2 text-sm text-dono-muted">
-              New submissions will appear here after a student creates a
-              campaign.
+              Approved campaigns will appear here.
             </Text>
           </View>
         ) : (
-          <View className="gap-4">
-            {pending.map((campaign) => (
+          <View className="mt-6 gap-4">
+            {campaigns.map((campaign) => (
               <Pressable
                 key={campaign.id}
                 onPress={() =>
-                  router.push(`/admin/${encodeURIComponent(campaign.id)}` as Href)
+                  router.push(
+                    `/admin/${encodeURIComponent(campaign.id)}` as Href,
+                  )
                 }
                 className="rounded-2xl border border-dono-border bg-white p-5"
               >
@@ -106,17 +86,12 @@ export default function AdminPortalPage() {
                       {campaign.title}
                     </Text>
                     <Text className="mt-1 text-sm text-dono-muted">
-                      {campaign.creator.name} · {campaign.university} · Goal{" "}
-                      {formatCurrency(campaign.goal)}
+                      {campaign.creator.name} · {campaign.university} ·{" "}
+                      {formatCurrency(campaign.raised)} raised · {campaign.status}
                     </Text>
-                    {campaign.createdAt ? (
-                      <Text className="mt-1 text-xs text-dono-muted">
-                        Submitted {campaign.createdAt}
-                      </Text>
-                    ) : null}
                     <Text
                       className="mt-3 text-sm text-dono-text"
-                      numberOfLines={3}
+                      numberOfLines={2}
                     >
                       {campaign.description}
                     </Text>
