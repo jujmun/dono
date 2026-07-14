@@ -1,83 +1,21 @@
-import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import { requireUserId, requireVerifiedUser } from "./lib/authz";
-import {
-  DONATION_CURRENCY,
-  normalizeCampaignSlug,
-  validateDonationAmount,
-} from "./lib/donationAmounts";
-import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
+import { query } from "./_generated/server";
+import { requireUserId } from "./lib/authz";
 
-export const donate = mutation({
-  args: {
-    campaignSlug: v.string(),
-    amount: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
-    const campaignSlug = normalizeCampaignSlug(args.campaignSlug);
-    const amount = Number(args.amount);
-
-    if (!campaignSlug) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Campaign is required.",
-      });
-    }
-    const amountValidation = validateDonationAmount(amount);
-    if (!amountValidation.valid) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: amountValidation.message,
-      });
-    }
-
-    const campaign = await ctx.db
-      .query("campaigns")
-      .withIndex("by_slug", (q) => q.eq("slug", campaignSlug))
-      .unique();
-    if (!campaign) {
-      throw new ConvexError({
-        code: "CAMPAIGN_NOT_FOUND",
-        message: "Campaign not found.",
-      });
-    }
-
-    await ctx.db.insert("donations", {
-      userId,
-      campaignId: campaign._id,
-      amount,
-      currency: DONATION_CURRENCY,
-      type: "one_time",
-      paymentStatus: "succeeded",
-      createdAt: Date.now(),
-    });
-
-    const { raised, donors, status } = computeCampaignAfterDonation(
-      {
-        raised: campaign.raised,
-        donors: campaign.donors,
-        goal: campaign.goal,
-        status: campaign.status,
-      },
-      amount,
-    );
-
-    await ctx.db.patch(campaign._id, { raised, donors, status });
-
-    return { raised, donors, status };
-  },
-});
+function getSucceededDonations<T extends { paymentStatus: string }>(donations: T[]) {
+  return donations.filter((donation) => donation.paymentStatus === "succeeded");
+}
 
 export const getDonorImpact = query({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
 
-    const donations = await ctx.db
-      .query("donations")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const donations = getSucceededDonations(
+      await ctx.db
+        .query("donations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    );
 
     if (donations.length === 0) {
       return {
@@ -139,10 +77,12 @@ export const getDonoWrapped = query({
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
 
-    const donations = await ctx.db
-      .query("donations")
-      .withIndex("by_user", (q) => q.eq("userId", userId))
-      .collect();
+    const donations = getSucceededDonations(
+      await ctx.db
+        .query("donations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    );
 
     const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0);
     const campaignIds = [...new Set(donations.map((d) => d.campaignId))];
