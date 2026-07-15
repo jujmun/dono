@@ -11,6 +11,7 @@ import { type Href, useRouter } from "expo-router";
 import { ChevronRight, Search } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminStatsNav } from "@/components/admin-stats-nav";
 import {
   AdminStatusChip,
   moderationActionLabel,
@@ -83,14 +84,7 @@ export default function AdminArchivePage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">
-            Removed
-          </Text>
-          <Text className="mt-1 text-dono-muted">
-            Posts you denied or took down. Open one to put it back live.
-          </Text>
-        </View>
+        <AdminStatsNav active="removed" />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#5e6473" />

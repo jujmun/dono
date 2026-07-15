@@ -32,10 +32,16 @@ export function toCampaign(campaign: CampaignDoc) {
     moderatedAt: campaign.moderatedAt,
     moderationAction: campaign.moderationAction,
     restoredAt: campaign.restoredAt,
+    societyApprovalStatus: campaign.societyApprovalStatus,
+    societyApprovedAt: campaign.societyApprovedAt,
+    societyRejectionNote: campaign.societyRejectionNote,
   };
 }
 
 export function toCommunity(community: CommunityDoc) {
+  const verificationStatus =
+    community.verificationStatus ??
+    (community.verified ? ("verified" as const) : ("pending" as const));
   return {
     id: community.slug,
     name: community.name,
@@ -47,8 +53,23 @@ export function toCommunity(community: CommunityDoc) {
     followers: community.followers,
     campaigns: community.campaigns,
     totalRaised: community.totalRaised,
-    verified: community.verified,
+    verified: community.verified || verificationStatus === "verified",
     verificationType: community.verificationType,
+    verificationStatus,
+    createdBy: community.createdBy,
+  };
+}
+
+export function toSocietyMembership(member: Doc<"societyMembers">) {
+  return {
+    id: member._id,
+    communitySlug: member.communitySlug,
+    userId: member.userId,
+    role: member.role,
+    status: member.status,
+    createdAt: member.createdAt,
+    reviewedAt: member.reviewedAt,
+    reviewedBy: member.reviewedBy,
   };
 }
 

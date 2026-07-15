@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
 import {
   DONATION_CURRENCY,
@@ -9,6 +10,7 @@ import {
 import { getProfileByUserId } from "./lib/authz";
 import { isAdminIdentityEmail } from "./auth/adminConfig";
 import { getRecurringDonationForUserHandler } from "./lib/stripeOwnership";
+import { incrementCommunityRaised } from "./lib/aggregates";
 
 export const assertNotAdminDonor = internalQuery({
   args: { userId: v.id("users") },
@@ -236,7 +238,15 @@ export const markDonationSucceeded = internalMutation({
       return { alreadyProcessed: true };
     }
 
+    if (donation.fundId) {
+      return { alreadyProcessed: true };
+    }
+
     if (donation.paymentStatus === "succeeded") {
+      return { alreadyProcessed: true };
+    }
+
+    if (!donation.campaignId) {
       return { alreadyProcessed: true };
     }
 
@@ -250,6 +260,7 @@ export const markDonationSucceeded = internalMutation({
 
     await ctx.db.patch(donation._id, { paymentStatus: "succeeded" });
 
+    const wasFunded = campaign.raised >= campaign.goal;
     const { raised, donors, status } = computeCampaignAfterDonation(
       {
         raised: campaign.raised,
@@ -260,6 +271,50 @@ export const markDonationSucceeded = internalMutation({
       donation.amount,
     );
     await ctx.db.patch(campaign._id, { raised, donors, status });
+    await incrementCommunityRaised(ctx, campaign.creator.communityId, donation.amount);
+
+    const donorName = donation.userId
+      ? (await getProfileByUserId(ctx, donation.userId))?.name ?? "A donor"
+      : "A donor";
+    const donorAvatar =
+      donorName
+        .split(" ")
+        .map((p) => p[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase() || "DN";
+
+    await ctx.scheduler.runAfter(0, internal.activity.recordDonation, {
+      userName: donorName,
+      userAvatar: donorAvatar,
+      campaignTitle: campaign.title,
+      amount: donation.amount,
+    });
+
+    const receiptEmail =
+      donation.donorEmail ??
+      (donation.userId
+        ? (await getProfileByUserId(ctx, donation.userId))?.email
+        : undefined);
+    if (receiptEmail) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendDonationReceipt, {
+        email: receiptEmail,
+        campaignTitle: campaign.title,
+        amount: donation.amount,
+        currency: donation.currency,
+      });
+    }
+
+    if (!wasFunded && raised >= campaign.goal && campaign.createdBy) {
+      const profile = await getProfileByUserId(ctx, campaign.createdBy);
+      if (profile?.email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendCampaignFunded, {
+          email: profile.email,
+          name: profile.name ?? "there",
+          campaignTitle: campaign.title,
+        });
+      }
+    }
 
     return { alreadyProcessed: false };
   },
@@ -462,5 +517,86 @@ export const getRecurringDonationForUser = internalQuery({
       recurringDonation,
       callerUserId: args.userId,
     });
+  },
+});
+
+export const markDonationRefunded = internalMutation({
+  args: { stripePaymentIntentId: v.string() },
+  handler: async (ctx, args) => {
+    const donation = await ctx.db
+      .query("donations")
+      .withIndex("by_paymentIntent", (q) =>
+        q.eq("stripePaymentIntentId", args.stripePaymentIntentId),
+      )
+      .unique();
+
+    if (!donation || donation.paymentStatus !== "succeeded") {
+      return { updated: false };
+    }
+
+    await ctx.db.patch(donation._id, { paymentStatus: "refunded" });
+
+    if (donation.campaignId) {
+      const campaign = await ctx.db.get(donation.campaignId);
+      if (campaign) {
+        await ctx.db.patch(campaign._id, {
+          raised: Math.max(0, campaign.raised - donation.amount),
+          donors: Math.max(0, campaign.donors - 1),
+        });
+        await incrementCommunityRaised(
+          ctx,
+          campaign.creator.communityId,
+          -donation.amount,
+        );
+      }
+    }
+
+    return { updated: true };
+  },
+});
+
+export const linkGuestDonations = internalMutation({
+  args: {
+    userId: v.id("users"),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const normalized = args.email.trim().toLowerCase();
+    const guestDonations = await ctx.db
+      .query("donations")
+      .withIndex("by_donorEmail", (q) => q.eq("donorEmail", normalized))
+      .collect();
+
+    let linked = 0;
+    for (const donation of guestDonations) {
+      if (!donation.userId) {
+        await ctx.db.patch(donation._id, { userId: args.userId });
+        linked += 1;
+      }
+    }
+    return { linked };
+  },
+});
+
+export const listStalePendingDonations = internalQuery({
+  args: { olderThanMs: v.number() },
+  handler: async (ctx, args) => {
+    const cutoff = Date.now() - args.olderThanMs;
+    const donations = await ctx.db.query("donations").collect();
+    return donations.filter(
+      (d) => d.paymentStatus === "pending" && d.createdAt < cutoff,
+    );
+  },
+});
+
+export const failStalePendingDonation = internalMutation({
+  args: { donationId: v.id("donations") },
+  handler: async (ctx, args) => {
+    const donation = await ctx.db.get(args.donationId);
+    if (!donation || donation.paymentStatus !== "pending") {
+      return { updated: false };
+    }
+    await ctx.db.patch(args.donationId, { paymentStatus: "failed" });
+    return { updated: true };
   },
 });

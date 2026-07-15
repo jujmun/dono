@@ -11,6 +11,7 @@ import { type Href, useRouter } from "expo-router";
 import { ChevronRight, Search } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminStatsNav } from "@/components/admin-stats-nav";
 import { AdminStatusChip } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
@@ -23,10 +24,6 @@ export default function AdminPortalPage() {
   const adminUser = isPortalAdmin(profile);
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();
-  const stats = useQuery(
-    api.campaigns.getAdminStats,
-    adminUser ? {} : "skip",
-  );
   const pending = useQuery(
     api.campaigns.listPendingForAdmin,
     adminUser
@@ -65,47 +62,7 @@ export default function AdminPortalPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">
-            Needs review
-          </Text>
-          <Text className="mt-1 text-dono-muted">
-            New posts waiting for your decision
-          </Text>
-        </View>
-
-        <View className="mb-6 flex-row gap-3">
-          <View className="flex-1 rounded-xl border-2 border-dono-primary bg-dono-primary/5 px-4 py-3">
-            <Text className="text-xs font-sans-medium text-dono-primary">
-              Waiting
-            </Text>
-            <Text className="mt-1 font-display-medium text-xl text-dono-text">
-              {stats?.pending ?? "—"}
-            </Text>
-          </View>
-          <Pressable
-            onPress={() => router.push("/admin/discover" as Href)}
-            className="flex-1 rounded-xl border border-dono-border bg-white px-4 py-3"
-          >
-            <Text className="text-xs font-sans-medium text-dono-muted">
-              Live
-            </Text>
-            <Text className="mt-1 font-display-medium text-xl text-dono-text">
-              {stats?.live ?? "—"}
-            </Text>
-          </Pressable>
-          <Pressable
-            onPress={() => router.push("/admin/archive" as Href)}
-            className="flex-1 rounded-xl border border-dono-border bg-white px-4 py-3"
-          >
-            <Text className="text-xs font-sans-medium text-dono-muted">
-              Removed
-            </Text>
-            <Text className="mt-1 font-display-medium text-xl text-dono-text">
-              {stats?.moderated ?? "—"}
-            </Text>
-          </Pressable>
-        </View>
+        <AdminStatsNav active="waiting" />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#5e6473" />
