@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { requireAdmin, requireVerifiedUser } from "./lib/authz";
@@ -152,6 +152,10 @@ async function toAdminSociety(ctx: QueryCtx, society: SocietyDoc) {
     creatorId: society.creatorId,
     supportingDocumentUrls,
     idDocumentUrl,
+    stripeVerificationStatus: society.stripeVerificationStatus ?? null,
+    stripeVerificationLastErrorCode: society.stripeVerificationLastErrorCode ?? null,
+    verifiedName: society.verifiedName ?? null,
+    verifiedDob: society.verifiedDob ?? null,
   };
 }
 
@@ -355,5 +359,104 @@ export const reject = mutation({
       targetId: args.slug,
     });
     return null;
+  },
+});
+
+/** Internal — used by the Stripe Identity action/webhook (ActionCtx has no ctx.db). */
+export const getBySlug = internalQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+  },
+});
+
+export const recordVerificationSessionCreated = internalMutation({
+  args: {
+    slug: v.string(),
+    stripeVerificationSessionId: v.string(),
+    status: v.union(
+      v.literal("created"),
+      v.literal("requires_input"),
+      v.literal("processing"),
+      v.literal("verified"),
+      v.literal("canceled"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society) return null;
+    await ctx.db.patch(society._id, {
+      stripeVerificationSessionId: args.stripeVerificationSessionId,
+      stripeVerificationStatus: args.status,
+    });
+    return null;
+  },
+});
+
+/** Webhook-driven update — matches purely by stripeVerificationSessionId, no auth context. */
+export const updateVerificationFromWebhook = internalMutation({
+  args: {
+    stripeVerificationSessionId: v.string(),
+    status: v.union(
+      v.literal("created"),
+      v.literal("requires_input"),
+      v.literal("processing"),
+      v.literal("verified"),
+      v.literal("canceled"),
+    ),
+    verifiedName: v.optional(v.string()),
+    verifiedDob: v.optional(v.string()),
+    lastErrorCode: v.optional(v.string()),
+    lastErrorReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_stripeVerificationSessionId", (q) =>
+        q.eq("stripeVerificationSessionId", args.stripeVerificationSessionId),
+      )
+      .unique();
+    if (!society) return { updated: false };
+
+    await ctx.db.patch(society._id, {
+      stripeVerificationStatus: args.status,
+      ...(args.verifiedName !== undefined ? { verifiedName: args.verifiedName } : {}),
+      ...(args.verifiedDob !== undefined ? { verifiedDob: args.verifiedDob } : {}),
+      // Only meaningful on requires_input — clear it on every other status so a
+      // stale error message can't linger after a later successful attempt.
+      stripeVerificationLastErrorCode:
+        args.status === "requires_input" ? args.lastErrorCode : undefined,
+      stripeVerificationLastErrorReason:
+        args.status === "requires_input" ? args.lastErrorReason : undefined,
+    });
+    return { updated: true };
+  },
+});
+
+/** Live status for the wizard's own in-progress society — owner-only, no file URLs. */
+export const getMine = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society || society.creatorId !== userId) {
+      return null;
+    }
+    return {
+      slug: society.slug,
+      status: society.status,
+      stripeVerificationStatus: society.stripeVerificationStatus ?? null,
+      stripeVerificationLastErrorCode: society.stripeVerificationLastErrorCode ?? null,
+      stripeVerificationLastErrorReason: society.stripeVerificationLastErrorReason ?? null,
+    };
   },
 });

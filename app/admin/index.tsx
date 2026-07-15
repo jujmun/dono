@@ -37,6 +37,48 @@ const reviewTypeTabs: { id: ReviewType; label: string }[] = [
   { id: "societies", label: "Societies" },
 ];
 
+type ChipTone = "neutral" | "waiting" | "live" | "removed";
+
+function stripeStatusChip(
+  status: AdminSociety["stripeVerificationStatus"],
+): { label: string; tone: ChipTone } {
+  switch (status) {
+    case "verified":
+      return { label: "Verified", tone: "live" };
+    case "processing":
+    case "created":
+      return { label: "Pending", tone: "waiting" };
+    case "requires_input":
+      return { label: "Needs attention", tone: "removed" };
+    case "canceled":
+      return { label: "Canceled", tone: "removed" };
+    default:
+      return { label: "Not started", tone: "neutral" };
+  }
+}
+
+/**
+ * Distinct from the overall stripeVerificationStatus: whether the selfie
+ * specifically matched. Derived (no dedicated backend field) — "verified"
+ * implies the selfie check passed (require_matching_selfie is set at
+ * session creation); a requires_input with a selfie_* last_error means it
+ * didn't; anything else is treated as pending/unknown rather than assumed.
+ */
+function selfieMatchChip(
+  society: AdminSociety,
+): { label: string; tone: ChipTone } {
+  if (society.stripeVerificationStatus === "verified") {
+    return { label: "Selfie match: Yes", tone: "live" };
+  }
+  if (
+    society.stripeVerificationStatus === "requires_input" &&
+    society.stripeVerificationLastErrorCode?.startsWith("selfie_")
+  ) {
+    return { label: "Selfie match: No", tone: "removed" };
+  }
+  return { label: "Selfie match: Pending", tone: "waiting" };
+}
+
 function formatSubmittedAt(ms: number) {
   return new Date(ms).toLocaleDateString("en-GB", {
     day: "numeric",
@@ -361,7 +403,7 @@ export default function AdminPortalPage() {
                             ))}
                           </View>
                         )}
-                        <View className="mt-2 border-t border-dono-border pt-2">
+                        <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
                           {society.idDocumentUrl ? (
                             <Pressable
                               onPress={() =>
@@ -379,7 +421,37 @@ export default function AdminPortalPage() {
                               ID document unavailable.
                             </Text>
                           )}
+                          <AdminStatusChip
+                            label={stripeStatusChip(society.stripeVerificationStatus).label}
+                            tone={stripeStatusChip(society.stripeVerificationStatus).tone}
+                          />
                         </View>
+
+                        <View className="mt-2 flex-row flex-wrap gap-2">
+                          <AdminStatusChip
+                            label={selfieMatchChip(society).label}
+                            tone={selfieMatchChip(society).tone}
+                          />
+                        </View>
+
+                        {society.verifiedName || society.verifiedDob ? (
+                          <View className="mt-2 rounded-lg border border-dono-border bg-white px-3 py-2">
+                            <Text className="text-xs font-sans-medium text-dono-muted">
+                              Auto-extracted from ID (Stripe) — reference only, not
+                              verified ground truth
+                            </Text>
+                            {society.verifiedName ? (
+                              <Text className="mt-1 text-sm text-dono-text">
+                                Name: {society.verifiedName}
+                              </Text>
+                            ) : null}
+                            {society.verifiedDob ? (
+                              <Text className="text-sm text-dono-text">
+                                DOB: {society.verifiedDob}
+                              </Text>
+                            ) : null}
+                          </View>
+                        ) : null}
                       </View>
 
                       {reasonOpen ? (

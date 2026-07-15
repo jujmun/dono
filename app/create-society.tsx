@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link } from "expo-router";
-import { useConvexAuth, useMutation } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
   CheckCircle2,
@@ -18,12 +18,16 @@ import {
   IdCard,
   Globe,
   Link2,
+  ShieldCheck,
+  ShieldAlert,
+  Clock,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
+import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -68,6 +72,9 @@ export default function CreateSocietyPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
   const createSociety = useMutation(api.societies.create);
+  const createVerificationSession = useAction(
+    api.societyIdentity.createVerificationSession,
+  );
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
@@ -77,8 +84,14 @@ export default function CreateSocietyPage() {
   const [pickingCover, setPickingCover] = useState(false);
   const [pickingDocs, setPickingDocs] = useState(false);
   const [pickingId, setPickingId] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [societySlug, setSocietySlug] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  // Once a slug exists, this reflects the webhook-driven status in real time.
+  const verification = useQuery(
+    api.societies.getMine,
+    societySlug ? { slug: societySlug } : "skip",
+  );
 
   const update = (field: keyof typeof initialForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -217,47 +230,66 @@ export default function CreateSocietyPage() {
     return await uploadImageToConvexStorage(uploadUrl, file.uri, file.mimeType);
   };
 
-  const submitSociety = async () => {
+  /** Creates the society (once) so Stripe Identity has a record to attach to. */
+  const ensureSocietyCreated = async (): Promise<string> => {
+    if (societySlug) return societySlug;
     if (!idDocument) {
-      setError("An ID document is required.");
-      return;
+      throw new Error("An ID document is required.");
     }
 
+    const coverImageStorageId = coverImage
+      ? await uploadPickedFile(coverImage)
+      : undefined;
+
+    const supportingDocumentStorageIds: Id<"_storage">[] = [];
+    for (const doc of supportingDocs) {
+      supportingDocumentStorageIds.push(await uploadPickedFile(doc));
+    }
+
+    const idDocumentStorageId = await uploadPickedFile(idDocument);
+
+    const result = await createSociety({
+      name: form.name,
+      description: form.description,
+      story: form.story,
+      websiteUrl: form.website,
+      secondaryLink: form.secondaryLink.trim() || undefined,
+      coverImageStorageId,
+      supportingDocumentStorageIds,
+      idDocumentStorageId,
+    });
+
+    setSocietySlug(result.slug);
+    return result.slug;
+  };
+
+  const handleVerifyIdentity = async () => {
     setError(null);
-    setSubmitting(true);
+    setVerifying(true);
     try {
-      const coverImageStorageId = coverImage
-        ? await uploadPickedFile(coverImage)
-        : undefined;
-
-      const supportingDocumentStorageIds: Id<"_storage">[] = [];
-      for (const doc of supportingDocs) {
-        supportingDocumentStorageIds.push(await uploadPickedFile(doc));
+      const slug = await ensureSocietyCreated();
+      const { clientSecret, url } = await createVerificationSession({ slug });
+      const result = await launchIdentityVerification({ clientSecret, url });
+      if (result.error) {
+        setError(result.error);
       }
-
-      const idDocumentStorageId = await uploadPickedFile(idDocument);
-
-      await createSociety({
-        name: form.name,
-        description: form.description,
-        story: form.story,
-        websiteUrl: form.website,
-        secondaryLink: form.secondaryLink.trim() || undefined,
-        coverImageStorageId,
-        supportingDocumentStorageIds,
-        idDocumentStorageId,
-      });
-
-      setSubmitted(true);
     } catch (err) {
-      setError(getFriendlyAuthError(err) || "Failed to submit your society.");
+      setError(getFriendlyAuthError(err) || "Could not start verification.");
     } finally {
-      setSubmitting(false);
+      setVerifying(false);
     }
   };
 
   const websiteInvalid = !isValidOptionalUrl(form.website);
   const secondaryLinkInvalid = !isValidOptionalUrl(form.secondaryLink);
+  const manualFieldsValid =
+    supportingDocs.length > 0 &&
+    idDocument !== null &&
+    !websiteInvalid &&
+    !secondaryLinkInvalid;
+
+  const stripeStatus = verification?.stripeVerificationStatus ?? null;
+  const stripeVerified = stripeStatus === "verified";
 
   const canProceed = () => {
     switch (step) {
@@ -266,15 +298,58 @@ export default function CreateSocietyPage() {
       case 1:
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
-        return (
-          supportingDocs.length > 0 &&
-          idDocument !== null &&
-          !websiteInvalid &&
-          !secondaryLinkInvalid
-        );
+        // Requires BOTH the manual ID document (already implied by
+        // societySlug existing, since societies.create enforces it) AND a
+        // verified Stripe Identity check.
+        return societySlug !== null && stripeVerified;
       default:
         return true;
     }
+  };
+
+  const renderVerificationStatus = () => {
+    if (!stripeStatus) return null;
+    if (stripeStatus === "verified") {
+      return (
+        <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
+          <ShieldCheck size={14} color="#15803d" />
+          <Text className="text-xs text-green-800">Verified</Text>
+        </View>
+      );
+    }
+    if (stripeStatus === "processing" || stripeStatus === "created") {
+      return (
+        <View className="flex-row items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+          <Clock size={14} color="#b45309" />
+          <Text className="text-xs text-amber-800">
+            Verification submitted — pending
+          </Text>
+        </View>
+      );
+    }
+    if (stripeStatus === "requires_input") {
+      const isSelfieMismatch =
+        verification?.stripeVerificationLastErrorCode?.startsWith("selfie_") ?? false;
+      return (
+        <View className="flex-row items-center gap-2 rounded-xl bg-rose-50 px-3 py-2">
+          <ShieldAlert size={14} color="#be123c" />
+          <Text className="text-xs text-rose-700">
+            {isSelfieMismatch
+              ? "Selfie didn't match your ID."
+              : (verification?.stripeVerificationLastErrorReason ?? "Needs attention.")}
+          </Text>
+        </View>
+      );
+    }
+    if (stripeStatus === "canceled") {
+      return (
+        <View className="flex-row items-center gap-2 rounded-xl bg-rose-50 px-3 py-2">
+          <ShieldAlert size={14} color="#be123c" />
+          <Text className="text-xs text-rose-700">Verification canceled.</Text>
+        </View>
+      );
+    }
+    return null;
   };
 
   const inputClass =
@@ -583,6 +658,44 @@ export default function CreateSocietyPage() {
                   </Text>
                 </Pressable>
               </View>
+
+              <View className="rounded-xl border border-dono-border bg-white p-4">
+                <View className="mb-1.5 flex-row items-center gap-2">
+                  <ShieldCheck size={16} color="#17211B" />
+                  <Text className="font-sans-medium text-sm text-dono-text">
+                    Identity Check
+                  </Text>
+                </View>
+                <Text className="mb-3 text-xs text-dono-muted">
+                  You'll be asked for a quick photo of your ID and a selfie so we can
+                  confirm it's really you — it only takes a minute.
+                </Text>
+
+                {renderVerificationStatus()}
+
+                <Pressable
+                  onPress={() => void handleVerifyIdentity()}
+                  disabled={!manualFieldsValid || verifying || stripeVerified}
+                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2.5 ${
+                    !manualFieldsValid || verifying || stripeVerified ? "opacity-50" : ""
+                  }`}
+                >
+                  {verifying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="font-sans-medium text-sm text-white">
+                      {stripeStatus === "requires_input" || stripeStatus === "canceled"
+                        ? "Try again"
+                        : "Verify your identity"}
+                    </Text>
+                  )}
+                </Pressable>
+                {!manualFieldsValid ? (
+                  <Text className="mt-2 text-xs text-dono-muted">
+                    Add your supporting documents, ID, and website above first.
+                  </Text>
+                ) : null}
+              </View>
             </View>
           )}
 
@@ -644,47 +757,34 @@ export default function CreateSocietyPage() {
                 <Text className="text-sm text-dono-muted">
                   Secondary link: {form.secondaryLink.trim() || "Not provided"}
                 </Text>
+                <View className="mt-1">{renderVerificationStatus()}</View>
               </View>
             </View>
           )}
 
           {step === 4 && (
-            <View className="gap-5">
-              {submitted ? (
-                <View className="items-center gap-3 py-4">
-                  <CheckCircle2 size={32} color="#17211B" />
-                  <Text className="text-center text-lg font-sans-medium text-dono-text">
-                    Application submitted
+            <View className="items-center gap-3 py-4">
+              <CheckCircle2 size={32} color="#17211B" />
+              <Text className="text-center text-lg font-sans-medium text-dono-text">
+                Application submitted
+              </Text>
+              <Text className="text-center text-sm leading-relaxed text-dono-muted">
+                Thanks — we've received your society, its verification documents, and your
+                Stripe identity check. We'll review it and let you know once a decision is
+                made.
+              </Text>
+              <Link href="/societies" asChild>
+                <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
+                  <Text className="font-sans-medium text-sm text-white">
+                    Back to Societies
                   </Text>
-                  <Text className="text-center text-sm leading-relaxed text-dono-muted">
-                    Thanks — we've received your society and its verification documents.
-                    We'll review them and let you know once a decision is made.
-                  </Text>
-                  <Link href="/societies" asChild>
-                    <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
-                      <Text className="font-sans-medium text-sm text-white">
-                        Back to Societies
-                      </Text>
-                    </Pressable>
-                  </Link>
-                </View>
-              ) : (
-                <>
-                  <Text className="text-lg font-sans-medium text-dono-text">
-                    Before your society goes live
-                  </Text>
-                  <Text className="text-sm leading-relaxed text-dono-muted">
-                    We review every new society, including its supporting documents and ID
-                    verification, before it appears publicly and can start receiving funds.
-                    We'll reach out directly if anything needs adjusting.
-                  </Text>
-                </>
-              )}
+                </Pressable>
+              </Link>
             </View>
           )}
 
           <View className="mt-8 flex-row justify-between">
-            {step > 0 && !(step === 4 && submitted) ? (
+            {step > 0 && step < 4 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
                 className="rounded-full border border-dono-border px-5 py-2.5"
@@ -706,19 +806,7 @@ export default function CreateSocietyPage() {
                 <Text className="font-sans-medium text-sm text-white">Continue</Text>
                 <ArrowRight size={16} color="#fff" />
               </Pressable>
-            ) : submitted ? null : (
-              <Pressable
-                disabled={submitting}
-                onPress={() => void submitSociety()}
-                className={`rounded-full bg-dono-accent px-6 py-2.5 ${
-                  submitting ? "opacity-50" : ""
-                }`}
-              >
-                <Text className="font-sans-medium text-sm text-white">
-                  {submitting ? "Submitting..." : "Submit for Review"}
-                </Text>
-              </Pressable>
-            )}
+            ) : null}
           </View>
 
           {error && (

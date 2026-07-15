@@ -46,6 +46,8 @@ import type * as security from "../security.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
 import type * as societies from "../societies.js";
+import type * as societyIdentity from "../societyIdentity.js";
+import type * as societyIdentityWebhook from "../societyIdentityWebhook.js";
 import type * as societyMembers from "../societyMembers.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeConnect from "../stripeConnect.js";
@@ -101,6 +103,8 @@ declare const fullApi: ApiFromModules<{
   seed: typeof seed;
   seedData: typeof seedData;
   societies: typeof societies;
+  societyIdentity: typeof societyIdentity;
+  societyIdentityWebhook: typeof societyIdentityWebhook;
   societyMembers: typeof societyMembers;
   stripe: typeof stripe;
   stripeConnect: typeof stripeConnect;
