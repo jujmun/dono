@@ -5,6 +5,13 @@ import { CategoryBadge } from "@/components/ui/category-badge";
 import { VerificationList } from "@/components/ui/verification-badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EngagementStats } from "@/components/activity-feed";
+import {
+  FundBreakdownSection,
+  ReceiptDivider,
+  ReceiptLedger,
+  ReceiptLineRow,
+  ReceiptTotalRow,
+} from "@/components/ui/receipt-lines";
 import { formatCurrency } from "@/lib/constants";
 
 function previewDeadline(): string {
@@ -21,6 +28,7 @@ export interface CampaignPreviewProps {
   goal: number;
   imageUri?: string | null;
   imageUris?: string[];
+  impactLines?: { label: string; amount: number }[];
 }
 
 export function CampaignPreview({
@@ -31,6 +39,7 @@ export function CampaignPreview({
   goal,
   imageUri,
   imageUris,
+  impactLines,
 }: CampaignPreviewProps) {
   const deadline = previewDeadline();
   const previewImages =
@@ -86,9 +95,21 @@ export function CampaignPreview({
         />
 
         <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-          <Text className="mb-3 text-lg font-sans-medium text-dono-text">The Story</Text>
+          <Text className="mb-3 text-lg font-sans-medium text-dono-text">The story</Text>
           <Text className="leading-relaxed text-dono-muted">{story}</Text>
         </View>
+
+        {impactLines && impactLines.length > 0 ? (
+          <FundBreakdownSection className="mb-8">
+            <ReceiptLedger>
+              {impactLines.map((line) => (
+                <ReceiptLineRow key={line.label} label={line.label} amount={line.amount} />
+              ))}
+              <ReceiptDivider />
+              <ReceiptTotalRow label="Total goal" amount={goal} />
+            </ReceiptLedger>
+          </FundBreakdownSection>
+        ) : null}
       </View>
 
       <View className="mt-8 w-full shrink-0 lg:mt-0 lg:w-80">

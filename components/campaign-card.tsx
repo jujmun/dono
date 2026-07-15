@@ -4,9 +4,14 @@ import { Users } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import { getPrimaryCampaignImage } from "@/lib/campaign-images";
-import { buildReceiptLines, getReceiptSubtitle } from "@/lib/receipt";
+import {
+  buildGoalLineItems,
+  buildReceiptFooter,
+  getReceiptSubtitle,
+} from "@/lib/receipt";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { CategoryBadge } from "@/components/ui/category-badge";
+import { ReceiptDivider, ReceiptLedger, ReceiptLineRow } from "@/components/ui/receipt-lines";
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -15,34 +20,34 @@ interface CampaignCardProps {
   href?: Href;
 }
 
-function ReceiptDivider() {
-  return <View className="my-4 border-t border-dashed border-dono-border" />;
-}
-
-function ReceiptLineRow({
-  label,
-  amount,
-  muted,
+function CampaignCardLedger({
+  campaign,
+  size = "sm",
+  boxed = false,
 }: {
-  label: string;
-  amount: number;
-  muted?: boolean;
+  campaign: Campaign;
+  size?: "xs" | "sm";
+  boxed?: boolean;
 }) {
-  return (
-    <View className="mb-2 flex-row items-baseline justify-between gap-4">
-      <Text
-        className={`flex-1 font-mono text-sm ${muted ? "text-dono-muted" : "text-dono-text"}`}
-        numberOfLines={1}
-      >
-        {label}
-      </Text>
-      <Text
-        className={`font-mono text-sm ${muted ? "text-dono-muted" : "text-dono-text"}`}
-      >
-        {formatCurrency(amount)}
-      </Text>
-    </View>
+  const goalLines = buildGoalLineItems(campaign);
+  const footer = buildReceiptFooter(campaign);
+  const dividerClass = size === "xs" ? "my-2" : "my-3";
+
+  const ledger = (
+    <>
+      {goalLines.map((line) => (
+        <ReceiptLineRow key={line.label} {...line} size={size} />
+      ))}
+      <ReceiptDivider className={dividerClass} />
+      <ReceiptLineRow {...footer} emphasis size={size} />
+    </>
   );
+
+  if (boxed) {
+    return <ReceiptLedger>{ledger}</ReceiptLedger>;
+  }
+
+  return ledger;
 }
 
 export function CampaignCard({
@@ -52,47 +57,53 @@ export function CampaignCard({
 }: CampaignCardProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
-  const receiptLines = buildReceiptLines(campaign);
   const subtitle = getReceiptSubtitle(campaign);
   const imageSource = getPrimaryCampaignImage(campaign);
+  const fundedLabel =
+    campaign.status === "funded" ? "Fully funded" : `${progress}% funded`;
 
   if (variant === "compact") {
     return (
       <Link href={destination} asChild>
-        <Pressable className="w-full overflow-hidden rounded-lg border border-dono-border bg-white active:opacity-90">
-          <CampaignImage image={imageSource} className="h-28">
-            <View className="absolute left-3 top-3">
-              <CategoryBadge category={campaign.category} />
-            </View>
-          </CampaignImage>
-          <View className="p-4">
-          <View className="mb-2 flex-row items-start justify-between gap-3">
-            <View className="min-w-0 flex-1">
-              <Text className="font-display-medium text-sm text-dono-text" numberOfLines={1}>
+        <Pressable className="w-full active:opacity-90">
+          <View className="overflow-hidden rounded-xl border border-dono-border bg-white">
+            <CampaignImage image={imageSource} className="h-32">
+              <View className="absolute left-3 top-3">
+                <CategoryBadge category={campaign.category} />
+              </View>
+            </CampaignImage>
+            <View className="p-4">
+              <Text
+                className="font-display-medium text-base text-dono-text"
+                numberOfLines={2}
+              >
                 {campaign.title}
               </Text>
-              <Text className="text-xs text-dono-muted" numberOfLines={1}>
-                {subtitle}
-              </Text>
+              {subtitle ? (
+                <Text className="mt-1 text-xs text-dono-muted" numberOfLines={1}>
+                  {subtitle}
+                </Text>
+              ) : null}
+              <View className="mt-2 flex-row items-center justify-between">
+                <Text className="font-mono text-xs text-dono-muted">{fundedLabel}</Text>
+              </View>
+
+              <View className="mt-3">
+                <CampaignCardLedger campaign={campaign} size="xs" boxed />
+              </View>
+
+              <View className="mt-3 flex-row items-center justify-between border-t border-dashed border-dono-border pt-3">
+                <Text className="font-mono text-xs text-dono-text">
+                  {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+                </Text>
+                <View className="flex-row items-center gap-1">
+                  <Users size={12} color="#56615A" />
+                  <Text className="font-mono text-xs text-dono-muted">
+                    {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+                  </Text>
+                </View>
+              </View>
             </View>
-            <Text className="font-mono text-xs text-dono-muted">{progress}% funded</Text>
-          </View>
-          <ReceiptDivider />
-          {receiptLines.slice(0, 3).map((line) => (
-            <ReceiptLineRow key={line.label} {...line} />
-          ))}
-          <ReceiptDivider />
-          <View className="flex-row items-center justify-between">
-            <Text className="font-mono text-xs text-dono-text">
-              {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
-            </Text>
-            <View className="flex-row items-center gap-1">
-              <Users size={12} color="#56615A" />
-              <Text className="font-mono text-xs text-dono-muted">
-                {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
-              </Text>
-            </View>
-          </View>
           </View>
         </Pressable>
       </Link>
@@ -109,37 +120,35 @@ export function CampaignCard({
             </View>
           </CampaignImage>
           <View className="p-5">
-          <View className="flex-row items-start justify-between gap-4">
-            <View className="min-w-0 flex-1">
-              <Text className="font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
-              {subtitle ? (
-                <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
-              ) : null}
-            </View>
-            <Text className="font-mono text-sm text-dono-muted">
-              {campaign.status === "funded" ? "Fully funded" : `${progress}% funded`}
-            </Text>
-          </View>
-
-          <ReceiptDivider />
-
-          {receiptLines.map((line) => (
-            <ReceiptLineRow key={line.label} {...line} />
-          ))}
-
-          <ReceiptDivider />
-
-          <View className="flex-row items-center justify-between">
-            <Text className="font-mono text-sm text-dono-text">
-              {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
-            </Text>
-            <View className="flex-row items-center gap-1.5">
-              <Users size={14} color="#56615A" />
-              <Text className="font-mono text-sm text-dono-muted">
-                {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+            <View className="flex-row items-start justify-between gap-4">
+              <View className="min-w-0 flex-1">
+                <Text className="font-display-medium text-xl text-dono-text" numberOfLines={2}>
+                  {campaign.title}
+                </Text>
+                {subtitle ? (
+                  <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
+                ) : null}
+              </View>
+              <Text className="shrink-0 font-mono text-sm text-dono-muted">
+                {fundedLabel}
               </Text>
             </View>
-          </View>
+
+            <View className="mt-4">
+              <CampaignCardLedger campaign={campaign} boxed />
+            </View>
+
+            <View className="mt-4 flex-row items-center justify-between border-t border-dashed border-dono-border pt-4">
+              <Text className="font-mono text-sm text-dono-text">
+                {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+              </Text>
+              <View className="flex-row items-center gap-1.5">
+                <Users size={14} color="#56615A" />
+                <Text className="font-mono text-sm text-dono-muted">
+                  {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+                </Text>
+              </View>
+            </View>
           </View>
         </View>
       </Pressable>
