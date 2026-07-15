@@ -69,7 +69,7 @@ export default function CreateCampaignPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AppShell>
     );
@@ -137,7 +137,7 @@ export default function CreateCampaignPage() {
                   value={form.title}
                   onChangeText={(v) => update("title", v)}
                   placeholder="e.g. Anatomy Models for Medical Students"
-                  placeholderTextColor="#5e6473"
+                  placeholderTextColor="#56615A"
                   className={inputClass}
                 />
               </View>
@@ -208,7 +208,7 @@ export default function CreateCampaignPage() {
                   value={form.university}
                   onChangeText={(v) => update("university", v)}
                   placeholder="e.g. University of Cambridge"
-                  placeholderTextColor="#5e6473"
+                  placeholderTextColor="#56615A"
                   className={inputClass}
                 />
               </View>
@@ -225,7 +225,7 @@ export default function CreateCampaignPage() {
                   value={form.description}
                   onChangeText={(v) => update("description", v)}
                   placeholder="One-line summary of your campaign"
-                  placeholderTextColor="#5e6473"
+                  placeholderTextColor="#56615A"
                   className={inputClass}
                 />
               </View>
@@ -237,7 +237,7 @@ export default function CreateCampaignPage() {
                   value={form.story}
                   onChangeText={(v) => update("story", v)}
                   placeholder="Tell donors why this matters..."
-                  placeholderTextColor="#5e6473"
+                  placeholderTextColor="#56615A"
                   multiline
                   numberOfLines={6}
                   textAlignVertical="top"
@@ -257,7 +257,7 @@ export default function CreateCampaignPage() {
                   value={form.goal}
                   onChangeText={(v) => update("goal", v)}
                   placeholder="e.g. 3500"
-                  placeholderTextColor="#5e6473"
+                  placeholderTextColor="#56615A"
                   keyboardType="numeric"
                   className={inputClass}
                 />

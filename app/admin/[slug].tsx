@@ -88,7 +88,7 @@ export default function AdminCampaignReviewPage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
           <Text className="mt-4 text-dono-muted">Loading review...</Text>
         </View>
       </AdminShell>
@@ -239,7 +239,7 @@ export default function AdminCampaignReviewPage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <Link href={backHref} asChild>
           <Pressable className="mb-6 flex-row items-center gap-2">
-            <ArrowLeft size={16} color="#5e6473" />
+            <ArrowLeft size={16} color="#56615A" />
             <Text className="text-sm text-dono-muted">{backLabel}</Text>
           </Pressable>
         </Link>
@@ -322,7 +322,7 @@ export default function AdminCampaignReviewPage() {
                   View student
                 </Text>
               </View>
-              <ChevronRight size={20} color="#5e6473" />
+              <ChevronRight size={20} color="#56615A" />
             </Pressable>
           ) : (
             <Text className="mt-3 text-sm text-dono-muted">
@@ -379,7 +379,7 @@ export default function AdminCampaignReviewPage() {
             multiline
             numberOfLines={4}
             placeholder="Ask for changes, clarify requirements, or share next steps..."
-            placeholderTextColor="#5e6473"
+            placeholderTextColor="#56615A"
             className="mt-4 min-h-[100px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
             textAlignVertical="top"
           />
@@ -400,7 +400,7 @@ export default function AdminCampaignReviewPage() {
                 busy !== null || !student || !comment.trim() ? "opacity-50" : ""
               }`}
             >
-              <Send size={15} color="#1d242f" />
+              <Send size={15} color="#17211B" />
               <Text className="font-sans-medium text-sm text-dono-text">
                 {busy === "comment" ? "Sending..." : "Send"}
               </Text>
@@ -435,7 +435,7 @@ export default function AdminCampaignReviewPage() {
               multiline
               numberOfLines={4}
               placeholder="Explain what needs to change or why this was removed…"
-              placeholderTextColor="#5e6473"
+              placeholderTextColor="#56615A"
               className="mt-4 min-h-[100px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
               textAlignVertical="top"
               maxLength={1000}

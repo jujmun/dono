@@ -27,7 +27,7 @@ export default function CommunityDetailPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AppShell>
     );
@@ -53,7 +53,7 @@ export default function CommunityDetailPage() {
       <View className="mx-auto w-full max-w-7xl px-4 py-6">
         <Link href="/communities" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#5e6473" />
+            <ArrowLeft size={16} color="#56615A" />
             <Text className="text-sm text-dono-muted">Back to communities</Text>
           </Pressable>
         </Link>
@@ -122,11 +122,11 @@ export default function CommunityDetailPage() {
 
         <View>
           <View className="mb-4 flex-row items-center gap-2">
-            <Target size={20} color="#1d242f" />
+            <Target size={20} color="#17211B" />
             <Text className="text-lg font-sans-medium text-dono-text">Active Campaigns</Text>
           </View>
           {communityCampaigns === undefined ? (
-            <ActivityIndicator color="#1d242f" />
+            <ActivityIndicator color="#17211B" />
           ) : communityCampaigns.length === 0 ? (
             <View className="rounded-2xl border border-dono-border bg-white p-8">
               <Text className="text-center text-dono-muted">No active campaigns yet.</Text>

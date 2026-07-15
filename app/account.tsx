@@ -143,7 +143,7 @@ export default function AccountPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AppShell>
     );
@@ -228,7 +228,7 @@ export default function AccountPage() {
               value={name}
               onChangeText={setName}
               placeholder="Your name"
-              placeholderTextColor="#5e6473"
+              placeholderTextColor="#56615A"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
             />
             {profileError ? (
@@ -261,7 +261,7 @@ export default function AccountPage() {
 
           {reviewMessages === undefined ? (
             <View className="items-center py-6">
-              <ActivityIndicator color="#1d242f" />
+              <ActivityIndicator color="#17211B" />
             </View>
           ) : reviewMessages.length === 0 ? (
             <Text className="mt-4 text-sm text-dono-muted">
@@ -301,7 +301,7 @@ export default function AccountPage() {
 
           {recurringDonations === undefined ? (
             <View className="items-center py-6">
-              <ActivityIndicator color="#1d242f" />
+              <ActivityIndicator color="#17211B" />
             </View>
           ) : recurringDonations.length === 0 ? (
             <Text className="mt-4 text-sm text-dono-muted">

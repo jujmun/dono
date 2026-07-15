@@ -63,7 +63,7 @@ export default function ForgotPasswordPage() {
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="you@st-annes.ox.ac.uk"
-              placeholderTextColor="#5e6473"
+              placeholderTextColor="#56615A"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
             />
 

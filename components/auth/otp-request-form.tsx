@@ -121,7 +121,7 @@ function OtpRequestFormInner({
                 keyboardType="email-address"
                 autoComplete="email"
                 placeholder="you@st-annes.ox.ac.uk"
-                placeholderTextColor="#5e6473"
+                placeholderTextColor="#56615A"
                 className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
               />
               <Text className="mt-1 text-xs text-dono-muted">

@@ -224,7 +224,7 @@ export function DonateSheet({
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="Email for receipt (optional)"
-              placeholderTextColor="#5e6473"
+              placeholderTextColor="#56615A"
               className="mb-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
             />
           ) : null}
@@ -243,7 +243,7 @@ export function DonateSheet({
             </View>
           ) : loading ? (
             <View className="flex-1 items-center justify-center py-8">
-              <ActivityIndicator color="#1d242f" />
+              <ActivityIndicator color="#17211B" />
             </View>
           ) : error ? (
             <Text className="mt-4 text-sm text-red-600">{error}</Text>
