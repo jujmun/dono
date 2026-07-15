@@ -2,7 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { requireAdmin, requireVerifiedUser } from "./lib/authz";
+import { getProfileByUserId, requireAdmin, requireVerifiedUser } from "./lib/authz";
 import { logAdminAction } from "./adminAudit";
 import {
   assertNotRateLimited,
@@ -370,6 +370,15 @@ export const getBySlug = internalQuery({
       .query("societies")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
+  },
+});
+
+/** For action-context admin-or-owner checks (ActionCtx has no ctx.db). */
+export const getCallerRole = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const profile = await getProfileByUserId(ctx, args.userId);
+    return profile?.role ?? "user";
   },
 });
 

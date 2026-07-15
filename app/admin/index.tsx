@@ -7,7 +7,7 @@ import {
   TextInput,
   Linking,
 } from "react-native";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { type Href, useRouter } from "expo-router";
 import {
   ChevronRight,
@@ -18,6 +18,7 @@ import {
   Link2,
   Paperclip,
   IdCard,
+  RefreshCw,
 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
@@ -115,14 +116,30 @@ export default function AdminPortalPage() {
 
   const approveSociety = useMutation(api.societies.approve);
   const rejectSociety = useMutation(api.societies.reject);
+  const refreshVerificationStatus = useAction(
+    api.societyIdentity.refreshVerificationStatus,
+  );
   const [societyBusy, setSocietyBusy] = useState<{
     slug: string;
-    action: "approve" | "reject";
+    action: "approve" | "reject" | "refresh";
   } | null>(null);
   const [societyReasonSlug, setSocietyReasonSlug] = useState<string | null>(null);
   const [societyReason, setSocietyReason] = useState("");
   const [societyError, setSocietyError] = useState<string | null>(null);
   const [societyInfo, setSocietyInfo] = useState<string | null>(null);
+
+  const handleRefreshVerification = async (slug: string) => {
+    setSocietyError(null);
+    setSocietyInfo(null);
+    setSocietyBusy({ slug, action: "refresh" });
+    try {
+      await refreshVerificationStatus({ slug });
+    } catch (err) {
+      setSocietyError(getFriendlyAuthError(err));
+    } finally {
+      setSocietyBusy(null);
+    }
+  };
 
   const handleApproveSociety = async (slug: string) => {
     setSocietyError(null);
@@ -421,10 +438,27 @@ export default function AdminPortalPage() {
                               ID document unavailable.
                             </Text>
                           )}
-                          <AdminStatusChip
-                            label={stripeStatusChip(society.stripeVerificationStatus).label}
-                            tone={stripeStatusChip(society.stripeVerificationStatus).tone}
-                          />
+                          <View className="flex-row items-center gap-2">
+                            <AdminStatusChip
+                              label={stripeStatusChip(society.stripeVerificationStatus).label}
+                              tone={stripeStatusChip(society.stripeVerificationStatus).tone}
+                            />
+                            <Pressable
+                              onPress={() => void handleRefreshVerification(society.slug)}
+                              disabled={societyBusy !== null}
+                              accessibilityLabel="Refresh verification status from Stripe"
+                              className={cn(
+                                "h-6 w-6 items-center justify-center rounded-full border border-dono-border",
+                                societyBusy !== null ? "opacity-50" : "",
+                              )}
+                            >
+                              {busyHere && societyBusy?.action === "refresh" ? (
+                                <ActivityIndicator size="small" color="#17211B" />
+                              ) : (
+                                <RefreshCw size={12} color="#56615A" />
+                              )}
+                            </Pressable>
+                          </View>
                         </View>
 
                         <View className="mt-2 flex-row flex-wrap gap-2">

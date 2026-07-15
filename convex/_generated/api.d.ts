@@ -38,6 +38,7 @@ import type * as lib_emails from "../lib/emails.js";
 import type * as lib_mappers from "../lib/mappers.js";
 import type * as lib_pagination from "../lib/pagination.js";
 import type * as lib_redirect from "../lib/redirect.js";
+import type * as lib_stripeIdentityOutputs from "../lib/stripeIdentityOutputs.js";
 import type * as lib_stripeOwnership from "../lib/stripeOwnership.js";
 import type * as lib_webhookIdempotency from "../lib/webhookIdempotency.js";
 import type * as maintenance from "../maintenance.js";
@@ -95,6 +96,7 @@ declare const fullApi: ApiFromModules<{
   "lib/mappers": typeof lib_mappers;
   "lib/pagination": typeof lib_pagination;
   "lib/redirect": typeof lib_redirect;
+  "lib/stripeIdentityOutputs": typeof lib_stripeIdentityOutputs;
   "lib/stripeOwnership": typeof lib_stripeOwnership;
   "lib/webhookIdempotency": typeof lib_webhookIdempotency;
   maintenance: typeof maintenance;

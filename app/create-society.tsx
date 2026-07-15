@@ -107,6 +107,9 @@ export default function CreateSocietyPage() {
   const createVerificationSession = useAction(
     api.societyIdentity.createVerificationSession,
   );
+  const refreshVerificationStatus = useAction(
+    api.societyIdentity.refreshVerificationStatus,
+  );
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
@@ -124,6 +127,22 @@ export default function CreateSocietyPage() {
     api.societies.getMine,
     societySlug ? { slug: societySlug } : "skip",
   );
+
+  // Fallback to the webhook: directly poll Stripe every few seconds while
+  // unverified, in case the webhook is delayed, misconfigured, or hasn't
+  // reached this deployment. Stops as soon as the query reflects "verified".
+  useEffect(() => {
+    if (!societySlug || verification?.stripeVerificationStatus === "verified") {
+      return;
+    }
+    const interval = setInterval(() => {
+      void refreshVerificationStatus({ slug: societySlug }).catch(() => {
+        // Best-effort background poll — surfaced errors would be noisy here;
+        // the webhook or the next tick may still succeed.
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [societySlug, verification?.stripeVerificationStatus, refreshVerificationStatus]);
 
   const update = (field: keyof typeof initialForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -304,6 +323,10 @@ export default function CreateSocietyPage() {
       const result = await launchIdentityVerification({ clientSecret, url });
       if (result.error) {
         setError(result.error);
+      } else {
+        // Don't wait on the webhook — ask Stripe directly as soon as the
+        // user finishes, the background poll (above) picks up from here.
+        void refreshVerificationStatus({ slug }).catch(() => {});
       }
     } catch (err) {
       setError(getFriendlyAuthError(err) || "Could not start verification.");
@@ -322,6 +345,16 @@ export default function CreateSocietyPage() {
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
   const stripeVerified = stripeStatus === "verified";
+  // requires_input is Stripe's status both for "awaiting your first
+  // submission" (its normal initial state) and "a check ran and failed" —
+  // only the presence of a real last_error means an actual attempt failed.
+  const hasVerificationError = Boolean(
+    verification?.stripeVerificationLastErrorCode ||
+      verification?.stripeVerificationLastErrorReason,
+  );
+  const stripeFailed =
+    stripeStatus === "canceled" ||
+    (stripeStatus === "requires_input" && hasVerificationError);
 
   const canProceed = () => {
     switch (step) {
@@ -699,6 +732,10 @@ export default function CreateSocietyPage() {
                 {!manualFieldsValid ? (
                   <Text className="mt-2 text-xs text-dono-muted">
                     Add your supporting documents, ID, and website above first.
+                  </Text>
+                ) : stripeFailed ? (
+                  <Text className="mt-2 text-xs text-rose-700">
+                    That didn't go through — please try again.
                   </Text>
                 ) : null}
               </View>

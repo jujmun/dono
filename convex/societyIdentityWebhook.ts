@@ -2,6 +2,7 @@ import Stripe from "stripe";
 import { httpAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { shouldProcessWebhookEvent } from "./lib/webhookIdempotency";
+import { formatDob, fullName } from "./lib/stripeIdentityOutputs";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -10,22 +11,6 @@ function getStripeClient() {
   }
 
   return new Stripe(secretKey);
-}
-
-function formatDob(dob: Stripe.Identity.VerificationSession.VerifiedOutputs.Dob | null | undefined) {
-  if (!dob || !dob.year || !dob.month || !dob.day) return undefined;
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${dob.year}-${pad(dob.month)}-${pad(dob.day)}`;
-}
-
-function fullName(
-  outputs: Stripe.Identity.VerificationSession.VerifiedOutputs | null | undefined,
-) {
-  if (!outputs) return undefined;
-  const parts = [outputs.first_name, outputs.last_name].filter(
-    (part): part is string => Boolean(part),
-  );
-  return parts.length > 0 ? parts.join(" ") : undefined;
 }
 
 /**
