@@ -4,15 +4,14 @@
  * Always derive identity from `@convex-dev/auth` (`getAuthUserId`) — never trust
  * client-supplied userId, role, email, or ownership fields.
  *
- * This app has no organization/workspace membership model. "Communities" are
- * public catalog documents, so requireOrganization* helpers are intentionally
- * not provided.
+ * Societies use `societyMembers` for leadership and membership. Other communities
+ * remain public catalog documents without org membership.
  */
 
 import { ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx, MutationCtx, ActionCtx } from "../_generated/server";
-import type { Id } from "../_generated/dataModel";
+import type { Doc, Id } from "../_generated/dataModel";
 
 type CtxWithDb = QueryCtx | MutationCtx;
 type AnyCtx = CtxWithDb | ActionCtx;
@@ -129,4 +128,53 @@ export async function requireVerifiedUser(ctx: CtxWithDb) {
   }
 
   return { userId, user, profile };
+}
+
+function isSocietyVerified(community: Doc<"communities">) {
+  if (community.type !== "society") return false;
+  if (community.verificationStatus === "verified") return true;
+  if (community.verificationStatus === undefined && community.verified) {
+    return true;
+  }
+  return false;
+}
+
+async function getApprovedMembership(
+  ctx: CtxWithDb,
+  communitySlug: string,
+  userId: Id<"users">,
+) {
+  return await ctx.db
+    .query("societyMembers")
+    .withIndex("by_community_user", (q) =>
+      q.eq("communitySlug", communitySlug).eq("userId", userId),
+    )
+    .unique();
+}
+
+export async function requireSocietyMember(ctx: CtxWithDb, communitySlug: string) {
+  const { userId } = await requireVerifiedUser(ctx);
+  const community = await ctx.db
+    .query("communities")
+    .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+    .unique();
+  if (!community || !isSocietyVerified(community)) {
+    accessDenied();
+  }
+  const membership = await getApprovedMembership(ctx, communitySlug, userId);
+  if (!membership || membership.status !== "approved") {
+    accessDenied();
+  }
+  return { userId, community, membership };
+}
+
+export async function requireSocietyLeader(ctx: CtxWithDb, communitySlug: string) {
+  const { userId, community, membership } = await requireSocietyMember(
+    ctx,
+    communitySlug,
+  );
+  if (membership.role !== "leader") {
+    accessDenied();
+  }
+  return { userId, community, membership };
 }

@@ -56,9 +56,15 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
   switch (event.type) {
     case "payment_intent.succeeded": {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
-      await ctx.runMutation(internal.stripeInternal.markDonationSucceeded, {
-        stripePaymentIntentId: paymentIntent.id,
-      });
+      if (paymentIntent.metadata?.donationType === "fund_one_time") {
+        await ctx.runMutation(internal.stripeFunds.markFundDonationSucceeded, {
+          stripePaymentIntentId: paymentIntent.id,
+        });
+      } else {
+        await ctx.runMutation(internal.stripeInternal.markDonationSucceeded, {
+          stripePaymentIntentId: paymentIntent.id,
+        });
+      }
       break;
     }
     case "payment_intent.payment_failed": {
@@ -66,6 +72,32 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
       await ctx.runMutation(internal.stripeInternal.markDonationFailed, {
         stripePaymentIntentId: paymentIntent.id,
       });
+      break;
+    }
+    case "charge.refunded": {
+      const charge = event.data.object as Stripe.Charge;
+      const paymentIntentId =
+        typeof charge.payment_intent === "string"
+          ? charge.payment_intent
+          : charge.payment_intent?.id;
+      if (paymentIntentId) {
+        await ctx.runMutation(internal.stripeInternal.markDonationRefunded, {
+          stripePaymentIntentId: paymentIntentId,
+        });
+      }
+      break;
+    }
+    case "charge.dispute.created": {
+      const dispute = event.data.object as Stripe.Dispute;
+      const paymentIntentId =
+        typeof dispute.payment_intent === "string"
+          ? dispute.payment_intent
+          : dispute.payment_intent?.id;
+      if (paymentIntentId) {
+        await ctx.runMutation(internal.stripeInternal.markDonationRefunded, {
+          stripePaymentIntentId: paymentIntentId,
+        });
+      }
       break;
     }
     case "invoice.paid": {

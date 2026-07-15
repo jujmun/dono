@@ -3,7 +3,9 @@ import {
   internalMutation,
   mutation,
   query,
+  type MutationCtx,
 } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
 import { isAdminIdentityEmail } from "./auth/adminConfig";
@@ -22,6 +24,24 @@ const AVATAR_UPLOAD_LIMIT = {
   windowMs: 15 * 60 * 1000,
   lockoutMs: 15 * 60 * 1000,
 };
+
+async function linkGuestDonationsForUser(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  email: string,
+) {
+  const normalized = email.trim().toLowerCase();
+  const guestDonations = await ctx.db
+    .query("donations")
+    .withIndex("by_donorEmail", (q) => q.eq("donorEmail", normalized))
+    .collect();
+
+  for (const donation of guestDonations) {
+    if (!donation.userId) {
+      await ctx.db.patch(donation._id, { userId });
+    }
+  }
+}
 
 export const me = query({
   args: {},
@@ -264,6 +284,7 @@ export const ensureMyProfile = mutation({
         ...(isAdminIdentityEmail(user.email) ? { role: "admin" as const } : {}),
         updatedAt: now,
       });
+      await linkGuestDonationsForUser(ctx, userId, user.email);
       return;
     }
 
@@ -277,6 +298,7 @@ export const ensureMyProfile = mutation({
       createdAt: now,
       updatedAt: now,
     });
+    await linkGuestDonationsForUser(ctx, userId, user.email);
   },
 });
 
@@ -300,6 +322,24 @@ export const setUserRole = mutation({
     }
 
     await ctx.db.patch(profile._id, { role: args.role, updatedAt: Date.now() });
+  },
+});
+
+export const requestAccountDeletion = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId, profile } = await requireVerifiedUser(ctx);
+    const anonymized = `deleted-${userId}@deleted.dono.app`;
+    if (profile) {
+      await ctx.db.patch(profile._id, {
+        email: anonymized,
+        name: "Deleted User",
+        avatarUrl: undefined,
+        avatarStorageId: undefined,
+        updatedAt: Date.now(),
+      });
+    }
+    return { requestedAt: Date.now() };
   },
 });
 

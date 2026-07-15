@@ -2,10 +2,13 @@ import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
 import { requireAdmin, requireVerifiedUser } from "./lib/authz";
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
+import { logAdminAction } from "./adminAudit";
+import { isPublicCampaign, isPublicStatus } from "./lib/campaignVisibility";
 
 function slugify(title: string) {
   return title
@@ -14,8 +17,8 @@ function slugify(title: string) {
     .replace(/^-|-$/g, "");
 }
 
-function isPublicStatus(status: string) {
-  return status === "active" || status === "funded" || status === "completed";
+function isPublicStatusLocal(status: string) {
+  return isPublicStatus(status);
 }
 
 const MAX_REASON_LENGTH = 1000;
@@ -78,7 +81,52 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns.filter((c) => isPublicStatus(c.status)).map(toCampaign);
+    return campaigns.filter((c) => isPublicCampaign(c)).map(toCampaign);
+  },
+});
+
+export const listPaginated = query({
+  args: {
+    search: v.optional(v.string()),
+    category: v.optional(v.string()),
+    university: v.optional(v.string()),
+    cursor: v.optional(v.string()),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const limit = clampLimit(args.limit, 20, 50);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    const filtered = campaigns
+      .filter((c) => isPublicCampaign(c))
+      .filter((c) => !args.category || c.category === args.category)
+      .filter((c) => !args.university || c.university === args.university)
+      .filter((c) => matchesSearch(c, args.search))
+      .sort((a, b) => b._creationTime - a._creationTime);
+
+    let start = 0;
+    if (args.cursor) {
+      const idx = filtered.findIndex((c) => c.slug === args.cursor);
+      start = idx >= 0 ? idx + 1 : 0;
+    }
+
+    const page = filtered.slice(start, start + limit);
+    return {
+      items: page.map(toCampaign),
+      nextCursor: start + limit < filtered.length ? page[page.length - 1]?.slug : null,
+    };
+  },
+});
+
+export const listTrending = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = clampLimit(args.limit, 10, 30);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    return campaigns
+      .filter((c) => isPublicCampaign(c))
+      .sort((a, b) => b.likes + b.donors - (a.likes + a.donors))
+      .slice(0, limit)
+      .map(toCampaign);
   },
 });
 
@@ -88,7 +136,7 @@ export const listFeatured = query({
     const limit = clampLimit(args.limit, 3);
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
-      .filter((c) => isPublicStatus(c.status))
+      .filter((c) => isPublicCampaign(c))
       .slice(0, limit)
       .map(toCampaign);
   },
@@ -101,7 +149,7 @@ export const getBySlug = query({
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
-    if (!campaign || !isPublicStatus(campaign.status)) {
+    if (!campaign || !isPublicCampaign(campaign)) {
       return null;
     }
     return toCampaign(campaign);
@@ -117,7 +165,7 @@ export const listByCommunity = query({
         q.eq("creator.communityId", args.communityId),
       )
       .collect();
-    return campaigns.filter((c) => isPublicStatus(c.status)).map(toCampaign);
+    return campaigns.filter((c) => isPublicCampaign(c)).map(toCampaign);
   },
 });
 
@@ -129,7 +177,7 @@ export const listRelated = query({
     return campaigns
       .filter(
         (c) =>
-          isPublicStatus(c.status) &&
+          isPublicCampaign(c) &&
           c.slug !== args.slug &&
           c.category === args.category,
       )
@@ -171,7 +219,7 @@ export const getAdminStats = query({
     let moderated = 0;
     for (const c of campaigns) {
       if (c.status === "pending") pending += 1;
-      else if (isPublicStatus(c.status)) live += 1;
+      else if (isPublicStatusLocal(c.status)) live += 1;
       else if (c.status === "rejected") moderated += 1;
     }
     return { pending, live, moderated };
@@ -233,7 +281,7 @@ export const getForAdmin = query({
 export const approve = mutation({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+    const { userId: adminUserId } = await requireAdmin(ctx);
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -244,7 +292,45 @@ export const approve = mutation({
         message: "Pending campaign not found.",
       });
     }
+    if (
+      campaign.creator.type === "society" &&
+      campaign.societyApprovalStatus !== "approved"
+    ) {
+      throw new ConvexError({
+        code: "SOCIETY_APPROVAL_REQUIRED",
+        message: "Society leader approval is required before admin approval.",
+      });
+    }
     await ctx.db.patch(campaign._id, { status: "active" });
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "campaign.approve",
+      targetType: "campaign",
+      targetId: args.slug,
+    });
+
+    if (campaign.createdBy) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", campaign.createdBy!))
+        .unique();
+      if (profile?.email) {
+        await ctx.scheduler.runAfter(0, internal.emails.sendCampaignApproved, {
+          email: profile.email,
+          name: profile.name ?? "there",
+          campaignTitle: campaign.title,
+        });
+      }
+      const name = profile?.name ?? campaign.creator.name;
+      const avatar = campaign.creator.avatar;
+      await ctx.scheduler.runAfter(0, internal.activity.recordCampaignLaunched, {
+        userName: name,
+        userAvatar: avatar,
+        campaignTitle: campaign.title,
+      });
+    }
+
     return null;
   },
 });
@@ -291,7 +377,7 @@ export const takeDown = mutation({
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
-    if (!campaign || !isPublicStatus(campaign.status)) {
+    if (!campaign || !isPublicStatusLocal(campaign.status)) {
       throw new ConvexError({
         code: "NOT_FOUND",
         message: "Published campaign not found.",
@@ -447,7 +533,36 @@ export const create = mutation({
       updates: [],
       impactItems: [],
       createdBy: userId,
+      ...(creatorType === "society"
+        ? { societyApprovalStatus: "pending" as const }
+        : {}),
     });
+
+    if (creatorType === "society") {
+      const leaders = await ctx.db
+        .query("societyMembers")
+        .withIndex("by_community_status", (q) =>
+          q.eq("communitySlug", communityId).eq("status", "approved"),
+        )
+        .collect();
+      for (const leader of leaders.filter((m) => m.role === "leader")) {
+        const profile = await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", leader.userId))
+          .unique();
+        if (profile?.email) {
+          await ctx.scheduler.runAfter(
+            0,
+            internal.emails.sendSocietyCampaignPending,
+            {
+              leaderEmail: profile.email,
+              societyName: creatorName,
+              campaignTitle: title,
+            },
+          );
+        }
+      }
+    }
 
     return { slug, campaignId };
   },

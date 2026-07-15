@@ -1,4 +1,5 @@
 import { query } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { requireUserId } from "./lib/authz";
 
 function getSucceededDonations<T extends { paymentStatus: string }>(donations: T[]) {
@@ -15,31 +16,34 @@ export const getDonorImpact = query({
         .query("donations")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
+    ).filter(
+      (d): d is (typeof d & { campaignId: Id<"campaigns"> }) => Boolean(d.campaignId),
     );
 
     if (donations.length === 0) {
+      const communityFollows = await ctx.db
+        .query("communityFollows")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect();
       return {
         totalDonated: 0,
         campaignsSupported: 0,
-        communitiesFollowed: 0,
+        communitiesFollowed: communityFollows.length,
         impactHighlights: [],
         recentDonations: [],
       };
     }
 
     const campaignIds = [...new Set(donations.map((d) => d.campaignId))];
-    const campaigns = await Promise.all(campaignIds.map((id) => ctx.db.get(id)));
-    const campaignMap = new Map(
-      campaigns
-        .filter((c) => c !== null)
-        .map((c) => [c!._id, c!]),
+    const campaigns = (await Promise.all(campaignIds.map((id) => ctx.db.get(id)))).filter(
+      (c): c is Doc<"campaigns"> => c !== null,
     );
+    const campaignMap = new Map(campaigns.map((c) => [c._id, c]));
 
-    const communityIds = new Set(
-      campaigns
-        .filter((c) => c !== null)
-        .map((c) => c!.creator.communityId),
-    );
+    const communityFollows = await ctx.db
+      .query("communityFollows")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
 
     const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0);
     const recentDonations = donations
@@ -55,17 +59,17 @@ export const getDonorImpact = query({
       });
 
     const impactHighlights = campaigns
-      .filter((c) => c?.impactItems?.length)
+      .filter((c) => c.impactItems?.length)
       .slice(0, 3)
       .map((c) => {
-        const item = c!.impactItems![0];
-        return `Helped fund ${item} via ${c!.title}`;
+        const item = c.impactItems![0];
+        return `Helped fund ${item} via ${c.title}`;
       });
 
     return {
       totalDonated,
       campaignsSupported: campaignIds.length,
-      communitiesFollowed: communityIds.size,
+      communitiesFollowed: communityFollows.length,
       impactHighlights,
       recentDonations,
     };
@@ -82,6 +86,8 @@ export const getDonoWrapped = query({
         .query("donations")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect(),
+    ).filter(
+      (d): d is (typeof d & { campaignId: Id<"campaigns"> }) => Boolean(d.campaignId),
     );
 
     const totalDonated = donations.reduce((sum, d) => sum + d.amount, 0);

@@ -38,6 +38,7 @@ export const campaignFields = {
   university: v.string(),
   college: v.optional(v.string()),
   image: v.string(),
+  imageStorageId: v.optional(v.id("_storage")),
   createdAt: v.string(),
   deadline: v.string(),
   status: v.union(
@@ -57,7 +58,23 @@ export const campaignFields = {
     v.union(v.literal("rejected"), v.literal("taken_down")),
   ),
   restoredAt: v.optional(v.number()),
+  societyApprovalStatus: v.optional(
+    v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+  ),
+  societyApprovedAt: v.optional(v.number()),
+  societyApprovedBy: v.optional(v.id("users")),
+  societyRejectionNote: v.optional(v.string()),
 };
+
+export const verificationStatusValidator = v.union(
+  v.literal("pending"),
+  v.literal("verified"),
+  v.literal("rejected"),
+);
 
 export const communityFields = {
   slug: v.string(),
@@ -72,6 +89,25 @@ export const communityFields = {
   totalRaised: v.number(),
   verified: v.boolean(),
   verificationType: v.optional(v.string()),
+  verificationStatus: v.optional(verificationStatusValidator),
+  createdBy: v.optional(v.id("users")),
+  moderationNote: v.optional(v.string()),
+  moderatedAt: v.optional(v.number()),
+  moderatedBy: v.optional(v.id("users")),
+};
+
+export const societyMemberFields = {
+  communitySlug: v.string(),
+  userId: v.id("users"),
+  role: v.union(v.literal("leader"), v.literal("member")),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("approved"),
+    v.literal("rejected"),
+  ),
+  createdAt: v.number(),
+  reviewedAt: v.optional(v.number()),
+  reviewedBy: v.optional(v.id("users")),
 };
 
 export const fundFields = {

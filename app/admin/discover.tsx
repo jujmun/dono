@@ -10,6 +10,7 @@ import { type Href } from "expo-router";
 import { Search } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminStatsNav } from "@/components/admin-stats-nav";
 import { ActivityFeedItem } from "@/components/activity-feed";
 import { CampaignCard } from "@/components/campaign-card";
 import { useCurrentProfile } from "@/lib/auth/hooks";
@@ -69,15 +70,8 @@ export default function AdminDiscoverPage() {
 
   return (
     <AdminShell>
-      <View className="mx-auto w-full max-w-7xl px-4 py-8">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">
-            Live posts
-          </Text>
-          <Text className="mt-1 text-dono-muted">
-            Already published — search and open a post to remove it if needed
-          </Text>
-        </View>
+      <View className="mx-auto w-full max-w-3xl px-4 py-8">
+        <AdminStatsNav active="live" />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />

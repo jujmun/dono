@@ -244,6 +244,85 @@ export const createPaymentIntent = action({
   },
 });
 
+export const createFundPaymentIntent = action({
+  args: {
+    fundSlug: v.string(),
+    amount: v.number(),
+    donorEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const amount = Number(args.amount);
+    const donorEmail = normalizeDonorEmail(args.donorEmail);
+    const amountValidation = validateDonationAmount(amount);
+    if (!amountValidation.valid) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: amountValidation.message,
+      });
+    }
+
+    const fund = await ctx.runQuery(internal.stripeFunds.getFundForDonation, {
+      fundSlug: args.fundSlug.trim(),
+    });
+
+    const stripe = getStripeClient();
+    const userId = await getAuthUserId(ctx);
+
+    const quotaKey = userId
+      ? `stripeFundPi:${userId}`
+      : `stripeFundPi:guest:${donorEmail ?? "anonymous"}`;
+    await enforceStripeCreateQuota(ctx, quotaKey, userId ?? undefined);
+
+    let stripeCustomerId: string | undefined;
+    let receiptEmail = donorEmail;
+
+    if (userId) {
+      await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
+      const userContext = await ctx.runQuery(
+        internal.stripeInternal.getVerifiedUserContext,
+        { userId },
+      );
+      stripeCustomerId = await getOrCreateStripeCustomer(ctx, userId, userContext);
+      receiptEmail = receiptEmail || userContext.email || undefined;
+    }
+
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: donationAmountToStripeMinorUnits(amount),
+      currency: "gbp",
+      ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
+      ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
+      automatic_payment_methods: { enabled: true },
+      metadata: {
+        ...(userId ? { userId } : {}),
+        ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
+        fundId: fund.fundId,
+        fundSlug: fund.fundSlug,
+        donationType: "fund_one_time",
+      },
+    });
+
+    if (!paymentIntent.client_secret) {
+      throw new ConvexError({
+        code: "STRIPE_ERROR",
+        message: "Stripe did not return a client secret.",
+      });
+    }
+
+    await ctx.runMutation(internal.stripeFunds.createPendingFundDonation, {
+      userId: userId ?? undefined,
+      donorEmail: receiptEmail,
+      fundId: fund.fundId,
+      amount,
+      stripePaymentIntentId: paymentIntent.id,
+    });
+
+    return {
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+    };
+  },
+});
+
 export const createRecurringDonationSubscription = action({
   args: {
     campaignSlug: v.string(),
