@@ -5,16 +5,15 @@ import {
   Gift,
   Heart,
   Users,
-  Sparkles,
   ArrowRight,
   TrendingUp,
   Calendar,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
-import { CampaignCard } from "@/components/campaign-card";
+import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { LoginGate } from "@/components/login-gate";
 import { formatCurrency } from "@/lib/constants";
-import type { Campaign, DonorImpact, DonoWrapped } from "@/lib/types";
+import type { Campaign, DonorImpact } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
 export default function DashboardPage() {
@@ -23,10 +22,6 @@ export default function DashboardPage() {
     api.donations.getDonorImpact,
     isAuthenticated ? {} : "skip",
   ) as DonorImpact | null | undefined;
-  const donoWrapped = useQuery(
-    api.donations.getDonoWrapped,
-    isAuthenticated ? {} : "skip",
-  ) as DonoWrapped | null | undefined;
   const campaigns = (useQuery(api.campaigns.list) ?? []) as Campaign[];
   const followedCampaigns = campaigns.slice(0, 2);
 
@@ -48,7 +43,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (donorImpact === undefined || donoWrapped === undefined) {
+  if (donorImpact === undefined) {
     return (
       <AppShell>
         <View className="items-center py-16">
@@ -65,16 +60,6 @@ export default function DashboardPage() {
     communitiesFollowed: 0,
     impactHighlights: [],
     recentDonations: [],
-  };
-
-  const wrapped = donoWrapped ?? {
-    year: new Date().getFullYear(),
-    totalDonated: 0,
-    campaignsSupported: 0,
-    topCommunity: "Your communities",
-    rank: "Start your giving journey",
-    impactStatement:
-      "Make your first donation to see your impact grow throughout the year.",
   };
 
   return (
@@ -114,38 +99,6 @@ export default function DashboardPage() {
               <Text className="text-xs text-dono-muted">{stat.label}</Text>
             </View>
           ))}
-        </View>
-
-        <View className="mb-8 overflow-hidden rounded-2xl bg-dono-primary p-6">
-          <View className="mb-2 flex-row items-center gap-2">
-            <Sparkles size={20} color="#F7FAF8" />
-            <Text className="font-mono uppercase tracking-wider text-dono-cream/80">
-              Dono Wrapped {wrapped.year}
-            </Text>
-          </View>
-          <Text className="mb-2 font-display-medium text-2xl text-white">{wrapped.rank}</Text>
-          <Text className="leading-relaxed text-dono-cream">{wrapped.impactStatement}</Text>
-
-          <View className="mt-6 flex-row gap-4 border-t border-white/20 pt-6">
-            <View className="flex-1">
-              <Text className="font-mono-medium text-lg text-white">
-                {formatCurrency(wrapped.totalDonated)}
-              </Text>
-              <Text className="text-xs text-dono-cream/80">donated</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="font-mono-medium text-lg text-white">
-                {wrapped.campaignsSupported}
-              </Text>
-              <Text className="text-xs text-dono-cream/80">campaigns</Text>
-            </View>
-            <View className="flex-1">
-              <Text className="font-sans-medium text-lg text-white" numberOfLines={1}>
-                {wrapped.topCommunity}
-              </Text>
-              <Text className="text-xs text-dono-cream/80">top community</Text>
-            </View>
-          </View>
         </View>
 
         <View className="gap-8">
@@ -230,19 +183,15 @@ export default function DashboardPage() {
               </Pressable>
             </Link>
           </View>
-          <View className="gap-6">
-            {followedCampaigns.length > 0 ? (
-              followedCampaigns.map((campaign) => (
-                <CampaignCard key={campaign.id} campaign={campaign} variant="compact" />
-              ))
-            ) : (
-              <View className="rounded-xl border border-dono-border bg-white p-4">
-                <Text className="text-sm text-dono-muted">
-                  You are not following any campaigns yet.
-                </Text>
-              </View>
-            )}
-          </View>
+          {followedCampaigns.length > 0 ? (
+            <CampaignCardGrid campaigns={followedCampaigns} variant="compact" />
+          ) : (
+            <View className="rounded-xl border border-dono-border bg-white p-4">
+              <Text className="text-sm text-dono-muted">
+                You are not following any campaigns yet.
+              </Text>
+            </View>
+          )}
         </View>
       </View>
     </AppShell>

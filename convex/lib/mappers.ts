@@ -23,6 +23,7 @@ export function toCampaign(campaign: CampaignDoc) {
     university: campaign.university,
     college: campaign.college,
     image: campaign.image,
+    images: campaign.images,
     createdAt: campaign.createdAt,
     deadline: campaign.deadline,
     status: campaign.status,

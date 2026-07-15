@@ -10,7 +10,7 @@ import {
 import { useQuery } from "convex/react";
 import { Search, SlidersHorizontal } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
-import { CampaignCard } from "@/components/campaign-card";
+import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { categoryLabels } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
@@ -95,11 +95,7 @@ export default function CampaignsPage() {
             </Text>
           </View>
         ) : (
-          <View className="gap-6">
-            {filtered.map((campaign) => (
-              <CampaignCard key={campaign.id} campaign={campaign} />
-            ))}
-          </View>
+          <CampaignCardGrid campaigns={filtered} />
         )}
       </View>
     </AppShell>

@@ -34,3 +34,11 @@ export const categoryColors: Record<string, string> = {
   memorial: "bg-gray-100 text-gray-700",
   outreach: "bg-indigo-100 text-indigo-700",
 };
+
+export const creatorTypeLabels: Record<string, string> = {
+  student: "Individual Student",
+  society: "Student Society",
+  college: "College",
+  department: "Department",
+  category: "Category",
+};

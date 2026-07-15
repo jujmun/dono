@@ -1,6 +1,10 @@
-import { View, type ViewProps } from "react-native";
+import { View, Image, type ViewProps } from "react-native";
 import { LinearGradient } from "./linear-gradient-fallback";
 import { cn } from "@/lib/utils";
+
+function isPhotoImage(image: string): boolean {
+  return /^(https?|file|blob|data):/.test(image);
+}
 
 const gradients: Record<string, [string, string]> = {
   anatomy: ["#059669", "#115e59"],
@@ -26,6 +30,20 @@ interface CampaignImageProps extends ViewProps {
 }
 
 export function CampaignImage({ image, className, children, style, ...rest }: CampaignImageProps) {
+  if (isPhotoImage(image)) {
+    return (
+      <View className={cn("relative overflow-hidden", className)} style={style} {...rest}>
+        <Image
+          source={{ uri: image }}
+          style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }}
+          resizeMode="cover"
+          accessibilityLabel="Campaign image"
+        />
+        {children}
+      </View>
+    );
+  }
+
   const colors = gradients[image] || ["#1d242f", "#151a22"];
 
   return (

@@ -3,7 +3,10 @@ import { View, Text, Pressable } from "react-native";
 import { Users } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency, getProgress } from "@/lib/constants";
+import { getPrimaryCampaignImage } from "@/lib/campaign-images";
 import { buildReceiptLines, getReceiptSubtitle } from "@/lib/receipt";
+import { CampaignImage } from "@/components/ui/campaign-image";
+import { CategoryBadge } from "@/components/ui/category-badge";
 
 interface CampaignCardProps {
   campaign: Campaign;
@@ -51,11 +54,18 @@ export function CampaignCard({
   const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
   const receiptLines = buildReceiptLines(campaign);
   const subtitle = getReceiptSubtitle(campaign);
+  const imageSource = getPrimaryCampaignImage(campaign);
 
   if (variant === "compact") {
     return (
       <Link href={destination} asChild>
-        <Pressable className="rounded-lg border border-dono-border bg-white p-4 active:opacity-90">
+        <Pressable className="w-full overflow-hidden rounded-lg border border-dono-border bg-white active:opacity-90">
+          <CampaignImage image={imageSource} className="h-28">
+            <View className="absolute left-3 top-3">
+              <CategoryBadge category={campaign.category} />
+            </View>
+          </CampaignImage>
+          <View className="p-4">
           <View className="mb-2 flex-row items-start justify-between gap-3">
             <View className="min-w-0 flex-1">
               <Text className="font-display-medium text-sm text-dono-text" numberOfLines={1}>
@@ -83,6 +93,7 @@ export function CampaignCard({
               </Text>
             </View>
           </View>
+          </View>
         </Pressable>
       </Link>
     );
@@ -90,11 +101,14 @@ export function CampaignCard({
 
   return (
     <Link href={destination} asChild>
-      <Pressable className="active:opacity-95">
-        <Text className="mb-2 font-mono text-xs uppercase tracking-[0.2em] text-dono-muted">
-          Active Campaign
-        </Text>
-        <View className="rounded-lg border border-dono-border bg-white p-5">
+      <Pressable className="w-full active:opacity-95">
+        <View className="overflow-hidden rounded-lg border border-dono-border bg-white">
+          <CampaignImage image={imageSource} className="h-40">
+            <View className="absolute left-4 top-4">
+              <CategoryBadge category={campaign.category} />
+            </View>
+          </CampaignImage>
+          <View className="p-5">
           <View className="flex-row items-start justify-between gap-4">
             <View className="min-w-0 flex-1">
               <Text className="font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
@@ -125,6 +139,7 @@ export function CampaignCard({
                 {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
               </Text>
             </View>
+          </View>
           </View>
         </View>
       </Pressable>

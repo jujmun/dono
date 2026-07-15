@@ -51,6 +51,7 @@ export interface Campaign {
   university: string;
   college?: string;
   image: string;
+  images?: string[];
   createdAt: string;
   deadline: string;
   status: "pending" | "rejected" | "active" | "funded" | "completed";

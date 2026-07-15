@@ -350,7 +350,7 @@ export default function AccountPage() {
         <View className="rounded-2xl border border-dono-border bg-white p-6">
           <Pressable
             onPress={handleSignOut}
-            className="items-center rounded-full bg-dono-primary py-3"
+            className="items-center rounded-full bg-red-600 py-3"
           >
             <Text className="font-sans-medium text-sm text-white">Sign out</Text>
           </Pressable>

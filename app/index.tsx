@@ -15,7 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
-import { CampaignCard } from "@/components/campaign-card";
+import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { CommunityCard } from "@/components/community-card";
 import { api } from "@convex/_generated/api";
 import type { Campaign, Community } from "@/lib/types";
@@ -71,21 +71,17 @@ export default function HomePage() {
         </View>
       </View>
 
-      <View className="mx-auto w-full max-w-7xl py-16 pl-10 pr-4 md:pl-20 lg:pl-28">
-        <View className="mb-8">
+      <View className="mx-auto w-full max-w-7xl px-4 py-16">
+        <View className="mb-8 items-center">
           <Text className="font-display-medium text-2xl text-dono-text">Active Campaigns</Text>
-          <Text className="mt-1 text-dono-muted">
+          <Text className="mt-1 text-center text-dono-muted">
             Tangible projects with clear, specific outcomes
           </Text>
         </View>
         {loading ? (
           <ActivityIndicator color="#17211B" />
         ) : (
-          <View className="w-full gap-6 md:w-1/2">
-            {featuredCampaigns!.map((campaign) => (
-              <CampaignCard key={campaign.id} campaign={campaign} />
-            ))}
-          </View>
+          <CampaignCardGrid campaigns={featuredCampaigns!} centered />
         )}
       </View>
 

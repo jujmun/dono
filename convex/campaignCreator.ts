@@ -284,6 +284,70 @@ export const setImage = mutation({
   },
 });
 
+const MAX_CAMPAIGN_IMAGES = 5;
+
+export const setImages = mutation({
+  args: {
+    slug: v.string(),
+    storageIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    if (args.storageIds.length === 0 || args.storageIds.length > MAX_CAMPAIGN_IMAGES) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: `Provide between 1 and ${MAX_CAMPAIGN_IMAGES} images.`,
+      });
+    }
+
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+
+    const urls: string[] = [];
+    for (const storageId of args.storageIds) {
+      const metadata = await ctx.db.system.get("_storage", storageId);
+      if (!metadata) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "Image not found." });
+      }
+      if (metadata.contentType && !metadata.contentType.startsWith("image/")) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "File must be an image." });
+      }
+
+      const owner = await ctx.db
+        .query("storageOwners")
+        .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+        .unique();
+      if (owner && owner.userId !== userId) {
+        throw new ConvexError({ code: "FORBIDDEN", message: "Invalid image ownership." });
+      }
+      if (!owner) {
+        await ctx.db.insert("storageOwners", {
+          userId,
+          storageId,
+          createdAt: Date.now(),
+        });
+      }
+
+      const url = await ctx.storage.getUrl(storageId);
+      urls.push(url ?? "default");
+    }
+
+    await ctx.db.patch(campaign._id, {
+      imageStorageIds: args.storageIds,
+      images: urls,
+      imageStorageId: args.storageIds[0],
+      image: urls[0] ?? "default",
+    });
+    return null;
+  },
+});
+
 export const listPendingForSocietyLeader = query({
   args: { communitySlug: v.string() },
   handler: async (ctx, args) => {
