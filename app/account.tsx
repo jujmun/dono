@@ -9,6 +9,8 @@ import {
   Platform,
 } from "react-native";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
@@ -21,6 +23,8 @@ import type { Id } from "@convex/_generated/dataModel";
 
 export default function AccountPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const { signOut } = useAuthActions();
+  const router = useRouter();
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
@@ -129,6 +133,12 @@ export default function AccountPage() {
     } finally {
       setUploadingAvatar(false);
     }
+  };
+
+  const handleSignOut = () => {
+    void signOut().then(() => {
+      router.replace("/signin");
+    });
   };
 
   const handleCancelRecurring = (recurringDonationId: Id<"recurringDonations">) => {
@@ -335,6 +345,15 @@ export default function AccountPage() {
               ))}
             </View>
           )}
+        </View>
+
+        <View className="rounded-2xl border border-dono-border bg-white p-6">
+          <Pressable
+            onPress={handleSignOut}
+            className="items-center rounded-full bg-dono-primary py-3"
+          >
+            <Text className="font-sans-medium text-sm text-white">Sign out</Text>
+          </Pressable>
         </View>
       </View>
     </AppShell>

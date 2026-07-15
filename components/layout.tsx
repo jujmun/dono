@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type Href, Link, usePathname, useRouter } from "expo-router";
+import { type Href, Link, usePathname } from "expo-router";
 import { View, Text, Pressable, Image, useWindowDimensions } from "react-native";
 import {
   Home,
@@ -11,10 +11,8 @@ import {
   Plus,
   Menu,
   X,
-  LogOut,
 } from "lucide-react-native";
 import { useConvexAuth } from "convex/react";
-import { useAuthActions } from "@convex-dev/auth/react";
 import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 
@@ -34,20 +32,11 @@ function useIsWide() {
 
 export function Header() {
   const pathname = usePathname();
-  const router = useRouter();
   const isWide = useIsWide();
   const [mobileOpen, setMobileOpen] = useState(false);
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const { signOut } = useAuthActions();
   const profile = useCurrentProfile();
   const initials = (profile?.name || profile?.email || "D").trim().charAt(0).toUpperCase();
-
-  const handleSignOut = () => {
-    setMobileOpen(false);
-    void signOut().then(() => {
-      router.replace("/signin");
-    });
-  };
 
   return (
     <View className="z-50 border-b border-dono-border bg-dono-bg/95">
@@ -115,26 +104,15 @@ export function Header() {
                 </Pressable>
               </Link>
 
-              {!isLoading &&
-                (isAuthenticated ? (
-                  <Pressable
-                    onPress={handleSignOut}
-                    className="flex-row items-center gap-1.5 rounded-full border border-dono-border px-3 py-2"
-                  >
-                    <LogOut size={16} color="#56615A" />
+              {!isLoading && !isAuthenticated && (
+                <Link href="/signin" asChild>
+                  <Pressable className="rounded-full border border-dono-border px-4 py-2">
                     <Text className="font-sans-medium text-sm text-dono-muted">
-                      Sign out
+                      Sign in
                     </Text>
                   </Pressable>
-                ) : (
-                  <Link href="/signin" asChild>
-                    <Pressable className="rounded-full border border-dono-border px-4 py-2">
-                      <Text className="font-sans-medium text-sm text-dono-muted">
-                        Sign in
-                      </Text>
-                    </Pressable>
-                  </Link>
-                ))}
+                </Link>
+              )}
             </>
           )}
 
@@ -194,29 +172,18 @@ export function Header() {
               </Text>
             </Pressable>
           </Link>
-          {!isLoading &&
-            (isAuthenticated ? (
+          {!isLoading && !isAuthenticated && (
+            <Link href="/signin" asChild>
               <Pressable
-                onPress={handleSignOut}
-                className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border px-4 py-2.5"
+                onPress={() => setMobileOpen(false)}
+                className="mt-2 items-center rounded-full border border-dono-border px-4 py-2.5"
               >
-                <LogOut size={16} color="#56615A" />
                 <Text className="font-sans-medium text-sm text-dono-muted">
-                  Sign out
+                  Sign in
                 </Text>
               </Pressable>
-            ) : (
-              <Link href="/signin" asChild>
-                <Pressable
-                  onPress={() => setMobileOpen(false)}
-                  className="mt-2 items-center rounded-full border border-dono-border px-4 py-2.5"
-                >
-                  <Text className="font-sans-medium text-sm text-dono-muted">
-                    Sign in
-                  </Text>
-                </Pressable>
-              </Link>
-            ))}
+            </Link>
+          )}
         </View>
       )}
     </View>
