@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,6 +6,8 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import { Link } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -19,8 +21,6 @@ import {
   Globe,
   Link2,
   ShieldCheck,
-  ShieldAlert,
-  Clock,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
@@ -66,6 +66,38 @@ function isValidOptionalUrl(value: string): boolean {
 
 function fileNameFromAsset(asset: ImagePicker.ImagePickerAsset): string {
   return asset.fileName ?? asset.uri.split("/").pop() ?? "file";
+}
+
+/** Pulsing (bigger/smaller) shield icon — reads as "still working on it". */
+function VerifyingIndicator({ size, color }: { size: number; color: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.25,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scale]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <ShieldCheck size={size} color={color} />
+    </Animated.View>
+  );
 }
 
 export default function CreateSocietyPage() {
@@ -298,10 +330,11 @@ export default function CreateSocietyPage() {
       case 1:
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
-        // Requires BOTH the manual ID document (already implied by
-        // societySlug existing, since societies.create enforces it) AND a
-        // verified Stripe Identity check.
-        return societySlug !== null && stripeVerified;
+        // The manual ID document is already implied by societySlug existing
+        // (societies.create enforces it). Identity verification itself can
+        // finish in the background — don't block moving on while it's still
+        // processing; the final step shows a waiting state until it's done.
+        return societySlug !== null;
       default:
         return true;
     }
@@ -309,7 +342,7 @@ export default function CreateSocietyPage() {
 
   const renderVerificationStatus = () => {
     if (!stripeStatus) return null;
-    if (stripeStatus === "verified") {
+    if (stripeVerified) {
       return (
         <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
           <ShieldCheck size={14} color="#15803d" />
@@ -317,39 +350,14 @@ export default function CreateSocietyPage() {
         </View>
       );
     }
-    if (stripeStatus === "processing" || stripeStatus === "created") {
-      return (
-        <View className="flex-row items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
-          <Clock size={14} color="#b45309" />
-          <Text className="text-xs text-amber-800">
-            Verification submitted — pending
-          </Text>
-        </View>
-      );
-    }
-    if (stripeStatus === "requires_input") {
-      const isSelfieMismatch =
-        verification?.stripeVerificationLastErrorCode?.startsWith("selfie_") ?? false;
-      return (
-        <View className="flex-row items-center gap-2 rounded-xl bg-rose-50 px-3 py-2">
-          <ShieldAlert size={14} color="#be123c" />
-          <Text className="text-xs text-rose-700">
-            {isSelfieMismatch
-              ? "Selfie didn't match your ID."
-              : (verification?.stripeVerificationLastErrorReason ?? "Needs attention.")}
-          </Text>
-        </View>
-      );
-    }
-    if (stripeStatus === "canceled") {
-      return (
-        <View className="flex-row items-center gap-2 rounded-xl bg-rose-50 px-3 py-2">
-          <ShieldAlert size={14} color="#be123c" />
-          <Text className="text-xs text-rose-700">Verification canceled.</Text>
-        </View>
-      );
-    }
-    return null;
+    return (
+      <View className="flex-row items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+        <VerifyingIndicator size={14} color="#b45309" />
+        <Text className="text-xs text-amber-800">
+          Verifying your identity... you can keep filling in the form
+        </Text>
+      </View>
+    );
   };
 
   const inputClass =
@@ -684,9 +692,7 @@ export default function CreateSocietyPage() {
                     <ActivityIndicator color="#fff" />
                   ) : (
                     <Text className="font-sans-medium text-sm text-white">
-                      {stripeStatus === "requires_input" || stripeStatus === "canceled"
-                        ? "Try again"
-                        : "Verify your identity"}
+                      Verify your identity
                     </Text>
                   )}
                 </Pressable>
@@ -764,27 +770,43 @@ export default function CreateSocietyPage() {
 
           {step === 4 && (
             <View className="items-center gap-3 py-4">
-              <CheckCircle2 size={32} color="#17211B" />
-              <Text className="text-center text-lg font-sans-medium text-dono-text">
-                Application submitted
-              </Text>
-              <Text className="text-center text-sm leading-relaxed text-dono-muted">
-                Thanks — we've received your society, its verification documents, and your
-                Stripe identity check. We'll review it and let you know once a decision is
-                made.
-              </Text>
-              <Link href="/societies" asChild>
-                <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
-                  <Text className="font-sans-medium text-sm text-white">
-                    Back to Societies
+              {stripeVerified ? (
+                <>
+                  <CheckCircle2 size={32} color="#17211B" />
+                  <Text className="text-center text-lg font-sans-medium text-dono-text">
+                    Application submitted
                   </Text>
-                </Pressable>
-              </Link>
+                  <Text className="text-center text-sm leading-relaxed text-dono-muted">
+                    Thanks — we've received your society, its verification documents, and
+                    your Stripe identity check. We'll review it and let you know once a
+                    decision is made.
+                  </Text>
+                  <Link href="/societies" asChild>
+                    <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
+                      <Text className="font-sans-medium text-sm text-white">
+                        Back to Societies
+                      </Text>
+                    </Pressable>
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <VerifyingIndicator size={48} color="#17211B" />
+                  <Text className="text-center text-lg font-sans-medium text-dono-text">
+                    Verifying your identity...
+                  </Text>
+                  <Text className="text-center text-sm leading-relaxed text-dono-muted">
+                    Your society has already been submitted. This usually takes a
+                    minute or two — feel free to leave this page open, it'll update
+                    automatically the moment it's done.
+                  </Text>
+                </>
+              )}
             </View>
           )}
 
           <View className="mt-8 flex-row justify-between">
-            {step > 0 && step < 4 ? (
+            {step > 0 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
                 className="rounded-full border border-dono-border px-5 py-2.5"
