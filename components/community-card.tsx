@@ -12,7 +12,7 @@ interface CommunityCardProps {
 
 export function CommunityCard({ community }: CommunityCardProps) {
   return (
-    <Link href={`/communities/${community.id}`} asChild>
+    <Link href={`/societies/${community.id}`} asChild>
       <Pressable className="overflow-hidden rounded-2xl border border-dono-border bg-white active:opacity-95">
         <CampaignImage image={community.coverImage} className="h-28" />
 
