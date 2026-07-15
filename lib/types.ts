@@ -106,6 +106,22 @@ export interface MySociety extends Society {
   hasIdDocument: boolean;
 }
 
+/** Admin-only shape — the one place real file URLs for verification docs appear. */
+export interface AdminSociety {
+  slug: string;
+  name: string;
+  description: string;
+  story: string;
+  coverImageUrl: string | null;
+  websiteUrl: string;
+  secondaryLink: string | null;
+  status: "pending" | "active" | "rejected";
+  createdAt: number;
+  creatorId: string;
+  supportingDocumentUrls: string[];
+  idDocumentUrl: string | null;
+}
+
 export interface CommunityFund {
   id: string;
   name: string;
