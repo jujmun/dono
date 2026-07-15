@@ -49,7 +49,7 @@ export default function AdminStudentProfilePage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
           <Text className="mt-4 text-dono-muted">Loading student...</Text>
         </View>
       </AdminShell>
@@ -76,7 +76,7 @@ export default function AdminStudentProfilePage() {
             onPress={() => router.back()}
             className="mb-6 flex-row items-center gap-2"
           >
-            <ArrowLeft size={16} color="#5e6473" />
+            <ArrowLeft size={16} color="#56615A" />
             <Text className="text-sm text-dono-muted">Back</Text>
           </Pressable>
           <Text className="text-center text-dono-muted">
@@ -98,7 +98,7 @@ export default function AdminStudentProfilePage() {
           onPress={() => router.back()}
           className="mb-6 flex-row items-center gap-2"
         >
-          <ArrowLeft size={16} color="#5e6473" />
+          <ArrowLeft size={16} color="#56615A" />
           <Text className="text-sm text-dono-muted">Back</Text>
         </Pressable>
 
@@ -179,7 +179,7 @@ export default function AdminStudentProfilePage() {
                         <Text className="text-xs font-sans-medium text-dono-muted">
                           Open
                         </Text>
-                        <ChevronRight size={18} color="#5e6473" />
+                        <ChevronRight size={18} color="#56615A" />
                       </View>
                     </View>
                   </Pressable>

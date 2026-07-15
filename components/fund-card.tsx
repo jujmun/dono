@@ -32,13 +32,13 @@ export function FundCard({ fund }: FundCardProps) {
 
           <View className="flex-row items-center gap-4">
             <View className="flex-row items-center gap-1">
-              <Users size={14} color="#5e6473" />
+              <Users size={14} color="#56615A" />
               <Text className="text-xs text-dono-muted">
                 {fund.donors.toLocaleString()} donors
               </Text>
             </View>
             <View className="flex-row items-center gap-1">
-              <Target size={14} color="#5e6473" />
+              <Target size={14} color="#56615A" />
               <Text className="text-xs text-dono-muted">
                 {fund.campaignsSupported} campaigns
               </Text>

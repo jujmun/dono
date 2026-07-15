@@ -79,7 +79,7 @@ export default function HomePage() {
           </Text>
         </View>
         {loading ? (
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         ) : (
           <View className="w-full gap-6 md:w-1/2">
             {featuredCampaigns!.map((campaign) => (
@@ -92,7 +92,7 @@ export default function HomePage() {
       <View className="mx-auto w-full max-w-7xl px-4 py-16">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
           <View className="items-center">
-            <Sparkles size={32} color="#1d242f" />
+            <Sparkles size={32} color="#17211B" />
             <Text className="mb-4 mt-4 text-center font-display text-2xl text-dono-text">
               People don&apos;t dislike giving
             </Text>
@@ -126,7 +126,7 @@ export default function HomePage() {
       <View className="mx-auto w-full max-w-7xl px-4 pb-20">
         <View className="rounded-2xl bg-dono-primary p-8">
           <View className="items-center">
-            <TrendingUp size={32} color="#f7f4ed" />
+            <TrendingUp size={32} color="#F7FAF8" />
             <Text className="mb-4 mt-4 text-center font-display-medium text-2xl text-white">
               Ready to make a difference?
             </Text>
@@ -138,7 +138,7 @@ export default function HomePage() {
               <Link href="/campaigns" asChild>
                 <Pressable className="flex-row items-center justify-center gap-2 rounded-full bg-dono-cream px-6 py-3">
                   <Text className="font-sans-medium text-sm text-dono-text">Find a Campaign</Text>
-                  <ArrowRight size={16} color="#1d242f" />
+                  <ArrowRight size={16} color="#17211B" />
                 </Pressable>
               </Link>
               <Link href="/create" asChild>
@@ -151,7 +151,7 @@ export default function HomePage() {
               {["Free for students", "Secure payments", "Full transparency"].map(
                 (label) => (
                   <View key={label} className="flex-row items-center gap-1.5">
-                    <CheckCircle2 size={16} color="#f7f4ed" />
+                    <CheckCircle2 size={16} color="#F7FAF8" />
                     <Text className="text-sm text-dono-cream/80">{label}</Text>
                   </View>
                 )
