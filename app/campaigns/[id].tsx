@@ -21,12 +21,19 @@ import {
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignImageGallery } from "@/components/campaign-image-gallery";
-import { VerificationList } from "@/components/ui/verification-badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import { EngagementStats } from "@/components/activity-feed";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
+import {
+  FundBreakdownSection,
+  ReceiptDivider,
+  ReceiptLedger,
+  ReceiptLineRow,
+  ReceiptTotalRow,
+} from "@/components/ui/receipt-lines";
 import { formatCurrency, getProgress } from "@/lib/constants";
+import { buildGoalLineItems } from "@/lib/receipt";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
@@ -263,11 +270,12 @@ export default function CampaignDetailPage() {
           )}
         </CampaignImageGallery>
 
-        <View className="mb-4">
-          <VerificationList verifications={campaign.verifications} size="md" />
+        <View className="mb-3 flex-row flex-wrap items-center gap-2">
+          <Text className="font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
+          {campaign.verifications.length > 0 ? (
+            <CheckCircle2 size={20} color="#168456" accessibilityLabel="Verified campaign" />
+          ) : null}
         </View>
-
-        <Text className="mb-3 font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
 
         <View className="mb-4 gap-2">
           <View className="flex-row items-center gap-1">
@@ -303,20 +311,16 @@ export default function CampaignDetailPage() {
           <Text className="leading-relaxed text-dono-muted">{campaign.story}</Text>
         </View>
 
-        {campaign.impactItems && (
-          <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-            <Text className="mb-3 text-lg font-sans-medium text-dono-text">
-              What your donation funds
-            </Text>
-            <View className="gap-2">
-              {campaign.impactItems.map((item) => (
-                <View key={item} className="flex-row items-start gap-2">
-                  <CheckCircle2 size={16} color="#17211B" />
-                  <Text className="flex-1 text-sm text-dono-muted">{item}</Text>
-                </View>
+        {(campaign.impactItems?.length ?? 0) >= 2 && (
+          <FundBreakdownSection className="mb-8">
+            <ReceiptLedger>
+              {buildGoalLineItems(campaign).map((line) => (
+                <ReceiptLineRow key={line.label} {...line} />
               ))}
-            </View>
-          </View>
+              <ReceiptDivider />
+              <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
+            </ReceiptLedger>
+          </FundBreakdownSection>
         )}
 
         {campaign.updates.length > 0 && (
@@ -346,18 +350,6 @@ export default function CampaignDetailPage() {
             </View>
           </View>
         )}
-
-        <View className="mb-8 rounded-2xl border border-green-200 bg-green-50 p-5">
-          <Text className="mb-2 text-sm font-semibold text-green-800">
-            Trust & Verification
-          </Text>
-          <Text className="text-xs leading-relaxed text-green-700">
-            This campaign has been verified by its creator&apos;s identity and
-            {campaign.verifications.some((v) => v.type === "institutional")
-              ? " institutionally endorsed."
-              : " validated by the community."}
-          </Text>
-        </View>
 
         {(related?.length ?? 0) > 0 && (
           <View className="mt-4">

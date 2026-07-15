@@ -348,6 +348,70 @@ export const setImages = mutation({
   },
 });
 
+const MIN_IMPACT_ITEMS = 2;
+const MAX_IMPACT_ITEMS = 5;
+const IMPACT_ITEM_DELIMITER = "::";
+
+function parseEncodedImpactItem(item: string) {
+  const idx = item.lastIndexOf(IMPACT_ITEM_DELIMITER);
+  if (idx === -1) {
+    return { label: item.trim(), amount: null as number | null };
+  }
+  const label = item.slice(0, idx).trim();
+  const amount = Number(item.slice(idx + IMPACT_ITEM_DELIMITER.length));
+  return {
+    label,
+    amount: Number.isFinite(amount) ? amount : null,
+  };
+}
+
+export const setImpactItems = mutation({
+  args: {
+    slug: v.string(),
+    impactItems: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    if (
+      args.impactItems.length < MIN_IMPACT_ITEMS ||
+      args.impactItems.length > MAX_IMPACT_ITEMS
+    ) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: `Provide between ${MIN_IMPACT_ITEMS} and ${MAX_IMPACT_ITEMS} fund line items.`,
+      });
+    }
+
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+
+    const parsed = args.impactItems.map(parseEncodedImpactItem);
+    if (parsed.some((item) => !item.label || item.amount === null || item.amount <= 0)) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Each fund line item needs a label and a positive amount.",
+      });
+    }
+
+    const total = parsed.reduce((sum, item) => sum + (item.amount ?? 0), 0);
+    if (total !== campaign.goal) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Fund line items must add up to the campaign goal.",
+      });
+    }
+
+    await ctx.db.patch(campaign._id, { impactItems: args.impactItems });
+    return null;
+  },
+});
+
 export const listPendingForSocietyLeader = query({
   args: { communitySlug: v.string() },
   handler: async (ctx, args) => {

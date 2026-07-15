@@ -1,4 +1,5 @@
 import type { Campaign } from "@/lib/types";
+import { parseImpactItem } from "@/lib/fund-breakdown";
 
 export interface ReceiptLine {
   label: string;
@@ -26,43 +27,81 @@ function splitAmount(total: number, parts: number): number[] {
   return amounts;
 }
 
-export function buildReceiptLines(campaign: Campaign): ReceiptLine[] {
-  const labels =
-    campaign.impactItems?.length && campaign.impactItems.length >= 2
-      ? campaign.impactItems
-      : defaultLabelsByCategory[campaign.category] ?? [
-          "Primary cost",
-          "Secondary cost",
-          "Additional costs",
-        ];
-
-  const itemCount = Math.min(labels.length, 3);
-  const remaining = Math.max(0, campaign.goal - campaign.raised);
-
-  if (remaining === campaign.goal) {
-    const amounts = splitAmount(campaign.goal, itemCount);
-    return labels.slice(0, itemCount).map((label, index) => ({
-      label,
-      amount: amounts[index] ?? 0,
-    }));
+function goalLabels(campaign: Campaign): string[] {
+  if (campaign.impactItems?.length && campaign.impactItems.length >= 2) {
+    return campaign.impactItems.map((item) => parseImpactItem(item).label);
   }
+  return (
+    defaultLabelsByCategory[campaign.category] ?? [
+      "Primary cost",
+      "Secondary cost",
+      "Additional costs",
+    ]
+  );
+}
 
-  const amounts = splitAmount(campaign.goal - remaining, itemCount);
-  const lines: ReceiptLine[] = labels.slice(0, itemCount).map((label, index) => ({
+function goalAmountsFromImpactItems(campaign: Campaign): number[] | null {
+  if (!campaign.impactItems?.length || campaign.impactItems.length < 2) {
+    return null;
+  }
+  const parsed = campaign.impactItems.map((item) => parseImpactItem(item));
+  if (!parsed.every((item) => item.amount !== undefined)) {
+    return null;
+  }
+  return parsed.map((item) => item.amount!);
+}
+
+/** Line items for the campaign goal — uses creator breakdown when available. */
+export function buildGoalLineItems(campaign: Campaign): ReceiptLine[] {
+  const labels = goalLabels(campaign);
+  const itemCount = Math.min(labels.length, 5);
+  const customAmounts = goalAmountsFromImpactItems(campaign);
+  const amounts =
+    customAmounts?.slice(0, itemCount) ?? splitAmount(campaign.goal, itemCount);
+
+  return labels.slice(0, itemCount).map((label, index) => ({
     label,
     amount: amounts[index] ?? 0,
   }));
+}
 
-  if (remaining > 0) {
-    lines.push({ label: "Remaining", amount: remaining, muted: true });
+/** Closing ledger row — always present on campaign cards. */
+export function buildReceiptFooter(campaign: Campaign): ReceiptLine {
+  const remaining = Math.max(0, campaign.goal - campaign.raised);
+
+  if (campaign.raised === 0) {
+    return { label: "Total goal", amount: campaign.goal };
   }
 
-  return lines;
+  if (remaining === 0 || campaign.status === "funded") {
+    return { label: "Fully funded", amount: campaign.goal, muted: true };
+  }
+
+  return { label: "Remaining", amount: remaining, muted: true };
+}
+
+/** @deprecated Use buildGoalLineItems + buildReceiptFooter for consistent card layout. */
+export function buildReceiptLines(campaign: Campaign): ReceiptLine[] {
+  return [...buildGoalLineItems(campaign), buildReceiptFooter(campaign)];
+}
+
+function formatPlaceName(name: string) {
+  const trimmed = name.trim();
+  if (!trimmed) return "";
+  const lower = trimmed.toLowerCase();
+  if (lower.startsWith("university of ")) {
+    const place = lower.slice("university of ".length);
+    const formattedPlace =
+      place.length > 0 ? `${place.charAt(0).toUpperCase()}${place.slice(1)}` : place;
+    return `University of ${formattedPlace}`;
+  }
+  return `${lower.charAt(0).toUpperCase()}${lower.slice(1)}`;
 }
 
 export function getReceiptSubtitle(campaign: Campaign): string {
-  const parts = [campaign.university, campaign.college, campaign.creator.name].filter(
-    Boolean,
-  );
-  return parts.slice(0, 2).join(", ");
+  const university = campaign.university
+    ? formatPlaceName(campaign.university)
+    : "";
+  const parts = [university, campaign.college, campaign.creator.name].filter(Boolean);
+  return parts.slice(0, 2).join(" · ");
 }

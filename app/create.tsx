@@ -10,17 +10,24 @@ import {
 import { useRouter } from "expo-router";
 import { useConvexAuth, useMutation } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import { CheckCircle2, ArrowRight, ImagePlus } from "lucide-react-native";
+import { CheckCircle2, ArrowRight, ImagePlus, Plus, Trash2 } from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignPreview } from "@/components/campaign-preview";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { CategoryBadge } from "@/components/ui/category-badge";
-import { categoryLabels } from "@/lib/constants";
+import {
+  ReceiptDivider,
+  ReceiptLedger,
+  ReceiptLineRow,
+  ReceiptTotalRow,
+} from "@/components/ui/receipt-lines";
+import { categoryLabels, formatCurrency } from "@/lib/constants";
 import { MAX_CAMPAIGN_IMAGES } from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
+import { encodeImpactItems } from "@/lib/fund-breakdown";
 import { api } from "@convex/_generated/api";
 
 const steps = ["Details", "Story", "Goal", "Review", "Submit"];
@@ -36,6 +43,21 @@ const creatorTypes = [
 ];
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MIN_FUND_LINES = 2;
+const MAX_FUND_LINES = 5;
+
+interface FundLine {
+  label: string;
+  amount: string;
+}
+
+const emptyFundLine = (): FundLine => ({ label: "", amount: "" });
+
+const initialFundLines = (): FundLine[] => [
+  emptyFundLine(),
+  emptyFundLine(),
+  emptyFundLine(),
+];
 
 interface PickedImage {
   uri: string;
@@ -60,12 +82,53 @@ export default function CreateCampaignPage() {
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
+  const setImpactItems = useMutation(api.campaignCreator.setImpactItems);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
+  const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
+
+  const updateFundLine = (index: number, field: keyof FundLine, value: string) => {
+    setFundLines((current) =>
+      current.map((line, i) => (i === index ? { ...line, [field]: value } : line)),
+    );
+  };
+
+  const addFundLine = () => {
+    setFundLines((current) =>
+      current.length >= MAX_FUND_LINES ? current : [...current, emptyFundLine()],
+    );
+  };
+
+  const removeFundLine = (index: number) => {
+    setFundLines((current) =>
+      current.length <= MIN_FUND_LINES
+        ? current
+        : current.filter((_, i) => i !== index),
+    );
+  };
+
+  const filledFundLines = fundLines.filter((line) => line.label.trim());
+  const fundLineTotal = fundLines.reduce(
+    (sum, line) => sum + (Number(line.amount) || 0),
+    0,
+  );
+  const goalAmount = Number(form.goal) || 0;
+  const fundLinesComplete =
+    filledFundLines.length >= MIN_FUND_LINES &&
+    filledFundLines.every((line) => Number(line.amount) > 0) &&
+    fundLineTotal === goalAmount;
+
+  const previewImpactLines = filledFundLines.map((line) => ({
+    label: line.label.trim(),
+    amount: Number(line.amount) || 0,
+  }));
+
+  const impactItemLabels = filledFundLines.map((line) => line.label.trim());
+  const encodedImpactItems = encodeImpactItems(previewImpactLines);
 
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -133,7 +196,7 @@ export default function CreateCampaignPage() {
       case 1:
         return form.description && form.story;
       case 2:
-        return form.goal && Number(form.goal) > 0;
+        return form.goal && Number(form.goal) > 0 && fundLinesComplete;
       default:
         return true;
     }
@@ -172,34 +235,59 @@ export default function CreateCampaignPage() {
           </Text>
         </View>
 
-        <View className="mb-8 items-center">
-          <View className="flex-row items-center">
-            {steps.map((s, i) => (
-              <View key={s} className="flex-row items-center">
-                <View
-                  className={`h-8 w-8 items-center justify-center rounded-full ${
-                    i <= step ? "bg-dono-primary" : "bg-dono-surface-muted"
-                  }`}
-                >
-                  {i < step ? (
-                    <CheckCircle2 size={16} color="#fff" />
-                  ) : (
-                    <Text
-                      className={`text-xs font-bold ${
-                        i === step ? "text-white" : "text-dono-muted"
+        <View className="mb-8 w-full items-center">
+          <View className="w-full max-w-lg flex-row items-start">
+            {steps.map((label, i) => (
+              <View key={label} className="flex-1 items-center">
+                <View className="w-full flex-row items-center">
+                  {i > 0 ? (
+                    <View
+                      className={`h-0.5 flex-1 ${
+                        i <= step ? "bg-dono-primary" : "bg-dono-border"
                       }`}
-                    >
-                      {i + 1}
-                    </Text>
+                    />
+                  ) : (
+                    <View className="flex-1" />
+                  )}
+                  <View
+                    className={`h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                      i <= step ? "bg-dono-primary" : "bg-dono-surface-muted"
+                    }`}
+                  >
+                    {i < step ? (
+                      <CheckCircle2 size={16} color="#fff" />
+                    ) : (
+                      <Text
+                        className={`text-xs font-bold ${
+                          i === step ? "text-white" : "text-dono-muted"
+                        }`}
+                      >
+                        {i + 1}
+                      </Text>
+                    )}
+                  </View>
+                  {i < steps.length - 1 ? (
+                    <View
+                      className={`h-0.5 flex-1 ${
+                        i < step ? "bg-dono-primary" : "bg-dono-border"
+                      }`}
+                    />
+                  ) : (
+                    <View className="flex-1" />
                   )}
                 </View>
-                {i < steps.length - 1 && (
-                  <View
-                    className={`mx-2 h-0.5 w-10 ${
-                      i < step ? "bg-dono-primary" : "bg-dono-border"
-                    }`}
-                  />
-                )}
+                <Text
+                  className={`mt-2 text-center text-xs ${
+                    i === step
+                      ? "font-sans-medium text-dono-text"
+                      : i < step
+                        ? "text-dono-muted"
+                        : "text-dono-muted"
+                  }`}
+                  numberOfLines={1}
+                >
+                  {label}
+                </Text>
               </View>
             ))}
           </View>
@@ -395,10 +483,75 @@ export default function CreateCampaignPage() {
                   keyboardType="numeric"
                   className={inputClass}
                 />
-                <Text className="mt-1.5 text-xs text-dono-muted">
-                  Dono is optimised for small-to-medium funding needs (£500–£10,000)
-                </Text>
               </View>
+
+              <View>
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                  What your donation funds
+                </Text>
+                <Text className="mb-3 text-xs text-dono-muted">
+                  Itemise how you&apos;ll spend the money (amounts in £). Line items must
+                  add up to your funding goal — donors see this as a transparent ledger.
+                </Text>
+                <ReceiptLedger>
+                  {fundLines.map((line, index) => (
+                    <View key={index} className="mb-3 flex-row items-center gap-2">
+                      <TextInput
+                        value={line.label}
+                        onChangeText={(v) => updateFundLine(index, "label", v)}
+                        placeholder="e.g. Core textbook"
+                        placeholderTextColor="#56615A"
+                        className="min-w-0 flex-1 rounded-lg border border-dono-border/80 bg-white px-3 py-2.5 text-sm text-dono-text"
+                      />
+                      <View className="w-[5.5rem] flex-row items-center rounded-lg border border-dono-border/80 bg-white">
+                        <Text className="pl-3 font-mono text-sm text-dono-muted">£</Text>
+                        <TextInput
+                          value={line.amount}
+                          onChangeText={(v) => updateFundLine(index, "amount", v)}
+                          placeholder="0"
+                          placeholderTextColor="#56615A"
+                          keyboardType="numeric"
+                          className="min-w-0 flex-1 py-2.5 pr-3 text-right font-mono text-sm text-dono-text"
+                        />
+                      </View>
+                      {fundLines.length > MIN_FUND_LINES ? (
+                        <Pressable
+                          onPress={() => removeFundLine(index)}
+                          className="h-10 w-10 items-center justify-center rounded-lg border border-dono-border/80 bg-white"
+                          accessibilityLabel="Remove line item"
+                        >
+                          <Trash2 size={14} color="#56615A" />
+                        </Pressable>
+                      ) : (
+                        <View className="w-10" />
+                      )}
+                    </View>
+                  ))}
+                  {fundLines.length < MAX_FUND_LINES ? (
+                    <Pressable
+                      onPress={addFundLine}
+                      className="mb-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-dashed border-dono-border bg-white/80 py-2.5"
+                    >
+                      <Plus size={14} color="#56615A" />
+                      <Text className="font-sans-medium text-xs text-dono-muted">
+                        Add line item
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                  <ReceiptDivider />
+                  <ReceiptTotalRow
+                    label="Total goal"
+                    amount={goalAmount > 0 ? goalAmount : "—"}
+                  />
+                  {goalAmount > 0 && fundLineTotal !== goalAmount ? (
+                    <Text className="mt-2 text-xs text-rose-700">
+                      Line items total {formatCurrency(fundLineTotal)} — must equal{" "}
+                      {formatCurrency(goalAmount)}
+                    </Text>
+                  ) : null}
+                </ReceiptLedger>
+              </View>
+
               <View className="rounded-xl border border-green-200 bg-green-50 p-4">
                 <Text className="text-sm text-green-800">
                   Students never pay to create campaigns. Dono takes a small transaction
@@ -425,6 +578,7 @@ export default function CreateCampaignPage() {
                 story={form.story}
                 goal={Number(form.goal)}
                 imageUris={pickedImageUris}
+                impactLines={previewImpactLines}
               />
             </View>
           )}
@@ -490,6 +644,16 @@ export default function CreateCampaignPage() {
                   })
                     .then(async (result) => {
                       let imageUploadFailed = false;
+                      try {
+                        await setImpactItems({
+                          slug: result.slug,
+                          impactItems: encodedImpactItems,
+                        });
+                      } catch {
+                        setError(
+                          "Campaign created but fund breakdown could not be saved. Edit from your dashboard.",
+                        );
+                      }
                       if (pickedImages.length > 0) {
                         try {
                           const allUploaded = await uploadCampaignImages({
@@ -514,9 +678,11 @@ export default function CreateCampaignPage() {
                         campaign_has_image:
                           pickedImages.length > 0 && !imageUploadFailed,
                         campaign_image_count: pickedImages.length,
+                        campaign_impact_items: impactItemLabels.length,
                       });
                       setForm(initialForm);
                       setPickedImages([]);
+                      setFundLines(initialFundLines());
                       setStep(0);
                       setError(null);
                       router.push(`/campaigns/${result.slug}`);
