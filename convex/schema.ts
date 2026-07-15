@@ -6,6 +6,7 @@ import {
   campaignFields,
   communityFields,
   fundFields,
+  societyFields,
   societyMemberFields,
 } from "./validators";
 
@@ -41,6 +42,13 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_community_user", ["communitySlug", "userId"])
     .index("by_community_status", ["communitySlug", "status"]),
+  /** New user-facing "Create Society" submissions — distinct from the legacy
+   * `communities` catalog (which also has a type: "society" entry) and from
+   * `societyMembers` (leadership/membership on those catalog entries). */
+  societies: defineTable(societyFields)
+    .index("by_slug", ["slug"])
+    .index("by_creatorId", ["creatorId"])
+    .index("by_status", ["status"]),
   campaigns: defineTable(campaignFields)
     .index("by_slug", ["slug"])
     .index("by_community", ["creator.communityId"])
