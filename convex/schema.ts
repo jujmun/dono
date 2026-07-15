@@ -48,7 +48,8 @@ export default defineSchema({
   societies: defineTable(societyFields)
     .index("by_slug", ["slug"])
     .index("by_creatorId", ["creatorId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_stripeVerificationSessionId", ["stripeVerificationSessionId"]),
   campaigns: defineTable(campaignFields)
     .index("by_slug", ["slug"])
     .index("by_community", ["creator.communityId"])

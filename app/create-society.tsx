@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   View,
   Text,
@@ -6,9 +6,11 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
+  Animated,
+  Easing,
 } from "react-native";
 import { Link } from "expo-router";
-import { useConvexAuth, useMutation } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
   CheckCircle2,
@@ -18,12 +20,14 @@ import {
   IdCard,
   Globe,
   Link2,
+  ShieldCheck,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
+import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -64,10 +68,48 @@ function fileNameFromAsset(asset: ImagePicker.ImagePickerAsset): string {
   return asset.fileName ?? asset.uri.split("/").pop() ?? "file";
 }
 
+/** Pulsing (bigger/smaller) shield icon — reads as "still working on it". */
+function VerifyingIndicator({ size, color }: { size: number; color: string }) {
+  const scale = useRef(new Animated.Value(1)).current;
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(scale, {
+          toValue: 1.25,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(scale, {
+          toValue: 1,
+          duration: 700,
+          easing: Easing.inOut(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [scale]);
+
+  return (
+    <Animated.View style={{ transform: [{ scale }] }}>
+      <ShieldCheck size={size} color={color} />
+    </Animated.View>
+  );
+}
+
 export default function CreateSocietyPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
   const createSociety = useMutation(api.societies.create);
+  const createVerificationSession = useAction(
+    api.societyIdentity.createVerificationSession,
+  );
+  const refreshVerificationStatus = useAction(
+    api.societyIdentity.refreshVerificationStatus,
+  );
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
@@ -77,8 +119,30 @@ export default function CreateSocietyPage() {
   const [pickingCover, setPickingCover] = useState(false);
   const [pickingDocs, setPickingDocs] = useState(false);
   const [pickingId, setPickingId] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [submitted, setSubmitted] = useState(false);
+  const [societySlug, setSocietySlug] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  // Once a slug exists, this reflects the webhook-driven status in real time.
+  const verification = useQuery(
+    api.societies.getMine,
+    societySlug ? { slug: societySlug } : "skip",
+  );
+
+  // Fallback to the webhook: directly poll Stripe every few seconds while
+  // unverified, in case the webhook is delayed, misconfigured, or hasn't
+  // reached this deployment. Stops as soon as the query reflects "verified".
+  useEffect(() => {
+    if (!societySlug || verification?.stripeVerificationStatus === "verified") {
+      return;
+    }
+    const interval = setInterval(() => {
+      void refreshVerificationStatus({ slug: societySlug }).catch(() => {
+        // Best-effort background poll — surfaced errors would be noisy here;
+        // the webhook or the next tick may still succeed.
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [societySlug, verification?.stripeVerificationStatus, refreshVerificationStatus]);
 
   const update = (field: keyof typeof initialForm, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
@@ -217,47 +281,80 @@ export default function CreateSocietyPage() {
     return await uploadImageToConvexStorage(uploadUrl, file.uri, file.mimeType);
   };
 
-  const submitSociety = async () => {
+  /** Creates the society (once) so Stripe Identity has a record to attach to. */
+  const ensureSocietyCreated = async (): Promise<string> => {
+    if (societySlug) return societySlug;
     if (!idDocument) {
-      setError("An ID document is required.");
-      return;
+      throw new Error("An ID document is required.");
     }
 
+    const coverImageStorageId = coverImage
+      ? await uploadPickedFile(coverImage)
+      : undefined;
+
+    const supportingDocumentStorageIds: Id<"_storage">[] = [];
+    for (const doc of supportingDocs) {
+      supportingDocumentStorageIds.push(await uploadPickedFile(doc));
+    }
+
+    const idDocumentStorageId = await uploadPickedFile(idDocument);
+
+    const result = await createSociety({
+      name: form.name,
+      description: form.description,
+      story: form.story,
+      websiteUrl: form.website,
+      secondaryLink: form.secondaryLink.trim() || undefined,
+      coverImageStorageId,
+      supportingDocumentStorageIds,
+      idDocumentStorageId,
+    });
+
+    setSocietySlug(result.slug);
+    return result.slug;
+  };
+
+  const handleVerifyIdentity = async () => {
     setError(null);
-    setSubmitting(true);
+    setVerifying(true);
     try {
-      const coverImageStorageId = coverImage
-        ? await uploadPickedFile(coverImage)
-        : undefined;
-
-      const supportingDocumentStorageIds: Id<"_storage">[] = [];
-      for (const doc of supportingDocs) {
-        supportingDocumentStorageIds.push(await uploadPickedFile(doc));
+      const slug = await ensureSocietyCreated();
+      const { clientSecret, url } = await createVerificationSession({ slug });
+      const result = await launchIdentityVerification({ clientSecret, url });
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Don't wait on the webhook — ask Stripe directly as soon as the
+        // user finishes, the background poll (above) picks up from here.
+        void refreshVerificationStatus({ slug }).catch(() => {});
       }
-
-      const idDocumentStorageId = await uploadPickedFile(idDocument);
-
-      await createSociety({
-        name: form.name,
-        description: form.description,
-        story: form.story,
-        websiteUrl: form.website,
-        secondaryLink: form.secondaryLink.trim() || undefined,
-        coverImageStorageId,
-        supportingDocumentStorageIds,
-        idDocumentStorageId,
-      });
-
-      setSubmitted(true);
     } catch (err) {
-      setError(getFriendlyAuthError(err) || "Failed to submit your society.");
+      setError(getFriendlyAuthError(err) || "Could not start verification.");
     } finally {
-      setSubmitting(false);
+      setVerifying(false);
     }
   };
 
   const websiteInvalid = !isValidOptionalUrl(form.website);
   const secondaryLinkInvalid = !isValidOptionalUrl(form.secondaryLink);
+  const manualFieldsValid =
+    supportingDocs.length > 0 &&
+    idDocument !== null &&
+    !websiteInvalid &&
+    !secondaryLinkInvalid;
+
+  const stripeStatus = verification?.stripeVerificationStatus ?? null;
+  const stripeVerified = stripeStatus === "verified";
+  // requires_input is Stripe's status both for "awaiting your first
+  // submission" (its normal initial state) and "a check ran and failed" —
+  // only the presence of a real last_error means an actual attempt failed.
+  const hasVerificationError = Boolean(
+    verification?.stripeVerificationLastErrorCode ||
+      verification?.stripeVerificationLastErrorReason,
+  );
+  const stripeFailed =
+    stripeStatus === "canceled" ||
+    (stripeStatus === "requires_input" && hasVerificationError);
 
   const canProceed = () => {
     switch (step) {
@@ -266,15 +363,34 @@ export default function CreateSocietyPage() {
       case 1:
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
-        return (
-          supportingDocs.length > 0 &&
-          idDocument !== null &&
-          !websiteInvalid &&
-          !secondaryLinkInvalid
-        );
+        // The manual ID document is already implied by societySlug existing
+        // (societies.create enforces it). Identity verification itself can
+        // finish in the background — don't block moving on while it's still
+        // processing; the final step shows a waiting state until it's done.
+        return societySlug !== null;
       default:
         return true;
     }
+  };
+
+  const renderVerificationStatus = () => {
+    if (!stripeStatus) return null;
+    if (stripeVerified) {
+      return (
+        <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
+          <ShieldCheck size={14} color="#15803d" />
+          <Text className="text-xs text-green-800">Verified</Text>
+        </View>
+      );
+    }
+    return (
+      <View className="flex-row items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+        <VerifyingIndicator size={14} color="#b45309" />
+        <Text className="text-xs text-amber-800">
+          Verifying your identity... you can keep filling in the form
+        </Text>
+      </View>
+    );
   };
 
   const inputClass =
@@ -583,6 +699,46 @@ export default function CreateSocietyPage() {
                   </Text>
                 </Pressable>
               </View>
+
+              <View className="rounded-xl border border-dono-border bg-white p-4">
+                <View className="mb-1.5 flex-row items-center gap-2">
+                  <ShieldCheck size={16} color="#17211B" />
+                  <Text className="font-sans-medium text-sm text-dono-text">
+                    Identity Check
+                  </Text>
+                </View>
+                <Text className="mb-3 text-xs text-dono-muted">
+                  You'll be asked for a quick photo of your ID and a selfie so we can
+                  confirm it's really you — it only takes a minute.
+                </Text>
+
+                {renderVerificationStatus()}
+
+                <Pressable
+                  onPress={() => void handleVerifyIdentity()}
+                  disabled={!manualFieldsValid || verifying || stripeVerified}
+                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2.5 ${
+                    !manualFieldsValid || verifying || stripeVerified ? "opacity-50" : ""
+                  }`}
+                >
+                  {verifying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="font-sans-medium text-sm text-white">
+                      Verify your identity
+                    </Text>
+                  )}
+                </Pressable>
+                {!manualFieldsValid ? (
+                  <Text className="mt-2 text-xs text-dono-muted">
+                    Add your supporting documents, ID, and website above first.
+                  </Text>
+                ) : stripeFailed ? (
+                  <Text className="mt-2 text-xs text-rose-700">
+                    That didn't go through — please try again.
+                  </Text>
+                ) : null}
+              </View>
             </View>
           )}
 
@@ -644,21 +800,23 @@ export default function CreateSocietyPage() {
                 <Text className="text-sm text-dono-muted">
                   Secondary link: {form.secondaryLink.trim() || "Not provided"}
                 </Text>
+                <View className="mt-1">{renderVerificationStatus()}</View>
               </View>
             </View>
           )}
 
           {step === 4 && (
-            <View className="gap-5">
-              {submitted ? (
-                <View className="items-center gap-3 py-4">
+            <View className="items-center gap-3 py-4">
+              {stripeVerified ? (
+                <>
                   <CheckCircle2 size={32} color="#17211B" />
                   <Text className="text-center text-lg font-sans-medium text-dono-text">
                     Application submitted
                   </Text>
                   <Text className="text-center text-sm leading-relaxed text-dono-muted">
-                    Thanks — we've received your society and its verification documents.
-                    We'll review them and let you know once a decision is made.
+                    Thanks — we've received your society, its verification documents, and
+                    your Stripe identity check. We'll review it and let you know once a
+                    decision is made.
                   </Text>
                   <Link href="/societies" asChild>
                     <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
@@ -667,16 +825,17 @@ export default function CreateSocietyPage() {
                       </Text>
                     </Pressable>
                   </Link>
-                </View>
+                </>
               ) : (
                 <>
-                  <Text className="text-lg font-sans-medium text-dono-text">
-                    Before your society goes live
+                  <VerifyingIndicator size={48} color="#17211B" />
+                  <Text className="text-center text-lg font-sans-medium text-dono-text">
+                    Verifying your identity...
                   </Text>
-                  <Text className="text-sm leading-relaxed text-dono-muted">
-                    We review every new society, including its supporting documents and ID
-                    verification, before it appears publicly and can start receiving funds.
-                    We'll reach out directly if anything needs adjusting.
+                  <Text className="text-center text-sm leading-relaxed text-dono-muted">
+                    Your society has already been submitted. This usually takes a
+                    minute or two — feel free to leave this page open, it'll update
+                    automatically the moment it's done.
                   </Text>
                 </>
               )}
@@ -684,7 +843,7 @@ export default function CreateSocietyPage() {
           )}
 
           <View className="mt-8 flex-row justify-between">
-            {step > 0 && !(step === 4 && submitted) ? (
+            {step > 0 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
                 className="rounded-full border border-dono-border px-5 py-2.5"
@@ -706,19 +865,7 @@ export default function CreateSocietyPage() {
                 <Text className="font-sans-medium text-sm text-white">Continue</Text>
                 <ArrowRight size={16} color="#fff" />
               </Pressable>
-            ) : submitted ? null : (
-              <Pressable
-                disabled={submitting}
-                onPress={() => void submitSociety()}
-                className={`rounded-full bg-dono-accent px-6 py-2.5 ${
-                  submitting ? "opacity-50" : ""
-                }`}
-              >
-                <Text className="font-sans-medium text-sm text-white">
-                  {submitting ? "Submitting..." : "Submit for Review"}
-                </Text>
-              </Pressable>
-            )}
+            ) : null}
           </View>
 
           {error && (

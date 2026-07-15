@@ -120,6 +120,16 @@ export interface AdminSociety {
   creatorId: string;
   supportingDocumentUrls: string[];
   idDocumentUrl: string | null;
+  stripeVerificationStatus:
+    | "created"
+    | "requires_input"
+    | "processing"
+    | "verified"
+    | "canceled"
+    | null;
+  stripeVerificationLastErrorCode: string | null;
+  verifiedName: string | null;
+  verifiedDob: string | null;
 }
 
 export interface CommunityFund {

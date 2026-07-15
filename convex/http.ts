@@ -1,6 +1,7 @@
 import { httpRouter } from "convex/server";
 import { auth } from "./auth";
 import { stripeWebhook } from "./stripeWebhook";
+import { identityWebhook } from "./societyIdentityWebhook";
 
 const http = httpRouter();
 
@@ -10,6 +11,12 @@ http.route({
   path: "/stripe/webhook",
   method: "POST",
   handler: stripeWebhook,
+});
+
+http.route({
+  path: "/stripe/identity-webhook",
+  method: "POST",
+  handler: identityWebhook,
 });
 
 export default http;

@@ -132,6 +132,25 @@ export const societyFields = {
   moderationNote: v.optional(v.string()),
   moderatedAt: v.optional(v.number()),
   moderatedBy: v.optional(v.id("users")),
+  /** Stripe Identity — additive alongside the manual idDocumentStorageId above. */
+  stripeVerificationSessionId: v.optional(v.string()),
+  stripeVerificationStatus: v.optional(
+    v.union(
+      // "created" is Stripe's actual initial status (verified against current
+      // Stripe Identity docs) — included so the first status write after
+      // session creation doesn't fail schema validation.
+      v.literal("created"),
+      v.literal("requires_input"),
+      v.literal("processing"),
+      v.literal("verified"),
+      v.literal("canceled"),
+    ),
+  ),
+  verifiedName: v.optional(v.string()),
+  verifiedDob: v.optional(v.string()),
+  /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
+  stripeVerificationLastErrorCode: v.optional(v.string()),
+  stripeVerificationLastErrorReason: v.optional(v.string()),
 };
 
 export const fundFields = {
