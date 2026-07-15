@@ -37,7 +37,7 @@ export default function FundsPage() {
         </View>
 
         {communityFunds === undefined ? (
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         ) : communityFunds.length === 0 ? (
           <View className="rounded-2xl border border-dono-border bg-white p-12">
             <Text className="text-center text-dono-muted">
@@ -54,7 +54,7 @@ export default function FundsPage() {
 
         <View className="mt-12 rounded-2xl bg-dono-primary p-8">
           <View className="items-center">
-            <Gift size={32} color="#f7f4ed" />
+            <Gift size={32} color="#F7FAF8" />
             <Text className="mb-2 mt-4 text-center font-mono-medium text-xl text-white">
               Can&apos;t decide? Let the community guide you.
             </Text>

@@ -77,7 +77,7 @@ export default function CampaignDetailPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AppShell>
     );
@@ -122,7 +122,7 @@ export default function CampaignDetailPage() {
       <View className="mx-auto w-full max-w-7xl px-4 py-6">
         <Link href="/campaigns" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#5e6473" />
+            <ArrowLeft size={16} color="#56615A" />
             <Text className="text-sm text-dono-muted">Back to campaigns</Text>
           </Pressable>
         </Link>
@@ -147,14 +147,14 @@ export default function CampaignDetailPage() {
 
         <View className="mb-4 gap-2">
           <View className="flex-row items-center gap-1">
-            <MapPin size={16} color="#5e6473" />
+            <MapPin size={16} color="#56615A" />
             <Text className="text-sm text-dono-muted">
               {campaign.university}
               {campaign.college ? ` · ${campaign.college}` : ""}
             </Text>
           </View>
           <View className="flex-row items-center gap-1">
-            <Clock size={16} color="#5e6473" />
+            <Clock size={16} color="#56615A" />
             <Text className="font-mono text-sm text-dono-muted">
               Deadline:{" "}
               {new Date(campaign.deadline).toLocaleDateString("en-GB", {
@@ -187,7 +187,7 @@ export default function CampaignDetailPage() {
             <View className="gap-2">
               {campaign.impactItems.map((item) => (
                 <View key={item} className="flex-row items-start gap-2">
-                  <CheckCircle2 size={16} color="#1d242f" />
+                  <CheckCircle2 size={16} color="#17211B" />
                   <Text className="flex-1 text-sm text-dono-muted">{item}</Text>
                 </View>
               ))}
@@ -353,7 +353,7 @@ export default function CampaignDetailPage() {
               }
               className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
             >
-              <Heart size={16} color="#5e6473" />
+              <Heart size={16} color="#56615A" />
               <Text className="font-sans-medium text-sm text-dono-muted">Like</Text>
             </Pressable>
             <Pressable
@@ -366,7 +366,7 @@ export default function CampaignDetailPage() {
               }
               className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
             >
-              <UserPlus size={16} color="#5e6473" />
+              <UserPlus size={16} color="#56615A" />
               <Text className="font-sans-medium text-sm text-dono-muted">Follow</Text>
             </Pressable>
             <Pressable
@@ -379,7 +379,7 @@ export default function CampaignDetailPage() {
               }
               className="items-center justify-center rounded-xl border border-dono-border px-3 py-2.5"
             >
-              <Share2 size={16} color="#5e6473" />
+              <Share2 size={16} color="#56615A" />
             </Pressable>
           </View>
         </View>

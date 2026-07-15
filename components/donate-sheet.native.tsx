@@ -122,7 +122,7 @@ export function DonateSheet({
               autoCapitalize="none"
               keyboardType="email-address"
               placeholder="Email for receipt (optional)"
-              placeholderTextColor="#5e6473"
+              placeholderTextColor="#56615A"
               className="mt-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
             />
           ) : null}

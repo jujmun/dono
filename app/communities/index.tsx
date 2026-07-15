@@ -42,7 +42,7 @@ export default function CommunitiesPage() {
     return (
       <AppShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AppShell>
     );
@@ -70,11 +70,11 @@ export default function CommunitiesPage() {
         <View className="mb-6">
           <View className="relative">
             <View className="absolute left-3 top-3 z-10">
-              <Search size={16} color="#5e6473" />
+              <Search size={16} color="#56615A" />
             </View>
             <TextInput
               placeholder="Search communities..."
-              placeholderTextColor="#5e6473"
+              placeholderTextColor="#56615A"
               value={search}
               onChangeText={setSearch}
               className="w-full rounded-xl border border-dono-border bg-white py-2.5 pl-10 pr-4 text-sm text-dono-text"
@@ -110,7 +110,7 @@ export default function CommunitiesPage() {
         </ScrollView>
 
         {communities === undefined ? (
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         ) : filtered.length === 0 ? (
           <View className="rounded-2xl border border-dono-border bg-white p-12">
             <Text className="text-center text-dono-muted">

@@ -50,7 +50,7 @@ export default function AdminDiscoverPage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
         </View>
       </AdminShell>
     );
@@ -74,12 +74,12 @@ export default function AdminDiscoverPage() {
         <AdminStatsNav active="live" />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
-          <Search size={16} color="#5e6473" />
+          <Search size={16} color="#56615A" />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search by name or title…"
-            placeholderTextColor="#5e6473"
+            placeholderTextColor="#56615A"
             className="flex-1 py-2 text-sm text-dono-text"
             autoCapitalize="none"
             autoCorrect={false}
@@ -92,7 +92,7 @@ export default function AdminDiscoverPage() {
               {trimmedSearch ? "Matching posts" : "All live posts"}
             </Text>
             {campaigns === undefined ? (
-              <ActivityIndicator color="#1d242f" />
+              <ActivityIndicator color="#17211B" />
             ) : liveCampaigns.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white p-6">
                 <Text className="text-center font-sans-medium text-dono-text">

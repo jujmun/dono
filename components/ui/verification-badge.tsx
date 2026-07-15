@@ -49,7 +49,7 @@ export function VerificationBadge({
         size === "sm" ? "px-2 py-0.5" : "px-3 py-1"
       )}
     >
-      <Icon size={iconSize} color="#1d242f" />
+      <Icon size={iconSize} color="#17211B" />
       <Text
         className={cn(
           "font-medium",

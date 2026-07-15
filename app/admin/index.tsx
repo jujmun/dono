@@ -37,7 +37,7 @@ export default function AdminPortalPage() {
     return (
       <AdminShell>
         <View className="items-center py-16">
-          <ActivityIndicator color="#1d242f" />
+          <ActivityIndicator color="#17211B" />
           <Text className="mt-4 text-dono-muted">Loading...</Text>
         </View>
       </AdminShell>
@@ -65,12 +65,12 @@ export default function AdminPortalPage() {
         <AdminStatsNav active="waiting" />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
-          <Search size={16} color="#5e6473" />
+          <Search size={16} color="#56615A" />
           <TextInput
             value={search}
             onChangeText={setSearch}
             placeholder="Search by name or title…"
-            placeholderTextColor="#5e6473"
+            placeholderTextColor="#56615A"
             className="flex-1 py-2 text-sm text-dono-text"
             autoCapitalize="none"
             autoCorrect={false}
@@ -79,7 +79,7 @@ export default function AdminPortalPage() {
 
         {pending === undefined ? (
           <View className="items-center py-12">
-            <ActivityIndicator color="#1d242f" />
+            <ActivityIndicator color="#17211B" />
             <Text className="mt-4 text-dono-muted">Loading posts...</Text>
           </View>
         ) : pending.length === 0 ? (
@@ -133,7 +133,7 @@ export default function AdminPortalPage() {
                     <Text className="text-xs font-sans-medium text-dono-muted">
                       Open
                     </Text>
-                    <ChevronRight size={18} color="#5e6473" />
+                    <ChevronRight size={18} color="#56615A" />
                   </View>
                 </View>
               </Pressable>

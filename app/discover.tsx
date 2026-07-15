@@ -32,13 +32,13 @@ export default function DiscoverPage() {
         <View className="gap-8">
           <View>
             <View className="mb-4 flex-row items-center gap-2">
-              <Sparkles size={20} color="#1d242f" />
+              <Sparkles size={20} color="#17211B" />
               <Text className="text-lg font-sans-medium text-dono-text">
                 Trending Campaigns
               </Text>
             </View>
             {campaigns === undefined ? (
-              <ActivityIndicator color="#1d242f" />
+              <ActivityIndicator color="#17211B" />
             ) : trending.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white p-6">
                 <Text className="text-center text-dono-muted">
@@ -59,7 +59,7 @@ export default function DiscoverPage() {
               Live Activity
             </Text>
             {activityFeed === undefined ? (
-              <ActivityIndicator color="#1d242f" />
+              <ActivityIndicator color="#17211B" />
             ) : activityFeed.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white p-6">
                 <Text className="text-center text-dono-muted">
