@@ -1,4 +1,4 @@
-@AGENTS.md
+@Agents.md 
 # CLAUDE.md
 
 ## Project
@@ -8,19 +8,21 @@ to receive funding directly from alumni. Donors browse campaigns, communities
 (colleges, societies, departments), and community funds, and donate to specific
 projects. Auth is restricted to University of Oxford email addresses.
 
-## Scope — FRONTEND ONLY (hard rule)
+## Scope — full stack (frontend + Convex backend)
 
-You are working on frontend code only.
+You may now read, write, and edit files in `convex/` as well as the frontend.
 
-- **Never create, edit, or delete anything inside `convex/`.** The backend is
-  owned by another workflow. You may READ files in `convex/` to understand
-  schema, function signatures, and data shapes — but treat the entire
-  directory as read-only.
+- When a task touches both frontend and backend, show the plan for both
+  sides before implementing — schema/function changes on the Convex side,
+  and the UI/hook changes that consume them.
+- Be extra careful with anything touching auth, roles/permissions, or money
+  (Stripe, donation amounts, payout logic) — flag assumptions and ask before
+  implementing rather than guessing on these specifically.
 - Never edit `.env.local` or any env file. Never print or paste secret values
   (`AUTH_RESEND_KEY`, Stripe keys, etc.) into output, commits, or logs.
-- If a task appears to require a backend change (new Convex function, schema
-  change, auth change), STOP and say so — describe what backend change would
-  be needed and let a human make it. Do not work around it from the client.
+- Never trust a status/role/permission value sent from the client — enforce
+  these checks server-side in the Convex function itself, matching the
+  existing `requireVerifiedUser` / admin-role-check patterns already in use.
 
 ## Commands
 
