@@ -52,9 +52,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const root = String(segments[0] ?? "");
     const inOnboarding = root === "onboarding";
-    const inProtected =
-      root === "dashboard" ||
-      root === "funds";
+    const inProtected = root === "funds";
     const inAuthPublic =
       root === "signin" ||
       root === "signup" ||
