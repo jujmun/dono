@@ -11,11 +11,10 @@ import { Search } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminStatsNav } from "@/components/admin-stats-nav";
-import { ActivityFeedItem } from "@/components/activity-feed";
-import { CampaignCard } from "@/components/campaign-card";
+import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
-import type { ActivityItem, Campaign } from "@/lib/types";
+import type { Campaign } from "@/lib/types";
 
 function matchesCampaignSearch(campaign: Campaign, query: string) {
   if (!query) return true;
@@ -37,10 +36,6 @@ export default function AdminDiscoverPage() {
     api.campaigns.list,
     adminUser ? {} : "skip",
   ) ?? undefined) as Campaign[] | undefined;
-  const activityFeed = (useQuery(
-    api.activity.list,
-    adminUser && !trimmedSearch ? {} : "skip",
-  ) ?? undefined) as ActivityItem[] | undefined;
 
   const liveCampaigns = [...(campaigns ?? []).filter((c) =>
     matchesCampaignSearch(c, trimmedSearch),
@@ -105,32 +100,12 @@ export default function AdminDiscoverPage() {
                 </Text>
               </View>
             ) : (
-              <View className="gap-6">
-                {liveCampaigns.map((campaign) => (
-                  <CampaignCard
-                    key={campaign.id}
-                    campaign={campaign}
-                    href={`/admin/${campaign.id}` as Href}
-                  />
-                ))}
-              </View>
+              <CampaignCardGrid
+                campaigns={liveCampaigns}
+                getHref={(campaign) => `/admin/${campaign.id}` as Href}
+              />
             )}
           </View>
-
-          {!trimmedSearch &&
-          activityFeed !== undefined &&
-          activityFeed.length > 0 ? (
-            <View>
-              <Text className="mb-4 text-lg font-sans-medium text-dono-text">
-                Recent activity
-              </Text>
-              <View className="gap-3">
-                {activityFeed.map((item) => (
-                  <ActivityFeedItem key={item.id} item={item} />
-                ))}
-              </View>
-            </View>
-          ) : null}
         </View>
       </View>
     </AdminShell>

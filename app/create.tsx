@@ -9,14 +9,23 @@ import {
 } from "react-native";
 import { useRouter } from "expo-router";
 import { useConvexAuth, useMutation } from "convex/react";
-import { CheckCircle2, ArrowRight } from "lucide-react-native";
+import * as ImagePicker from "expo-image-picker";
+import { CheckCircle2, ArrowRight, ImagePlus } from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
+import { CampaignPreview } from "@/components/campaign-preview";
 import { LoginGate } from "@/components/login-gate";
+import { CampaignImage } from "@/components/ui/campaign-image";
+import { CategoryBadge } from "@/components/ui/category-badge";
 import { categoryLabels } from "@/lib/constants";
+import { MAX_CAMPAIGN_IMAGES } from "@/lib/campaign-images";
+import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { api } from "@convex/_generated/api";
 
 const steps = ["Details", "Story", "Goal", "Review", "Submit"];
+
+const DEFAULT_UNIVERSITY = "University of Oxford";
 
 const creatorTypes = [
   "Individual Student",
@@ -26,11 +35,18 @@ const creatorTypes = [
   "University",
 ];
 
+const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+
+interface PickedImage {
+  uri: string;
+  mimeType?: string | null;
+  fileSize?: number | null;
+}
+
 const initialForm = {
   title: "",
   category: "",
   creatorType: "",
-  university: "",
   description: "",
   story: "",
   goal: "",
@@ -41,18 +57,79 @@ export default function CreateCampaignPage() {
   const posthog = usePostHog();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
+  const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
+  const setCampaignImage = useMutation(api.campaignCreator.setImage);
+  const setCampaignImages = useMutation(api.campaignCreator.setImages);
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [pickingImage, setPickingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
 
   const update = (field: string, value: string) =>
     setForm((prev) => ({ ...prev, [field]: value }));
 
+  const pickCampaignImages = async () => {
+    if (pickedImages.length >= MAX_CAMPAIGN_IMAGES) {
+      setError(`You can add up to ${MAX_CAMPAIGN_IMAGES} photos.`);
+      return;
+    }
+
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("Photo library permission is required to add campaign photos.");
+      return;
+    }
+
+    setPickingImage(true);
+    try {
+      const remaining = MAX_CAMPAIGN_IMAGES - pickedImages.length;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
+        quality: 0.85,
+      });
+
+      if (result.canceled || result.assets.length === 0) {
+        return;
+      }
+
+      const nextImages: PickedImage[] = [];
+      for (const asset of result.assets) {
+        if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
+          setError("Each campaign photo must be 5MB or smaller.");
+          return;
+        }
+        nextImages.push({
+          uri: asset.uri,
+          mimeType: asset.mimeType,
+          fileSize: asset.fileSize,
+        });
+      }
+
+      setPickedImages((current) => [...current, ...nextImages].slice(0, MAX_CAMPAIGN_IMAGES));
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setPickingImage(false);
+    }
+  };
+
+  const removeCampaignImage = (index: number) => {
+    setPickedImages((current) => current.filter((_, i) => i !== index));
+  };
+
+  const campaignImageSource =
+    pickedImages[0]?.uri ?? (form.category || "default");
+  const pickedImageUris = pickedImages.map((image) => image.uri);
+
   const canProceed = () => {
     switch (step) {
       case 0:
-        return form.title && form.category && form.creatorType && form.university;
+        return form.title && form.category && form.creatorType;
       case 1:
         return form.description && form.story;
       case 2:
@@ -85,7 +162,9 @@ export default function CreateCampaignPage() {
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-2xl px-4 py-8">
+      <View
+        className={`mx-auto w-full px-4 py-8 ${step === 3 ? "max-w-7xl" : "max-w-2xl"}`}
+      >
         <View className="mb-8 items-center">
           <Text className="font-display-medium text-2xl text-dono-text">Start a Campaign</Text>
           <Text className="mt-1 text-center text-dono-muted">
@@ -93,10 +172,10 @@ export default function CreateCampaignPage() {
           </Text>
         </View>
 
-        <View className="mb-8 flex-row items-center justify-between">
-          {steps.map((s, i) => (
-            <View key={s} className="flex-1 flex-row items-center">
-              <View className="items-center">
+        <View className="mb-8 items-center">
+          <View className="flex-row items-center">
+            {steps.map((s, i) => (
+              <View key={s} className="flex-row items-center">
                 <View
                   className={`h-8 w-8 items-center justify-center rounded-full ${
                     i <= step ? "bg-dono-primary" : "bg-dono-surface-muted"
@@ -114,16 +193,16 @@ export default function CreateCampaignPage() {
                     </Text>
                   )}
                 </View>
+                {i < steps.length - 1 && (
+                  <View
+                    className={`mx-2 h-0.5 w-10 ${
+                      i < step ? "bg-dono-primary" : "bg-dono-border"
+                    }`}
+                  />
+                )}
               </View>
-              {i < steps.length - 1 && (
-                <View
-                  className={`mx-2 h-0.5 flex-1 ${
-                    i < step ? "bg-dono-primary" : "bg-dono-border"
-                  }`}
-                />
-              )}
-            </View>
-          ))}
+            ))}
+          </View>
         </View>
 
         <View className="rounded-2xl border border-dono-border bg-white p-6">
@@ -140,6 +219,74 @@ export default function CreateCampaignPage() {
                   placeholderTextColor="#56615A"
                   className={inputClass}
                 />
+              </View>
+
+              <View>
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                  Campaign Photos
+                </Text>
+                <View className="overflow-hidden rounded-2xl border border-dono-border">
+                  <CampaignImage image={campaignImageSource} className="h-48">
+                    {form.category ? (
+                      <View className="absolute left-4 top-4">
+                        <CategoryBadge category={form.category} />
+                      </View>
+                    ) : null}
+                  </CampaignImage>
+                </View>
+                {pickedImages.length > 1 ? (
+                  <ScrollView
+                    horizontal
+                    showsHorizontalScrollIndicator={false}
+                    className="mt-3"
+                    contentContainerClassName="gap-2"
+                  >
+                    {pickedImages.map((image, index) => (
+                      <View key={`${image.uri}-${index}`} className="relative">
+                        <CampaignImage image={image.uri} className="h-16 w-24 rounded-lg" />
+                        <Pressable
+                          onPress={() => removeCampaignImage(index)}
+                          className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-dono-text"
+                        >
+                          <Text className="text-xs font-bold text-white">×</Text>
+                        </Pressable>
+                      </View>
+                    ))}
+                  </ScrollView>
+                ) : null}
+                <View className="mt-3 flex-row flex-wrap gap-2">
+                  <Pressable
+                    onPress={() => void pickCampaignImages()}
+                    disabled={pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES}
+                    className={`flex-row items-center gap-2 rounded-full border border-dono-border px-4 py-2 ${
+                      pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES
+                        ? "opacity-50"
+                        : ""
+                    }`}
+                  >
+                    <ImagePlus size={16} color="#17211B" />
+                    <Text className="font-sans-medium text-sm text-dono-text">
+                      {pickingImage
+                        ? "Opening library..."
+                        : pickedImages.length > 0
+                          ? "Add more photos"
+                          : "Add photos"}
+                    </Text>
+                  </Pressable>
+                  {pickedImages.length > 0 ? (
+                    <Pressable
+                      onPress={() => setPickedImages([])}
+                      className="rounded-full border border-dono-border px-4 py-2"
+                    >
+                      <Text className="font-sans-medium text-sm text-dono-muted">
+                        Remove all
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+                <Text className="mt-1.5 text-xs text-dono-muted">
+                  Optional. Add up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each).
+                </Text>
               </View>
 
               <View>
@@ -198,19 +345,6 @@ export default function CreateCampaignPage() {
                     </Pressable>
                   ))}
                 </View>
-              </View>
-
-              <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
-                  University
-                </Text>
-                <TextInput
-                  value={form.university}
-                  onChangeText={(v) => update("university", v)}
-                  placeholder="e.g. University of Cambridge"
-                  placeholderTextColor="#56615A"
-                  className={inputClass}
-                />
               </View>
             </View>
           )}
@@ -276,32 +410,22 @@ export default function CreateCampaignPage() {
 
           {step === 3 && (
             <View className="gap-4">
-              <Text className="text-lg font-sans-medium text-dono-text">
-                Review your campaign
-              </Text>
-              {(
-                [
-                  ["Title", form.title],
-                  ["Category", categoryLabels[form.category] || form.category],
-                  ["Creator", form.creatorType],
-                  ["University", form.university],
-                  ["Description", form.description],
-                  ["Goal", `£${Number(form.goal).toLocaleString()}`],
-                ] as const
-              ).map(([label, value]) => (
-                <View
-                  key={label}
-                  className="flex-row justify-between border-b border-dono-border pb-3"
-                >
-                  <Text className="text-sm text-dono-muted">{label}</Text>
-                  <Text className="max-w-[60%] text-right font-sans-medium text-sm text-dono-text">
-                    {value}
-                  </Text>
-                </View>
-              ))}
-              <View className="rounded-xl border border-dono-border bg-dono-surface-muted p-4">
-                <Text className="text-sm leading-relaxed text-dono-muted">{form.story}</Text>
+              <View>
+                <Text className="text-lg font-sans-medium text-dono-text">
+                  Review your campaign
+                </Text>
+                <Text className="mt-1 text-sm text-dono-muted">
+                  This is how donors will see your campaign once it&apos;s live.
+                </Text>
               </View>
+              <CampaignPreview
+                title={form.title}
+                category={form.category}
+                university={DEFAULT_UNIVERSITY}
+                story={form.story}
+                goal={Number(form.goal)}
+                imageUris={pickedImageUris}
+              />
             </View>
           )}
 
@@ -359,26 +483,48 @@ export default function CreateCampaignPage() {
                     title: form.title,
                     category: form.category,
                     creatorType: form.creatorType,
-                    university: form.university,
+                    university: DEFAULT_UNIVERSITY,
                     description: form.description,
                     story: form.story,
                     goal: Number(form.goal),
                   })
-                    .then((result) => {
+                    .then(async (result) => {
+                      let imageUploadFailed = false;
+                      if (pickedImages.length > 0) {
+                        try {
+                          const allUploaded = await uploadCampaignImages({
+                            slug: result.slug,
+                            images: pickedImages,
+                            generateUploadUrl: generateImageUploadUrl,
+                            setImage: setCampaignImage,
+                            setImages: setCampaignImages,
+                          });
+                          imageUploadFailed = !allUploaded;
+                        } catch {
+                          imageUploadFailed = true;
+                        }
+                      }
+
                       posthog?.capture("campaign_created", {
                         campaign_title: form.title,
                         campaign_category: form.category,
                         campaign_creator_type: form.creatorType,
-                        campaign_university: form.university,
+                        campaign_university: DEFAULT_UNIVERSITY,
                         campaign_goal: Number(form.goal),
+                        campaign_has_image:
+                          pickedImages.length > 0 && !imageUploadFailed,
+                        campaign_image_count: pickedImages.length,
                       });
                       setForm(initialForm);
+                      setPickedImages([]);
                       setStep(0);
                       setError(null);
                       router.push(`/campaigns/${result.slug}`);
                     })
                     .catch((err: Error) => {
-                      setError(err.message || "Failed to create campaign.");
+                      setError(
+                        getFriendlyAuthError(err) || "Failed to create campaign.",
+                      );
                     })
                     .finally(() => {
                       setSubmitting(false);
@@ -389,7 +535,11 @@ export default function CreateCampaignPage() {
                 }`}
               >
                 <Text className="font-sans-medium text-sm text-white">
-                  {submitting ? "Completing..." : "Complete"}
+                  {submitting
+                    ? pickedImages.length > 0
+                      ? "Creating & uploading..."
+                      : "Completing..."
+                    : "Complete"}
                 </Text>
               </Pressable>
             )}

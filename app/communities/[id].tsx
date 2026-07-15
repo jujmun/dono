@@ -6,7 +6,7 @@ import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { VerificationBadge } from "@/components/ui/verification-badge";
-import { CampaignCard } from "@/components/campaign-card";
+import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign, Community, VerificationType } from "@/lib/types";
 import { api } from "@convex/_generated/api";
@@ -132,11 +132,7 @@ export default function CommunityDetailPage() {
               <Text className="text-center text-dono-muted">No active campaigns yet.</Text>
             </View>
           ) : (
-            <View className="gap-6">
-              {communityCampaigns.map((campaign) => (
-                <CampaignCard key={campaign.id} campaign={campaign} />
-              ))}
-            </View>
+            <CampaignCardGrid campaigns={communityCampaigns} />
           )}
         </View>
       </View>

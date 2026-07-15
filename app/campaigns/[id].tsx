@@ -20,19 +20,18 @@ import {
 } from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
-import { CampaignImage } from "@/components/ui/campaign-image";
+import { CampaignImageGallery } from "@/components/campaign-image-gallery";
 import { VerificationList } from "@/components/ui/verification-badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import { EngagementStats } from "@/components/activity-feed";
-import { CampaignCard } from "@/components/campaign-card";
+import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import {
   PRESET_DONATION_AMOUNTS,
-  type DonationFrequency,
 } from "@/components/donate-sheet-types";
 
 const donationAmounts = [...PRESET_DONATION_AMOUNTS];
@@ -43,8 +42,6 @@ export default function CampaignDetailPage() {
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState(25);
   const [customAmount, setCustomAmount] = useState("");
-  const [donationFrequency, setDonationFrequency] =
-    useState<DonationFrequency>("one_time");
   const [donorEmail, setDonorEmail] = useState("");
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [donationMessage, setDonationMessage] = useState<string | null>(null);
@@ -112,10 +109,129 @@ export default function CampaignDetailPage() {
       campaign_goal: campaign.goal,
       campaign_raised: campaign.raised,
       amount: resolvedAmount,
-      donation_type: donationFrequency === "monthly" ? "recurring" : "one_time",
+      donation_type: "one_time",
     });
     setDonateSheetOpen(true);
   };
+
+  const donationPanel = (
+    <View className="rounded-2xl border border-dono-border bg-white p-6">
+      <View className="mb-4 flex-row items-baseline justify-between">
+        <Text className="font-mono-medium text-3xl text-dono-primary">
+          {formatCurrency(campaign.raised)}
+        </Text>
+        <Text className="text-sm text-dono-muted">
+          of {formatCurrency(campaign.goal)}
+        </Text>
+      </View>
+      <ProgressBar value={progress} className="mt-3" showLabel />
+      <Text className="mt-2 text-sm text-dono-muted">
+        {campaign.donors} donors · {campaign.followers} followers
+      </Text>
+
+      {campaign.status !== "funded" && (
+        <>
+          <View className="mb-4 mt-4 flex-row gap-2">
+            {donationAmounts.map((amount) => (
+              <Pressable
+                key={amount}
+                onPress={() => {
+                  setCustomAmount("");
+                  setSelectedAmount(amount);
+                  posthog?.capture("donation_amount_selected", {
+                    campaign_id: campaign.id,
+                    campaign_title: campaign.title,
+                    amount,
+                  });
+                }}
+                className={`flex-1 items-center rounded-xl border py-2.5 ${
+                  !customAmount && selectedAmount === amount
+                    ? "border-dono-primary bg-dono-primary/5"
+                    : "border-dono-border"
+                }`}
+              >
+                <Text className="font-sans-medium text-sm text-dono-text">£{amount}</Text>
+              </Pressable>
+            ))}
+          </View>
+          <TextInput
+            value={customAmount}
+            onChangeText={setCustomAmount}
+            keyboardType="numeric"
+            placeholder="Custom amount (£)"
+            className="mb-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
+          />
+          {donationMessage ? (
+            <Text className="mb-3 text-sm text-green-700">{donationMessage}</Text>
+          ) : null}
+          <Pressable
+            onPress={openDonateSheet}
+            className="mb-3 flex-row items-center justify-center gap-2 rounded-full bg-dono-accent py-3"
+          >
+            <Gift size={16} color="#fff" />
+            <Text className="font-sans-medium text-sm text-white">Donate Now</Text>
+          </Pressable>
+          <DonateSheet
+            visible={donateSheetOpen}
+            campaignId={campaign.id}
+            campaignTitle={campaign.title}
+            selectedAmount={resolvedAmount}
+            isAuthenticated={isAuthenticated}
+            donorEmail={donorEmail}
+            onDonorEmailChange={setDonorEmail}
+            onClose={() => setDonateSheetOpen(false)}
+            onSuccess={(amount: number) => {
+              setDonationMessage(
+                `Thank you! Your £${amount} donation is being processed.`,
+              );
+            }}
+            frequency="one_time"
+          />
+        </>
+      )}
+
+      <View className="flex-row gap-2">
+        <Pressable
+          onPress={() =>
+            posthog?.capture("campaign_liked", {
+              campaign_id: campaign.id,
+              campaign_title: campaign.title,
+              campaign_category: campaign.category,
+            })
+          }
+          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
+        >
+          <Heart size={16} color="#56615A" />
+          <Text className="font-sans-medium text-sm text-dono-muted">Like</Text>
+        </Pressable>
+        <Pressable
+          onPress={() =>
+            posthog?.capture("campaign_followed", {
+              campaign_id: campaign.id,
+              campaign_title: campaign.title,
+              campaign_category: campaign.category,
+            })
+          }
+          className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
+        >
+          <UserPlus size={16} color="#56615A" />
+          <Text className="font-sans-medium text-sm text-dono-muted">Follow</Text>
+        </Pressable>
+        <Pressable
+          onPress={() =>
+            posthog?.capture("campaign_shared", {
+              campaign_id: campaign.id,
+              campaign_title: campaign.title,
+              campaign_category: campaign.category,
+            })
+          }
+          className="items-center justify-center rounded-xl border border-dono-border px-3 py-2.5"
+        >
+          <Share2 size={16} color="#56615A" />
+        </Pressable>
+      </View>
+    </View>
+  );
 
   return (
     <AppShell>
@@ -127,7 +243,15 @@ export default function CampaignDetailPage() {
           </Pressable>
         </Link>
 
-        <CampaignImage image={campaign.image} className="mb-6 h-56 rounded-2xl">
+        <View className="flex-col lg:flex-row lg:items-start lg:gap-8">
+          <View className="order-2 min-w-0 flex-1 lg:order-1">
+        <CampaignImageGallery
+          image={campaign.image}
+          images={campaign.images}
+          category={campaign.category}
+          className="mb-6"
+          heroClassName="h-56 rounded-2xl"
+        >
           <View className="absolute left-4 top-4">
             <CategoryBadge category={campaign.category} />
           </View>
@@ -137,7 +261,7 @@ export default function CampaignDetailPage() {
               <Text className="text-sm font-semibold text-green-700">Fully Funded</Text>
             </View>
           )}
-        </CampaignImage>
+        </CampaignImageGallery>
 
         <View className="mb-4">
           <VerificationList verifications={campaign.verifications} size="md" />
@@ -223,167 +347,6 @@ export default function CampaignDetailPage() {
           </View>
         )}
 
-        <View className="mb-8 rounded-2xl border border-dono-border bg-white p-5">
-          <View className="flex-row items-center gap-3">
-            <View className="h-12 w-12 items-center justify-center rounded-xl bg-dono-primary">
-              <Text className="text-sm font-bold text-white">{campaign.creator.avatar}</Text>
-            </View>
-            <View>
-              <Text className="font-sans-medium text-dono-text">{campaign.creator.name}</Text>
-              <Text className="text-sm capitalize text-dono-muted">
-                {campaign.creator.type}
-              </Text>
-            </View>
-          </View>
-        </View>
-
-        <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-          <View className="mb-4 flex-row items-baseline justify-between">
-            <Text className="font-mono-medium text-3xl text-dono-primary">
-              {formatCurrency(campaign.raised)}
-            </Text>
-            <Text className="text-sm text-dono-muted">
-              of {formatCurrency(campaign.goal)}
-            </Text>
-          </View>
-          <ProgressBar value={progress} className="mt-3" showLabel />
-          <Text className="mt-2 text-sm text-dono-muted">
-            {campaign.donors} donors · {campaign.followers} followers
-          </Text>
-
-          {campaign.status !== "funded" && (
-            <>
-              <View className="mb-4 mt-4 flex-row gap-2">
-                <Pressable
-                  onPress={() => setDonationFrequency("one_time")}
-                  className={`flex-1 items-center rounded-xl border py-2.5 ${
-                    donationFrequency === "one_time"
-                      ? "border-dono-primary bg-dono-primary/5"
-                      : "border-dono-border"
-                  }`}
-                >
-                  <Text className="font-sans-medium text-sm text-dono-text">One-time</Text>
-                </Pressable>
-                <Pressable
-                  onPress={() => setDonationFrequency("monthly")}
-                  className={`flex-1 items-center rounded-xl border py-2.5 ${
-                    donationFrequency === "monthly"
-                      ? "border-dono-primary bg-dono-primary/5"
-                      : "border-dono-border"
-                  }`}
-                >
-                  <Text className="font-sans-medium text-sm text-dono-text">Monthly</Text>
-                </Pressable>
-              </View>
-              {!isAuthenticated && donationFrequency === "monthly" ? (
-                <Text className="mb-3 text-sm text-dono-muted">
-                  Monthly giving requires an account. Choose One-time to donate without
-                  signing in, or open Donate and sign in for monthly.
-                </Text>
-              ) : null}
-              <View className="mb-4 flex-row gap-2">
-                {donationAmounts.map((amount) => (
-                  <Pressable
-                    key={amount}
-                    onPress={() => {
-                      setCustomAmount("");
-                      setSelectedAmount(amount);
-                      posthog?.capture("donation_amount_selected", {
-                        campaign_id: campaign.id,
-                        campaign_title: campaign.title,
-                        amount,
-                      });
-                    }}
-                    className={`flex-1 items-center rounded-xl border py-2.5 ${
-                      !customAmount && selectedAmount === amount
-                        ? "border-dono-primary bg-dono-primary/5"
-                        : "border-dono-border"
-                    }`}
-                  >
-                    <Text className="font-sans-medium text-sm text-dono-text">£{amount}</Text>
-                  </Pressable>
-                ))}
-              </View>
-              <TextInput
-                value={customAmount}
-                onChangeText={setCustomAmount}
-                keyboardType="numeric"
-                placeholder="Custom amount (£)"
-                className="mb-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
-              />
-              {donationMessage ? (
-                <Text className="mb-3 text-sm text-green-700">{donationMessage}</Text>
-              ) : null}
-              <Pressable
-                onPress={openDonateSheet}
-                className="mb-3 flex-row items-center justify-center gap-2 rounded-full bg-dono-accent py-3"
-              >
-                <Gift size={16} color="#fff" />
-                <Text className="font-sans-medium text-sm text-white">Donate Now</Text>
-              </Pressable>
-              <DonateSheet
-                visible={donateSheetOpen}
-                campaignId={campaign.id}
-                campaignTitle={campaign.title}
-                selectedAmount={resolvedAmount}
-                isAuthenticated={isAuthenticated}
-                donorEmail={donorEmail}
-                onDonorEmailChange={setDonorEmail}
-                onClose={() => setDonateSheetOpen(false)}
-                onSuccess={(amount: number) => {
-                  setDonationMessage(
-                    donationFrequency === "monthly"
-                      ? `Thank you! Your £${amount}/month subscription is being set up.`
-                      : `Thank you! Your £${amount} donation is being processed.`,
-                  );
-                }}
-                frequency={donationFrequency}
-              />
-            </>
-          )}
-
-          <View className="flex-row gap-2">
-            <Pressable
-              onPress={() =>
-                posthog?.capture("campaign_liked", {
-                  campaign_id: campaign.id,
-                  campaign_title: campaign.title,
-                  campaign_category: campaign.category,
-                })
-              }
-              className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
-            >
-              <Heart size={16} color="#56615A" />
-              <Text className="font-sans-medium text-sm text-dono-muted">Like</Text>
-            </Pressable>
-            <Pressable
-              onPress={() =>
-                posthog?.capture("campaign_followed", {
-                  campaign_id: campaign.id,
-                  campaign_title: campaign.title,
-                  campaign_category: campaign.category,
-                })
-              }
-              className="flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border border-dono-border py-2.5"
-            >
-              <UserPlus size={16} color="#56615A" />
-              <Text className="font-sans-medium text-sm text-dono-muted">Follow</Text>
-            </Pressable>
-            <Pressable
-              onPress={() =>
-                posthog?.capture("campaign_shared", {
-                  campaign_id: campaign.id,
-                  campaign_title: campaign.title,
-                  campaign_category: campaign.category,
-                })
-              }
-              className="items-center justify-center rounded-xl border border-dono-border px-3 py-2.5"
-            >
-              <Share2 size={16} color="#56615A" />
-            </Pressable>
-          </View>
-        </View>
-
         <View className="mb-8 rounded-2xl border border-green-200 bg-green-50 p-5">
           <Text className="mb-2 text-sm font-semibold text-green-800">
             Trust & Verification
@@ -399,13 +362,15 @@ export default function CampaignDetailPage() {
         {(related?.length ?? 0) > 0 && (
           <View className="mt-4">
             <Text className="mb-6 font-display-medium text-xl text-dono-text">Related Campaigns</Text>
-            <View className="gap-6">
-              {related!.map((c) => (
-                <CampaignCard key={c.id} campaign={c} />
-              ))}
-            </View>
+            <CampaignCardGrid campaigns={related!} />
           </View>
         )}
+          </View>
+
+          <View className="order-1 mb-8 w-full shrink-0 self-start lg:order-2 lg:sticky lg:top-6 lg:mb-0 lg:w-80">
+            {donationPanel}
+          </View>
+        </View>
       </View>
     </AppShell>
   );

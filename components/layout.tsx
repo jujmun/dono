@@ -3,7 +3,6 @@ import { type Href, Link, usePathname } from "expo-router";
 import { View, Text, Pressable, Image, useWindowDimensions } from "react-native";
 import {
   Home,
-  Compass,
   Users,
   PiggyBank,
   User,
@@ -18,7 +17,6 @@ import { useCurrentProfile } from "@/lib/auth/hooks";
 
 const navItems = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/discover", label: "Discover", icon: Compass },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
   { href: "/communities", label: "Communities", icon: Users },
   { href: "/dashboard", label: "Impact", icon: Sparkles },
@@ -40,14 +38,16 @@ export function Header() {
 
   return (
     <View className="z-50 border-b border-dono-border bg-dono-bg/95">
-      <View className="mx-auto h-16 w-full max-w-7xl flex-row items-center justify-between px-4">
-        <Link href="/" asChild>
-          <Pressable className="flex-row items-center gap-2">
-            <Text className="font-display-medium text-xl text-dono-text">Dono</Text>
-          </Pressable>
-        </Link>
+      <View className="mx-auto h-16 w-full max-w-7xl flex-row items-center px-4">
+        <View className="flex-1 flex-row items-center">
+          <Link href="/" asChild>
+            <Pressable className="flex-row items-center gap-2">
+              <Text className="font-display-medium text-xl text-dono-text">Dono</Text>
+            </Pressable>
+          </Link>
+        </View>
 
-        {isWide && (
+        {isWide ? (
           <View className="flex-row items-center gap-1">
             {navItems.slice(1, -1).map((item) => {
               const active =
@@ -73,9 +73,9 @@ export function Header() {
               );
             })}
           </View>
-        )}
+        ) : null}
 
-        <View className="flex-row items-center gap-2">
+        <View className="flex-1 flex-row items-center justify-end gap-2">
           {isWide && (
             <>
               <Link href="/create" asChild>
@@ -253,7 +253,6 @@ export function Footer() {
               [
                 ["/campaigns", "Campaigns"],
                 ["/communities", "Communities"],
-                ["/discover", "Discover"],
               ] as const
             ).map(([href, label]) => (
               <Link key={href} href={href} asChild>
@@ -261,22 +260,6 @@ export function Footer() {
                   <Text className="text-sm text-dono-muted">{label}</Text>
                 </Pressable>
               </Link>
-            ))}
-          </View>
-
-          <View className={cn(isWide ? "w-[22%]" : "w-full")}>
-            <Text className="mb-3 font-sans-medium text-sm text-dono-text">
-              Principles
-            </Text>
-            {[
-              "Radical transparency",
-              "Small donations, big impact",
-              "Communities over campaigns",
-              "Trust through visibility",
-            ].map((item) => (
-              <Text key={item} className="py-1 text-sm text-dono-muted">
-                {item}
-              </Text>
             ))}
           </View>
         </View>

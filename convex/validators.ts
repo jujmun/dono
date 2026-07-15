@@ -39,6 +39,8 @@ export const campaignFields = {
   college: v.optional(v.string()),
   image: v.string(),
   imageStorageId: v.optional(v.id("_storage")),
+  images: v.optional(v.array(v.string())),
+  imageStorageIds: v.optional(v.array(v.id("_storage"))),
   createdAt: v.string(),
   deadline: v.string(),
   status: v.union(
