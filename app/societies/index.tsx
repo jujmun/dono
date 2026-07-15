@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
-import { Search } from "lucide-react-native";
+import { Link } from "expo-router";
+import { Search, Plus } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { SocietyCardGrid } from "@/components/society-card-grid";
 import { mockSocieties } from "@/lib/mock-societies";
@@ -25,8 +26,14 @@ export default function SocietiesPage() {
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-7xl px-4 py-8">
-        <View className="mb-8">
+        <View className="mb-8 flex-row items-center justify-between gap-4">
           <Text className="font-display-medium text-2xl text-dono-text">Societies</Text>
+          <Link href="/create-society" asChild>
+            <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
+              <Plus size={16} color="#fff" />
+              <Text className="font-sans-medium text-sm text-white">Create Society</Text>
+            </Pressable>
+          </Link>
         </View>
 
         <View className="mb-6">
