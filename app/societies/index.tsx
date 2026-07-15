@@ -1,10 +1,13 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
+import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { Link } from "expo-router";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Search, Plus } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
+import { LoginGate } from "@/components/login-gate";
 import { SocietyCardGrid } from "@/components/society-card-grid";
-import { mockSocieties } from "@/lib/mock-societies";
+import { api } from "@convex/_generated/api";
+import type { MySociety, Society } from "@/lib/types";
 
 type SocietiesTab = "discover" | "mine";
 
@@ -16,12 +19,22 @@ const tabs: { id: SocietiesTab; label: string }[] = [
 export default function SocietiesPage() {
   const [tab, setTab] = useState<SocietiesTab>("discover");
   const [search, setSearch] = useState("");
+  const { isAuthenticated } = useConvexAuth();
 
-  const scoped =
-    tab === "mine" ? mockSocieties.filter((s) => s.joined) : mockSocieties;
-  const filtered = scoped.filter((s) =>
+  const activeSocieties = (useQuery(api.societies.listActive) ?? undefined) as
+    | Society[]
+    | undefined;
+  const mySocieties = (useQuery(
+    api.societies.listMine,
+    isAuthenticated ? {} : "skip",
+  ) ?? undefined) as MySociety[] | undefined;
+
+  const scoped = tab === "mine" ? mySocieties : activeSocieties;
+  const filtered = (scoped ?? []).filter((s) =>
     s.name.toLowerCase().includes(search.toLowerCase()),
   );
+
+  const showMineLoginGate = tab === "mine" && !isAuthenticated;
 
   return (
     <AppShell>
@@ -73,7 +86,11 @@ export default function SocietiesPage() {
           ))}
         </View>
 
-        {filtered.length === 0 ? (
+        {showMineLoginGate ? null : scoped === undefined ? (
+          <View className="items-center py-16">
+            <ActivityIndicator color="#17211B" />
+          </View>
+        ) : filtered.length === 0 ? (
           <View className="rounded-2xl border border-dono-border bg-white p-12">
             <Text className="text-center text-dono-muted">
               No societies match your search.
@@ -83,6 +100,9 @@ export default function SocietiesPage() {
           <SocietyCardGrid societies={filtered} />
         )}
       </View>
+      {showMineLoginGate ? (
+        <LoginGate message="Sign in to see the societies you've created." />
+      ) : null}
     </AppShell>
   );
 }

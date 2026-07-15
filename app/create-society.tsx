@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
 } from "react-native";
 import { Link } from "expo-router";
-import { useConvexAuth } from "convex/react";
+import { useConvexAuth, useMutation } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
   CheckCircle2,
@@ -23,6 +23,9 @@ import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 
 const steps = ["Details", "About", "Verification", "Review", "Submit"];
 
@@ -63,6 +66,8 @@ function fileNameFromAsset(asset: ImagePicker.ImagePickerAsset): string {
 
 export default function CreateSocietyPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
+  const createSociety = useMutation(api.societies.create);
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
@@ -204,6 +209,50 @@ export default function CreateSocietyPage() {
       setError(getFriendlyAuthError(err));
     } finally {
       setPickingId(false);
+    }
+  };
+
+  const uploadPickedFile = async (file: PickedFile): Promise<Id<"_storage">> => {
+    const uploadUrl = await generateUploadUrl({});
+    return await uploadImageToConvexStorage(uploadUrl, file.uri, file.mimeType);
+  };
+
+  const submitSociety = async () => {
+    if (!idDocument) {
+      setError("An ID document is required.");
+      return;
+    }
+
+    setError(null);
+    setSubmitting(true);
+    try {
+      const coverImageStorageId = coverImage
+        ? await uploadPickedFile(coverImage)
+        : undefined;
+
+      const supportingDocumentStorageIds: Id<"_storage">[] = [];
+      for (const doc of supportingDocs) {
+        supportingDocumentStorageIds.push(await uploadPickedFile(doc));
+      }
+
+      const idDocumentStorageId = await uploadPickedFile(idDocument);
+
+      await createSociety({
+        name: form.name,
+        description: form.description,
+        story: form.story,
+        websiteUrl: form.website,
+        secondaryLink: form.secondaryLink.trim() || undefined,
+        coverImageStorageId,
+        supportingDocumentStorageIds,
+        idDocumentStorageId,
+      });
+
+      setSubmitted(true);
+    } catch (err) {
+      setError(getFriendlyAuthError(err) || "Failed to submit your society.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -608,9 +657,8 @@ export default function CreateSocietyPage() {
                     Application submitted
                   </Text>
                   <Text className="text-center text-sm leading-relaxed text-dono-muted">
-                    This is a UI-only demo — nothing was sent anywhere. Once the backend is
-                    connected, this step will submit your society and its verification
-                    documents for review.
+                    Thanks — we've received your society and its verification documents.
+                    We'll review them and let you know once a decision is made.
                   </Text>
                   <Link href="/societies" asChild>
                     <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
@@ -661,14 +709,7 @@ export default function CreateSocietyPage() {
             ) : submitted ? null : (
               <Pressable
                 disabled={submitting}
-                onPress={() => {
-                  setError(null);
-                  setSubmitting(true);
-                  setTimeout(() => {
-                    setSubmitting(false);
-                    setSubmitted(true);
-                  }, 400);
-                }}
+                onPress={() => void submitSociety()}
                 className={`rounded-full bg-dono-accent px-6 py-2.5 ${
                   submitting ? "opacity-50" : ""
                 }`}

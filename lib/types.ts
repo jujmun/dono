@@ -87,6 +87,25 @@ export interface Community {
   verificationType?: VerificationType;
 }
 
+export interface Society {
+  slug: string;
+  name: string;
+  description: string;
+  story: string;
+  coverImageUrl: string | null;
+  websiteUrl: string;
+  secondaryLink: string | null;
+  status: "pending" | "active" | "rejected";
+  createdAt: number;
+}
+
+export interface MySociety extends Society {
+  moderationNote: string | null;
+  moderatedAt: number | null;
+  supportingDocumentCount: number;
+  hasIdDocument: boolean;
+}
+
 export interface CommunityFund {
   id: string;
   name: string;
