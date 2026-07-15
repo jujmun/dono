@@ -112,6 +112,28 @@ export const societyMemberFields = {
   reviewedBy: v.optional(v.id("users")),
 };
 
+export const societyFields = {
+  slug: v.string(),
+  name: v.string(),
+  description: v.string(),
+  story: v.string(),
+  coverImageStorageId: v.optional(v.id("_storage")),
+  websiteUrl: v.string(),
+  secondaryLink: v.optional(v.string()),
+  supportingDocumentStorageIds: v.array(v.id("_storage")),
+  idDocumentStorageId: v.id("_storage"),
+  creatorId: v.id("users"),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("active"),
+    v.literal("rejected"),
+  ),
+  createdAt: v.number(),
+  moderationNote: v.optional(v.string()),
+  moderatedAt: v.optional(v.number()),
+  moderatedBy: v.optional(v.id("users")),
+};
+
 export const fundFields = {
   slug: v.string(),
   name: v.string(),

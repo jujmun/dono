@@ -87,6 +87,41 @@ export interface Community {
   verificationType?: VerificationType;
 }
 
+export interface Society {
+  slug: string;
+  name: string;
+  description: string;
+  story: string;
+  coverImageUrl: string | null;
+  websiteUrl: string;
+  secondaryLink: string | null;
+  status: "pending" | "active" | "rejected";
+  createdAt: number;
+}
+
+export interface MySociety extends Society {
+  moderationNote: string | null;
+  moderatedAt: number | null;
+  supportingDocumentCount: number;
+  hasIdDocument: boolean;
+}
+
+/** Admin-only shape — the one place real file URLs for verification docs appear. */
+export interface AdminSociety {
+  slug: string;
+  name: string;
+  description: string;
+  story: string;
+  coverImageUrl: string | null;
+  websiteUrl: string;
+  secondaryLink: string | null;
+  status: "pending" | "active" | "rejected";
+  createdAt: number;
+  creatorId: string;
+  supportingDocumentUrls: string[];
+  idDocumentUrl: string | null;
+}
+
 export interface CommunityFund {
   id: string;
   name: string;

@@ -45,6 +45,7 @@ import type * as reviewMessages from "../reviewMessages.js";
 import type * as security from "../security.js";
 import type * as seed from "../seed.js";
 import type * as seedData from "../seedData.js";
+import type * as societies from "../societies.js";
 import type * as societyMembers from "../societyMembers.js";
 import type * as stripe from "../stripe.js";
 import type * as stripeConnect from "../stripeConnect.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   security: typeof security;
   seed: typeof seed;
   seedData: typeof seedData;
+  societies: typeof societies;
   societyMembers: typeof societyMembers;
   stripe: typeof stripe;
   stripeConnect: typeof stripeConnect;

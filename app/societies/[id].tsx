@@ -38,9 +38,9 @@ export default function CommunityDetailPage() {
       <AppShell>
         <View className="mx-auto w-full max-w-7xl px-4 py-16">
           <Text className="text-center text-dono-muted">Community not found.</Text>
-          <Link href="/communities" asChild>
+          <Link href="/societies" asChild>
             <Pressable className="mt-4 items-center">
-              <Text className="font-sans-medium text-dono-primary">Back to communities</Text>
+              <Text className="font-sans-medium text-dono-primary">Back to societies</Text>
             </Pressable>
           </Link>
         </View>
@@ -51,10 +51,10 @@ export default function CommunityDetailPage() {
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-7xl px-4 py-6">
-        <Link href="/communities" asChild>
+        <Link href="/societies" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
             <ArrowLeft size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">Back to communities</Text>
+            <Text className="text-sm text-dono-muted">Back to societies</Text>
           </Pressable>
         </Link>
 
