@@ -12,12 +12,13 @@ import {
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCard } from "@/components/campaign-card";
+import { LoginGate } from "@/components/login-gate";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign, DonorImpact, DonoWrapped } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
 export default function DashboardPage() {
-  const { isAuthenticated } = useConvexAuth();
+  const { isAuthenticated, isLoading } = useConvexAuth();
   const donorImpact = useQuery(
     api.donations.getDonorImpact,
     isAuthenticated ? {} : "skip",
@@ -29,10 +30,25 @@ export default function DashboardPage() {
   const campaigns = (useQuery(api.campaigns.list) ?? []) as Campaign[];
   const followedCampaigns = campaigns.slice(0, 2);
 
-  if (
-    isAuthenticated &&
-    (donorImpact === undefined || donoWrapped === undefined)
-  ) {
+  if (isLoading) {
+    return (
+      <AppShell>
+        <View className="items-center py-16">
+          <ActivityIndicator color="#17211B" />
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return (
+      <AppShell>
+        <LoginGate message="Sign in to track your generosity and see your impact." />
+      </AppShell>
+    );
+  }
+
+  if (donorImpact === undefined || donoWrapped === undefined) {
     return (
       <AppShell>
         <View className="items-center py-16">
