@@ -39,6 +39,7 @@ export const createPendingFundDonation = internalMutation({
   args: {
     userId: v.optional(v.id("users")),
     donorEmail: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
     fundId: v.id("communityFunds"),
     amount: v.number(),
     stripePaymentIntentId: v.string(),
@@ -55,6 +56,7 @@ export const createPendingFundDonation = internalMutation({
     return await ctx.db.insert("donations", {
       userId: args.userId,
       donorEmail: args.donorEmail,
+      isAnonymous: args.isAnonymous ?? false,
       fundId: args.fundId,
       amount: args.amount,
       currency: DONATION_CURRENCY,

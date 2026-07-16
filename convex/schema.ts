@@ -16,6 +16,10 @@ export default defineSchema({
     userId: v.id("users"),
     email: v.string(),
     name: v.optional(v.string()),
+    phone: v.optional(v.string()),
+    college: v.optional(v.string()),
+    degree: v.optional(v.string()),
+    yearInCollege: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
     role: v.union(v.literal("user"), v.literal("admin")),
@@ -121,6 +125,7 @@ export default defineSchema({
   donations: defineTable({
     userId: v.optional(v.id("users")),
     donorEmail: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
     campaignId: v.optional(v.id("campaigns")),
     fundId: v.optional(v.id("communityFunds")),
     amount: v.number(),

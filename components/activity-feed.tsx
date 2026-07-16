@@ -1,4 +1,4 @@
-import { View, Text } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import {
   Heart,
   Users,
@@ -74,6 +74,72 @@ interface EngagementStatsProps {
   followers: number;
   comments: number;
   className?: string;
+  liked?: boolean;
+  likeLoading?: boolean;
+  onLikePress?: () => void;
+  onCommentPress?: () => void;
+}
+
+type StatConfig = {
+  icon: typeof Heart;
+  value: number;
+  label: string;
+  interactive?: boolean;
+  active?: boolean;
+  loading?: boolean;
+  onPress?: () => void;
+  iconColor?: string;
+  iconFill?: string;
+};
+
+function EngagementStatChip({
+  icon: Icon,
+  value,
+  label,
+  interactive,
+  active,
+  loading,
+  onPress,
+  iconColor = "#56615A",
+  iconFill = "transparent",
+}: StatConfig) {
+  const content = (
+    <>
+      {loading ? (
+        <ActivityIndicator size="small" color={iconColor} />
+      ) : (
+        <Icon size={16} color={iconColor} fill={iconFill} />
+      )}
+      <Text
+        className={cn(
+          "font-sans-medium text-sm",
+          active ? "text-red-700" : "text-dono-text",
+        )}
+      >
+        {value}
+      </Text>
+      <Text className={cn("text-sm", active ? "text-red-600" : "text-dono-muted")}>
+        {label}
+      </Text>
+    </>
+  );
+
+  if (interactive && onPress) {
+    return (
+      <Pressable
+        onPress={onPress}
+        disabled={loading}
+        className={cn(
+          "flex-row items-center gap-1.5 rounded-full border px-3 py-1.5",
+          active ? "border-red-200 bg-red-50" : "border-transparent",
+        )}
+      >
+        {content}
+      </Pressable>
+    );
+  }
+
+  return <View className="flex-row items-center gap-1.5">{content}</View>;
 }
 
 export function EngagementStats({
@@ -82,22 +148,38 @@ export function EngagementStats({
   followers,
   comments,
   className,
+  liked = false,
+  likeLoading = false,
+  onLikePress,
+  onCommentPress,
 }: EngagementStatsProps) {
-  const stats = [
-    { icon: Heart, value: likes, label: "likes" },
+  const stats: StatConfig[] = [
+    {
+      icon: Heart,
+      value: likes,
+      label: "likes",
+      interactive: Boolean(onLikePress),
+      active: liked,
+      loading: likeLoading,
+      onPress: onLikePress,
+      iconColor: liked ? "#C62828" : "#56615A",
+      iconFill: liked ? "#C62828" : "transparent",
+    },
     { icon: Gift, value: donors, label: "donors" },
     { icon: Users, value: followers, label: "followers" },
-    { icon: MessageCircle, value: comments, label: "comments" },
+    {
+      icon: MessageCircle,
+      value: comments,
+      label: "comments",
+      interactive: Boolean(onCommentPress),
+      onPress: onCommentPress,
+    },
   ];
 
   return (
     <View className={cn("flex-row flex-wrap items-center gap-4", className)}>
-      {stats.map(({ icon: Icon, value, label }) => (
-        <View key={label} className="flex-row items-center gap-1.5">
-          <Icon size={16} color="#56615A" />
-          <Text className="font-sans-medium text-sm text-dono-text">{value}</Text>
-          <Text className="text-sm text-dono-muted">{label}</Text>
-        </View>
+      {stats.map((stat) => (
+        <EngagementStatChip key={stat.label} {...stat} />
       ))}
     </View>
   );

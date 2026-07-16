@@ -1,38 +1,42 @@
 import { describe, expect, it } from "vitest";
 import { getFriendlyAuthError } from "./errors";
 
-describe("friendly auth errors", () => {
-  it("maps rate-limit errors", () => {
-    const msg = getFriendlyAuthError(new Error("RATE_LIMITED"));
-    expect(msg.toLowerCase()).toContain("too many attempts");
-  });
-
-  it("maps unauthenticated errors", () => {
-    const msg = getFriendlyAuthError(new Error("Not authenticated"));
-    expect(msg.toLowerCase()).toContain("sign in");
-  });
-
-  it("maps OTP send failures without calling them invalid codes", () => {
-    const msg = getFriendlyAuthError(
-      new Error(
-        'Uncaught ConvexError: {"code":"OTP_SEND_FAILED","message":"Unable to send OTP email. Please try again."}',
-      ),
+describe("getFriendlyAuthError", () => {
+  it("maps InvalidAccountId to setup guidance", () => {
+    expect(getFriendlyAuthError(new Error("InvalidAccountId"))).toBe(
+      "No password is set for this email yet. We'll send a sign-in code so you can create one.",
     );
-    expect(msg.toLowerCase()).toContain("couldn't send");
-    expect(msg.toLowerCase()).not.toContain("invalid or expired");
   });
 
-  it("maps invalid/expired verification codes", () => {
-    const msg = getFriendlyAuthError(new Error("Invalid verification token"));
-    expect(msg.toLowerCase()).toContain("invalid or expired");
-  });
-
-  it("maps domain allowlist failures", () => {
-    const msg = getFriendlyAuthError(
-      new Error(
-        'ConvexError: {"code":"EMAIL_DOMAIN_NOT_ALLOWED","message":"Only Oxford email addresses (ending in ox.ac.uk) are allowed."}',
-      ),
+  it("maps InvalidSecret to sign-in guidance", () => {
+    expect(getFriendlyAuthError(new Error("InvalidSecret"))).toBe(
+      "Email or password is incorrect.",
     );
-    expect(msg.toLowerCase()).toContain("domain is not allowed");
+  });
+
+  it("maps Invalid code before generic password errors", () => {
+    expect(getFriendlyAuthError(new Error("Invalid code"))).toBe(
+      "That code is invalid or expired. Request a new one and try again.",
+    );
+  });
+
+  it("maps Invalid credentials to sign-in guidance", () => {
+    expect(getFriendlyAuthError(new Error("Invalid credentials"))).toBe(
+      "Email or password is incorrect.",
+    );
+  });
+
+  it("maps TooManyFailedAttempts to rate limit guidance", () => {
+    expect(getFriendlyAuthError(new Error("TooManyFailedAttempts"))).toBe(
+      "Too many attempts. Please wait a little and try again.",
+    );
+  });
+
+  it("surfaces INVALID_PASSWORD convex details", () => {
+    const message =
+      'ConvexError: {"code":"INVALID_PASSWORD","message":"Password does not meet security requirements.","details":["Password must be at least 10 characters."]}';
+    expect(getFriendlyAuthError(new Error(message))).toBe(
+      "Password must be at least 10 characters.",
+    );
   });
 });

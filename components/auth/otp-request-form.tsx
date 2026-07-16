@@ -6,7 +6,6 @@ import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import {
   getAuthProviderId,
-  OUTREACH_ADMIN_EMAIL,
   type AuthProviderId,
 } from "@/lib/auth/admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -125,8 +124,7 @@ function OtpRequestFormInner({
                 className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
               />
               <Text className="mt-1 text-xs text-dono-muted">
-                Oxford emails (ending in ox.ac.uk). Exception:{" "}
-                {OUTREACH_ADMIN_EMAIL}.
+                Use your Oxford email address (ending in ox.ac.uk).
               </Text>
             </View>
 

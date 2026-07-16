@@ -59,6 +59,23 @@ export async function getProfileByUserId(ctx: CtxWithDb, userId: Id<"users">) {
     .unique();
 }
 
+/** Email + display name for a campaign creator, with auth user email as fallback. */
+export async function resolveCreatorContact(
+  ctx: CtxWithDb,
+  userId: Id<"users">,
+): Promise<{ email: string; name: string } | null> {
+  const [profile, user] = await Promise.all([
+    getProfileByUserId(ctx, userId),
+    ctx.db.get(userId),
+  ]);
+  const email = profile?.email?.trim() || user?.email?.trim();
+  if (!email) return null;
+  return {
+    email,
+    name: profile?.name ?? user?.name ?? "there",
+  };
+}
+
 /**
  * Authenticated user + users table row (+ profile when present).
  */

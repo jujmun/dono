@@ -4,7 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
-import { requireAdmin, requireVerifiedUser } from "./lib/authz";
+import { requireAdmin, requireVerifiedUser, resolveCreatorContact } from "./lib/authz";
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
@@ -311,18 +311,16 @@ export const approve = mutation({
     });
 
     if (campaign.createdBy) {
-      const profile = await ctx.db
-        .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", campaign.createdBy!))
-        .unique();
-      if (profile?.email) {
+      const creator = await resolveCreatorContact(ctx, campaign.createdBy);
+      if (creator) {
         await ctx.scheduler.runAfter(0, internal.emails.sendCampaignApproved, {
-          email: profile.email,
-          name: profile.name ?? "there",
+          email: creator.email,
+          name: creator.name,
           campaignTitle: campaign.title,
+          campaignSlug: campaign.slug,
         });
       }
-      const name = profile?.name ?? campaign.creator.name;
+      const name = creator?.name ?? campaign.creator.name;
       const avatar = campaign.creator.avatar;
       await ctx.scheduler.runAfter(0, internal.activity.recordCampaignLaunched, {
         userName: name,

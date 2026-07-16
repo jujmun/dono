@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -20,6 +20,7 @@ import { loadStripe } from "@stripe/stripe-js";
 import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
+import { DonateAnonymouslyToggle } from "@/components/donate-anonymously-toggle";
 import type { DonateSheetProps } from "./donate-sheet-types";
 
 const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
@@ -30,12 +31,18 @@ function PaymentForm({
   campaignTitle,
   selectedAmount,
   frequency,
+  paymentIntentId,
   onClose,
   onSuccess,
-}: DonateSheetProps) {
+  onPaymentCompleted,
+}: DonateSheetProps & {
+  paymentIntentId: string;
+  onPaymentCompleted: () => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
   const posthog = usePostHog();
+  const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const donationType = frequency === "monthly" ? "recurring" : "one_time";
@@ -73,7 +80,17 @@ function PaymentForm({
         donation_type: donationType,
       });
 
-      onSuccess(selectedAmount);
+      let pendingConfirmation = false;
+      if (frequency === "one_time") {
+        try {
+          await confirmOneTimeDonation({ paymentIntentId });
+        } catch {
+          pendingConfirmation = true;
+        }
+      }
+
+      onPaymentCompleted();
+      onSuccess(selectedAmount, pendingConfirmation ? { pendingConfirmation: true } : undefined);
       onClose();
     } catch (err) {
       setError(getFriendlyPaymentError(err));
@@ -125,6 +142,8 @@ export function DonateSheet({
   isAuthenticated,
   donorEmail,
   onDonorEmailChange,
+  donateAnonymously,
+  onDonateAnonymouslyChange,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -132,29 +151,54 @@ export function DonateSheet({
   const createRecurringDonationSubscription = useAction(
     api.stripe.createRecurringDonationSubscription,
   );
+  const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const paymentCompletedRef = useRef(false);
+  const activePaymentIntentIdRef = useRef<string | null>(null);
+  const donorEmailRef = useRef(donorEmail);
+
+  donorEmailRef.current = donorEmail;
 
   const frequencyLabel =
     frequency === "monthly" ? "Monthly donation" : "One-time donation";
   const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
 
+  const abandonActivePaymentIntent = () => {
+    const piId = activePaymentIntentIdRef.current;
+    if (!piId || paymentCompletedRef.current || frequency !== "one_time") {
+      return;
+    }
+
+    void abandonPaymentIntent({
+      paymentIntentId: piId,
+      donorEmail: donorEmailRef.current.trim() || undefined,
+    });
+    activePaymentIntentIdRef.current = null;
+  };
+
   useEffect(() => {
     if (!visible) {
+      abandonActivePaymentIntent();
+      paymentCompletedRef.current = false;
       setClientSecret(null);
+      setPaymentIntentId(null);
       setError(null);
       return;
     }
 
     if (monthlyBlockedForGuest) {
       setClientSecret(null);
+      setPaymentIntentId(null);
       setLoading(false);
       setError(null);
       return;
     }
 
     let cancelled = false;
+    paymentCompletedRef.current = false;
     setLoading(true);
     setError(null);
 
@@ -167,13 +211,31 @@ export function DonateSheet({
         : createPaymentIntent({
             campaignSlug: campaignId,
             amount: selectedAmount,
-            donorEmail: donorEmail.trim() || undefined,
+            donorEmail: donorEmailRef.current.trim() || undefined,
+            anonymous: donateAnonymously,
           });
 
     void createPayment
       .then((result) => {
-        if (!cancelled) {
-          setClientSecret(result.clientSecret);
+        const piId =
+          "paymentIntentId" in result && result.paymentIntentId
+            ? result.paymentIntentId
+            : null;
+
+        if (cancelled) {
+          if (piId && frequency === "one_time") {
+            void abandonPaymentIntent({
+              paymentIntentId: piId,
+              donorEmail: donorEmailRef.current.trim() || undefined,
+            });
+          }
+          return;
+        }
+
+        setClientSecret(result.clientSecret);
+        if (piId) {
+          setPaymentIntentId(piId);
+          activePaymentIntentIdRef.current = piId;
         }
       })
       .catch((err) => {
@@ -189,6 +251,7 @@ export function DonateSheet({
 
     return () => {
       cancelled = true;
+      abandonActivePaymentIntent();
     };
     // donorEmail is read when the sheet opens / amount changes; avoid recreating
     // the PaymentIntent on every keystroke.
@@ -199,8 +262,10 @@ export function DonateSheet({
     selectedAmount,
     frequency,
     monthlyBlockedForGuest,
+    donateAnonymously,
     createPaymentIntent,
     createRecurringDonationSubscription,
+    abandonPaymentIntent,
   ]);
 
   return (
@@ -229,6 +294,12 @@ export function DonateSheet({
             />
           ) : null}
 
+          <DonateAnonymouslyToggle
+            value={donateAnonymously}
+            onChange={onDonateAnonymouslyChange}
+            className="mb-4"
+          />
+
           {monthlyBlockedForGuest ? (
             <View className="flex-1">
               <Text className="text-sm text-dono-muted">
@@ -247,7 +318,7 @@ export function DonateSheet({
             </View>
           ) : error ? (
             <Text className="mt-4 text-sm text-red-600">{error}</Text>
-          ) : clientSecret && stripePromise ? (
+          ) : clientSecret && paymentIntentId && stripePromise ? (
             <View className="min-h-0 flex-1">
               <Elements stripe={stripePromise} options={{ clientSecret }}>
                 <PaymentForm
@@ -259,8 +330,15 @@ export function DonateSheet({
                   isAuthenticated={isAuthenticated}
                   donorEmail={donorEmail}
                   onDonorEmailChange={onDonorEmailChange}
+                  donateAnonymously={donateAnonymously}
+                  onDonateAnonymouslyChange={onDonateAnonymouslyChange}
                   onClose={onClose}
                   onSuccess={onSuccess}
+                  paymentIntentId={paymentIntentId}
+                  onPaymentCompleted={() => {
+                    paymentCompletedRef.current = true;
+                    activePaymentIntentIdRef.current = null;
+                  }}
                 />
               </Elements>
             </View>

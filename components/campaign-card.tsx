@@ -1,6 +1,6 @@
 import { type Href, Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
-import { Users } from "lucide-react-native";
+import { Users, Heart } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import { getPrimaryCampaignImage } from "@/lib/campaign-images";
@@ -96,11 +96,19 @@ export function CampaignCard({
                 <Text className="font-mono text-xs text-dono-text">
                   {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
                 </Text>
-                <View className="flex-row items-center gap-1">
-                  <Users size={12} color="#56615A" />
-                  <Text className="font-mono text-xs text-dono-muted">
-                    {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
-                  </Text>
+                <View className="flex-row items-center gap-3">
+                  <View className="flex-row items-center gap-1">
+                    <Heart size={12} color="#56615A" />
+                    <Text className="font-mono text-xs text-dono-muted">
+                      {campaign.likes}
+                    </Text>
+                  </View>
+                  <View className="flex-row items-center gap-1">
+                    <Users size={12} color="#56615A" />
+                    <Text className="font-mono text-xs text-dono-muted">
+                      {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+                    </Text>
+                  </View>
                 </View>
               </View>
             </View>
@@ -142,11 +150,19 @@ export function CampaignCard({
               <Text className="font-mono text-sm text-dono-text">
                 {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
               </Text>
-              <View className="flex-row items-center gap-1.5">
-                <Users size={14} color="#56615A" />
-                <Text className="font-mono text-sm text-dono-muted">
-                  {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
-                </Text>
+              <View className="flex-row items-center gap-4">
+                <View className="flex-row items-center gap-1.5">
+                  <Heart size={14} color="#56615A" />
+                  <Text className="font-mono text-sm text-dono-muted">
+                    {campaign.likes} like{campaign.likes === 1 ? "" : "s"}
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-1.5">
+                  <Users size={14} color="#56615A" />
+                  <Text className="font-mono text-sm text-dono-muted">
+                    {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>

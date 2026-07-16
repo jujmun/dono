@@ -87,22 +87,24 @@ export function Header() {
                 </Pressable>
               </Link>
 
-              <Link href="/account" asChild>
-                <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
-                  {profile?.avatarUrl ? (
-                    <Image
-                      source={{ uri: profile.avatarUrl }}
-                      style={{ width: "100%", height: "100%" }}
-                      resizeMode="cover"
-                      accessibilityLabel="Your profile picture"
-                    />
-                  ) : (
-                    <Text className="font-mono-medium text-sm text-dono-primary">
-                      {initials}
-                    </Text>
-                  )}
-                </Pressable>
-              </Link>
+              {!isLoading && isAuthenticated && (
+                <Link href="/account" asChild>
+                  <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
+                    {profile?.avatarUrl ? (
+                      <Image
+                        source={{ uri: profile.avatarUrl }}
+                        style={{ width: "100%", height: "100%" }}
+                        resizeMode="cover"
+                        accessibilityLabel="Your profile picture"
+                      />
+                    ) : (
+                      <Text className="font-mono-medium text-sm text-dono-primary">
+                        {initials}
+                      </Text>
+                    )}
+                  </Pressable>
+                </Link>
+              )}
 
               {!isLoading && !isAuthenticated && (
                 <Link href="/signin" asChild>

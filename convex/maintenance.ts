@@ -1,11 +1,13 @@
 import { internalMutation } from "./_generated/server";
+import { v } from "convex/values";
 
-const STALE_PENDING_MS = 24 * 60 * 60 * 1000;
+const STALE_PENDING_MS = 60 * 60 * 1000;
 
 export const reconcileStalePendingDonations = internalMutation({
-  args: {},
-  handler: async (ctx) => {
-    const cutoff = Date.now() - STALE_PENDING_MS;
+  args: { olderThanMs: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const staleWindow = args.olderThanMs ?? STALE_PENDING_MS;
+    const cutoff = Date.now() - staleWindow;
     const donations = await ctx.db.query("donations").collect();
     const stale = donations.filter(
       (d) => d.paymentStatus === "pending" && d.createdAt < cutoff,

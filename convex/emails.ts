@@ -9,8 +9,16 @@ export const sendCampaignApproved = internalAction({
     email: v.string(),
     name: v.string(),
     campaignTitle: v.string(),
+    campaignSlug: v.string(),
   },
   handler: async (_ctx, args) => {
+    const siteUrl =
+      process.env.EXPO_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
+      process.env.SITE_URL?.replace(/\/$/, "");
+    const campaignUrl = siteUrl
+      ? `${siteUrl}/campaigns/${args.campaignSlug}`
+      : null;
+
     await sendTransactionalEmail({
       to: args.email,
       subject: `Your campaign "${args.campaignTitle}" is live`,
@@ -19,7 +27,11 @@ export const sendCampaignApproved = internalAction({
         "",
         `Great news — your campaign "${args.campaignTitle}" has been approved and is now live on Dono.`,
         "",
-        "Sign in to share it with your community.",
+        campaignUrl
+          ? `View your campaign: ${campaignUrl}`
+          : "Sign in to Dono to share it with your community.",
+        "",
+        "Thank you for using Dono.",
       ].join("\n"),
     });
   },
