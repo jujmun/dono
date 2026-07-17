@@ -6,8 +6,9 @@ const crons = cronJobs();
 
 crons.interval(
   "reconcile stale pending donations",
-  { hours: 6 },
+  { hours: 1 },
   internal.maintenance.reconcileStalePendingDonations,
+  {},
 );
 
 crons.daily(

@@ -1,14 +1,14 @@
-import { View, Text, Pressable } from "react-native";
+import { Text, Pressable } from "react-native";
 import { type Href, Link } from "expo-router";
-import { OtpRequestForm } from "@/components/auth/otp-request-form";
+import { PasswordAuthForm } from "@/components/auth/password-auth-form";
 
 export default function SignInPage() {
   return (
-    <OtpRequestForm
-      flow="signIn"
+    <PasswordAuthForm
+      mode="signIn"
       title="Welcome back"
-      subtitle="Get a one-time code to sign in securely"
-      submitLabel="Send sign-in code"
+      subtitle="Sign in with your email and password"
+      submitLabel="Sign in"
       footer={
         <>
           <Link href={"/signup" as Href} asChild>
@@ -19,22 +19,11 @@ export default function SignInPage() {
             </Pressable>
           </Link>
 
-          <View className="mt-3 flex-row items-center justify-between">
-            <Link href={"/forgot-password" as Href} asChild>
-              <Pressable>
-                <Text className="text-sm text-dono-primary">
-                  Need a new code?
-                </Text>
-              </Pressable>
-            </Link>
-            <Link href={"/verify-email" as Href} asChild>
-              <Pressable>
-                <Text className="text-sm text-dono-primary">
-                  Already have a code? Verify
-                </Text>
-              </Pressable>
-            </Link>
-          </View>
+          <Link href={"/forgot-password" as Href} asChild>
+            <Pressable className="mt-3 items-center">
+              <Text className="text-sm text-dono-primary">Forgot password?</Text>
+            </Pressable>
+          </Link>
         </>
       }
     />

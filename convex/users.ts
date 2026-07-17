@@ -1,12 +1,22 @@
 import { ConvexError, v } from "convex/values";
 import {
+  action,
   internalMutation,
+  internalQuery,
   mutation,
   query,
   type MutationCtx,
+  type QueryCtx,
 } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  createAccount,
+  getAuthUserId,
+  modifyAccountCredentials,
+  retrieveAccount,
+} from "@convex-dev/auth/server";
+import { internal } from "./_generated/api";
+import { validatePasswordRequirements } from "./auth/passwordPolicy";
 import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
 import { isAdminIdentityEmail } from "./auth/adminConfig";
 import {
@@ -24,6 +34,19 @@ const AVATAR_UPLOAD_LIMIT = {
   windowMs: 15 * 60 * 1000,
   lockoutMs: 15 * 60 * 1000,
 };
+
+const PASSWORD_RATE_LIMIT = {
+  maxAttempts: 5,
+  windowMs: 10 * 60 * 1000,
+  lockoutMs: 15 * 60 * 1000,
+} as const;
+
+function passwordRateLimitKey(
+  kind: "set" | "change",
+  email: string,
+) {
+  return `${kind}-password:${email}`;
+}
 
 async function linkGuestDonationsForUser(
   ctx: MutationCtx,
@@ -66,6 +89,10 @@ export const me = query({
       id: user._id,
       email: profile.email,
       name: profile.name ?? user.name ?? "",
+      phone: profile.phone ?? null,
+      college: profile.college ?? null,
+      degree: profile.degree ?? null,
+      yearInCollege: profile.yearInCollege ?? null,
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
@@ -121,6 +148,10 @@ export const generateAvatarUploadUrl = mutation({
 export const updateProfile = mutation({
   args: {
     name: v.string(),
+    phone: v.optional(v.string()),
+    college: v.optional(v.string()),
+    degree: v.optional(v.string()),
+    yearInCollege: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
   },
@@ -133,6 +164,47 @@ export const updateProfile = mutation({
         message: "Name must be between 2 and 80 characters.",
       });
     }
+
+    const trimmedPhone = args.phone?.trim();
+    if (trimmedPhone) {
+      if (trimmedPhone.length < 7 || trimmedPhone.length > 20) {
+        throw new ConvexError({
+          code: "INVALID_PHONE",
+          message: "Phone number must be between 7 and 20 characters.",
+        });
+      }
+      if (!/^[+\d][\d\s()-]{6,18}\d$/.test(trimmedPhone)) {
+        throw new ConvexError({
+          code: "INVALID_PHONE",
+          message: "Enter a valid phone number.",
+        });
+      }
+    }
+
+    const trimmedCollege = args.college?.trim();
+    if (trimmedCollege && (trimmedCollege.length < 2 || trimmedCollege.length > 80)) {
+      throw new ConvexError({
+        code: "INVALID_COLLEGE",
+        message: "College must be between 2 and 80 characters.",
+      });
+    }
+
+    const trimmedDegree = args.degree?.trim();
+    if (trimmedDegree && (trimmedDegree.length < 2 || trimmedDegree.length > 80)) {
+      throw new ConvexError({
+        code: "INVALID_DEGREE",
+        message: "Degree must be between 2 and 80 characters.",
+      });
+    }
+
+    const yearInCollege = args.yearInCollege?.trim();
+    if (yearInCollege && yearInCollege.length > 40) {
+      throw new ConvexError({
+        code: "INVALID_YEAR",
+        message: "Year in college is too long.",
+      });
+    }
+
     if (args.avatarUrl && args.avatarUrl.length > 2048) {
       throw new ConvexError({
         code: "INVALID_AVATAR_URL",
@@ -200,6 +272,10 @@ export const updateProfile = mutation({
         userId,
         email: user.email,
         name: trimmedName,
+        phone: trimmedPhone,
+        college: trimmedCollege,
+        degree: trimmedDegree,
+        yearInCollege,
         avatarUrl: args.avatarUrl,
         avatarStorageId: args.avatarStorageId,
         role: roleForEmail(user.email),
@@ -218,6 +294,10 @@ export const updateProfile = mutation({
 
       await ctx.db.patch(profile._id, {
         name: trimmedName,
+        ...(args.phone !== undefined ? { phone: trimmedPhone } : {}),
+        ...(args.college !== undefined ? { college: trimmedCollege } : {}),
+        ...(args.degree !== undefined ? { degree: trimmedDegree } : {}),
+        ...(args.yearInCollege !== undefined ? { yearInCollege } : {}),
         ...(args.avatarUrl !== undefined ? { avatarUrl: args.avatarUrl } : {}),
         ...(args.avatarStorageId !== undefined
           ? { avatarStorageId: args.avatarStorageId, avatarUrl: undefined }
@@ -279,7 +359,12 @@ export const ensureMyProfile = mutation({
       await ctx.db.patch(existing._id, {
         email: user.email,
         name: existing.name ?? user.name,
+        phone: existing.phone,
+        college: existing.college,
+        degree: existing.degree,
+        yearInCollege: existing.yearInCollege,
         avatarUrl: existing.avatarUrl ?? user.image,
+        avatarStorageId: existing.avatarStorageId,
         emailVerifiedAt: user.emailVerificationTime ?? existing.emailVerifiedAt,
         ...(isAdminIdentityEmail(user.email) ? { role: "admin" as const } : {}),
         updatedAt: now,
@@ -334,12 +419,244 @@ export const requestAccountDeletion = mutation({
       await ctx.db.patch(profile._id, {
         email: anonymized,
         name: "Deleted User",
+        phone: undefined,
+        college: undefined,
+        degree: undefined,
+        yearInCollege: undefined,
         avatarUrl: undefined,
         avatarStorageId: undefined,
         updatedAt: Date.now(),
       });
     }
     return { requestedAt: Date.now() };
+  },
+});
+
+export const hasPassword = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return false;
+    return await passwordAccountExists(ctx, userId);
+  },
+});
+
+async function passwordAccountExists(ctx: QueryCtx, userId: Id<"users">) {
+  const account = await ctx.db
+    .query("authAccounts")
+    .withIndex("userIdAndProvider", (q) =>
+      q.eq("userId", userId).eq("provider", "password"),
+    )
+    .unique();
+
+  return account !== null;
+}
+
+export const internalHasPassword = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    return await passwordAccountExists(ctx, args.userId);
+  },
+});
+
+export const beginPasswordAttempt = internalMutation({
+  args: {
+    email: v.string(),
+    kind: v.union(v.literal("set"), v.literal("change")),
+  },
+  handler: async (ctx, args) => {
+    const opts = {
+      key: passwordRateLimitKey(args.kind, args.email),
+      ...PASSWORD_RATE_LIMIT,
+    };
+    await assertNotRateLimited(ctx, opts);
+    await recordRateLimitAttempt(ctx, opts, false);
+  },
+});
+
+export const completePasswordAttempt = internalMutation({
+  args: {
+    email: v.string(),
+    kind: v.union(v.literal("set"), v.literal("change")),
+  },
+  handler: async (ctx, args) => {
+    const opts = {
+      key: passwordRateLimitKey(args.kind, args.email),
+      ...PASSWORD_RATE_LIMIT,
+    };
+    await recordRateLimitAttempt(ctx, opts, true);
+  },
+});
+
+export const setPassword = action({
+  args: { newPassword: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "You must be signed in to perform this action.",
+      });
+    }
+
+    const profile = await ctx.runQuery(internal.users.getEmailForPasswordAction, {
+      userId,
+    });
+    const email = profile.email;
+
+    await ctx.runMutation(internal.users.beginPasswordAttempt, {
+      email,
+      kind: "set",
+    });
+
+    try {
+      const alreadyHasPassword = await ctx.runQuery(
+        internal.users.internalHasPassword,
+        { userId },
+      );
+      if (alreadyHasPassword) {
+        throw new ConvexError({
+          code: "PASSWORD_ALREADY_SET",
+          message: "You already have a password. Use change password instead.",
+        });
+      }
+
+      validatePasswordRequirements(args.newPassword);
+
+      await createAccount(ctx, {
+        provider: "password",
+        account: { id: email, secret: args.newPassword },
+        profile: { email },
+        shouldLinkViaEmail: true,
+      });
+
+      await ctx.runMutation(internal.users.completePasswordAttempt, {
+        email,
+        kind: "set",
+      });
+    } catch (error) {
+      if (
+        error instanceof ConvexError &&
+        (error.data as { code?: string })?.code === "PASSWORD_ALREADY_SET"
+      ) {
+        throw error;
+      }
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      if (/already exists|account already/i.test(message)) {
+        throw new ConvexError({
+          code: "PASSWORD_ALREADY_SET",
+          message: "You already have a password. Use change password instead.",
+        });
+      }
+      throw error;
+    }
+  },
+});
+
+export const changePassword = action({
+  args: {
+    currentPassword: v.string(),
+    newPassword: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "You must be signed in to perform this action.",
+      });
+    }
+
+    const profile = await ctx.runQuery(internal.users.getEmailForPasswordAction, {
+      userId,
+    });
+    const email = profile.email;
+
+    await ctx.runMutation(internal.users.beginPasswordAttempt, {
+      email,
+      kind: "change",
+    });
+
+    try {
+      const hasPw = await ctx.runQuery(internal.users.internalHasPassword, {
+        userId,
+      });
+      if (!hasPw) {
+        throw new ConvexError({
+          code: "PASSWORD_NOT_SET",
+          message: "Set a password first before changing it.",
+        });
+      }
+
+      try {
+        await retrieveAccount(ctx, {
+          provider: "password",
+          account: { id: email, secret: args.currentPassword },
+        });
+      } catch {
+        throw new ConvexError({
+          code: "CURRENT_PASSWORD_INCORRECT",
+          message: "Current password is incorrect.",
+        });
+      }
+
+      validatePasswordRequirements(args.newPassword);
+
+      await modifyAccountCredentials(ctx, {
+        provider: "password",
+        account: { id: email, secret: args.newPassword },
+      });
+
+      await ctx.runMutation(internal.users.completePasswordAttempt, {
+        email,
+        kind: "change",
+      });
+    } catch (error) {
+      if (error instanceof ConvexError) {
+        throw error;
+      }
+      const message = error instanceof Error ? error.message : String(error);
+      if (/invalid credentials|incorrect/i.test(message)) {
+        throw new ConvexError({
+          code: "CURRENT_PASSWORD_INCORRECT",
+          message: "Current password is incorrect.",
+        });
+      }
+      throw error;
+    }
+  },
+});
+
+export const getEmailForPasswordAction = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const user = await ctx.db.get(args.userId);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", args.userId))
+      .unique();
+
+    const email = (profile?.email ?? user?.email)?.trim().toLowerCase();
+    if (!email) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be loaded.",
+      });
+    }
+
+    const verified =
+      Boolean(user?.emailVerificationTime) || Boolean(profile?.emailVerifiedAt);
+    if (!verified) {
+      throw new ConvexError({
+        code: "EMAIL_NOT_VERIFIED",
+        message: "Please verify your email before continuing.",
+      });
+    }
+
+    return { email };
   },
 });
 

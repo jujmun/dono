@@ -1,14 +1,14 @@
 import { Text, Pressable } from "react-native";
 import { type Href, Link } from "expo-router";
-import { OtpRequestForm } from "@/components/auth/otp-request-form";
+import { PasswordAuthForm } from "@/components/auth/password-auth-form";
 
 export default function SignUpPage() {
   return (
-    <OtpRequestForm
-      flow="signUp"
+    <PasswordAuthForm
+      mode="signUp"
       title="Create your account"
-      subtitle="We'll email you a one-time code, then you'll finish onboarding"
-      submitLabel="Send sign-up code"
+      subtitle="Create your account with email and password. We'll send a one-time code to verify your email."
+      submitLabel="Create account"
       footer={
         <Link href={"/signin" as Href} asChild>
           <Pressable className="mt-4 items-center">

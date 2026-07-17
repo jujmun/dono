@@ -1,6 +1,7 @@
 import { Link } from "expo-router";
 import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useConvexAuth, useQuery } from "convex/react";
+import { useMemo } from "react";
 import {
   Gift,
   Heart,
@@ -11,9 +12,10 @@ import {
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
+import { CommunityCard } from "@/components/community-card";
 import { LoginGate } from "@/components/login-gate";
 import { formatCurrency } from "@/lib/constants";
-import type { Campaign, DonorImpact } from "@/lib/types";
+import type { Campaign, Community, DonorImpact } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
 export default function DashboardPage() {
@@ -22,8 +24,24 @@ export default function DashboardPage() {
     api.donations.getDonorImpact,
     isAuthenticated ? {} : "skip",
   ) as DonorImpact | null | undefined;
-  const campaigns = (useQuery(api.campaigns.list) ?? []) as Campaign[];
-  const followedCampaigns = campaigns.slice(0, 2);
+  const followedCampaigns = useQuery(
+    api.engagement.listFollowedCampaigns,
+    isAuthenticated ? {} : "skip",
+  ) as Campaign[] | undefined;
+  const followedCommunitySlugs = useQuery(
+    api.engagement.listFollowedCommunities,
+    isAuthenticated ? {} : "skip",
+  ) as string[] | undefined;
+  const communities = useQuery(
+    api.communities.list,
+    isAuthenticated ? {} : "skip",
+  ) as Community[] | undefined;
+  const followedCommunities = useMemo(() => {
+    if (!followedCommunitySlugs || !communities) return undefined;
+    return followedCommunitySlugs
+      .map((slug) => communities.find((community) => community.id === slug))
+      .filter((community): community is Community => community != null);
+  }, [followedCommunitySlugs, communities]);
 
   if (isLoading) {
     return (
@@ -43,7 +61,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (donorImpact === undefined) {
+  if (donorImpact === undefined || followedCampaigns === undefined || followedCommunities === undefined) {
     return (
       <AppShell>
         <View className="items-center py-16">
@@ -188,7 +206,38 @@ export default function DashboardPage() {
           ) : (
             <View className="rounded-xl border border-dono-border bg-white p-4">
               <Text className="text-sm text-dono-muted">
-                You are not following any campaigns yet.
+                You are not following any campaigns yet. Follow campaigns from their
+                detail pages to see them here.
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View className="mt-8">
+          <View className="mb-4 flex-row items-center justify-between">
+            <Text className="text-lg font-sans-medium text-dono-text">
+              Communities You Follow
+            </Text>
+            <Link href="/societies" asChild>
+              <Pressable className="flex-row items-center gap-1">
+                <Text className="font-sans-medium text-sm text-dono-primary">Browse more</Text>
+                <ArrowRight size={16} color="#17211B" />
+              </Pressable>
+            </Link>
+          </View>
+          {followedCommunities.length > 0 ? (
+            <View className="flex-row flex-wrap justify-between gap-y-6">
+              {followedCommunities.map((community) => (
+                <View key={community.id} className="w-[48%]">
+                  <CommunityCard community={community} />
+                </View>
+              ))}
+            </View>
+          ) : (
+            <View className="rounded-xl border border-dono-border bg-white p-4">
+              <Text className="text-sm text-dono-muted">
+                You are not following any communities yet. Follow societies from their
+                profile pages to see them here.
               </Text>
             </View>
           )}

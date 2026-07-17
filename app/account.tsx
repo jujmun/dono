@@ -14,8 +14,9 @@ import * as ImagePicker from "expo-image-picker";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
-import { updateProfileSchema } from "@/lib/validation/auth";
+import { profileDetailsSchema, YEAR_IN_COLLEGE_OPTIONS } from "@/lib/validation/profile";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { uploadImageToConvexStorage } from "@/lib/upload-avatar";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
@@ -83,6 +84,10 @@ export default function AccountPage() {
   const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
 
   const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [college, setCollege] = useState("");
+  const [degree, setDegree] = useState("");
+  const [yearInCollege, setYearInCollege] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -96,11 +101,21 @@ export default function AccountPage() {
   useEffect(() => {
     if (!profile) return;
     setName(profile.name ?? "");
+    setPhone(profile.phone ?? "");
+    setCollege(profile.college ?? "");
+    setDegree(profile.degree ?? "");
+    setYearInCollege(profile.yearInCollege ?? "");
     setAvatarPreview(profile.avatarUrl ?? null);
   }, [profile]);
 
   const saveProfile = () => {
-    const parsed = updateProfileSchema.safeParse({ name });
+    const parsed = profileDetailsSchema.safeParse({
+      name,
+      phone,
+      college,
+      degree,
+      yearInCollege,
+    });
     if (!parsed.success) {
       setProfileError(parsed.error.issues[0]?.message ?? "Invalid profile.");
       return;
@@ -110,6 +125,10 @@ export default function AccountPage() {
     setProfileSuccess(null);
     void updateProfile({
       name: parsed.data.name,
+      phone: parsed.data.phone,
+      college: parsed.data.college,
+      degree: parsed.data.degree,
+      yearInCollege: parsed.data.yearInCollege,
     })
       .then(() => setProfileSuccess("Profile updated."))
       .catch((err) => setProfileError(getFriendlyAuthError(err)))
@@ -146,27 +165,19 @@ export default function AccountPage() {
     setUploadingAvatar(true);
     try {
       const uploadUrl = await generateAvatarUploadUrl({});
-      const response = await fetch(asset.uri);
-      const blob = await response.blob();
-      const contentType = blob.type || asset.mimeType || "image/jpeg";
-
-      const uploadResult = await fetch(uploadUrl, {
-        method: "POST",
-        headers: { "Content-Type": contentType },
-        body: blob,
+      const storageId = await uploadImageToConvexStorage(uploadUrl, {
+        uri: asset.uri,
+        mimeType: asset.mimeType,
+        fileSize: asset.fileSize,
       });
-
-      if (!uploadResult.ok) {
-        throw new Error("Upload failed.");
-      }
-
-      const { storageId } = (await uploadResult.json()) as {
-        storageId: Id<"_storage">;
-      };
 
       const currentName = (name || profile?.name || "Member").trim();
       await updateProfile({
         name: currentName,
+        phone: phone || profile?.phone || undefined,
+        college: college || profile?.college || undefined,
+        degree: degree || profile?.degree || undefined,
+        yearInCollege: yearInCollege || profile?.yearInCollege || undefined,
         avatarStorageId: storageId,
       });
 
@@ -262,6 +273,12 @@ export default function AccountPage() {
 
           <InfoRow label="Email" value={profile?.email ?? ""} mono />
           <InfoRow label="Role" value={formatRole(profile?.role ?? "user")} />
+          {profile?.phone ? <InfoRow label="Phone" value={profile.phone} mono /> : null}
+          {profile?.college ? <InfoRow label="College" value={profile.college} /> : null}
+          {profile?.degree ? <InfoRow label="Degree" value={profile.degree} /> : null}
+          {profile?.yearInCollege ? (
+            <InfoRow label="Year" value={profile.yearInCollege} />
+          ) : null}
 
           <View className="mt-5 flex-row items-center gap-4">
             <View className="h-16 w-16 overflow-hidden rounded-full border border-dono-border bg-dono-surface-muted">
@@ -304,6 +321,64 @@ export default function AccountPage() {
             placeholderTextColor="#56615A"
             className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
           />
+          <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
+            Phone number
+          </Text>
+          <TextInput
+            value={phone}
+            onChangeText={setPhone}
+            placeholder="+44 7700 900000"
+            placeholderTextColor="#56615A"
+            keyboardType="phone-pad"
+            className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+          />
+          <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
+            College
+          </Text>
+          <TextInput
+            value={college}
+            onChangeText={setCollege}
+            placeholder="e.g. Balliol College"
+            placeholderTextColor="#56615A"
+            className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+          />
+          <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
+            Degree
+          </Text>
+          <TextInput
+            value={degree}
+            onChangeText={setDegree}
+            placeholder="e.g. BA History"
+            placeholderTextColor="#56615A"
+            className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+          />
+          <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
+            Year in college
+          </Text>
+          <View className="mt-2 flex-row flex-wrap gap-2">
+            {YEAR_IN_COLLEGE_OPTIONS.map((option) => {
+              const selected = yearInCollege === option;
+              return (
+                <Pressable
+                  key={option}
+                  onPress={() => setYearInCollege(option)}
+                  className={`rounded-full border px-3 py-2 ${
+                    selected
+                      ? "border-dono-primary bg-dono-primary/10"
+                      : "border-dono-border bg-white"
+                  }`}
+                >
+                  <Text
+                    className={`text-sm ${
+                      selected ? "font-sans-medium text-dono-primary" : "text-dono-muted"
+                    }`}
+                  >
+                    {option}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
           {profileError ? (
             <Text className="mt-3 text-sm text-rose-700">{profileError}</Text>
           ) : null}

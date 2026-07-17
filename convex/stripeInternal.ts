@@ -146,6 +146,7 @@ export const createPendingDonation = internalMutation({
   args: {
     userId: v.optional(v.id("users")),
     donorEmail: v.optional(v.string()),
+    isAnonymous: v.optional(v.boolean()),
     campaignId: v.id("campaigns"),
     amount: v.number(),
     stripePaymentIntentId: v.string(),
@@ -162,6 +163,7 @@ export const createPendingDonation = internalMutation({
     return await ctx.db.insert("donations", {
       userId: args.userId,
       donorEmail: args.donorEmail,
+      isAnonymous: args.isAnonymous ?? false,
       campaignId: args.campaignId,
       amount: args.amount,
       currency: DONATION_CURRENCY,
@@ -273,16 +275,19 @@ export const markDonationSucceeded = internalMutation({
     await ctx.db.patch(campaign._id, { raised, donors, status });
     await incrementCommunityRaised(ctx, campaign.creator.communityId, donation.amount);
 
-    const donorName = donation.userId
-      ? (await getProfileByUserId(ctx, donation.userId))?.name ?? "A donor"
-      : "A donor";
-    const donorAvatar =
-      donorName
-        .split(" ")
-        .map((p) => p[0])
-        .join("")
-        .slice(0, 2)
-        .toUpperCase() || "DN";
+    const donorName = donation.isAnonymous
+      ? "Anonymous donor"
+      : donation.userId
+        ? (await getProfileByUserId(ctx, donation.userId))?.name ?? "A donor"
+        : "A donor";
+    const donorAvatar = donation.isAnonymous
+      ? "??"
+      : donorName
+          .split(" ")
+          .map((p) => p[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase() || "DN";
 
     await ctx.scheduler.runAfter(0, internal.activity.recordDonation, {
       userName: donorName,

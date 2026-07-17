@@ -13,6 +13,7 @@ import { useStripe } from "@stripe/stripe-react-native";
 import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
+import { DonateAnonymouslyToggle } from "@/components/donate-anonymously-toggle";
 import type { DonateSheetProps } from "./donate-sheet-types";
 
 export function DonateSheet({
@@ -24,6 +25,8 @@ export function DonateSheet({
   isAuthenticated,
   donorEmail,
   onDonorEmailChange,
+  donateAnonymously,
+  onDonateAnonymouslyChange,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -31,6 +34,8 @@ export function DonateSheet({
   const createRecurringDonationSubscription = useAction(
     api.stripe.createRecurringDonationSubscription,
   );
+  const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
+  const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
   const posthog = usePostHog();
   const [loading, setLoading] = useState(false);
@@ -41,11 +46,20 @@ export function DonateSheet({
     frequency === "monthly" ? "Monthly donation" : "One-time donation";
   const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
 
+  const abandonOneTimePayment = async (paymentIntentId: string) => {
+    await abandonPaymentIntent({
+      paymentIntentId,
+      donorEmail: donorEmail.trim() || undefined,
+    });
+  };
+
   const handleDonate = async () => {
     if (monthlyBlockedForGuest) return;
 
     setLoading(true);
     setError(null);
+
+    let paymentIntentId: string | undefined;
 
     try {
       posthog?.capture("donation_started", {
@@ -55,7 +69,7 @@ export function DonateSheet({
         donation_type: donationType,
       });
 
-      const { clientSecret } =
+      const paymentResult =
         frequency === "monthly"
           ? await createRecurringDonationSubscription({
               campaignSlug: campaignId,
@@ -65,7 +79,14 @@ export function DonateSheet({
               campaignSlug: campaignId,
               amount: selectedAmount,
               donorEmail: donorEmail.trim() || undefined,
+              anonymous: donateAnonymously,
             });
+
+      if ("paymentIntentId" in paymentResult && paymentResult.paymentIntentId) {
+        paymentIntentId = paymentResult.paymentIntentId;
+      }
+
+      const clientSecret = paymentResult.clientSecret;
 
       const initResult = await initPaymentSheet({
         paymentIntentClientSecret: clientSecret,
@@ -80,6 +101,9 @@ export function DonateSheet({
       const presentResult = await presentPaymentSheet();
       if (presentResult.error) {
         if (presentResult.error.code === "Canceled") {
+          if (paymentIntentId && frequency === "one_time") {
+            await abandonOneTimePayment(paymentIntentId);
+          }
           return;
         }
         throw new Error(presentResult.error.message);
@@ -92,9 +116,30 @@ export function DonateSheet({
         donation_type: donationType,
       });
 
-      onSuccess(selectedAmount);
+      let pendingConfirmation = false;
+      if (paymentIntentId && frequency === "one_time") {
+        try {
+          await confirmOneTimeDonation({
+            paymentIntentId,
+          });
+        } catch {
+          pendingConfirmation = true;
+        }
+      }
+
+      onSuccess(
+        selectedAmount,
+        pendingConfirmation ? { pendingConfirmation: true } : undefined,
+      );
       onClose();
     } catch (err) {
+      if (paymentIntentId && frequency === "one_time") {
+        try {
+          await abandonOneTimePayment(paymentIntentId);
+        } catch {
+          // Ignore abandon failures; surface the original payment error.
+        }
+      }
       setError(getFriendlyPaymentError(err));
     } finally {
       setLoading(false);
@@ -126,6 +171,12 @@ export function DonateSheet({
               className="mt-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
             />
           ) : null}
+
+          <DonateAnonymouslyToggle
+            value={donateAnonymously}
+            onChange={onDonateAnonymouslyChange}
+            className="mt-4"
+          />
 
           {monthlyBlockedForGuest ? (
             <View className="mt-4">

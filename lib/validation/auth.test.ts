@@ -1,8 +1,12 @@
 import { describe, expect, it } from "vitest";
 import {
+  changePasswordSchema,
   requestOtpSchema,
-  verifyOtpSchema,
+  setPasswordSchema,
+  signInWithPasswordSchema,
+  signUpWithPasswordSchema,
   verifyEmailSchema,
+  verifyOtpSchema,
 } from "./auth";
 
 describe("auth validation", () => {
@@ -56,6 +60,48 @@ describe("auth validation", () => {
     const result = verifyEmailSchema.safeParse({
       email: "bad-email",
       code: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts a strong password in setPasswordSchema", () => {
+    const result = setPasswordSchema.safeParse({
+      newPassword: "StrongPass123!",
+      confirmPassword: "StrongPass123!",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts sign-up with email and matching passwords", () => {
+    const result = signUpWithPasswordSchema.safeParse({
+      email: "student@st-annes.ox.ac.uk",
+      newPassword: "StrongPass123!",
+      confirmPassword: "StrongPass123!",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("requires a password for sign-in", () => {
+    const result = signInWithPasswordSchema.safeParse({
+      email: "student@st-annes.ox.ac.uk",
+      password: "",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects mismatched passwords in setPasswordSchema", () => {
+    const result = setPasswordSchema.safeParse({
+      newPassword: "StrongPass123!",
+      confirmPassword: "DifferentPass123!",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects weak passwords in changePasswordSchema", () => {
+    const result = changePasswordSchema.safeParse({
+      currentPassword: "old-password",
+      newPassword: "weak",
+      confirmPassword: "weak",
     });
     expect(result.success).toBe(false);
   });

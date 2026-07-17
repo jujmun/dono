@@ -23,6 +23,9 @@ export function getFriendlyPaymentError(error: unknown) {
   if (/STRIPE_NOT_CONFIGURED/i.test(message)) {
     return "Payments are not configured for this environment.";
   }
+  if (/RATE_LIMITED|Too many pending donations/i.test(message)) {
+    return "Too many pending donations. Please finish or wait before trying again.";
+  }
   if (/canceled|cancelled/i.test(message)) {
     return "Payment was canceled.";
   }

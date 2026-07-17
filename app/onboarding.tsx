@@ -1,71 +1,99 @@
 import { useState } from "react";
-import { View, Text, TextInput, Pressable } from "react-native";
+import { View, Text } from "react-native";
 import { useRouter } from "expo-router";
+import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
+import {
+  ProfileSetupForm,
+  type ProfileSetupValues,
+} from "@/components/profile-setup-form";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
-import { updateProfileSchema } from "@/lib/validation/auth";
+import {
+  YEAR_IN_COLLEGE_OPTIONS,
+  type YearInCollege,
+} from "@/lib/validation/profile";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { uploadImageToConvexStorage } from "@/lib/upload-avatar";
+import { setWelcomeTourPending } from "@/lib/welcome-tour-storage";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 
 export default function OnboardingPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
-  const [name, setName] = useState(profile?.name ?? "");
+  const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const completeOnboarding = () => {
-    const parsed = updateProfileSchema.safeParse({ name });
-    if (!parsed.success) {
-      setError(parsed.error.issues[0]?.message ?? "Please check your details.");
-      return;
-    }
+  const initialYear = YEAR_IN_COLLEGE_OPTIONS.includes(
+    profile?.yearInCollege as YearInCollege,
+  )
+    ? (profile?.yearInCollege as YearInCollege)
+    : undefined;
 
+  const completeOnboarding = async (values: ProfileSetupValues) => {
     setLoading(true);
     setError(null);
-    void updateProfile({
-      name: parsed.data.name,
-    })
-      .then(() => router.replace("/dashboard"))
-      .catch((err) => setError(getFriendlyAuthError(err)))
-      .finally(() => setLoading(false));
+
+    try {
+      let avatarStorageId: Id<"_storage"> | undefined;
+
+      if (values.avatarPreview && !values.avatarPreview.startsWith("http")) {
+        const uploadUrl = await generateAvatarUploadUrl({});
+        avatarStorageId = await uploadImageToConvexStorage(uploadUrl, {
+          uri: values.avatarPreview,
+        });
+      }
+
+      await updateProfile({
+        name: values.name,
+        phone: values.phone,
+        college: values.college,
+        degree: values.degree,
+        yearInCollege: values.yearInCollege,
+        ...(avatarStorageId ? { avatarStorageId } : {}),
+      });
+
+      if (profile?.id) {
+        await setWelcomeTourPending(profile.id);
+      }
+
+      router.replace("/welcome");
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-md px-4 py-12">
+      <View className="mx-auto w-full max-w-lg px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <Text className="font-display-medium text-2xl text-dono-text">Finish onboarding</Text>
-          <Text className="mt-1 text-sm text-dono-muted">
-            Tell us your name to complete your account setup.
+          <Text className="font-display-medium text-2xl text-dono-text">
+            Set up your profile
+          </Text>
+          <Text className="mt-1 text-sm leading-relaxed text-dono-muted">
+            Welcome to Dono. Add a few details so donors and campaign creators know
+            who you are.
           </Text>
 
-          <View className="mt-6 gap-4">
-            <TextInput
-              value={name}
-              onChangeText={setName}
-              placeholder="Your full name"
-              placeholderTextColor="#56615A"
-              className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+          <View className="mt-6">
+            <ProfileSetupForm
+              initialValues={{
+                name: profile?.name ?? "",
+                phone: profile?.phone ?? "",
+                college: profile?.college ?? "",
+                degree: profile?.degree ?? "",
+                yearInCollege: initialYear,
+                avatarPreview: profile?.avatarUrl ?? null,
+              }}
+              submitLabel={loading ? "Saving..." : "Complete setup"}
+              loading={loading}
+              error={error}
+              onSubmit={completeOnboarding}
             />
-
-            {error ? (
-              <View className="rounded-xl bg-rose-50 px-4 py-3">
-                <Text className="text-sm text-rose-700">{error}</Text>
-              </View>
-            ) : null}
-
-            <Pressable
-              onPress={completeOnboarding}
-              disabled={loading}
-              className={`items-center rounded-full bg-dono-primary py-3 ${
-                loading ? "opacity-50" : ""
-              }`}
-            >
-              <Text className="font-sans-medium text-sm text-white">
-                {loading ? "Saving..." : "Complete setup"}
-              </Text>
-            </Pressable>
           </View>
         </View>
       </View>

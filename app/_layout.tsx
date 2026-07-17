@@ -20,6 +20,7 @@ import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { useWelcomeTourStatus } from "@/lib/hooks/use-welcome-tour";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { authStorage } from "@/lib/auth-storage";
 import { StripeAppProvider } from "@/lib/stripe/provider";
@@ -37,6 +38,8 @@ const posthogHost =
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const profile = useCurrentProfile();
+  const { complete: welcomeTourComplete, pending: welcomeTourPending, loading: welcomeTourLoading } =
+    useWelcomeTourStatus(profile?.id);
   const ensureMyProfile = useMutation(api.users.ensureMyProfile);
   const segments = useSegments();
   const router = useRouter();
@@ -52,6 +55,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     const root = String(segments[0] ?? "");
     const inOnboarding = root === "onboarding";
+    const inWelcome = root === "welcome";
     const inProtected = root === "funds";
     const inAuthPublic =
       root === "signin" ||
@@ -65,8 +69,16 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       profile !== undefined &&
       !profile?.name &&
       !adminUser;
+    const needsWelcomeTour =
+      isAuthenticated &&
+      profile !== undefined &&
+      Boolean(profile?.name) &&
+      !adminUser &&
+      !welcomeTourLoading &&
+      welcomeTourComplete === false &&
+      welcomeTourPending === true;
 
-    if ((inProtected || inOnboarding || inAdmin) && !isAuthenticated) {
+    if ((inProtected || inOnboarding || inWelcome || inAdmin) && !isAuthenticated) {
       router.replace("/signin");
       return;
     }
@@ -76,12 +88,22 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (inAuthPublic && isAuthenticated && profile && !needsOnboarding) {
+    if (isAuthenticated && needsWelcomeTour && !inWelcome && !inOnboarding) {
+      router.replace("/welcome");
+      return;
+    }
+
+    if (inAuthPublic && isAuthenticated && profile && !needsOnboarding && !needsWelcomeTour) {
       router.replace(adminUser ? "/admin" : "/dashboard");
       return;
     }
 
     if (inOnboarding && isAuthenticated && profile?.name) {
+      router.replace("/welcome");
+      return;
+    }
+
+    if (inWelcome && isAuthenticated && welcomeTourComplete === true) {
       router.replace(adminUser ? "/admin" : "/dashboard");
       return;
     }
@@ -101,7 +123,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     ) {
       router.replace("/admin");
     }
-  }, [isAuthenticated, isLoading, segments, router, profile]);
+  }, [isAuthenticated, isLoading, segments, router, profile, welcomeTourComplete, welcomeTourPending, welcomeTourLoading]);
 
   return <>{children}</>;
 }

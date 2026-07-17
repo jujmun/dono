@@ -176,10 +176,12 @@ export const createPaymentIntent = action({
     campaignSlug: v.string(),
     amount: v.number(),
     donorEmail: v.optional(v.string()),
+    anonymous: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const amount = Number(args.amount);
     const donorEmail = normalizeDonorEmail(args.donorEmail);
+    const anonymous = args.anonymous === true;
     const { campaign, amount: validAmount } = await validateCampaignAndAmount(
       ctx,
       args.campaignSlug,
@@ -216,6 +218,7 @@ export const createPaymentIntent = action({
       metadata: {
         ...(userId ? { userId } : {}),
         ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
+        ...(anonymous ? { anonymous: "true" } : {}),
         campaignId: campaign.campaignId,
         campaignSlug: campaign.campaignSlug,
         donationType: "one_time",
@@ -232,6 +235,7 @@ export const createPaymentIntent = action({
     await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
       userId: userId ?? undefined,
       donorEmail: receiptEmail,
+      isAnonymous: anonymous,
       campaignId: campaign.campaignId,
       amount: validAmount,
       stripePaymentIntentId: paymentIntent.id,
@@ -249,10 +253,12 @@ export const createFundPaymentIntent = action({
     fundSlug: v.string(),
     amount: v.number(),
     donorEmail: v.optional(v.string()),
+    anonymous: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const amount = Number(args.amount);
     const donorEmail = normalizeDonorEmail(args.donorEmail);
+    const anonymous = args.anonymous === true;
     const amountValidation = validateDonationAmount(amount);
     if (!amountValidation.valid) {
       throw new ConvexError({
@@ -295,6 +301,7 @@ export const createFundPaymentIntent = action({
       metadata: {
         ...(userId ? { userId } : {}),
         ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
+        ...(anonymous ? { anonymous: "true" } : {}),
         fundId: fund.fundId,
         fundSlug: fund.fundSlug,
         donationType: "fund_one_time",
@@ -311,6 +318,7 @@ export const createFundPaymentIntent = action({
     await ctx.runMutation(internal.stripeFunds.createPendingFundDonation, {
       userId: userId ?? undefined,
       donorEmail: receiptEmail,
+      isAnonymous: anonymous,
       fundId: fund.fundId,
       amount,
       stripePaymentIntentId: paymentIntent.id,
@@ -389,6 +397,158 @@ export const createRecurringDonationSubscription = action({
     return {
       clientSecret,
       subscriptionId: subscription.id,
+    };
+  },
+});
+
+function isStripeCancelErrorSafeToIgnore(error: unknown) {
+  if (!(error instanceof Stripe.errors.StripeError)) {
+    return false;
+  }
+  return (
+    error.code === "resource_missing" ||
+    error.code === "payment_intent_unexpected_state"
+  );
+}
+
+async function assertCanAbandonDonation(
+  ctx: ActionCtx,
+  donation: {
+    userId?: Id<"users">;
+    donorEmail?: string;
+    paymentStatus: string;
+  },
+  donorEmail?: string,
+) {
+  if (donation.paymentStatus !== "pending") {
+    return false;
+  }
+
+  const userId = await getAuthUserId(ctx);
+
+  if (donation.userId) {
+    if (!userId || donation.userId !== userId) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You cannot abandon this payment.",
+      });
+    }
+    return true;
+  }
+
+  const normalizedDonorEmail = donorEmail?.trim().toLowerCase();
+  const donationEmail = donation.donorEmail?.trim().toLowerCase();
+  if (donationEmail) {
+    if (!normalizedDonorEmail || normalizedDonorEmail !== donationEmail) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You cannot abandon this payment.",
+      });
+    }
+    return true;
+  }
+
+  if (userId) {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "You cannot abandon this payment.",
+    });
+  }
+
+  return true;
+}
+
+export const abandonPaymentIntent = action({
+  args: {
+    paymentIntentId: v.string(),
+    donorEmail: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const donation = await ctx.runQuery(
+      internal.stripeInternal.getDonationByPaymentIntentId,
+      { stripePaymentIntentId: args.paymentIntentId },
+    );
+
+    if (!donation) {
+      return { abandoned: false };
+    }
+
+    const canAbandon = await assertCanAbandonDonation(
+      ctx,
+      donation,
+      args.donorEmail,
+    );
+    if (!canAbandon) {
+      return { abandoned: false };
+    }
+
+    const stripe = getStripeClient();
+    try {
+      await stripe.paymentIntents.cancel(args.paymentIntentId);
+    } catch (error) {
+      if (!isStripeCancelErrorSafeToIgnore(error)) {
+        throw error;
+      }
+    }
+
+    await ctx.runMutation(internal.stripeInternal.markDonationFailed, {
+      stripePaymentIntentId: args.paymentIntentId,
+    });
+
+    return { abandoned: true };
+  },
+});
+
+export const confirmOneTimeDonation = action({
+  args: { paymentIntentId: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ confirmed: true; alreadyProcessed: boolean }> => {
+    const stripe = getStripeClient();
+    const paymentIntent = await stripe.paymentIntents.retrieve(args.paymentIntentId);
+
+    if (paymentIntent.status === "processing") {
+      throw new ConvexError({
+        code: "PAYMENT_PROCESSING",
+        message: "Payment is still processing. Please wait a moment and try again.",
+      });
+    }
+
+    if (paymentIntent.status !== "succeeded") {
+      throw new ConvexError({
+        code: "PAYMENT_NOT_COMPLETE",
+        message: "Payment has not completed successfully.",
+      });
+    }
+
+    const donation = await ctx.runQuery(
+      internal.stripeInternal.getDonationByPaymentIntentId,
+      { stripePaymentIntentId: args.paymentIntentId },
+    );
+
+    const isFundDonation =
+      paymentIntent.metadata?.donationType === "fund_one_time" ||
+      donation?.fundId != null;
+
+    let alreadyProcessed = false;
+    if (isFundDonation) {
+      const fundResult: { alreadyProcessed: boolean } = await ctx.runMutation(
+        internal.stripeFunds.markFundDonationSucceeded,
+        { stripePaymentIntentId: args.paymentIntentId },
+      );
+      alreadyProcessed = fundResult.alreadyProcessed;
+    } else {
+      const campaignResult: { alreadyProcessed: boolean } = await ctx.runMutation(
+        internal.stripeInternal.markDonationSucceeded,
+        { stripePaymentIntentId: args.paymentIntentId },
+      );
+      alreadyProcessed = campaignResult.alreadyProcessed;
+    }
+
+    return {
+      confirmed: true,
+      alreadyProcessed,
     };
   },
 });

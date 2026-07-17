@@ -9,7 +9,7 @@ import {
 } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
-import { requireAdmin, requireVerifiedUser } from "./lib/authz";
+import { requireAdmin, requireVerifiedUser, resolveCreatorContact } from "./lib/authz";
 import { getAuthFromAddress } from "./auth/otpConfig";
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -26,11 +26,8 @@ export async function insertReviewMessageAndScheduleEmail(
   if (!args.campaign.createdBy) return null;
 
   const studentUserId = args.campaign.createdBy;
-  const studentProfile = await ctx.db
-    .query("profiles")
-    .withIndex("by_userId", (q) => q.eq("userId", studentUserId))
-    .unique();
-  if (!studentProfile?.email) return null;
+  const creator = await resolveCreatorContact(ctx, studentUserId);
+  if (!creator) return null;
 
   const messageId = await ctx.db.insert("campaignReviewMessages", {
     campaignId: args.campaign._id,
@@ -43,8 +40,8 @@ export async function insertReviewMessageAndScheduleEmail(
 
   await ctx.scheduler.runAfter(0, internal.reviewMessages.emailStudent, {
     messageId,
-    studentEmail: studentProfile.email,
-    studentName: studentProfile.name ?? "there",
+    studentEmail: creator.email,
+    studentName: creator.name,
     campaignTitle: args.campaign.title,
     body: args.body,
   });

@@ -1,0 +1,342 @@
+import { useState } from "react";
+import { View, Text, TextInput, Pressable } from "react-native";
+import { type Href, useRouter } from "expo-router";
+import { useAuthActions } from "@convex-dev/auth/react";
+import { usePostHog } from "posthog-react-native";
+import { AppShell } from "@/components/app-shell";
+import { SetPasswordFields } from "@/components/auth/set-password-fields";
+import {
+  getAuthProviderId,
+  isAdminLoginEmail,
+  type AuthProviderId,
+} from "@/lib/auth/admin";
+import { getFriendlyAuthError } from "@/lib/auth/errors";
+import {
+  buildPasswordFlowFormData,
+  isAccountAlreadyExistsError,
+} from "@/lib/auth/password-flow";
+import {
+  signInWithPasswordSchema,
+  signUpWithPasswordSchema,
+  verifyEmailSchema,
+} from "@/lib/validation/auth";
+
+const hasPostHog = Boolean(process.env.EXPO_PUBLIC_POSTHOG_API_KEY);
+const inputClassName =
+  "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+
+export type PasswordAuthMode = "signUp" | "signIn";
+
+type PasswordAuthFormProps = {
+  mode: PasswordAuthMode;
+  title: string;
+  subtitle: string;
+  submitLabel: string;
+  footer?: React.ReactNode;
+};
+
+function verifyHref(email: string, provider: AuthProviderId): Href {
+  const params = new URLSearchParams({ email });
+  if (provider === "admin-email") {
+    params.set("provider", provider);
+  }
+  return `/verify-email?${params.toString()}` as Href;
+}
+
+function PasswordAuthFormInner({
+  mode,
+  title,
+  subtitle,
+  submitLabel,
+  footer,
+}: PasswordAuthFormProps) {
+  const { signIn } = useAuthActions();
+  const router = useRouter();
+  const posthog = usePostHog();
+  const [step, setStep] = useState<"credentials" | "verify">("credentials");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [code, setCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+
+  const normalizedEmail = email.trim().toLowerCase();
+
+  const handleAdminOtpSignIn = async (emailValue: string) => {
+    const provider = getAuthProviderId(emailValue);
+    const formData = new FormData();
+    formData.append("email", emailValue);
+    await signIn(provider, formData);
+    router.push(verifyHref(emailValue, provider));
+  };
+
+  const redirectAfterAuth = () => {
+    if (mode === "signUp") {
+      router.replace("/onboarding");
+      return;
+    }
+    router.replace("/dashboard");
+  };
+
+  const handleCredentialsSubmit = () => {
+    if (isAdminLoginEmail(normalizedEmail)) {
+      setLoading(true);
+      setError(null);
+      void handleAdminOtpSignIn(normalizedEmail)
+        .catch((err) => setError(getFriendlyAuthError(err)))
+        .finally(() => setLoading(false));
+      return;
+    }
+
+    if (mode === "signUp") {
+      const parsed = signUpWithPasswordSchema.safeParse({
+        email: normalizedEmail,
+        newPassword,
+        confirmPassword,
+      });
+      if (!parsed.success) {
+        setError(parsed.error.issues[0]?.message ?? "Please check your input.");
+        return;
+      }
+    } else {
+      const parsed = signInWithPasswordSchema.safeParse({
+        email: normalizedEmail,
+        password,
+      });
+      if (!parsed.success) {
+        setError(parsed.error.issues[0]?.message ?? "Please check your input.");
+        return;
+      }
+    }
+
+    setLoading(true);
+    setError(null);
+    setInfo(null);
+
+    void (async () => {
+      try {
+        const result = await signIn(
+          "password",
+          buildPasswordFlowFormData(
+            mode === "signUp"
+              ? {
+                  flow: "signUp",
+                  email: normalizedEmail,
+                  password: newPassword,
+                }
+              : {
+                  flow: "signIn",
+                  email: normalizedEmail,
+                  password,
+                },
+          ),
+        );
+        if (result.signingIn) {
+          posthog?.capture(mode === "signUp" ? "user_signed_up" : "user_signed_in");
+          redirectAfterAuth();
+          return;
+        }
+        setStep("verify");
+        setInfo("Enter the 6-digit code we sent to your email.");
+      } catch (err) {
+        if (mode === "signUp" && isAccountAlreadyExistsError(err)) {
+          setError(
+            "An account with this email already exists. Sign in or use Forgot password.",
+          );
+          return;
+        }
+        setError(getFriendlyAuthError(err));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  };
+
+  const handleVerifySubmit = () => {
+    const parsed = verifyEmailSchema.safeParse({ email: normalizedEmail, code });
+    if (!parsed.success) {
+      setError(parsed.error.issues[0]?.message ?? "Invalid code.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+    setInfo(null);
+
+    void (async () => {
+      try {
+        const result = await signIn(
+          "password",
+          buildPasswordFlowFormData({
+            flow: "email-verification",
+            email: parsed.data.email,
+            code: parsed.data.code,
+          }),
+        );
+        if (!result.signingIn) {
+          setError("That code is invalid or expired. Request a new one and try again.");
+          return;
+        }
+        posthog?.capture(mode === "signUp" ? "user_signed_up" : "user_signed_in");
+        redirectAfterAuth();
+      } catch (err) {
+        setError(getFriendlyAuthError(err));
+      } finally {
+        setLoading(false);
+      }
+    })();
+  };
+
+  return (
+    <AppShell>
+      <View className="mx-auto w-full max-w-md px-4 py-12">
+        <View className="rounded-2xl border border-dono-border bg-white p-8">
+          <View className="mb-8 items-center">
+            <Text className="font-display-medium text-2xl text-dono-text">{title}</Text>
+            <Text className="mt-1 text-center text-sm text-dono-muted">{subtitle}</Text>
+          </View>
+
+          {step === "credentials" ? (
+            <View className="gap-4">
+              <View>
+                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                  Email
+                </Text>
+                <TextInput
+                  value={email}
+                  onChangeText={setEmail}
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  autoComplete="email"
+                  placeholder="you@st-annes.ox.ac.uk"
+                  placeholderTextColor="#56615A"
+                  className={inputClassName}
+                />
+                <Text className="mt-1 text-xs text-dono-muted">
+                  Use your Oxford email address (ending in ox.ac.uk).
+                </Text>
+              </View>
+
+              {mode === "signUp" ? (
+                <SetPasswordFields
+                  newPassword={newPassword}
+                  confirmPassword={confirmPassword}
+                  onNewPasswordChange={setNewPassword}
+                  onConfirmPasswordChange={setConfirmPassword}
+                />
+              ) : (
+                <View>
+                  <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                    Password
+                  </Text>
+                  <TextInput
+                    value={password}
+                    onChangeText={setPassword}
+                    secureTextEntry
+                    autoCapitalize="none"
+                    autoComplete="current-password"
+                    placeholder="Your password"
+                    placeholderTextColor="#56615A"
+                    className={inputClassName}
+                  />
+                </View>
+              )}
+
+              {error ? (
+                <View className="rounded-xl bg-rose-50 px-4 py-3">
+                  <Text className="text-sm text-rose-700">{error}</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                onPress={handleCredentialsSubmit}
+                disabled={loading || normalizedEmail.length === 0}
+                className={`items-center rounded-full bg-dono-primary py-3 ${
+                  loading || normalizedEmail.length === 0 ? "opacity-50" : ""
+                }`}
+              >
+                <Text className="font-sans-medium text-sm text-white">
+                  {loading ? "Please wait..." : submitLabel}
+                </Text>
+              </Pressable>
+
+              {mode === "signUp" ? (
+                <Text className="text-center text-xs text-dono-muted">
+                  We&apos;ll send a one-time code to verify your email.
+                </Text>
+              ) : null}
+            </View>
+          ) : (
+            <View className="gap-4">
+              <Text className="text-sm text-dono-muted">
+                We sent a code to {normalizedEmail}.
+              </Text>
+              <TextInput
+                value={code}
+                onChangeText={setCode}
+                keyboardType="number-pad"
+                maxLength={6}
+                autoComplete="one-time-code"
+                placeholder="6-digit code"
+                placeholderTextColor="#56615A"
+                className={inputClassName}
+              />
+
+              {error ? (
+                <View className="rounded-xl bg-rose-50 px-4 py-3">
+                  <Text className="text-sm text-rose-700">{error}</Text>
+                </View>
+              ) : null}
+
+              {info ? (
+                <View className="rounded-xl bg-green-50 px-4 py-3">
+                  <Text className="text-sm text-green-700">{info}</Text>
+                </View>
+              ) : null}
+
+              <Pressable
+                onPress={handleVerifySubmit}
+                disabled={loading}
+                className={`items-center rounded-full bg-dono-primary py-3 ${
+                  loading ? "opacity-50" : ""
+                }`}
+              >
+                <Text className="font-sans-medium text-sm text-white">
+                  {loading ? "Verifying..." : "Verify email"}
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => {
+                  setStep("credentials");
+                  setCode("");
+                  setError(null);
+                  setInfo(null);
+                }}
+                className="items-center"
+              >
+                <Text className="text-sm text-dono-primary">Back</Text>
+              </Pressable>
+            </View>
+          )}
+
+          {footer}
+        </View>
+      </View>
+    </AppShell>
+  );
+}
+
+function PasswordAuthFormWithPostHog(props: PasswordAuthFormProps) {
+  return <PasswordAuthFormInner {...props} />;
+}
+
+export function PasswordAuthForm(props: PasswordAuthFormProps) {
+  if (hasPostHog) {
+    return <PasswordAuthFormWithPostHog {...props} />;
+  }
+  return <PasswordAuthFormInner {...props} />;
+}
