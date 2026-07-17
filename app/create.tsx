@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -6,17 +6,25 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
+  Image,
 } from "react-native";
 import { useRouter } from "expo-router";
-import { useConvexAuth, useMutation } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import { CheckCircle2, ArrowRight, ImagePlus, Plus, Trash2 } from "lucide-react-native";
+import {
+  ArrowRight,
+  ImagePlus,
+  Plus,
+  ShieldCheck,
+  Trash2,
+} from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignPreview } from "@/components/campaign-preview";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { CategoryBadge } from "@/components/ui/category-badge";
+import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import {
   ReceiptDivider,
   ReceiptLedger,
@@ -28,7 +36,10 @@ import { MAX_CAMPAIGN_IMAGES } from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { encodeImpactItems } from "@/lib/fund-breakdown";
+import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { api } from "@convex/_generated/api";
+
+const dinoLogo = require("../assets/dino-hero.png");
 
 const steps = ["Details", "Story", "Goal", "Review", "Submit"];
 
@@ -79,10 +90,17 @@ export default function CreateCampaignPage() {
   const posthog = usePostHog();
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
+  const updateCampaign = useMutation(api.campaignCreator.update);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
   const setImpactItems = useMutation(api.campaignCreator.setImpactItems);
+  const createVerificationSession = useAction(
+    api.campaignIdentity.createVerificationSession,
+  );
+  const refreshVerificationStatus = useAction(
+    api.campaignIdentity.refreshVerificationStatus,
+  );
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
@@ -90,6 +108,30 @@ export default function CreateCampaignPage() {
   const [form, setForm] = useState(initialForm);
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
+  const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
+  const [verifying, setVerifying] = useState(false);
+
+  // Once a slug exists, this reflects the webhook-driven status in real time.
+  const verification = useQuery(
+    api.campaignCreator.getMyVerificationStatus,
+    campaignSlug ? { slug: campaignSlug } : "skip",
+  );
+
+  // Fallback to the webhook: directly poll Stripe every few seconds while
+  // unverified, in case the webhook is delayed, misconfigured, or hasn't
+  // reached this deployment. Stops as soon as the query reflects "verified".
+  useEffect(() => {
+    if (!campaignSlug || verification?.stripeVerificationStatus === "verified") {
+      return;
+    }
+    const interval = setInterval(() => {
+      void refreshVerificationStatus({ slug: campaignSlug }).catch(() => {
+        // Best-effort background poll — surfaced errors would be noisy here;
+        // the webhook or the next tick may still succeed.
+      });
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [campaignSlug, verification?.stripeVerificationStatus, refreshVerificationStatus]);
 
   const updateFundLine = (index: number, field: keyof FundLine, value: string) => {
     setFundLines((current) =>
@@ -117,10 +159,15 @@ export default function CreateCampaignPage() {
     0,
   );
   const goalAmount = Number(form.goal) || 0;
-  const fundLinesComplete =
-    filledFundLines.length >= MIN_FUND_LINES &&
-    filledFundLines.every((line) => Number(line.amount) > 0) &&
-    fundLineTotal === goalAmount;
+  const goalInvalid = form.goal.trim().length > 0 && goalAmount <= 0;
+  // Compare in pence — decimal amounts summed as floats can drift by a
+  // hair (e.g. 1166.67 × 3) and a strict === would reject a correct ledger.
+  const totalsMatch = Math.round(fundLineTotal * 100) === Math.round(goalAmount * 100);
+  const missingLineItems = filledFundLines.length < MIN_FUND_LINES;
+  const lineAmountMissing = filledFundLines.some(
+    (line) => !(Number(line.amount) > 0),
+  );
+  const fundLinesComplete = !missingLineItems && !lineAmountMissing && totalsMatch;
 
   const previewImpactLines = filledFundLines.map((line) => ({
     label: line.label.trim(),
@@ -189,6 +236,80 @@ export default function CreateCampaignPage() {
     pickedImages[0]?.uri ?? (form.category || "default");
   const pickedImageUris = pickedImages.map((image) => image.uri);
 
+  /**
+   * Creates the campaign (once) so Stripe Identity has a record to attach to —
+   * mirrors the society wizard. Field edits made after this are synced via
+   * campaignCreator.update when the user presses Complete.
+   */
+  const ensureCampaignCreated = async (): Promise<string> => {
+    if (campaignSlug) return campaignSlug;
+    const result = await createCampaign({
+      title: form.title,
+      category: form.category,
+      creatorType: form.creatorType,
+      university: DEFAULT_UNIVERSITY,
+      description: form.description,
+      story: form.story,
+      goal: Number(form.goal),
+    });
+    setCampaignSlug(result.slug);
+    return result.slug;
+  };
+
+  const handleVerifyIdentity = async () => {
+    setError(null);
+    setVerifying(true);
+    try {
+      const slug = await ensureCampaignCreated();
+      const { clientSecret, url } = await createVerificationSession({ slug });
+      const result = await launchIdentityVerification({ clientSecret, url });
+      if (result.error) {
+        setError(result.error);
+      } else {
+        // Don't wait on the webhook — ask Stripe directly as soon as the
+        // user finishes, the background poll (above) picks up from here.
+        void refreshVerificationStatus({ slug }).catch(() => {});
+      }
+    } catch (err) {
+      setError(getFriendlyAuthError(err) || "Could not start verification.");
+    } finally {
+      setVerifying(false);
+    }
+  };
+
+  const stripeStatus = verification?.stripeVerificationStatus ?? null;
+  const stripeVerified = stripeStatus === "verified";
+  // requires_input is Stripe's status both for "awaiting your first
+  // submission" (its normal initial state) and "a check ran and failed" —
+  // only the presence of a real last_error means an actual attempt failed.
+  const hasVerificationError = Boolean(
+    verification?.stripeVerificationLastErrorCode ||
+      verification?.stripeVerificationLastErrorReason,
+  );
+  const stripeFailed =
+    stripeStatus === "canceled" ||
+    (stripeStatus === "requires_input" && hasVerificationError);
+
+  const renderVerificationStatus = () => {
+    if (!stripeStatus) return null;
+    if (stripeVerified) {
+      return (
+        <View className="flex-row items-center gap-2 self-start rounded-xl bg-green-50 px-3 py-2">
+          <ShieldCheck size={14} color="#15803d" />
+          <Text className="text-xs text-green-800">Verified</Text>
+        </View>
+      );
+    }
+    return (
+      <View className="flex-row items-center gap-2 self-start rounded-xl bg-amber-50 px-3 py-2">
+        <VerifyingIndicator size={14} color="#b45309" />
+        <Text className="text-xs text-amber-800">
+          Verifying your identity... you can keep going
+        </Text>
+      </View>
+    );
+  };
+
   const canProceed = () => {
     switch (step) {
       case 0:
@@ -197,6 +318,10 @@ export default function CreateCampaignPage() {
         return form.description && form.story;
       case 2:
         return form.goal && Number(form.goal) > 0 && fundLinesComplete;
+      case 3:
+        // The identity check must at least be started (which also creates the
+        // campaign record). Verification itself can finish in the background.
+        return campaignSlug !== null;
       default:
         return true;
     }
@@ -255,7 +380,12 @@ export default function CreateCampaignPage() {
                     }`}
                   >
                     {i < step ? (
-                      <CheckCircle2 size={16} color="#fff" />
+                      <Image
+                        source={dinoLogo}
+                        style={{ width: 18, height: 18, tintColor: "#fff" }}
+                        resizeMode="contain"
+                        accessibilityLabel="Step complete"
+                      />
                     ) : (
                       <Text
                         className={`text-xs font-bold ${
@@ -483,6 +613,11 @@ export default function CreateCampaignPage() {
                   keyboardType="numeric"
                   className={inputClass}
                 />
+                {goalInvalid ? (
+                  <Text className="mt-1 text-xs text-rose-700">
+                    Enter your goal as a plain number, e.g. 3500 — no commas or symbols.
+                  </Text>
+                ) : null}
               </View>
 
               <View>
@@ -543,7 +678,16 @@ export default function CreateCampaignPage() {
                     label="Total goal"
                     amount={goalAmount > 0 ? goalAmount : "—"}
                   />
-                  {goalAmount > 0 && fundLineTotal !== goalAmount ? (
+                  {goalAmount > 0 && missingLineItems ? (
+                    <Text className="mt-2 text-xs text-rose-700">
+                      Add at least {MIN_FUND_LINES} line items, each with a label and
+                      an amount.
+                    </Text>
+                  ) : goalAmount > 0 && lineAmountMissing ? (
+                    <Text className="mt-2 text-xs text-rose-700">
+                      Every line item needs an amount greater than £0.
+                    </Text>
+                  ) : goalAmount > 0 && !totalsMatch ? (
                     <Text className="mt-2 text-xs text-rose-700">
                       Line items total {formatCurrency(fundLineTotal)} — must equal{" "}
                       {formatCurrency(goalAmount)}
@@ -580,6 +724,46 @@ export default function CreateCampaignPage() {
                 imageUris={pickedImageUris}
                 impactLines={previewImpactLines}
               />
+
+              <View className="rounded-xl border border-dono-border bg-white p-4">
+                <View className="mb-1.5 flex-row items-center gap-2">
+                  <ShieldCheck size={16} color="#17211B" />
+                  <Text className="font-sans-medium text-sm text-dono-text">
+                    Identity Check
+                  </Text>
+                </View>
+                <Text className="mb-3 text-xs text-dono-muted">
+                  You'll be asked for a quick photo of your ID and a selfie so we can
+                  confirm it's really you — it only takes a minute.
+                </Text>
+
+                {renderVerificationStatus()}
+
+                <Pressable
+                  onPress={() => void handleVerifyIdentity()}
+                  disabled={verifying || stripeVerified}
+                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2.5 ${
+                    verifying || stripeVerified ? "opacity-50" : ""
+                  }`}
+                >
+                  {verifying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="font-sans-medium text-sm text-white">
+                      Verify your identity
+                    </Text>
+                  )}
+                </Pressable>
+                {stripeFailed ? (
+                  <Text className="mt-2 text-xs text-rose-700">
+                    That didn't go through — please try again.
+                  </Text>
+                ) : !campaignSlug ? (
+                  <Text className="mt-2 text-xs text-dono-muted">
+                    You'll be able to continue once you've started this check.
+                  </Text>
+                ) : null}
+              </View>
             </View>
           )}
 
@@ -594,6 +778,7 @@ export default function CreateCampaignPage() {
                 reaching alumni and getting funded. We'll reach out directly if anything
                 needs adjusting.
               </Text>
+              {renderVerificationStatus()}
             </View>
           )}
 
@@ -623,30 +808,36 @@ export default function CreateCampaignPage() {
             ) : step === 3 ? (
               <Pressable
                 onPress={() => setStep(4)}
-                className="rounded-full bg-dono-accent px-6 py-2.5"
+                disabled={!canProceed()}
+                className={`rounded-full px-6 py-2.5 ${
+                  stripeVerified ? "bg-dono-primary" : "bg-dono-accent"
+                } ${!canProceed() ? "opacity-50" : ""}`}
               >
-                <Text className="font-sans-medium text-sm text-white">Verify Campaign</Text>
+                <Text className="font-sans-medium text-sm text-white">Continue</Text>
               </Pressable>
             ) : (
               <Pressable
-                disabled={submitting}
+                disabled={submitting || !campaignSlug}
                 onPress={() => {
+                  const slug = campaignSlug;
+                  if (!slug) return;
                   setError(null);
                   setSubmitting(true);
-                  void createCampaign({
+                  // The campaign was created when the identity check started —
+                  // push any fields edited since, then attach the extras.
+                  void updateCampaign({
+                    slug,
                     title: form.title,
                     category: form.category,
-                    creatorType: form.creatorType,
-                    university: DEFAULT_UNIVERSITY,
                     description: form.description,
                     story: form.story,
                     goal: Number(form.goal),
                   })
-                    .then(async (result) => {
+                    .then(async () => {
                       let imageUploadFailed = false;
                       try {
                         await setImpactItems({
-                          slug: result.slug,
+                          slug,
                           impactItems: encodedImpactItems,
                         });
                       } catch {
@@ -657,7 +848,7 @@ export default function CreateCampaignPage() {
                       if (pickedImages.length > 0) {
                         try {
                           const allUploaded = await uploadCampaignImages({
-                            slug: result.slug,
+                            slug,
                             images: pickedImages,
                             generateUploadUrl: generateImageUploadUrl,
                             setImage: setCampaignImage,
@@ -683,9 +874,10 @@ export default function CreateCampaignPage() {
                       setForm(initialForm);
                       setPickedImages([]);
                       setFundLines(initialFundLines());
+                      setCampaignSlug(null);
                       setStep(0);
                       setError(null);
-                      router.push(`/campaigns/${result.slug}`);
+                      router.push(`/campaigns/${slug}`);
                     })
                     .catch((err: Error) => {
                       setError(
@@ -697,7 +889,7 @@ export default function CreateCampaignPage() {
                     });
                 }}
                 className={`rounded-full bg-dono-accent px-6 py-2.5 ${
-                  submitting ? "opacity-50" : ""
+                  submitting || !campaignSlug ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-sans-medium text-sm text-white">

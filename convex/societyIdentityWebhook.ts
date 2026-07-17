@@ -16,7 +16,9 @@ function getStripeClient() {
 /**
  * Separate from the payments webhook (/stripe/webhook): a distinct endpoint,
  * a distinct signing secret (STRIPE_IDENTITY_WEBHOOK_SECRET), and it never
- * touches donations/campaigns — only societies' Stripe Identity fields.
+ * touches donations — only the Stripe Identity fields on societies and
+ * campaigns. Each event is matched by session id against societies first,
+ * then campaigns (a session only ever belongs to one record).
  */
 export const identityWebhook = httpAction(async (ctx, request) => {
   const signature = request.headers.get("stripe-signature");
@@ -69,31 +71,61 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         session.id,
         { expand: ["verified_outputs"] },
       );
-      await ctx.runMutation(internal.societies.updateVerificationFromWebhook, {
+      const update = {
         stripeVerificationSessionId: session.id,
         status: expanded.status,
         verifiedName: fullName(expanded.verified_outputs),
         verifiedDob: formatDob(expanded.verified_outputs?.dob),
-      });
+      };
+      const { updated } = await ctx.runMutation(
+        internal.societies.updateVerificationFromWebhook,
+        update,
+      );
+      if (!updated) {
+        await ctx.runMutation(
+          internal.campaigns.updateVerificationFromWebhook,
+          update,
+        );
+      }
       break;
     }
     case "identity.verification_session.requires_input": {
       const session = event.data.object as Stripe.Identity.VerificationSession;
-      await ctx.runMutation(internal.societies.updateVerificationFromWebhook, {
+      const update = {
         stripeVerificationSessionId: session.id,
         status: session.status,
         lastErrorCode: session.last_error?.code ?? undefined,
         lastErrorReason: session.last_error?.reason ?? undefined,
-      });
+      };
+      const { updated } = await ctx.runMutation(
+        internal.societies.updateVerificationFromWebhook,
+        update,
+      );
+      if (!updated) {
+        await ctx.runMutation(
+          internal.campaigns.updateVerificationFromWebhook,
+          update,
+        );
+      }
       break;
     }
     case "identity.verification_session.processing":
     case "identity.verification_session.canceled": {
       const session = event.data.object as Stripe.Identity.VerificationSession;
-      await ctx.runMutation(internal.societies.updateVerificationFromWebhook, {
+      const update = {
         stripeVerificationSessionId: session.id,
         status: session.status,
-      });
+      };
+      const { updated } = await ctx.runMutation(
+        internal.societies.updateVerificationFromWebhook,
+        update,
+      );
+      if (!updated) {
+        await ctx.runMutation(
+          internal.campaigns.updateVerificationFromWebhook,
+          update,
+        );
+      }
       break;
     }
     default:

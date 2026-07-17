@@ -23,7 +23,12 @@ import {
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminStatsNav } from "@/components/admin-stats-nav";
-import { AdminStatusChip } from "@/lib/admin-labels";
+import {
+  AdminStatusChip,
+  selfieMatchChip,
+  stripeStatusChip,
+  type StripeVerificationStatus,
+} from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -37,48 +42,6 @@ const reviewTypeTabs: { id: ReviewType; label: string }[] = [
   { id: "campaigns", label: "Campaigns" },
   { id: "societies", label: "Societies" },
 ];
-
-type ChipTone = "neutral" | "waiting" | "live" | "removed";
-
-function stripeStatusChip(
-  status: AdminSociety["stripeVerificationStatus"],
-): { label: string; tone: ChipTone } {
-  switch (status) {
-    case "verified":
-      return { label: "Verified", tone: "live" };
-    case "processing":
-    case "created":
-      return { label: "Pending", tone: "waiting" };
-    case "requires_input":
-      return { label: "Needs attention", tone: "removed" };
-    case "canceled":
-      return { label: "Canceled", tone: "removed" };
-    default:
-      return { label: "Not started", tone: "neutral" };
-  }
-}
-
-/**
- * Distinct from the overall stripeVerificationStatus: whether the selfie
- * specifically matched. Derived (no dedicated backend field) — "verified"
- * implies the selfie check passed (require_matching_selfie is set at
- * session creation); a requires_input with a selfie_* last_error means it
- * didn't; anything else is treated as pending/unknown rather than assumed.
- */
-function selfieMatchChip(
-  society: AdminSociety,
-): { label: string; tone: ChipTone } {
-  if (society.stripeVerificationStatus === "verified") {
-    return { label: "Selfie match: Yes", tone: "live" };
-  }
-  if (
-    society.stripeVerificationStatus === "requires_input" &&
-    society.stripeVerificationLastErrorCode?.startsWith("selfie_")
-  ) {
-    return { label: "Selfie match: No", tone: "removed" };
-  }
-  return { label: "Selfie match: Pending", tone: "waiting" };
-}
 
 function formatSubmittedAt(ms: number) {
   return new Date(ms).toLocaleDateString("en-GB", {
@@ -103,7 +66,9 @@ export default function AdminPortalPage() {
         ? { search: trimmedSearch }
         : {}
       : "skip",
-  ) as Campaign[] | undefined;
+  ) as
+    | (Campaign & { stripeVerificationStatus: StripeVerificationStatus })[]
+    | undefined;
 
   const pendingSocieties = useQuery(
     api.societies.listPendingForAdmin,
@@ -280,8 +245,12 @@ export default function AdminPortalPage() {
                 >
                   <View className="flex-row items-start justify-between gap-3">
                     <View className="flex-1">
-                      <View className="mb-2">
+                      <View className="mb-2 flex-row flex-wrap gap-2">
                         <AdminStatusChip label="Waiting" tone="waiting" />
+                        <AdminStatusChip
+                          label={`ID: ${stripeStatusChip(campaign.stripeVerificationStatus).label}`}
+                          tone={stripeStatusChip(campaign.stripeVerificationStatus).tone}
+                        />
                       </View>
                       <Text className="font-display-medium text-lg text-dono-text">
                         {campaign.title}

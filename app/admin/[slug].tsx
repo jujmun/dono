@@ -7,12 +7,13 @@ import {
   TextInput,
   Image,
 } from "react-native";
-import { useMutation, useQuery } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { type Href, Link, useLocalSearchParams, useRouter } from "expo-router";
 import {
   ArrowLeft,
   Check,
   ChevronRight,
+  RefreshCw,
   RotateCcw,
   Send,
   Trash2,
@@ -25,7 +26,10 @@ import {
   AdminStatusChip,
   humanCampaignStatus,
   moderationActionLabel,
+  selfieMatchChip,
   statusChipTone,
+  stripeStatusChip,
+  type StripeVerificationStatus,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
@@ -41,6 +45,13 @@ type AdminReviewPayload = {
     email: string;
     avatarUrl: string | null;
   } | null;
+  identity: {
+    stripeVerificationStatus: StripeVerificationStatus;
+    stripeVerificationLastErrorCode: string | null;
+    stripeVerificationLastErrorReason: string | null;
+    verifiedName: string | null;
+    verifiedDob: string | null;
+  };
   messages: {
     id: string;
     body: string;
@@ -73,6 +84,9 @@ export default function AdminCampaignReviewPage() {
   const takeDown = useMutation(api.campaigns.takeDown);
   const restore = useMutation(api.campaigns.restore);
   const sendComment = useMutation(api.reviewMessages.send);
+  const refreshIdentity = useAction(
+    api.campaignIdentity.refreshVerificationStatus,
+  );
   const [comment, setComment] = useState("");
   const [reason, setReason] = useState("");
   const [reasonMode, setReasonMode] = useState<"reject" | "takedown" | null>(
@@ -81,7 +95,7 @@ export default function AdminCampaignReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState<
-    "approve" | "reject" | "comment" | "takedown" | "restore" | null
+    "approve" | "reject" | "comment" | "takedown" | "restore" | "refresh" | null
   >(null);
 
   if (profile === undefined || (adminUser && detail === undefined)) {
@@ -134,6 +148,7 @@ export default function AdminCampaignReviewPage() {
 
   const campaign = detail.campaign;
   const student = detail.student;
+  const identity = detail.identity;
   const messages = detail.messages;
   const pending = campaign.status === "pending";
   const moderated = campaign.status === "rejected";
@@ -222,6 +237,19 @@ export default function AdminCampaignReviewPage() {
     try {
       await restore({ slug: campaign.id });
       router.replace("/admin/discover" as Href);
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  const handleRefreshIdentity = async () => {
+    setError(null);
+    setInfo(null);
+    setBusy("refresh");
+    try {
+      await refreshIdentity({ slug: campaign.id });
     } catch (err) {
       setError(getFriendlyAuthError(err));
     } finally {
@@ -329,6 +357,66 @@ export default function AdminCampaignReviewPage() {
               No linked student account. Shown as {campaign.creator.name}.
             </Text>
           )}
+        </View>
+
+        <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
+          <View className="flex-row flex-wrap items-center justify-between gap-2">
+            <Text className="font-sans-medium text-base text-dono-text">
+              Identity check
+            </Text>
+            <View className="flex-row items-center gap-2">
+              <AdminStatusChip
+                label={stripeStatusChip(identity.stripeVerificationStatus).label}
+                tone={stripeStatusChip(identity.stripeVerificationStatus).tone}
+              />
+              <Pressable
+                onPress={() => void handleRefreshIdentity()}
+                disabled={busy !== null || !identity.stripeVerificationStatus}
+                accessibilityLabel="Refresh verification status from Stripe"
+                className={`h-6 w-6 items-center justify-center rounded-full border border-dono-border ${
+                  busy !== null || !identity.stripeVerificationStatus
+                    ? "opacity-50"
+                    : ""
+                }`}
+              >
+                {busy === "refresh" ? (
+                  <ActivityIndicator size="small" color="#17211B" />
+                ) : (
+                  <RefreshCw size={12} color="#56615A" />
+                )}
+              </Pressable>
+            </View>
+          </View>
+          <Text className="mt-1 text-sm text-dono-muted">
+            Stripe Identity result for the student who created this campaign —
+            photo ID plus a matching selfie.
+          </Text>
+
+          <View className="mt-3 flex-row flex-wrap gap-2">
+            <AdminStatusChip
+              label={selfieMatchChip(identity).label}
+              tone={selfieMatchChip(identity).tone}
+            />
+          </View>
+
+          {identity.verifiedName || identity.verifiedDob ? (
+            <View className="mt-3 rounded-lg border border-dono-border bg-dono-surface-muted px-3 py-2">
+              <Text className="text-xs font-sans-medium text-dono-muted">
+                Auto-extracted from ID (Stripe) — reference only, not verified
+                ground truth
+              </Text>
+              {identity.verifiedName ? (
+                <Text className="mt-1 text-sm text-dono-text">
+                  Name: {identity.verifiedName}
+                </Text>
+              ) : null}
+              {identity.verifiedDob ? (
+                <Text className="text-sm text-dono-text">
+                  DOB: {identity.verifiedDob}
+                </Text>
+              ) : null}
+            </View>
+          ) : null}
         </View>
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">

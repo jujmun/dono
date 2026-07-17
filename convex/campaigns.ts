@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -193,7 +193,10 @@ export const listPendingForAdmin = query({
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
       .filter((c) => c.status === "pending" && matchesSearch(c, args.search))
-      .map(toCampaign);
+      .map((c) => ({
+        ...toCampaign(c),
+        stripeVerificationStatus: c.stripeVerificationStatus ?? null,
+      }));
   },
 });
 
@@ -266,6 +269,15 @@ export const getForAdmin = query({
     return {
       campaign: toCampaign(campaign),
       student,
+      identity: {
+        stripeVerificationStatus: campaign.stripeVerificationStatus ?? null,
+        stripeVerificationLastErrorCode:
+          campaign.stripeVerificationLastErrorCode ?? null,
+        stripeVerificationLastErrorReason:
+          campaign.stripeVerificationLastErrorReason ?? null,
+        verifiedName: campaign.verifiedName ?? null,
+        verifiedDob: campaign.verifiedDob ?? null,
+      },
       messages: messages
         .sort((a, b) => a.createdAt - b.createdAt)
         .map((m) => ({
@@ -563,6 +575,87 @@ export const create = mutation({
     }
 
     return { slug, campaignId };
+  },
+});
+
+/**
+ * Stripe Identity plumbing — mirrors the internal functions of the same
+ * names in societies.ts so campaignIdentity.ts and the shared identity
+ * webhook can operate on campaigns the same way.
+ */
+export const getBySlugInternal = internalQuery({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+  },
+});
+
+export const recordVerificationSessionCreated = internalMutation({
+  args: {
+    slug: v.string(),
+    stripeVerificationSessionId: v.string(),
+    status: v.union(
+      v.literal("created"),
+      v.literal("requires_input"),
+      v.literal("processing"),
+      v.literal("verified"),
+      v.literal("canceled"),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) return null;
+    await ctx.db.patch(campaign._id, {
+      stripeVerificationSessionId: args.stripeVerificationSessionId,
+      stripeVerificationStatus: args.status,
+    });
+    return null;
+  },
+});
+
+/** Webhook-driven update — matches purely by stripeVerificationSessionId, no auth context. */
+export const updateVerificationFromWebhook = internalMutation({
+  args: {
+    stripeVerificationSessionId: v.string(),
+    status: v.union(
+      v.literal("created"),
+      v.literal("requires_input"),
+      v.literal("processing"),
+      v.literal("verified"),
+      v.literal("canceled"),
+    ),
+    verifiedName: v.optional(v.string()),
+    verifiedDob: v.optional(v.string()),
+    lastErrorCode: v.optional(v.string()),
+    lastErrorReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_stripeVerificationSessionId", (q) =>
+        q.eq("stripeVerificationSessionId", args.stripeVerificationSessionId),
+      )
+      .unique();
+    if (!campaign) return { updated: false };
+
+    await ctx.db.patch(campaign._id, {
+      stripeVerificationStatus: args.status,
+      ...(args.verifiedName !== undefined ? { verifiedName: args.verifiedName } : {}),
+      ...(args.verifiedDob !== undefined ? { verifiedDob: args.verifiedDob } : {}),
+      // Only meaningful on requires_input — clear it on every other status so a
+      // stale error message can't linger after a later successful attempt.
+      stripeVerificationLastErrorCode:
+        args.status === "requires_input" ? args.lastErrorCode : undefined,
+      stripeVerificationLastErrorReason:
+        args.status === "requires_input" ? args.lastErrorReason : undefined,
+    });
+    return { updated: true };
   },
 });
 

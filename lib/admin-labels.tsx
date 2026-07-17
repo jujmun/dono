@@ -55,6 +55,55 @@ export function AdminStatusChip({
   );
 }
 
+export type StripeVerificationStatus =
+  | "created"
+  | "requires_input"
+  | "processing"
+  | "verified"
+  | "canceled"
+  | null;
+
+export function stripeStatusChip(
+  status: StripeVerificationStatus | undefined,
+): { label: string; tone: "neutral" | "waiting" | "live" | "removed" } {
+  switch (status) {
+    case "verified":
+      return { label: "Verified", tone: "live" };
+    case "processing":
+    case "created":
+      return { label: "Pending", tone: "waiting" };
+    case "requires_input":
+      return { label: "Needs attention", tone: "removed" };
+    case "canceled":
+      return { label: "Canceled", tone: "removed" };
+    default:
+      return { label: "Not started", tone: "neutral" };
+  }
+}
+
+/**
+ * Distinct from the overall stripeVerificationStatus: whether the selfie
+ * specifically matched. Derived (no dedicated backend field) — "verified"
+ * implies the selfie check passed (require_matching_selfie is set at
+ * session creation); a requires_input with a selfie_* last_error means it
+ * didn't; anything else is treated as pending/unknown rather than assumed.
+ */
+export function selfieMatchChip(record: {
+  stripeVerificationStatus: StripeVerificationStatus | undefined;
+  stripeVerificationLastErrorCode: string | null | undefined;
+}): { label: string; tone: "neutral" | "waiting" | "live" | "removed" } {
+  if (record.stripeVerificationStatus === "verified") {
+    return { label: "Selfie match: Yes", tone: "live" };
+  }
+  if (
+    record.stripeVerificationStatus === "requires_input" &&
+    record.stripeVerificationLastErrorCode?.startsWith("selfie_")
+  ) {
+    return { label: "Selfie match: No", tone: "removed" };
+  }
+  return { label: "Selfie match: Pending", tone: "waiting" };
+}
+
 export function statusChipTone(
   label: string,
 ): "waiting" | "live" | "removed" | "neutral" {

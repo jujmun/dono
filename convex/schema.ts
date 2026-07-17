@@ -59,7 +59,8 @@ export default defineSchema({
     .index("by_community", ["creator.communityId"])
     .index("by_society_approval", ["societyApprovalStatus"])
     .index("by_status", ["status"])
-    .index("by_createdBy", ["createdBy"]),
+    .index("by_createdBy", ["createdBy"])
+    .index("by_stripeVerificationSessionId", ["stripeVerificationSessionId"]),
   campaignFollows: defineTable({
     userId: v.id("users"),
     campaignSlug: v.string(),
