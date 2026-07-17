@@ -366,18 +366,20 @@ export default function AdminPortalPage() {
                       </Text>
 
                       <View className="mt-4 gap-2">
-                        <Pressable
-                          onPress={() => void Linking.openURL(society.websiteUrl)}
-                          className="flex-row items-center gap-2"
-                        >
-                          <Globe size={14} color="#56615A" />
-                          <Text
-                            className="flex-1 text-sm text-dono-primary"
-                            numberOfLines={1}
+                        {society.websiteUrl ? (
+                          <Pressable
+                            onPress={() => void Linking.openURL(society.websiteUrl)}
+                            className="flex-row items-center gap-2"
                           >
-                            {society.websiteUrl}
-                          </Text>
-                        </Pressable>
+                            <Globe size={14} color="#56615A" />
+                            <Text
+                              className="flex-1 text-sm text-dono-primary"
+                              numberOfLines={1}
+                            >
+                              {society.websiteUrl}
+                            </Text>
+                          </Pressable>
+                        ) : null}
                         {society.secondaryLink ? (
                           <Pressable
                             onPress={() =>

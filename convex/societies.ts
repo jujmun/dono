@@ -207,10 +207,10 @@ export const create = mutation({
         message: "About text is required and must be at most 5000 characters.",
       });
     }
-    if (!websiteUrl || websiteUrl.length > MAX_URL_LENGTH || !isValidUrl(websiteUrl)) {
+    if (websiteUrl && (websiteUrl.length > MAX_URL_LENGTH || !isValidUrl(websiteUrl))) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: "A valid website URL is required.",
+        message: "Website must be a valid URL.",
       });
     }
     if (secondaryLink && (secondaryLink.length > MAX_URL_LENGTH || !isValidUrl(secondaryLink))) {
@@ -219,13 +219,10 @@ export const create = mutation({
         message: "Secondary link must be a valid URL.",
       });
     }
-    if (
-      args.supportingDocumentStorageIds.length === 0 ||
-      args.supportingDocumentStorageIds.length > MAX_DOCUMENTS
-    ) {
+    if (args.supportingDocumentStorageIds.length > MAX_DOCUMENTS) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: `Provide between 1 and ${MAX_DOCUMENTS} supporting documents.`,
+        message: `Provide at most ${MAX_DOCUMENTS} supporting documents.`,
       });
     }
 
@@ -267,6 +264,70 @@ export const create = mutation({
     });
 
     return { slug, societyId };
+  },
+});
+
+/**
+ * Lets the creator revise supporting documents and links while their society
+ * is still pending review — the record is created as soon as identity
+ * verification starts, before the applicant finishes the form.
+ */
+export const updateVerificationMaterials = mutation({
+  args: {
+    slug: v.string(),
+    websiteUrl: v.string(),
+    secondaryLink: v.optional(v.string()),
+    supportingDocumentStorageIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society || society.creatorId !== userId) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission for this action.",
+      });
+    }
+    if (society.status !== "pending") {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "This society has already been reviewed and can no longer be edited.",
+      });
+    }
+
+    const websiteUrl = args.websiteUrl.trim();
+    const secondaryLink = args.secondaryLink?.trim();
+    if (websiteUrl && (websiteUrl.length > MAX_URL_LENGTH || !isValidUrl(websiteUrl))) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Website must be a valid URL.",
+      });
+    }
+    if (secondaryLink && (secondaryLink.length > MAX_URL_LENGTH || !isValidUrl(secondaryLink))) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Secondary link must be a valid URL.",
+      });
+    }
+    if (args.supportingDocumentStorageIds.length > MAX_DOCUMENTS) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: `Provide at most ${MAX_DOCUMENTS} supporting documents.`,
+      });
+    }
+
+    for (const storageId of args.supportingDocumentStorageIds) {
+      await claimStorageId(ctx, userId, storageId);
+    }
+
+    await ctx.db.patch(society._id, {
+      websiteUrl,
+      secondaryLink: secondaryLink || undefined,
+      supportingDocumentStorageIds: args.supportingDocumentStorageIds,
+    });
   },
 });
 
