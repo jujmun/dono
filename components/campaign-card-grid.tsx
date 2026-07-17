@@ -1,7 +1,7 @@
 import { View } from "react-native";
 import { type Href } from "expo-router";
 import type { Campaign } from "@/lib/types";
-import { CampaignCard } from "@/components/campaign-card";
+import { RetroCampaignCard } from "@/components/retro";
 import { cn } from "@/lib/utils";
 
 interface CampaignCardGridProps {
@@ -15,7 +15,6 @@ interface CampaignCardGridProps {
 
 export function CampaignCardGrid({
   campaigns,
-  variant,
   getHref,
   featured = false,
   centered = false,
@@ -29,7 +28,7 @@ export function CampaignCardGrid({
         useFeaturedLayout ? "justify-center" : "justify-between",
       )}
     >
-      {campaigns.map((campaign) => (
+      {campaigns.map((campaign, index) => (
         <View
           key={campaign.id}
           className={cn(
@@ -38,9 +37,9 @@ export function CampaignCardGrid({
               : "w-full sm:w-[48%]",
           )}
         >
-          <CampaignCard
+          <RetroCampaignCard
             campaign={campaign}
-            variant={variant}
+            accent={index % 2 === 0 ? "indigo" : "tan"}
             href={getHref?.(campaign)}
           />
         </View>

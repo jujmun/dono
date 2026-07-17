@@ -4,18 +4,6 @@ import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef } from "react";
 import {
   useFonts,
-  Fraunces_400Regular,
-  Fraunces_500Medium,
-} from "@expo-google-fonts/fraunces";
-import {
-  JetBrainsMono_400Regular,
-  JetBrainsMono_500Medium,
-} from "@expo-google-fonts/jetbrains-mono";
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-} from "@expo-google-fonts/inter";
-import {
   Fredoka_500Medium,
   Fredoka_700Bold,
 } from "@expo-google-fonts/fredoka";
@@ -161,12 +149,6 @@ function AppTree() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Fraunces_400Regular,
-    Fraunces_500Medium,
-    JetBrainsMono_400Regular,
-    JetBrainsMono_500Medium,
-    Inter_400Regular,
-    Inter_500Medium,
     Fredoka_500Medium,
     Fredoka_700Bold,
     SpaceMono_400Regular,

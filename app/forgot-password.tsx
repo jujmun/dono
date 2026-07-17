@@ -163,7 +163,7 @@ export default function ForgotPasswordPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-md px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             {mode === "reset" ? "Reset your password" : "Set your password"}
           </Text>
           <Text className="mt-1 text-sm text-dono-muted">
@@ -201,7 +201,7 @@ export default function ForgotPasswordPage() {
                     loading || normalizedEmail.length === 0 ? "opacity-50" : ""
                   }`}
                 >
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-white">
                     {loading ? "Sending..." : "Send code"}
                   </Text>
                 </Pressable>
@@ -248,7 +248,7 @@ export default function ForgotPasswordPage() {
                     loading ? "opacity-50" : ""
                   }`}
                 >
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-white">
                     {loading
                       ? "Updating..."
                       : mode === "reset"

@@ -11,21 +11,29 @@ interface SocietyCardProps {
 export function SocietyCard({ society }: SocietyCardProps) {
   return (
     <Link href={`/societies/${society.slug}`} asChild>
-      <Pressable className="w-full overflow-hidden rounded-lg border border-dono-border bg-white active:opacity-95">
-        <CampaignImage image={society.coverImageUrl ?? "default"} className="h-28">
-          <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-white bg-dono-primary shadow">
-            <Text className="font-sans-medium text-sm text-white">
+      <Pressable className="w-full overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper shadow-[5px_5px_0_#211E1A] active:opacity-95">
+        <CampaignImage
+          image={society.coverImageUrl ?? "default"}
+          className="h-28 border-b-[3px] border-retro-ink bg-retro-indigo"
+        >
+          <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]">
+            <Text className="font-retro-bold text-sm text-retro-paper">
               {initialsFor(society.name)}
             </Text>
           </View>
           {society.status === "pending" ? (
-            <View className="absolute right-3 top-3 rounded-full bg-amber-500 px-2 py-0.5">
-              <Text className="font-sans-medium text-[10px] text-white">Pending review</Text>
+            <View className="absolute right-3 top-3 rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
+              <Text className="font-retro-bold text-[10px] text-retro-ink">
+                Pending review
+              </Text>
             </View>
           ) : null}
         </CampaignImage>
         <View className="p-4">
-          <Text className="font-display-medium text-sm text-dono-text" numberOfLines={1}>
+          <Text
+            className="font-retro-bold text-sm text-retro-ink"
+            numberOfLines={1}
+          >
             {society.name}
           </Text>
         </View>

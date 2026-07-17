@@ -73,7 +73,7 @@ export default function AdminArchivePage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -106,7 +106,7 @@ export default function AdminArchivePage() {
           </View>
         ) : filtered.length === 0 ? (
           <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
-            <Text className="font-sans-medium text-base text-dono-text">
+            <Text className="font-retro-bold text-base text-dono-text">
               {trimmedSearch ? "No matches" : "Nothing removed yet"}
             </Text>
             <Text className="mt-2 text-sm text-dono-muted">
@@ -142,7 +142,7 @@ export default function AdminArchivePage() {
                           <Text className="text-xs text-dono-muted">{when}</Text>
                         ) : null}
                       </View>
-                      <Text className="font-display-medium text-lg text-dono-text">
+                      <Text className="font-retro-bold text-lg text-dono-text">
                         {campaign.title}
                       </Text>
                       <Text className="mt-1 text-sm text-dono-muted">
@@ -159,7 +159,7 @@ export default function AdminArchivePage() {
                       ) : null}
                     </View>
                     <View className="items-center gap-0.5 pt-1">
-                      <Text className="text-xs font-sans-medium text-dono-muted">
+                      <Text className="text-xs font-retro-bold text-dono-muted">
                         Open
                       </Text>
                       <ChevronRight size={18} color="#56615A" />

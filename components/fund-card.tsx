@@ -21,12 +21,12 @@ export function FundCard({ fund }: FundCardProps) {
         </CampaignImage>
 
         <View className="flex-1 p-4">
-          <Text className="mb-1 font-sans-medium text-dono-text">{fund.name}</Text>
+          <Text className="mb-1 font-retro-bold text-dono-text">{fund.name}</Text>
           <Text className="mb-3 text-sm text-dono-muted" numberOfLines={2}>
             {fund.description}
           </Text>
 
-          <Text className="mb-3 font-mono-medium text-xl text-dono-primary">
+          <Text className="mb-3 font-retro-mono-bold text-xl text-dono-primary">
             {formatCurrency(fund.totalRaised)}
           </Text>
 

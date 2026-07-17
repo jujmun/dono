@@ -157,7 +157,7 @@ export default function AdminPortalPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             Access denied
           </Text>
           <Text className="mt-2 text-dono-muted">
@@ -187,7 +187,7 @@ export default function AdminPortalPage() {
             >
               <Text
                 className={cn(
-                  "font-sans-medium text-xs",
+                  "font-retro-bold text-xs",
                   reviewType === t.id ? "text-white" : "text-dono-muted",
                 )}
               >
@@ -222,7 +222,7 @@ export default function AdminPortalPage() {
             </View>
           ) : pendingCampaigns.length === 0 ? (
             <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
-              <Text className="font-sans-medium text-base text-dono-text">
+              <Text className="font-retro-bold text-base text-dono-text">
                 {trimmedSearch ? "No matches" : "You’re all caught up"}
               </Text>
               <Text className="mt-2 text-sm text-dono-muted">
@@ -252,7 +252,7 @@ export default function AdminPortalPage() {
                           tone={stripeStatusChip(campaign.stripeVerificationStatus).tone}
                         />
                       </View>
-                      <Text className="font-display-medium text-lg text-dono-text">
+                      <Text className="font-retro-bold text-lg text-dono-text">
                         {campaign.title}
                       </Text>
                       <Text className="mt-1 text-sm text-dono-muted">
@@ -272,7 +272,7 @@ export default function AdminPortalPage() {
                       </Text>
                     </View>
                     <View className="items-center gap-0.5 pt-1">
-                      <Text className="text-xs font-sans-medium text-dono-muted">
+                      <Text className="text-xs font-retro-bold text-dono-muted">
                         Open
                       </Text>
                       <ChevronRight size={18} color="#56615A" />
@@ -302,7 +302,7 @@ export default function AdminPortalPage() {
               </View>
             ) : filteredSocieties.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
-                <Text className="font-sans-medium text-base text-dono-text">
+                <Text className="font-retro-bold text-base text-dono-text">
                   {trimmedSearch ? "No matches" : "You’re all caught up"}
                 </Text>
                 <Text className="mt-2 text-sm text-dono-muted">
@@ -324,7 +324,7 @@ export default function AdminPortalPage() {
                       <View className="mb-2">
                         <AdminStatusChip label="Waiting" tone="waiting" />
                       </View>
-                      <Text className="font-display-medium text-lg text-dono-text">
+                      <Text className="font-retro-bold text-lg text-dono-text">
                         {society.name}
                       </Text>
                       <Text className="mt-1 text-xs text-dono-muted">
@@ -368,7 +368,7 @@ export default function AdminPortalPage() {
                       </View>
 
                       <View className="mt-4 rounded-xl border border-dono-border bg-dono-surface-muted p-4">
-                        <Text className="mb-2 font-sans-medium text-sm text-dono-text">
+                        <Text className="mb-2 font-retro-bold text-sm text-dono-text">
                           Verification documents
                         </Text>
                         {society.supportingDocumentUrls.length === 0 ? (
@@ -441,7 +441,7 @@ export default function AdminPortalPage() {
 
                         {society.verifiedName || society.verifiedDob ? (
                           <View className="mt-2 rounded-lg border border-dono-border bg-white px-3 py-2">
-                            <Text className="text-xs font-sans-medium text-dono-muted">
+                            <Text className="text-xs font-retro-bold text-dono-muted">
                               Auto-extracted from ID (Stripe) — reference only, not
                               verified ground truth
                             </Text>
@@ -461,7 +461,7 @@ export default function AdminPortalPage() {
 
                       {reasonOpen ? (
                         <View className="mt-4 rounded-xl border border-rose-200 p-4">
-                          <Text className="font-sans-medium text-sm text-dono-text">
+                          <Text className="font-retro-bold text-sm text-dono-text">
                             Why are you denying this?
                           </Text>
                           <Text className="mt-1 text-xs text-dono-muted">
@@ -488,7 +488,7 @@ export default function AdminPortalPage() {
                               disabled={societyBusy !== null}
                               className="rounded-xl px-4 py-2.5"
                             >
-                              <Text className="font-sans-medium text-sm text-dono-muted">
+                              <Text className="font-retro-bold text-sm text-dono-muted">
                                 Cancel
                               </Text>
                             </Pressable>
@@ -503,7 +503,7 @@ export default function AdminPortalPage() {
                               )}
                             >
                               <X size={15} color="#fff" />
-                              <Text className="font-sans-medium text-sm text-white">
+                              <Text className="font-retro-bold text-sm text-white">
                                 {busyHere && societyBusy?.action === "reject"
                                   ? "Working..."
                                   : "Confirm deny"}
@@ -522,7 +522,7 @@ export default function AdminPortalPage() {
                             )}
                           >
                             <Check size={16} color="#fff" />
-                            <Text className="font-sans-medium text-sm text-white">
+                            <Text className="font-retro-bold text-sm text-white">
                               {busyHere && societyBusy?.action === "approve"
                                 ? "Working..."
                                 : "Approve"}
@@ -541,7 +541,7 @@ export default function AdminPortalPage() {
                             )}
                           >
                             <X size={16} color="#be123c" />
-                            <Text className="font-sans-medium text-sm text-rose-700">
+                            <Text className="font-retro-bold text-sm text-rose-700">
                               Deny
                             </Text>
                           </Pressable>

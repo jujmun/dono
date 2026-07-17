@@ -66,7 +66,7 @@ export function CampaignPreview({
           />
         </View>
 
-        <Text className="mb-3 font-display-medium text-2xl text-dono-text">{title}</Text>
+        <Text className="mb-3 font-retro-bold text-2xl text-dono-text">{title}</Text>
 
         <View className="mb-4 gap-2">
           <View className="flex-row items-center gap-1">
@@ -75,7 +75,7 @@ export function CampaignPreview({
           </View>
           <View className="flex-row items-center gap-1">
             <Clock size={16} color="#56615A" />
-            <Text className="font-mono text-sm text-dono-muted">
+            <Text className="font-retro-mono text-sm text-dono-muted">
               Deadline:{" "}
               {new Date(deadline).toLocaleDateString("en-GB", {
                 day: "numeric",
@@ -95,7 +95,7 @@ export function CampaignPreview({
         />
 
         <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-          <Text className="mb-3 text-lg font-sans-medium text-dono-text">The story</Text>
+          <Text className="mb-3 text-lg font-retro-bold text-dono-text">The story</Text>
           <Text className="leading-relaxed text-dono-muted">{story}</Text>
         </View>
 
@@ -115,7 +115,7 @@ export function CampaignPreview({
       <View className="mt-8 w-full shrink-0 lg:mt-0 lg:w-80">
         <View className="rounded-2xl border border-dono-border bg-white p-6">
           <View className="mb-4 flex-row items-baseline justify-between">
-            <Text className="font-mono-medium text-3xl text-dono-primary">
+            <Text className="font-retro-mono-bold text-3xl text-dono-primary">
               {formatCurrency(0)}
             </Text>
             <Text className="text-sm text-dono-muted">of {formatCurrency(goal)}</Text>
@@ -124,18 +124,18 @@ export function CampaignPreview({
           <Text className="mt-2 text-sm text-dono-muted">0 donors · 0 followers</Text>
 
           <View className="mt-4 rounded-full bg-dono-accent py-3">
-            <Text className="text-center font-sans-medium text-sm text-white">Donate Now</Text>
+            <Text className="text-center font-retro-bold text-sm text-white">Donate Now</Text>
           </View>
 
           <View className="mt-3 flex-row gap-2">
             <View className="flex-1 items-center rounded-xl border border-dono-border py-2.5">
-              <Text className="font-sans-medium text-sm text-dono-muted">Like</Text>
+              <Text className="font-retro-bold text-sm text-dono-muted">Like</Text>
             </View>
             <View className="flex-1 items-center rounded-xl border border-dono-border py-2.5">
-              <Text className="font-sans-medium text-sm text-dono-muted">Follow</Text>
+              <Text className="font-retro-bold text-sm text-dono-muted">Follow</Text>
             </View>
             <View className="items-center justify-center rounded-xl border border-dono-border px-3 py-2.5">
-              <Text className="font-sans-medium text-sm text-dono-muted">↗</Text>
+              <Text className="font-retro-bold text-sm text-dono-muted">↗</Text>
             </View>
           </View>
         </View>

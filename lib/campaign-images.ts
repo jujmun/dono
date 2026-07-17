@@ -2,7 +2,9 @@ import type { Campaign } from "@/lib/types";
 
 const PHOTO_URI_PATTERN = /^(https?|file|blob|data):/;
 
-export const MAX_CAMPAIGN_IMAGES = 5;
+/** Gallery allows 2–4 images when photos are provided. */
+export const MIN_CAMPAIGN_IMAGES = 2;
+export const MAX_CAMPAIGN_IMAGES = 4;
 
 export function isCampaignPhotoSource(image: string): boolean {
   return PHOTO_URI_PATTERN.test(image);

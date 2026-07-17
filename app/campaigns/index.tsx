@@ -10,10 +10,8 @@ import {
 } from "react-native";
 import { useQuery } from "convex/react";
 import { Search, SlidersHorizontal } from "lucide-react-native";
-import {
-  RetroBrowserShell,
-  RetroCampaignCard,
-} from "@/components/campaigns/retro";
+import { AppShell } from "@/components/app-shell";
+import { RetroCampaignCard } from "@/components/retro";
 import { categoryLabels } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
@@ -41,7 +39,7 @@ export default function CampaignsPage() {
   });
 
   return (
-    <RetroBrowserShell path="campaigns">
+    <AppShell>
       <Text className="mb-1.5 font-retro-bold text-[32px] text-retro-ink">
         Campaigns
       </Text>
@@ -124,6 +122,6 @@ export default function CampaignsPage() {
           ))}
         </View>
       )}
-    </RetroBrowserShell>
+    </AppShell>
   );
 }

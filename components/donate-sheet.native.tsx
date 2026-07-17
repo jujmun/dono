@@ -150,9 +150,9 @@ export function DonateSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/40">
         <View className="rounded-t-3xl bg-white p-6">
-          <Text className="font-display-medium text-xl text-dono-text">Donate to campaign</Text>
+          <Text className="font-retro-bold text-xl text-dono-text">Donate to campaign</Text>
           <Text className="mt-1 text-sm text-dono-muted">{campaignTitle}</Text>
-          <Text className="mt-4 font-mono-medium text-3xl text-dono-primary">
+          <Text className="mt-4 font-retro-mono-bold text-3xl text-dono-primary">
             £{selectedAmount}
             {frequency === "monthly" ? (
               <Text className="text-base text-dono-muted">/month</Text>
@@ -186,7 +186,7 @@ export function DonateSheet({
               </Text>
               <Link href="/signin" asChild>
                 <Pressable className="mt-4 items-center rounded-full bg-dono-primary py-3">
-                  <Text className="font-sans-medium text-sm text-white">Sign in to continue</Text>
+                  <Text className="font-retro-bold text-sm text-white">Sign in to continue</Text>
                 </Pressable>
               </Link>
             </View>
@@ -204,7 +204,7 @@ export function DonateSheet({
                 {loading ? (
                   <ActivityIndicator color="#fff" />
                 ) : (
-                  <Text className="font-sans-medium text-sm text-white">Continue to payment</Text>
+                  <Text className="font-retro-bold text-sm text-white">Continue to payment</Text>
                 )}
               </Pressable>
             </>

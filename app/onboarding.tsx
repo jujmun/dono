@@ -71,7 +71,7 @@ export default function OnboardingPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-lg px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             Set up your profile
           </Text>
           <Text className="mt-1 text-sm leading-relaxed text-dono-muted">

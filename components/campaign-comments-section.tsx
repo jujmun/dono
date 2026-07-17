@@ -105,7 +105,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
         )}
       >
         {!embedded ? (
-          <Text className="mb-4 text-lg font-sans-medium text-dono-text">
+          <Text className="mb-4 text-lg font-retro-bold text-dono-text">
             Comments
           </Text>
         ) : null}
@@ -155,7 +155,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                 ) : (
                   <Text
                     className={cn(
-                      "font-sans-medium text-sm",
+                      "font-retro-bold text-sm",
                       embedded ? "font-retro-bold text-retro-paper" : "text-white",
                     )}
                   >
@@ -193,7 +193,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               >
                 <Text
                   className={cn(
-                    "font-sans-medium text-sm",
+                    "font-retro-bold text-sm",
                     embedded ? "font-retro-bold text-retro-paper" : "text-white",
                   )}
                 >
@@ -245,7 +245,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                   <View className="min-w-0 flex-1">
                     <View className="flex-row items-start justify-between gap-2">
                       <View className="min-w-0 flex-1">
-                        <Text className="font-sans-medium text-sm text-dono-text">
+                        <Text className="font-retro-bold text-sm text-dono-text">
                           {comment.authorName}
                         </Text>
                         <Text className="text-xs text-dono-muted">

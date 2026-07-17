@@ -93,7 +93,7 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-8">
       <View className="mb-6 flex-row items-center justify-between">
-        <Text className="font-mono text-xs uppercase tracking-wide text-dono-muted">
+        <Text className="font-retro-mono text-xs uppercase tracking-wide text-dono-muted">
           Getting started {step + 1}/{slides.length}
         </Text>
         <Pressable onPress={onComplete} disabled={loading}>
@@ -105,11 +105,11 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
         <View className="mb-5 h-16 w-16 items-center justify-center rounded-2xl bg-dono-primary/10">
           <Icon size={28} color="#17211B" strokeWidth={2} />
         </View>
-        <Text className="text-center font-display-medium text-2xl text-dono-text">
+        <Text className="text-center font-retro-bold text-2xl text-dono-text">
           {slide.title}
         </Text>
         <View className="mt-2 rounded-full bg-dono-surface-muted px-3 py-1">
-          <Text className="font-mono text-xs uppercase tracking-wide text-dono-muted">
+          <Text className="font-retro-mono text-xs uppercase tracking-wide text-dono-muted">
             {slide.navLabel}
           </Text>
         </View>
@@ -137,7 +137,7 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
             className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border py-3"
           >
             <ArrowLeft size={16} color="#56615A" />
-            <Text className="font-sans-medium text-sm text-dono-muted">Back</Text>
+            <Text className="font-retro-bold text-sm text-dono-muted">Back</Text>
           </Pressable>
         ) : (
           <View className="flex-1" />
@@ -156,7 +156,7 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
             loading ? "opacity-50" : ""
           }`}
         >
-          <Text className="font-sans-medium text-sm text-white">
+          <Text className="font-retro-bold text-sm text-white">
             {loading ? "Please wait..." : isLast ? "Enter Dono" : "Next"}
           </Text>
           {!loading && !isLast ? <ArrowRight size={16} color="#ffffff" /> : null}

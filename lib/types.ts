@@ -52,6 +52,8 @@ export interface Campaign {
   college?: string;
   image: string;
   images?: string[];
+  /** YouTube or Vimeo watch URL for the campaign media hero. */
+  videoUrl?: string;
   createdAt: string;
   deadline: string;
   status: "pending" | "rejected" | "active" | "funded" | "completed";

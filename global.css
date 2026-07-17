@@ -5,8 +5,8 @@
 @layer base {
   html,
   body {
-    font-family: "Inter_400Regular", "Inter", -apple-system, sans-serif;
-    font-weight: 400;
+    font-family: "Fredoka_500Medium", "Fredoka", sans-serif;
+    font-weight: 500;
   }
 
   /* Kill browser focus ring on RN-web inputs (retro UI uses ink borders instead) */

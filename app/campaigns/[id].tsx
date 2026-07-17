@@ -11,11 +11,13 @@ import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { usePostHog } from "posthog-react-native";
 import {
-  RetroBrowserShell,
+  CampaignMediaHero,
+  CampaignPhotoGrid,
+  DETAIL_DONATION_PRESETS,
   RetroDonateSidebar,
   RetroPanel,
-} from "@/components/campaigns/retro";
-import { CampaignImageGallery } from "@/components/campaign-image-gallery";
+} from "@/components/retro";
+import { AppShell } from "@/components/app-shell";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
 import {
   ReceiptDivider,
@@ -23,7 +25,7 @@ import {
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
-import { categoryLabels, formatCurrency } from "@/lib/constants";
+import { formatCurrency } from "@/lib/constants";
 import { buildGoalLineItems } from "@/lib/receipt";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
@@ -55,7 +57,9 @@ export default function CampaignDetailPage() {
     id ? { campaignSlug: id } : "skip",
   );
   const posthog = usePostHog();
-  const [selectedAmount, setSelectedAmount] = useState(25);
+  const [selectedAmount, setSelectedAmount] = useState<number>(
+    DETAIL_DONATION_PRESETS[2],
+  );
   const [customAmount, setCustomAmount] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
   const [donateAnonymously, setDonateAnonymously] = useState(false);
@@ -120,17 +124,17 @@ export default function CampaignDetailPage() {
 
   if (campaign === undefined) {
     return (
-      <RetroBrowserShell path={id ? `campaigns/${id}` : "campaigns"}>
+      <AppShell>
         <View className="items-center py-16">
           <ActivityIndicator color="#211E1A" />
         </View>
-      </RetroBrowserShell>
+      </AppShell>
     );
   }
 
   if (campaign === null) {
     return (
-      <RetroBrowserShell path={id ? `campaigns/${id}` : "campaigns/not-found"}>
+      <AppShell>
         <Text className="text-center font-retro-mono text-sm text-[#5c574f]">
           Campaign not found.
         </Text>
@@ -141,15 +145,13 @@ export default function CampaignDetailPage() {
             </Text>
           </Pressable>
         </Link>
-      </RetroBrowserShell>
+      </AppShell>
     );
   }
 
   const resolvedAmount = customAmount ? Number(customAmount) : selectedAmount;
   const liked = engagement?.liked ?? false;
   const following = engagement?.followingCampaign ?? false;
-  const categoryLabel =
-    categoryLabels[campaign.category] ?? campaign.category;
   const deadlineLabel = new Date(campaign.deadline).toLocaleDateString(
     "en-GB",
     {
@@ -158,6 +160,8 @@ export default function CampaignDetailPage() {
       year: "numeric",
     },
   );
+  const creatorInitial = (campaign.creator.name || "?").trim().charAt(0).toUpperCase();
+  const goalLines = buildGoalLineItems(campaign);
 
   const handleToggleLike = async () => {
     if (!id || likeLoading) return;
@@ -209,14 +213,6 @@ export default function CampaignDetailPage() {
     }
   };
 
-  const scrollToComments = () => {
-    if (Platform.OS === "web" && typeof document !== "undefined") {
-      document
-        .getElementById("campaign-comments")
-        ?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  };
-
   const openDonateSheet = () => {
     posthog?.capture("donation_started", {
       campaign_id: campaign.id,
@@ -265,7 +261,7 @@ export default function CampaignDetailPage() {
   );
 
   return (
-    <RetroBrowserShell path={`campaigns/${campaign.id}`}>
+    <AppShell>
       <Link href="/campaigns" asChild>
         <Pressable className="mb-4 self-start">
           <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
@@ -274,175 +270,155 @@ export default function CampaignDetailPage() {
         </Pressable>
       </Link>
 
+      {/* Title + creator */}
+      <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
+        <Text className="font-retro-bold text-[28px] uppercase leading-tight text-retro-ink md:text-[34px]">
+          {campaign.title}
+        </Text>
+        {campaign.verifications.length > 0 ? (
+          <View
+            className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint"
+            accessibilityLabel="Verified campaign"
+          >
+            <Text className="text-[11px] font-bold text-white">✓</Text>
+          </View>
+        ) : null}
+      </View>
+
+      <View className="mb-6 flex-row items-center gap-2.5">
+        <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
+          <Text className="font-retro-bold text-sm text-retro-ink">
+            {creatorInitial}
+          </Text>
+        </View>
+        <View>
+          <Text className="font-retro-bold text-sm text-retro-ink">
+            {campaign.creator.name}
+          </Text>
+          <Text className="font-retro-mono text-[11px] text-[#5c574f]">
+            Deadline {deadlineLabel}
+          </Text>
+        </View>
+      </View>
+
+      {/* Media + donate */}
       <View
-        className="flex-row flex-wrap gap-6"
+        className="mb-6 flex-row flex-wrap gap-5"
         style={{ alignItems: "flex-start" }}
       >
         <View
           style={{
             flexGrow: 1,
             flexBasis: isWide ? "58%" : "100%",
-            maxWidth: isWide ? "62%" : "100%",
+            maxWidth: isWide ? "64%" : "100%",
             minWidth: 0,
           }}
         >
-          {!isWide ? <View className="mb-5">{donateSidebar}</View> : null}
+          <CampaignMediaHero campaign={campaign} />
+        </View>
+        <View
+          style={{
+            flexGrow: 1,
+            flexBasis: isWide ? "30%" : "100%",
+            maxWidth: isWide ? "34%" : "100%",
+            minWidth: isWide ? 260 : undefined,
+          }}
+          className={isWide ? "lg:sticky lg:top-4" : ""}
+        >
+          {donateSidebar}
+        </View>
+      </View>
 
-          <CampaignImageGallery
-            image={campaign.image}
-            images={campaign.images}
-            category={campaign.category}
-            className="mb-5"
-            heroClassName="min-h-[260px] rounded-[14px] border-[3px] border-retro-ink bg-retro-indigo shadow-[5px_5px_0_#211E1A]"
-          >
-            <View className="absolute left-3.5 top-3.5 rounded-full border-2 border-retro-ink bg-retro-paper px-3.5 py-1 shadow-[3px_3px_0_#211E1A]">
-              <Text className="font-retro-bold text-[12.5px] text-retro-ink">
-                {categoryLabel}
-              </Text>
-            </View>
-            {campaign.status === "funded" ? (
-              <View className="absolute right-3.5 top-3.5 rounded-full border-2 border-retro-ink bg-retro-mint px-3 py-1">
-                <Text className="font-retro-bold text-[12px] text-retro-paper">
-                  Fully Funded
-                </Text>
-              </View>
-            ) : null}
-          </CampaignImageGallery>
-
-          <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
-            <Text className="font-retro-bold text-[26px] text-retro-ink">
-              {campaign.title}
-            </Text>
-            {campaign.verifications.length > 0 ? (
-              <View
-                className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint"
-                accessibilityLabel="Verified campaign"
-              >
-                <Text className="text-[11px] font-bold text-white">✓</Text>
-              </View>
-            ) : null}
-          </View>
-
-          <View className="mb-3.5 flex-row flex-wrap gap-4">
-            <Text className="font-retro-mono text-[12.5px] text-[#4a453c]">
-              📍{" "}
-              {(campaign.university +
-                (campaign.college ? ` · ${campaign.college}` : "")
-              ).toUpperCase()}
-            </Text>
-            <Text className="font-retro-mono text-[12.5px] text-[#4a453c]">
-              ⏱ DEADLINE: {deadlineLabel.toUpperCase()}
-            </Text>
-          </View>
-
-          <View className="mb-5 flex-row flex-wrap gap-3">
-            <Pressable
-              onPress={() => void handleToggleLike()}
-              className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5"
-            >
-              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
-                ♡ {campaign.likes} like{campaign.likes === 1 ? "" : "s"}
-              </Text>
-            </Pressable>
-            <View className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5">
-              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
-                🎁 {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
-              </Text>
-            </View>
-            <View className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5">
-              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
-                👥 {campaign.followers} follower
-                {campaign.followers === 1 ? "" : "s"}
-              </Text>
-            </View>
-            <Pressable
-              onPress={scrollToComments}
-              className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5"
-            >
-              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
-                💬 {campaign.comments} comment
-                {campaign.comments === 1 ? "" : "s"}
-              </Text>
-            </Pressable>
-          </View>
-
-          <View nativeID="campaign-comments">
-            <RetroPanel title="Comments.log" accent="marigold">
-              <CampaignCommentsSection
-                ref={commentsSectionRef}
-                campaignSlug={campaign.id}
-                isAuthenticated={isAuthenticated}
-                embedded
-              />
-            </RetroPanel>
-          </View>
-
-          <RetroPanel title="The_Story.txt" accent="marigold">
+      {/* Why? + Cost breakdown */}
+      <View
+        className="mb-6 flex-row flex-wrap gap-5"
+        style={{ alignItems: "stretch" }}
+      >
+        <View
+          style={{
+            flexGrow: 1,
+            flexBasis: isWide ? "48%" : "100%",
+            maxWidth: isWide ? "50%" : "100%",
+          }}
+        >
+          <RetroPanel title="Why?" accent="marigold" className="mb-0 h-full">
             <Text className="text-sm leading-6 text-retro-ink">
               {campaign.story}
             </Text>
           </RetroPanel>
-
-          {(campaign.impactItems?.length ?? 0) >= 2 ? (
-            <RetroPanel title="Fund_Breakdown.sys" accent="marigold">
-              <ReceiptLedger>
-                {buildGoalLineItems(campaign).map((line) => (
-                  <ReceiptLineRow key={line.label} {...line} />
-                ))}
-                <ReceiptDivider />
-                <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
-              </ReceiptLedger>
-              <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
-                Raised {formatCurrency(campaign.raised)} of{" "}
-                {formatCurrency(campaign.goal)}
-              </Text>
-            </RetroPanel>
-          ) : null}
-
-          {campaign.updates.length > 0 ? (
-            <RetroPanel title="Updates.log" accent="marigold">
-              <View className="gap-4">
-                {campaign.updates.map((update) => (
-                  <View
-                    key={update.id}
-                    className="rounded-lg border-2 border-retro-ink bg-retro-cream p-3.5"
-                  >
-                    <View className="mb-1.5 flex-row items-center justify-between gap-2">
-                      <Text className="flex-1 font-sans-medium text-retro-ink">
-                        {update.title}
-                      </Text>
-                      <Text className="font-retro-mono text-[11px] text-[#5c574f]">
-                        {new Date(update.date).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                    <Text className="text-sm leading-5 text-[#4a453c]">
-                      {update.content}
-                    </Text>
-                  </View>
-                ))}
-              </View>
-            </RetroPanel>
-          ) : null}
         </View>
-
-        {isWide ? (
-          <View
-            style={{
-              flexGrow: 1,
-              flexBasis: "34%",
-              maxWidth: "38%",
-              minWidth: 280,
-            }}
-            className="lg:sticky lg:top-4"
+        <View
+          style={{
+            flexGrow: 1,
+            flexBasis: isWide ? "45%" : "100%",
+            maxWidth: isWide ? "48%" : "100%",
+          }}
+        >
+          <RetroPanel
+            title="Cost breakdown"
+            accent="sky"
+            className="mb-0 h-full"
           >
-            {donateSidebar}
-          </View>
-        ) : null}
+            <ReceiptLedger>
+              {goalLines.map((line) => (
+                <ReceiptLineRow key={line.label} {...line} />
+              ))}
+              <ReceiptDivider />
+              <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
+            </ReceiptLedger>
+            <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
+              Raised {formatCurrency(campaign.raised)} of{" "}
+              {formatCurrency(campaign.goal)}
+            </Text>
+          </RetroPanel>
+        </View>
       </View>
+
+      {/* 2×2 photo grid */}
+      <View className="mb-6">
+        <CampaignPhotoGrid campaign={campaign} />
+      </View>
+
+      {/* Comments + updates */}
+      <View nativeID="campaign-comments" className="mb-4">
+        <RetroPanel title="Comments.log" accent="marigold">
+          <CampaignCommentsSection
+            ref={commentsSectionRef}
+            campaignSlug={campaign.id}
+            isAuthenticated={isAuthenticated}
+            embedded
+          />
+        </RetroPanel>
+      </View>
+
+      {campaign.updates.length > 0 ? (
+        <RetroPanel title="Updates.log" accent="mint">
+          <View className="gap-4">
+            {campaign.updates.map((update) => (
+              <View
+                key={update.id}
+                className="rounded-lg border-2 border-retro-ink bg-retro-cream p-3.5"
+              >
+                <View className="mb-1.5 flex-row items-center justify-between gap-2">
+                  <Text className="flex-1 font-retro-bold text-retro-ink">
+                    {update.title}
+                  </Text>
+                  <Text className="font-retro-mono text-[11px] text-[#5c574f]">
+                    {new Date(update.date).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
+                  </Text>
+                </View>
+                <Text className="text-sm leading-5 text-[#4a453c]">
+                  {update.content}
+                </Text>
+              </View>
+            ))}
+          </View>
+        </RetroPanel>
+      ) : null}
 
       <DonateSheet
         visible={donateSheetOpen}
@@ -471,6 +447,6 @@ export default function CampaignDetailPage() {
         pendingConfirmation={thankYou?.pendingConfirmation}
         onClose={() => setThankYou(null)}
       />
-    </RetroBrowserShell>
+    </AppShell>
   );
 }
