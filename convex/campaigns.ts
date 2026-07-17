@@ -193,7 +193,10 @@ export const listPendingForAdmin = query({
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
       .filter((c) => c.status === "pending" && matchesSearch(c, args.search))
-      .map(toCampaign);
+      .map((c) => ({
+        ...toCampaign(c),
+        stripeVerificationStatus: c.stripeVerificationStatus ?? null,
+      }));
   },
 });
 
@@ -266,6 +269,15 @@ export const getForAdmin = query({
     return {
       campaign: toCampaign(campaign),
       student,
+      identity: {
+        stripeVerificationStatus: campaign.stripeVerificationStatus ?? null,
+        stripeVerificationLastErrorCode:
+          campaign.stripeVerificationLastErrorCode ?? null,
+        stripeVerificationLastErrorReason:
+          campaign.stripeVerificationLastErrorReason ?? null,
+        verifiedName: campaign.verifiedName ?? null,
+        verifiedDob: campaign.verifiedDob ?? null,
+      },
       messages: messages
         .sort((a, b) => a.createdAt - b.createdAt)
         .map((m) => ({

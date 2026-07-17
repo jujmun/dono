@@ -809,9 +809,9 @@ export default function CreateCampaignPage() {
               <Pressable
                 onPress={() => setStep(4)}
                 disabled={!canProceed()}
-                className={`rounded-full bg-dono-accent px-6 py-2.5 ${
-                  !canProceed() ? "opacity-50" : ""
-                }`}
+                className={`rounded-full px-6 py-2.5 ${
+                  stripeVerified ? "bg-dono-primary" : "bg-dono-accent"
+                } ${!canProceed() ? "opacity-50" : ""}`}
               >
                 <Text className="font-sans-medium text-sm text-white">Continue</Text>
               </Pressable>
