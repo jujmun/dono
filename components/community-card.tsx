@@ -18,12 +18,12 @@ export function CommunityCard({ community }: CommunityCardProps) {
 
         <View className="relative px-4 pb-4">
           <View className="absolute -top-8 left-4 h-14 w-14 items-center justify-center rounded-xl border-2 border-white bg-dono-primary shadow">
-            <Text className="font-sans-medium text-lg text-white">{community.avatar}</Text>
+            <Text className="font-retro-bold text-lg text-white">{community.avatar}</Text>
           </View>
 
           <View className="pt-9">
             <View className="mb-1 flex-row items-start justify-between gap-2">
-              <Text className="flex-1 font-sans-medium text-dono-text">{community.name}</Text>
+              <Text className="flex-1 font-retro-bold text-dono-text">{community.name}</Text>
               {community.verified && community.verificationType && (
                 <VerificationBadge
                   verification={{
@@ -55,7 +55,7 @@ export function CommunityCard({ community }: CommunityCardProps) {
               </View>
             </View>
 
-            <Text className="mt-2 font-sans-medium text-sm text-dono-primary">
+            <Text className="mt-2 font-retro-bold text-sm text-dono-primary">
               {formatCurrency(community.totalRaised)} raised
             </Text>
           </View>

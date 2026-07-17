@@ -52,7 +52,7 @@ export function ReceiptLineRow({
         className={cn(
           "max-w-[55%] shrink",
           textSize,
-          emphasis ? "font-sans-medium text-dono-text" : "text-dono-text",
+          emphasis ? "font-retro-bold text-dono-text" : "text-dono-text",
           muted && !emphasis && "text-dono-muted",
         )}
         numberOfLines={2}
@@ -66,7 +66,7 @@ export function ReceiptLineRow({
         className={cn(
           "shrink-0 tabular-nums",
           textSize,
-          emphasis ? "font-mono-medium text-dono-text" : "font-mono text-dono-text",
+          emphasis ? "font-retro-mono-bold text-dono-text" : "font-retro-mono text-dono-text",
           muted && !emphasis && "text-dono-muted",
         )}
       >
@@ -101,7 +101,7 @@ export function FundBreakdownSection({
 }) {
   return (
     <View className={cn("rounded-2xl border border-dono-border bg-white p-6", className)}>
-      <Text className="font-sans-medium text-lg text-dono-text">{title}</Text>
+      <Text className="font-retro-bold text-lg text-dono-text">{title}</Text>
       {subtitle ? (
         <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
       ) : null}

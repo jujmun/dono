@@ -420,7 +420,11 @@ export default function CreateSocietyPage() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+    "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
+  const primaryBtnClass =
+    "items-center rounded-full border-2 border-retro-ink bg-retro-mint px-5 py-2.5 shadow-[3px_3px_0_#211E1A]";
+  const secondaryBtnClass =
+    "items-center rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-2.5 shadow-[3px_3px_0_#211E1A]";
 
   if (isLoading) {
     return (
@@ -444,8 +448,8 @@ export default function CreateSocietyPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-2xl px-4 py-8">
         <View className="mb-8 items-center">
-          <Text className="font-display-medium text-2xl text-dono-text">Create a Society</Text>
-          <Text className="mt-1 text-center text-dono-muted">
+          <Text className="font-retro-bold text-2xl text-retro-ink">Create a Society</Text>
+          <Text className="mt-1 text-center text-[#5c574f]">
             Set up your society's page and verify it so alumni can find and support it.
           </Text>
         </View>
@@ -456,7 +460,7 @@ export default function CreateSocietyPage() {
               <View key={s} className="flex-row items-center">
                 <View
                   className={`h-8 w-8 items-center justify-center rounded-full ${
-                    i <= step ? "bg-dono-primary" : "bg-dono-surface-muted"
+                    i <= step ? "bg-retro-mint" : "bg-retro-cream"
                   }`}
                 >
                   {i < step ? (
@@ -469,7 +473,7 @@ export default function CreateSocietyPage() {
                   ) : (
                     <Text
                       className={`text-xs font-bold ${
-                        i === step ? "text-white" : "text-dono-muted"
+                        i === step ? "text-white" : "text-[#5c574f]"
                       }`}
                     >
                       {i + 1}
@@ -479,7 +483,7 @@ export default function CreateSocietyPage() {
                 {i < steps.length - 1 && (
                   <View
                     className={`mx-2 h-0.5 w-10 ${
-                      i < step ? "bg-dono-primary" : "bg-dono-border"
+                      i < step ? "bg-retro-mint" : "bg-retro-ink/20"
                     }`}
                   />
                 )}
@@ -488,11 +492,11 @@ export default function CreateSocietyPage() {
           </View>
         </View>
 
-        <View className="rounded-2xl border border-dono-border bg-white p-6">
+        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-6 shadow-[5px_5px_0_#211E1A]">
           {step === 0 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Society Name
                 </Text>
                 <TextInput
@@ -505,22 +509,22 @@ export default function CreateSocietyPage() {
               </View>
 
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Cover Image
                 </Text>
-                <View className="overflow-hidden rounded-2xl border border-dono-border">
+                <View className="overflow-hidden rounded-2xl border border-retro-ink">
                   <CampaignImage image={coverImage?.uri ?? "default"} className="h-48" />
                 </View>
                 <View className="mt-3 flex-row flex-wrap gap-2">
                   <Pressable
                     onPress={() => void pickCoverImage()}
                     disabled={pickingCover}
-                    className={`flex-row items-center gap-2 rounded-full border border-dono-border px-4 py-2 ${
+                    className={`flex-row items-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
                       pickingCover ? "opacity-50" : ""
                     }`}
                   >
                     <ImagePlus size={16} color="#17211B" />
-                    <Text className="font-sans-medium text-sm text-dono-text">
+                    <Text className="font-retro-bold text-sm text-retro-ink">
                       {pickingCover
                         ? "Opening library..."
                         : coverImage
@@ -531,13 +535,13 @@ export default function CreateSocietyPage() {
                   {coverImage ? (
                     <Pressable
                       onPress={() => setCoverImage(null)}
-                      className="rounded-full border border-dono-border px-4 py-2"
+                      className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2"
                     >
-                      <Text className="font-sans-medium text-sm text-dono-muted">Remove</Text>
+                      <Text className="font-retro-bold text-sm text-[#5c574f]">Remove</Text>
                     </Pressable>
                   ) : null}
                 </View>
-                <Text className="mt-1.5 text-xs text-dono-muted">
+                <Text className="mt-1.5 text-xs text-[#5c574f]">
                   Optional. JPG or PNG, 5MB max.
                 </Text>
               </View>
@@ -547,7 +551,7 @@ export default function CreateSocietyPage() {
           {step === 1 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Short Description
                 </Text>
                 <TextInput
@@ -559,7 +563,7 @@ export default function CreateSocietyPage() {
                 />
               </View>
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   About Your Society
                 </Text>
                 <TextInput
@@ -581,11 +585,11 @@ export default function CreateSocietyPage() {
               <View>
                 <View className="mb-1.5 flex-row items-center gap-2">
                   <Paperclip size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     Supporting Documents
                   </Text>
                 </View>
-                <Text className="mb-3 text-xs text-dono-muted">
+                <Text className="mb-3 text-xs text-[#5c574f]">
                   Upload your society's constitution or proof of official university
                   recognition. Optional — but approval is less likely without
                   supporting documentation.
@@ -596,7 +600,7 @@ export default function CreateSocietyPage() {
                     {supportingDocs.map((doc, index) => (
                       <View
                         key={`${doc.uri}-${index}`}
-                        className="flex-row items-center gap-3 rounded-xl border border-dono-border p-2"
+                        className="flex-row items-center gap-3 rounded-xl border border-retro-ink p-2"
                       >
                         <Image
                           source={{ uri: doc.uri }}
@@ -605,16 +609,16 @@ export default function CreateSocietyPage() {
                           accessibilityLabel="Supporting document thumbnail"
                         />
                         <Text
-                          className="flex-1 text-sm text-dono-text"
+                          className="flex-1 text-sm text-retro-ink"
                           numberOfLines={1}
                         >
                           {doc.name}
                         </Text>
                         <Pressable
                           onPress={() => removeSupportingDocument(index)}
-                          className="h-6 w-6 items-center justify-center rounded-full bg-dono-surface-muted"
+                          className="h-6 w-6 items-center justify-center rounded-full bg-retro-cream"
                         >
-                          <Text className="text-xs font-bold text-dono-text">×</Text>
+                          <Text className="text-xs font-bold text-retro-ink">×</Text>
                         </Pressable>
                       </View>
                     ))}
@@ -624,27 +628,27 @@ export default function CreateSocietyPage() {
                 <Pressable
                   onPress={() => void pickSupportingDocuments()}
                   disabled={pickingDocs || supportingDocs.length >= MAX_DOCUMENTS}
-                  className={`flex-row items-center justify-center gap-2 self-start rounded-full border border-dono-border px-4 py-2 ${
+                  className={`flex-row items-center justify-center gap-2 self-start rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
                     pickingDocs || supportingDocs.length >= MAX_DOCUMENTS ? "opacity-50" : ""
                   }`}
                 >
                   <Paperclip size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     {pickingDocs ? "Opening library..." : "Add document"}
                   </Text>
                 </Pressable>
               </View>
 
-              <View className="border-t border-dono-border pt-6">
+              <View className="border-t border-retro-ink pt-6">
                 <View className="mb-3 flex-row items-center gap-2">
                   <Globe size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     Website &amp; Links
                   </Text>
                 </View>
                 <View className="gap-4">
                   <View>
-                    <Text className="mb-1.5 text-sm text-dono-muted">
+                    <Text className="mb-1.5 text-sm text-[#5c574f]">
                       Website URL (optional)
                     </Text>
                     <TextInput
@@ -665,7 +669,7 @@ export default function CreateSocietyPage() {
                   <View>
                     <View className="mb-1.5 flex-row items-center gap-1.5">
                       <Link2 size={12} color="#56615A" />
-                      <Text className="text-sm text-dono-muted">
+                      <Text className="text-sm text-[#5c574f]">
                         Secondary link (social media, optional)
                       </Text>
                     </View>
@@ -687,35 +691,35 @@ export default function CreateSocietyPage() {
                 </View>
               </View>
 
-              <View className="rounded-xl border border-dono-border bg-dono-surface-muted p-4">
+              <View className="rounded-xl border border-retro-ink bg-retro-cream p-4">
                 <View className="mb-1.5 flex-row items-center gap-2">
                   <IdCard size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     Student Verification
                   </Text>
                 </View>
-                <Text className="mb-3 text-xs text-dono-muted">
+                <Text className="mb-3 text-xs text-[#5c574f]">
                   Upload a photo of your student card to confirm you're a current student
                   setting up this society. Only student cards are accepted. This is used
                   for verification only and is never shown publicly.
                 </Text>
 
                 {idDocument ? (
-                  <View className="mb-3 flex-row items-center gap-3 rounded-xl border border-dono-border bg-white p-2">
+                  <View className="mb-3 flex-row items-center gap-3 rounded-xl border border-retro-ink bg-white p-2">
                     <Image
                       source={{ uri: idDocument.uri }}
                       style={{ width: 40, height: 40, borderRadius: 8 }}
                       resizeMode="cover"
                       accessibilityLabel="Student card thumbnail"
                     />
-                    <Text className="flex-1 text-sm text-dono-text" numberOfLines={1}>
+                    <Text className="flex-1 text-sm text-retro-ink" numberOfLines={1}>
                       {idDocument.name}
                     </Text>
                     <Pressable
                       onPress={() => setIdDocument(null)}
-                      className="h-6 w-6 items-center justify-center rounded-full bg-dono-surface-muted"
+                      className="h-6 w-6 items-center justify-center rounded-full bg-retro-cream"
                     >
-                      <Text className="text-xs font-bold text-dono-text">×</Text>
+                      <Text className="text-xs font-bold text-retro-ink">×</Text>
                     </Pressable>
                   </View>
                 ) : null}
@@ -723,12 +727,12 @@ export default function CreateSocietyPage() {
                 <Pressable
                   onPress={() => void pickIdDocument()}
                   disabled={pickingId}
-                  className={`flex-row items-center justify-center gap-2 self-start rounded-full border border-dono-border bg-white px-4 py-2 ${
+                  className={`flex-row items-center justify-center gap-2 self-start rounded-full border border-retro-ink bg-white px-4 py-2 ${
                     pickingId ? "opacity-50" : ""
                   }`}
                 >
                   <IdCard size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     {pickingId
                       ? "Opening library..."
                       : idDocument
@@ -738,14 +742,14 @@ export default function CreateSocietyPage() {
                 </Pressable>
               </View>
 
-              <View className="rounded-xl border border-dono-border bg-white p-4">
+              <View className="rounded-xl border border-retro-ink bg-white p-4">
                 <View className="mb-1.5 flex-row items-center gap-2">
                   <ShieldCheck size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     Identity Check
                   </Text>
                 </View>
-                <Text className="mb-3 text-xs text-dono-muted">
+                <Text className="mb-3 text-xs text-[#5c574f]">
                   You'll be asked for a quick photo of your ID and a selfie so we can
                   confirm it's really you — it only takes a minute.
                 </Text>
@@ -755,20 +759,20 @@ export default function CreateSocietyPage() {
                 <Pressable
                   onPress={() => void handleVerifyIdentity()}
                   disabled={!manualFieldsValid || verifying || stripeVerified}
-                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2.5 ${
+                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
                     !manualFieldsValid || verifying || stripeVerified ? "opacity-50" : ""
                   }`}
                 >
                   {verifying ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text className="font-sans-medium text-sm text-white">
+                    <Text className="font-retro-bold text-sm text-retro-paper">
                       Verify your identity
                     </Text>
                   )}
                 </Pressable>
                 {!manualFieldsValid ? (
-                  <Text className="mt-2 text-xs text-dono-muted">
+                  <Text className="mt-2 text-xs text-[#5c574f]">
                     Add your student card above first.
                   </Text>
                 ) : stripeFailed ? (
@@ -776,7 +780,7 @@ export default function CreateSocietyPage() {
                     That didn't go through — please try again.
                   </Text>
                 ) : !societySlug ? (
-                  <Text className="mt-2 text-xs text-dono-muted">
+                  <Text className="mt-2 text-xs text-[#5c574f]">
                     You'll be able to continue once you've started this check.
                   </Text>
                 ) : null}
@@ -787,37 +791,37 @@ export default function CreateSocietyPage() {
           {step === 3 && (
             <View className="gap-4">
               <View>
-                <Text className="text-lg font-sans-medium text-dono-text">
+                <Text className="text-lg font-retro-bold text-retro-ink">
                   Review your society
                 </Text>
-                <Text className="mt-1 text-sm text-dono-muted">
+                <Text className="mt-1 text-sm text-[#5c574f]">
                   Check the details below before submitting for verification.
                 </Text>
               </View>
 
-              <View className="overflow-hidden rounded-2xl border border-dono-border">
+              <View className="overflow-hidden rounded-2xl border border-retro-ink">
                 <CampaignImage image={coverImage?.uri ?? "default"} className="h-40" />
               </View>
 
               <View>
-                <Text className="font-display-medium text-xl text-dono-text">
+                <Text className="font-retro-bold text-xl text-retro-ink">
                   {form.name || "Untitled society"}
                 </Text>
-                <Text className="mt-1 text-sm text-dono-muted">{DEFAULT_UNIVERSITY}</Text>
+                <Text className="mt-1 text-sm text-[#5c574f]">{DEFAULT_UNIVERSITY}</Text>
                 {form.description ? (
-                  <Text className="mt-2 text-sm text-dono-muted">{form.description}</Text>
+                  <Text className="mt-2 text-sm text-[#5c574f]">{form.description}</Text>
                 ) : null}
               </View>
 
               {form.story ? (
-                <View className="rounded-xl border border-dono-border bg-white p-4">
-                  <Text className="mb-2 font-sans-medium text-sm text-dono-text">About</Text>
-                  <Text className="text-sm leading-relaxed text-dono-muted">{form.story}</Text>
+                <View className="rounded-xl border border-retro-ink bg-white p-4">
+                  <Text className="mb-2 font-retro-bold text-sm text-retro-ink">About</Text>
+                  <Text className="text-sm leading-relaxed text-[#5c574f]">{form.story}</Text>
                 </View>
               ) : null}
 
-              <View className="gap-2 rounded-xl border border-dono-border bg-white p-4">
-                <Text className="mb-1 font-sans-medium text-sm text-dono-text">
+              <View className="gap-2 rounded-xl border border-retro-ink bg-white p-4">
+                <Text className="mb-1 font-retro-bold text-sm text-retro-ink">
                   Verification
                 </Text>
                 <View className="flex-row items-center gap-2">
@@ -825,21 +829,21 @@ export default function CreateSocietyPage() {
                     size={14}
                     color={supportingDocs.length > 0 ? "#17211B" : "#56615A"}
                   />
-                  <Text className="text-sm text-dono-muted">
+                  <Text className="text-sm text-[#5c574f]">
                     {supportingDocs.length} supporting document
                     {supportingDocs.length === 1 ? "" : "s"} attached
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-2">
                   <CheckCircle2 size={14} color={idDocument ? "#17211B" : "#56615A"} />
-                  <Text className="text-sm text-dono-muted">
+                  <Text className="text-sm text-[#5c574f]">
                     {idDocument ? "Student card provided" : "No student card provided"}
                   </Text>
                 </View>
-                <Text className="text-sm text-dono-muted">
+                <Text className="text-sm text-[#5c574f]">
                   Website: {form.website.trim() || "Not provided"}
                 </Text>
-                <Text className="text-sm text-dono-muted">
+                <Text className="text-sm text-[#5c574f]">
                   Secondary link: {form.secondaryLink.trim() || "Not provided"}
                 </Text>
                 <View className="mt-1">{renderVerificationStatus()}</View>
@@ -852,17 +856,17 @@ export default function CreateSocietyPage() {
               {stripeVerified ? (
                 <>
                   <CheckCircle2 size={32} color="#17211B" />
-                  <Text className="text-center text-lg font-sans-medium text-dono-text">
+                  <Text className="text-center text-lg font-retro-bold text-retro-ink">
                     Application submitted
                   </Text>
-                  <Text className="text-center text-sm leading-relaxed text-dono-muted">
+                  <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
                     Thanks — we've received your society, its verification documents, and
                     your Stripe identity check. We'll review it and let you know once a
                     decision is made.
                   </Text>
                   <Link href="/societies" asChild>
-                    <Pressable className="mt-2 rounded-full bg-dono-primary px-6 py-2.5">
-                      <Text className="font-sans-medium text-sm text-white">
+                    <Pressable className="mt-2 rounded-full border-2 border-retro-ink bg-retro-mint px-6 py-2.5 shadow-[3px_3px_0_#211E1A]">
+                      <Text className="font-retro-bold text-sm text-retro-paper">
                         Back to Societies
                       </Text>
                     </Pressable>
@@ -871,10 +875,10 @@ export default function CreateSocietyPage() {
               ) : (
                 <>
                   <VerifyingIndicator size={48} color="#17211B" />
-                  <Text className="text-center text-lg font-sans-medium text-dono-text">
+                  <Text className="text-center text-lg font-retro-bold text-retro-ink">
                     Verifying your identity...
                   </Text>
-                  <Text className="text-center text-sm leading-relaxed text-dono-muted">
+                  <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
                     Your society has already been submitted. This usually takes a
                     minute or two — feel free to leave this page open, it'll update
                     automatically the moment it's done.
@@ -888,9 +892,9 @@ export default function CreateSocietyPage() {
             {step > 0 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
-                className="rounded-full border border-dono-border px-5 py-2.5"
+                className={secondaryBtnClass}
               >
-                <Text className="font-sans-medium text-sm text-dono-muted">Back</Text>
+                <Text className="font-retro-bold text-sm text-[#5c574f]">Back</Text>
               </Pressable>
             ) : (
               <View />
@@ -900,7 +904,7 @@ export default function CreateSocietyPage() {
               <Pressable
                 onPress={handleContinue}
                 disabled={!canProceed() || syncingMaterials}
-                className={`flex-row items-center gap-2 rounded-full bg-dono-primary px-5 py-2.5 ${
+                className={`flex-row ${primaryBtnClass} gap-2 ${
                   !canProceed() || syncingMaterials ? "opacity-50" : ""
                 }`}
               >
@@ -908,7 +912,7 @@ export default function CreateSocietyPage() {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <>
-                    <Text className="font-sans-medium text-sm text-white">
+                    <Text className="font-retro-bold text-sm text-retro-paper">
                       {step === 3 ? "Submit" : "Continue"}
                     </Text>
                     <ArrowRight size={16} color="#fff" />
@@ -940,14 +944,14 @@ export default function CreateSocietyPage() {
             onPress={(event) => event.stopPropagation()}
             className="w-full max-w-md"
           >
-            <View className="rounded-3xl border border-dono-border bg-white p-6">
+            <View className="rounded-3xl border border-retro-ink bg-white p-6">
               <View className="mb-3 flex-row items-center gap-2">
                 <Paperclip size={18} color="#17211B" />
-                <Text className="flex-1 font-sans-medium text-base text-dono-text">
+                <Text className="flex-1 font-retro-bold text-base text-retro-ink">
                   Continue without supporting documents?
                 </Text>
               </View>
-              <Text className="text-sm leading-relaxed text-dono-muted">
+              <Text className="text-sm leading-relaxed text-[#5c574f]">
                 Approval is less likely without supporting documentation. Adding
                 your society's constitution or proof of university recognition
                 makes it much easier for us to approve your society.
@@ -955,9 +959,9 @@ export default function CreateSocietyPage() {
               <View className="mt-5 flex-row justify-end gap-2">
                 <Pressable
                   onPress={() => setDocsPopupVisible(false)}
-                  className="rounded-full border border-dono-border px-4 py-2.5"
+                  className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2.5"
                 >
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     Add documents
                   </Text>
                 </Pressable>
@@ -966,9 +970,9 @@ export default function CreateSocietyPage() {
                     setDocsPopupVisible(false);
                     void continueFromVerification();
                   }}
-                  className="rounded-full bg-dono-primary px-4 py-2.5"
+                  className="rounded-full bg-retro-mint px-4 py-2.5"
                 >
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-retro-paper">
                     Continue anyway
                   </Text>
                 </Pressable>

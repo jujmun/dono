@@ -30,7 +30,7 @@ export function DonateAnonymouslyToggle({
       <View className="min-w-0 flex-1">
         <View className="flex-row items-center gap-2">
           <EyeOff size={14} color="#56615A" />
-          <Text className="font-sans-medium text-sm text-dono-text">Donate anonymously</Text>
+          <Text className="font-retro-bold text-sm text-dono-text">Donate anonymously</Text>
         </View>
         <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
           Your name won&apos;t appear on public activity feeds. You can still receive a

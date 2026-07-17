@@ -12,7 +12,7 @@ import { Menu, X } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 
-const navItems = [
+const baseNavItems = [
   { href: "/campaigns", label: "Campaigns" },
   { href: "/societies", label: "Societies" },
   { href: "/dashboard", label: "Impact" },
@@ -30,6 +30,13 @@ export function RetroBrowserSitehead() {
     .charAt(0)
     .toUpperCase();
 
+  const navItems: { href: Href; label: string }[] = [
+    ...baseNavItems,
+    ...(isAuthenticated
+      ? [{ href: "/account" as Href, label: "You" }]
+      : []),
+  ];
+
   return (
     <View className="border-b-[3px] border-retro-ink bg-retro-paper">
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
@@ -46,7 +53,7 @@ export function RetroBrowserSitehead() {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
-                <Link key={item.href} href={item.href as Href} asChild>
+                <Link key={item.label} href={item.href} asChild>
                   <Pressable
                     className={cn(
                       "rounded-lg border-2 px-3 py-1.5",
@@ -55,7 +62,7 @@ export function RetroBrowserSitehead() {
                         : "border-transparent",
                     )}
                   >
-                    <Text className="font-sans-medium text-[13.5px] text-retro-ink">
+                    <Text className="font-retro-bold text-[13.5px] text-retro-ink">
                       {item.label}
                     </Text>
                   </Pressable>
@@ -116,12 +123,12 @@ export function RetroBrowserSitehead() {
       {mobileOpen && !showNav ? (
         <View className="gap-1 border-t-2 border-retro-ink px-4 py-2">
           {navItems.map((item) => (
-            <Link key={item.href} href={item.href as Href} asChild>
+            <Link key={item.label} href={item.href} asChild>
               <Pressable
                 onPress={() => setMobileOpen(false)}
                 className="rounded-lg px-3 py-2.5"
               >
-                <Text className="font-sans-medium text-sm text-retro-ink">
+                <Text className="font-retro-bold text-sm text-retro-ink">
                   {item.label}
                 </Text>
               </Pressable>

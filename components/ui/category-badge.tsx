@@ -23,7 +23,7 @@ export function CategoryBadge({ category, className }: CategoryBadgeProps) {
 
   return (
     <View className={cn("rounded-full px-2.5 py-0.5", colors.bg, className)}>
-      <Text className={cn("font-sans-medium text-xs", colors.text)}>
+      <Text className={cn("font-retro-bold text-xs", colors.text)}>
         {categoryLabels[category] || category}
       </Text>
     </View>

@@ -41,6 +41,7 @@ import type * as lib_pagination from "../lib/pagination.js";
 import type * as lib_redirect from "../lib/redirect.js";
 import type * as lib_stripeIdentityOutputs from "../lib/stripeIdentityOutputs.js";
 import type * as lib_stripeOwnership from "../lib/stripeOwnership.js";
+import type * as lib_videoUrl from "../lib/videoUrl.js";
 import type * as lib_webhookIdempotency from "../lib/webhookIdempotency.js";
 import type * as maintenance from "../maintenance.js";
 import type * as reviewMessages from "../reviewMessages.js";
@@ -100,6 +101,7 @@ declare const fullApi: ApiFromModules<{
   "lib/redirect": typeof lib_redirect;
   "lib/stripeIdentityOutputs": typeof lib_stripeIdentityOutputs;
   "lib/stripeOwnership": typeof lib_stripeOwnership;
+  "lib/videoUrl": typeof lib_videoUrl;
   "lib/webhookIdempotency": typeof lib_webhookIdempotency;
   maintenance: typeof maintenance;
   reviewMessages: typeof reviewMessages;

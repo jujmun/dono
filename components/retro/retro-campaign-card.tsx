@@ -1,4 +1,4 @@
-import { Link } from "expo-router";
+import { type Href, Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
 import type { Campaign } from "@/lib/types";
 import {
@@ -18,11 +18,13 @@ import { cn } from "@/lib/utils";
 interface RetroCampaignCardProps {
   campaign: Campaign;
   accent?: "indigo" | "tan";
+  href?: Href;
 }
 
 export function RetroCampaignCard({
   campaign,
   accent = "indigo",
+  href,
 }: RetroCampaignCardProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const imageSource = getPrimaryCampaignImage(campaign);
@@ -36,9 +38,10 @@ export function RetroCampaignCard({
     campaign.status === "funded" ? "FUNDED" : `${progress}% FUNDED`;
   const tagMarigold =
     campaign.category === "travel" || campaign.category === "events";
+  const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
 
   return (
-    <Link href={`/campaigns/${campaign.id}`} asChild>
+    <Link href={destination} asChild>
       <Pressable className="active:opacity-90">
         <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper shadow-[5px_5px_0_#211E1A]">
           <CampaignImage

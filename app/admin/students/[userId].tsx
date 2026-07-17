@@ -60,7 +60,7 @@ export default function AdminStudentProfilePage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -111,13 +111,13 @@ export default function AdminStudentProfilePage() {
               />
             ) : (
               <View className="h-16 w-16 items-center justify-center rounded-full bg-dono-primary/10">
-                <Text className="font-mono-medium text-lg text-dono-primary">
+                <Text className="font-retro-mono-bold text-lg text-dono-primary">
                   {initials}
                 </Text>
               </View>
             )}
             <View className="flex-1">
-              <Text className="font-display-medium text-2xl text-dono-text">
+              <Text className="font-retro-bold text-2xl text-dono-text">
                 {student.name || "Unnamed student"}
               </Text>
               <Text className="mt-1 text-sm text-dono-muted">{student.email}</Text>
@@ -129,7 +129,7 @@ export default function AdminStudentProfilePage() {
         </View>
 
         <View className="mt-8">
-          <Text className="font-sans-medium text-base text-dono-text">
+          <Text className="font-retro-bold text-base text-dono-text">
             Their posts
           </Text>
           <Text className="mt-1 text-sm text-dono-muted">
@@ -167,7 +167,7 @@ export default function AdminStudentProfilePage() {
                             />
                           ) : null}
                         </View>
-                        <Text className="font-sans-medium text-base text-dono-text">
+                        <Text className="font-retro-bold text-base text-dono-text">
                           {campaign.title}
                         </Text>
                         <Text className="mt-1 text-sm text-dono-muted">
@@ -176,7 +176,7 @@ export default function AdminStudentProfilePage() {
                         </Text>
                       </View>
                       <View className="items-center gap-0.5 pt-1">
-                        <Text className="text-xs font-sans-medium text-dono-muted">
+                        <Text className="text-xs font-retro-bold text-dono-muted">
                           Open
                         </Text>
                         <ChevronRight size={18} color="#56615A" />

@@ -12,6 +12,7 @@ import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
+import { parseCampaignVideoUrl } from "./lib/videoUrl";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_CATEGORY_LENGTH = 60;
@@ -308,7 +309,44 @@ export const setImage = mutation({
   },
 });
 
-const MAX_CAMPAIGN_IMAGES = 5;
+const MIN_CAMPAIGN_IMAGES = 2;
+const MAX_CAMPAIGN_IMAGES = 4;
+
+export const setVideoUrl = mutation({
+  args: {
+    slug: v.string(),
+    /** Empty string clears the video. */
+    videoUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+
+    const trimmed = args.videoUrl.trim();
+    if (!trimmed) {
+      await ctx.db.patch(campaign._id, { videoUrl: undefined });
+      return null;
+    }
+
+    const parsed = parseCampaignVideoUrl(trimmed);
+    if (!parsed) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Video must be a valid YouTube or Vimeo URL.",
+      });
+    }
+
+    await ctx.db.patch(campaign._id, { videoUrl: parsed.watchUrl });
+    return null;
+  },
+});
 
 export const setImages = mutation({
   args: {
@@ -317,10 +355,13 @@ export const setImages = mutation({
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
-    if (args.storageIds.length === 0 || args.storageIds.length > MAX_CAMPAIGN_IMAGES) {
+    if (
+      args.storageIds.length < MIN_CAMPAIGN_IMAGES ||
+      args.storageIds.length > MAX_CAMPAIGN_IMAGES
+    ) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: `Provide between 1 and ${MAX_CAMPAIGN_IMAGES} images.`,
+        message: `Provide between ${MIN_CAMPAIGN_IMAGES} and ${MAX_CAMPAIGN_IMAGES} images.`,
       });
     }
 

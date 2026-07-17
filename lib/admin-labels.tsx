@@ -42,7 +42,7 @@ export function AdminStatusChip({
     >
       <Text
         className={cn(
-          "text-xs font-sans-medium",
+          "text-xs font-retro-bold",
           tone === "waiting" && "text-amber-800",
           tone === "live" && "text-emerald-800",
           tone === "removed" && "text-rose-700",

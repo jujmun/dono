@@ -113,14 +113,14 @@ export default function AdminCampaignReviewPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             Access denied
           </Text>
           <Pressable
             onPress={() => router.replace("/dashboard")}
             className="mt-6 items-center rounded-full bg-dono-primary py-3"
           >
-            <Text className="font-sans-medium text-sm text-white">
+            <Text className="font-retro-bold text-sm text-white">
               Back to dashboard
             </Text>
           </Pressable>
@@ -136,7 +136,7 @@ export default function AdminCampaignReviewPage() {
           <Text className="text-center text-dono-muted">Campaign not found.</Text>
           <Link href={"/admin" as Href} asChild>
             <Pressable className="mt-4 items-center">
-              <Text className="font-sans-medium text-dono-primary">
+              <Text className="font-retro-bold text-dono-primary">
                 Back to waiting posts
               </Text>
             </Pressable>
@@ -286,7 +286,7 @@ export default function AdminCampaignReviewPage() {
           ) : null}
         </View>
 
-        <Text className="font-display-medium text-2xl text-dono-text">
+        <Text className="font-retro-bold text-2xl text-dono-text">
           {campaign.title}
         </Text>
         <Text className="mt-2 text-sm text-dono-muted">
@@ -296,7 +296,7 @@ export default function AdminCampaignReviewPage() {
 
         {moderated && campaign.moderationNote ? (
           <View className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5">
-            <Text className="font-sans-medium text-base text-rose-800">
+            <Text className="font-retro-bold text-base text-rose-800">
               Why it was removed
             </Text>
             <Text className="mt-2 text-sm text-rose-900">
@@ -311,7 +311,7 @@ export default function AdminCampaignReviewPage() {
         ) : null}
 
         <View className="mt-8 rounded-2xl border border-dono-border bg-white p-5">
-          <Text className="font-sans-medium text-base text-dono-text">
+          <Text className="font-retro-bold text-base text-dono-text">
             Student
           </Text>
           {student ? (
@@ -332,7 +332,7 @@ export default function AdminCampaignReviewPage() {
                 />
               ) : (
                 <View className="h-14 w-14 items-center justify-center rounded-full bg-dono-primary/10">
-                  <Text className="font-mono-medium text-dono-primary">
+                  <Text className="font-retro-mono-bold text-dono-primary">
                     {(student.name || student.email || "?")
                       .slice(0, 2)
                       .toUpperCase()}
@@ -340,7 +340,7 @@ export default function AdminCampaignReviewPage() {
                 </View>
               )}
               <View className="flex-1">
-                <Text className="font-sans-medium text-dono-text">
+                <Text className="font-retro-bold text-dono-text">
                   {student.name || "Unnamed student"}
                 </Text>
                 <Text className="mt-1 text-sm text-dono-muted">
@@ -361,7 +361,7 @@ export default function AdminCampaignReviewPage() {
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
           <View className="flex-row flex-wrap items-center justify-between gap-2">
-            <Text className="font-sans-medium text-base text-dono-text">
+            <Text className="font-retro-bold text-base text-dono-text">
               Identity check
             </Text>
             <View className="flex-row items-center gap-2">
@@ -401,7 +401,7 @@ export default function AdminCampaignReviewPage() {
 
           {identity.verifiedName || identity.verifiedDob ? (
             <View className="mt-3 rounded-lg border border-dono-border bg-dono-surface-muted px-3 py-2">
-              <Text className="text-xs font-sans-medium text-dono-muted">
+              <Text className="text-xs font-retro-bold text-dono-muted">
                 Auto-extracted from ID (Stripe) — reference only, not verified
                 ground truth
               </Text>
@@ -420,11 +420,11 @@ export default function AdminCampaignReviewPage() {
         </View>
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
-          <Text className="font-sans-medium text-base text-dono-text">
+          <Text className="font-retro-bold text-base text-dono-text">
             Short description
           </Text>
           <Text className="mt-3 text-sm text-dono-text">{campaign.description}</Text>
-          <Text className="mt-6 font-sans-medium text-base text-dono-text">
+          <Text className="mt-6 font-retro-bold text-base text-dono-text">
             Full story
           </Text>
           <Text className="mt-3 text-sm leading-6 text-dono-text">
@@ -433,7 +433,7 @@ export default function AdminCampaignReviewPage() {
         </View>
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
-          <Text className="font-sans-medium text-base text-dono-text">
+          <Text className="font-retro-bold text-base text-dono-text">
             Comments to student
           </Text>
           <Text className="mt-1 text-sm text-dono-muted">
@@ -489,7 +489,7 @@ export default function AdminCampaignReviewPage() {
               }`}
             >
               <Send size={15} color="#17211B" />
-              <Text className="font-sans-medium text-sm text-dono-text">
+              <Text className="font-retro-bold text-sm text-dono-text">
                 {busy === "comment" ? "Sending..." : "Send"}
               </Text>
             </Pressable>
@@ -509,7 +509,7 @@ export default function AdminCampaignReviewPage() {
 
         {reasonMode ? (
           <View className="mt-8 rounded-2xl border border-rose-200 bg-white p-5">
-            <Text className="font-sans-medium text-base text-dono-text">
+            <Text className="font-retro-bold text-base text-dono-text">
               {reasonMode === "reject"
                 ? "Why are you denying this?"
                 : "Why are you removing this?"}
@@ -538,7 +538,7 @@ export default function AdminCampaignReviewPage() {
                 disabled={busy !== null}
                 className="rounded-xl px-4 py-2.5"
               >
-                <Text className="font-sans-medium text-sm text-dono-muted">
+                <Text className="font-retro-bold text-sm text-dono-muted">
                   Cancel
                 </Text>
               </Pressable>
@@ -556,7 +556,7 @@ export default function AdminCampaignReviewPage() {
                 ) : (
                   <Trash2 size={15} color="#fff" />
                 )}
-                <Text className="font-sans-medium text-sm text-white">
+                <Text className="font-retro-bold text-sm text-white">
                   {busy === "reject" || busy === "takedown"
                     ? "Working..."
                     : reasonMode === "reject"
@@ -570,7 +570,7 @@ export default function AdminCampaignReviewPage() {
 
         {(pending || isLive || moderated) && !reasonMode ? (
           <View className="mt-8 rounded-2xl border border-dono-border bg-white p-5">
-            <Text className="font-sans-medium text-base text-dono-text">
+            <Text className="font-retro-bold text-base text-dono-text">
               Your decision
             </Text>
             <Text className="mt-1 text-sm text-dono-muted">
@@ -593,7 +593,7 @@ export default function AdminCampaignReviewPage() {
                   }`}
                 >
                   <Check size={16} color="#fff" />
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-white">
                     {busy === "approve" ? "Working..." : "Approve"}
                   </Text>
                 </Pressable>
@@ -609,7 +609,7 @@ export default function AdminCampaignReviewPage() {
                   }`}
                 >
                   <X size={16} color="#be123c" />
-                  <Text className="font-sans-medium text-sm text-rose-700">
+                  <Text className="font-retro-bold text-sm text-rose-700">
                     Deny
                   </Text>
                 </Pressable>
@@ -629,7 +629,7 @@ export default function AdminCampaignReviewPage() {
                 }`}
               >
                 <Trash2 size={16} color="#be123c" />
-                <Text className="font-sans-medium text-sm text-rose-700">
+                <Text className="font-retro-bold text-sm text-rose-700">
                   Remove from site
                 </Text>
               </Pressable>
@@ -646,7 +646,7 @@ export default function AdminCampaignReviewPage() {
                 }`}
               >
                 <RotateCcw size={16} color="#fff" />
-                <Text className="font-sans-medium text-sm text-white">
+                <Text className="font-retro-bold text-sm text-white">
                   {busy === "restore" ? "Working..." : "Put back live"}
                 </Text>
               </Pressable>

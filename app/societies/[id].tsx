@@ -52,7 +52,7 @@ export default function SocietyOrCommunityPage() {
         <Text className="text-center text-dono-muted">Society not found.</Text>
         <Link href="/societies" asChild>
           <Pressable className="mt-4 items-center">
-            <Text className="font-sans-medium text-dono-primary">Back to societies</Text>
+            <Text className="font-retro-bold text-dono-primary">Back to societies</Text>
           </Pressable>
         </Link>
       </View>
@@ -99,7 +99,7 @@ function SocietyDetail({ society }: { society: Society }) {
 
         {banner ? (
           <View className={`mb-6 rounded-2xl border p-4 ${banner.container}`}>
-            <Text className={`font-sans-medium text-sm ${banner.title}`}>
+            <Text className={`font-retro-bold text-sm ${banner.title}`}>
               {banner.heading}
             </Text>
             <Text className={`mt-1 text-sm ${banner.body}`}>{banner.message}</Text>
@@ -114,12 +114,12 @@ function SocietyDetail({ society }: { society: Society }) {
         <View className="mb-8 gap-4">
           <View className="flex-row items-start gap-4">
             <View className="h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="font-mono-medium text-xl text-white">
+              <Text className="font-retro-mono-bold text-xl text-white">
                 {initialsFor(society.name)}
               </Text>
             </View>
             <View className="flex-1">
-              <Text className="font-display-medium text-2xl text-dono-text">
+              <Text className="font-retro-bold text-2xl text-dono-text">
                 {society.name}
               </Text>
               <Text className="mt-1 text-sm text-dono-muted">
@@ -141,7 +141,7 @@ function SocietyDetail({ society }: { society: Society }) {
                   className="flex-row items-center justify-center gap-2 rounded-full bg-dono-primary px-5 py-2.5"
                 >
                   <Globe size={16} color="#fff" />
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-white">
                     Visit website
                   </Text>
                 </Pressable>
@@ -156,7 +156,7 @@ function SocietyDetail({ society }: { society: Society }) {
                   className="flex-row items-center justify-center gap-2 rounded-full border border-dono-border bg-white px-5 py-2.5"
                 >
                   <ExternalLink size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-primary">
+                  <Text className="font-retro-bold text-sm text-dono-primary">
                     More links
                   </Text>
                 </Pressable>
@@ -166,7 +166,7 @@ function SocietyDetail({ society }: { society: Society }) {
         </View>
 
         <View className="mb-8">
-          <Text className="mb-3 text-lg font-sans-medium text-dono-text">About</Text>
+          <Text className="mb-3 text-lg font-retro-bold text-dono-text">About</Text>
           <View className="rounded-2xl border border-dono-border bg-white p-6">
             <Text className="leading-relaxed text-dono-text">{society.story}</Text>
           </View>
@@ -241,11 +241,11 @@ function CommunityDetail({
         <View className="mb-8 gap-4">
           <View className="flex-row items-start gap-4">
             <View className="h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="font-mono-medium text-xl text-white">{community.avatar}</Text>
+              <Text className="font-retro-mono-bold text-xl text-white">{community.avatar}</Text>
             </View>
             <View className="flex-1">
               <View className="mb-2 flex-row flex-wrap items-center gap-2">
-                <Text className="font-display-medium text-2xl text-dono-text">{community.name}</Text>
+                <Text className="font-retro-bold text-2xl text-dono-text">{community.name}</Text>
                 {community.verified && community.verificationType && (
                   <VerificationBadge
                     verification={{
@@ -275,7 +275,7 @@ function CommunityDetail({
               <UserPlus size={16} color={following ? "#17211B" : "#fff"} />
             )}
             <Text
-              className={`font-sans-medium text-sm ${
+              className={`font-retro-bold text-sm ${
                 following ? "text-dono-primary" : "text-white"
               }`}
             >
@@ -297,7 +297,7 @@ function CommunityDetail({
               key={stat.label}
               className="flex-1 rounded-2xl border border-dono-border bg-white p-4"
             >
-              <Text className="text-center font-display-medium text-xl text-dono-text">
+              <Text className="text-center font-retro-bold text-xl text-dono-text">
                 {stat.value}
               </Text>
               <Text className="text-center text-xs text-dono-muted">{stat.label}</Text>
@@ -308,7 +308,7 @@ function CommunityDetail({
         <View>
           <View className="mb-4 flex-row items-center gap-2">
             <Target size={20} color="#17211B" />
-            <Text className="text-lg font-sans-medium text-dono-text">Active Campaigns</Text>
+            <Text className="text-lg font-retro-bold text-dono-text">Active Campaigns</Text>
           </View>
           {communityCampaigns === undefined ? (
             <ActivityIndicator color="#17211B" />

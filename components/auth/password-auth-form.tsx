@@ -4,6 +4,7 @@ import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
+import { RetroPanel } from "@/components/retro";
 import { SetPasswordFields } from "@/components/auth/set-password-fields";
 import {
   getAuthProviderId,
@@ -23,7 +24,7 @@ import {
 
 const hasPostHog = Boolean(process.env.EXPO_PUBLIC_POSTHOG_API_KEY);
 const inputClassName =
-  "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+  "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
 
 export type PasswordAuthMode = "signUp" | "signIn";
 
@@ -192,17 +193,17 @@ function PasswordAuthFormInner({
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-md px-4 py-12">
-        <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <View className="mb-8 items-center">
-            <Text className="font-display-medium text-2xl text-dono-text">{title}</Text>
+      <View className="mx-auto w-full max-w-md">
+        <RetroPanel title={mode === "signUp" ? "SIGN_UP.exe" : "SIGN_IN.exe"} accent="mint">
+          <View className="mb-6 items-center">
+            <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
             <Text className="mt-1 text-center text-sm text-dono-muted">{subtitle}</Text>
           </View>
 
           {step === "credentials" ? (
             <View className="gap-4">
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Email
                 </Text>
                 <TextInput
@@ -229,7 +230,7 @@ function PasswordAuthFormInner({
                 />
               ) : (
                 <View>
-                  <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                  <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                     Password
                   </Text>
                   <TextInput
@@ -254,11 +255,11 @@ function PasswordAuthFormInner({
               <Pressable
                 onPress={handleCredentialsSubmit}
                 disabled={loading || normalizedEmail.length === 0}
-                className={`items-center rounded-full bg-dono-primary py-3 ${
+                className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
                   loading || normalizedEmail.length === 0 ? "opacity-50" : ""
                 }`}
               >
-                <Text className="font-sans-medium text-sm text-white">
+                <Text className="font-retro-bold text-sm text-retro-paper">
                   {loading ? "Please wait..." : submitLabel}
                 </Text>
               </Pressable>
@@ -300,11 +301,11 @@ function PasswordAuthFormInner({
               <Pressable
                 onPress={handleVerifySubmit}
                 disabled={loading}
-                className={`items-center rounded-full bg-dono-primary py-3 ${
+                className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
                   loading ? "opacity-50" : ""
                 }`}
               >
-                <Text className="font-sans-medium text-sm text-white">
+                <Text className="font-retro-bold text-sm text-retro-paper">
                   {loading ? "Verifying..." : "Verify email"}
                 </Text>
               </Pressable>
@@ -324,7 +325,7 @@ function PasswordAuthFormInner({
           )}
 
           {footer}
-        </View>
+        </RetroPanel>
       </View>
     </AppShell>
   );

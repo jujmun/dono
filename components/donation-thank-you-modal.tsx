@@ -161,14 +161,14 @@ export function DonationThankYouModal({
               <Animated.View entering={FadeInDown.delay(120).springify()} className="items-center">
                 <View className="mb-3 flex-row items-center gap-2">
                   <Sparkles size={18} color="#168456" />
-                  <Text className="font-display-medium text-3xl text-dono-text">
+                  <Text className="font-retro-bold text-3xl text-dono-text">
                     Thank you!
                   </Text>
                   <Sparkles size={18} color="#168456" />
                 </View>
 
                 {amount != null ? (
-                  <Text className="font-mono-medium text-4xl text-dono-primary">
+                  <Text className="font-retro-mono-bold text-4xl text-dono-primary">
                     {formatCurrency(amount)}
                   </Text>
                 ) : null}
@@ -180,7 +180,7 @@ export function DonationThankYouModal({
                       ? `Your generous gift is on its way to support`
                       : "Your generous gift is on its way to support"}
                 </Text>
-                <Text className="mt-1 text-center font-sans-medium text-base text-dono-text">
+                <Text className="mt-1 text-center font-retro-bold text-base text-dono-text">
                   {campaignTitle}
                 </Text>
               </Animated.View>
@@ -205,7 +205,7 @@ export function DonationThankYouModal({
                   onPress={onClose}
                   className="items-center rounded-full bg-dono-primary py-3.5"
                 >
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-white">
                     Continue exploring
                   </Text>
                 </Pressable>

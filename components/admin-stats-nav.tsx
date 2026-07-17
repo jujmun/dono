@@ -61,7 +61,7 @@ export function AdminStatsNav({ active }: { active: AdminSection }) {
     <View className="mb-6">
       <View className="mb-6 flex-row items-start justify-between gap-4">
         <View className="min-h-[56px] flex-1">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-retro-ink">
             {current.title}
           </Text>
           <Text className="mt-1 text-sm text-dono-muted">{current.subtitle}</Text>
@@ -95,13 +95,13 @@ export function AdminStatsNav({ active }: { active: AdminSection }) {
             >
               <Text
                 className={cn(
-                  "text-xs font-sans-medium",
+                  "text-xs font-retro-bold",
                   isActive ? "text-dono-primary" : "text-dono-muted",
                 )}
               >
                 {section.label}
               </Text>
-              <Text className="mt-1 font-display-medium text-xl text-dono-text">
+              <Text className="mt-1 font-retro-bold text-xl text-dono-text">
                 {countFor(section.key)}
               </Text>
             </Pressable>

@@ -41,6 +41,8 @@ export const campaignFields = {
   imageStorageId: v.optional(v.id("_storage")),
   images: v.optional(v.array(v.string())),
   imageStorageIds: v.optional(v.array(v.id("_storage"))),
+  /** YouTube or Vimeo watch URL for the campaign media hero. */
+  videoUrl: v.optional(v.string()),
   createdAt: v.string(),
   deadline: v.string(),
   status: v.union(

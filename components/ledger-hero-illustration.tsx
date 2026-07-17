@@ -15,7 +15,7 @@ export function LedgerHeroIllustration({ size = "md" }: LedgerHeroIllustrationPr
       accessibilityLabel="Illustration of a transparent donation receipt"
     >
       <View className="mb-3 flex-row items-center justify-between">
-        <Text className={`font-mono uppercase tracking-wider text-dono-primary ${titleSize}`}>
+        <Text className={`font-retro-mono uppercase tracking-wider text-dono-primary ${titleSize}`}>
           Donation receipt
         </Text>
         <View className="h-2 w-2 rounded-full bg-dono-primary" />
@@ -30,7 +30,7 @@ export function LedgerHeroIllustration({ size = "md" }: LedgerHeroIllustrationPr
       <ReceiptLineRow label="Total goal" amount={132} size="xs" />
 
       <View className="mt-4 rounded-lg bg-dono-surface-muted px-3 py-2">
-        <Text className="text-center font-mono text-[10px] text-dono-muted">
+        <Text className="text-center font-retro-mono text-[10px] text-dono-muted">
           Every line item visible
         </Text>
       </View>

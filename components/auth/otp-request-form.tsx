@@ -4,6 +4,7 @@ import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
+import { RetroPanel } from "@/components/retro";
 import {
   getAuthProviderId,
   type AuthProviderId,
@@ -101,16 +102,16 @@ function OtpRequestFormInner({
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-md px-4 py-12">
-        <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <View className="mb-8 items-center">
-            <Text className="font-display-medium text-2xl text-dono-text">{title}</Text>
+      <View className="mx-auto w-full max-w-md">
+        <RetroPanel title="AUTH.exe" accent="mint">
+          <View className="mb-6 items-center">
+            <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
             <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
           </View>
 
           <View className="gap-4">
             <View>
-              <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+              <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                 Email
               </Text>
               <TextInput
@@ -120,8 +121,8 @@ function OtpRequestFormInner({
                 keyboardType="email-address"
                 autoComplete="email"
                 placeholder="you@st-annes.ox.ac.uk"
-                placeholderTextColor="#56615A"
-                className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+                placeholderTextColor="#8a8478"
+                className="w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none"
               />
               <Text className="mt-1 text-xs text-dono-muted">
                 Use your Oxford email address (ending in ox.ac.uk).
@@ -137,11 +138,11 @@ function OtpRequestFormInner({
             <Pressable
               onPress={handleSubmit}
               disabled={loading || !canSubmit}
-              className={`items-center rounded-full bg-dono-primary py-3 ${
+              className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
                 loading || !canSubmit ? "opacity-50" : ""
               }`}
             >
-              <Text className="font-sans-medium text-sm text-white">
+              <Text className="font-retro-bold text-sm text-retro-paper">
                 {loading ? "Please wait..." : submitLabel}
               </Text>
             </Pressable>
@@ -151,7 +152,7 @@ function OtpRequestFormInner({
           </View>
 
           {footer}
-        </View>
+        </RetroPanel>
       </View>
     </AppShell>
   );

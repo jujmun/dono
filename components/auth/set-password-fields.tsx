@@ -9,7 +9,7 @@ type SetPasswordFieldsProps = {
 };
 
 const inputClassName =
-  "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+  "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
 
 export function SetPasswordFields({
   newPassword,
@@ -20,7 +20,7 @@ export function SetPasswordFields({
   return (
     <View className="gap-4">
       <View>
-        <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
+        <Text className="mb-2 font-retro-mono text-xs uppercase tracking-wide text-[#5c574f]">
           Password
         </Text>
         <TextInput
@@ -38,7 +38,7 @@ export function SetPasswordFields({
         <PasswordStrengthChecklist password={newPassword} />
       ) : null}
       <View>
-        <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
+        <Text className="mb-2 font-retro-mono text-xs uppercase tracking-wide text-[#5c574f]">
           Confirm password
         </Text>
         <TextInput

@@ -19,7 +19,7 @@ export function ProgressBar({ value, className, showLabel = false }: ProgressBar
         />
       </View>
       {showLabel && (
-        <Text className="mt-1 text-right font-sans-medium text-xs text-dono-muted">
+        <Text className="mt-1 text-right font-retro-bold text-xs text-dono-muted">
           {value}% funded
         </Text>
       )}

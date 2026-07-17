@@ -37,7 +37,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
       <View className="flex-row items-center justify-between py-3">
         <Text className="text-sm text-dono-text">{label}</Text>
         <Text
-          className={`text-sm text-dono-text ${mono ? "font-mono" : ""}`}
+          className={`text-sm text-dono-text ${mono ? "font-retro-mono" : ""}`}
           numberOfLines={1}
         >
           {value}
@@ -59,7 +59,7 @@ function SectionCard({
 }) {
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-6">
-      <Text className="font-sans-medium text-lg text-dono-text">{title}</Text>
+      <Text className="font-retro-bold text-lg text-dono-text">{title}</Text>
       <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
       {children}
     </View>
@@ -253,7 +253,7 @@ export default function AccountPage() {
             <Text className="text-sm text-dono-muted">/</Text>
             <Text className="text-sm text-dono-muted">Account settings</Text>
           </View>
-          <Text className="mt-3 font-display-medium text-2xl text-dono-text">
+          <Text className="mt-3 font-retro-bold text-2xl text-dono-text">
             Account settings
           </Text>
           <Text className="mt-1 text-dono-muted">
@@ -263,9 +263,9 @@ export default function AccountPage() {
 
         <View className="rounded-2xl border border-dono-border bg-white p-6">
           <View className="mb-1 flex-row items-center justify-between gap-4">
-            <Text className="font-sans-medium text-lg text-dono-text">Account</Text>
+            <Text className="font-retro-bold text-lg text-dono-text">Account</Text>
             {memberSince ? (
-              <Text className="font-mono text-xs uppercase tracking-wide text-dono-muted">
+              <Text className="font-retro-mono text-xs uppercase tracking-wide text-dono-muted">
                 {memberSince}
               </Text>
             ) : null}
@@ -291,7 +291,7 @@ export default function AccountPage() {
                 />
               ) : (
                 <View className="h-full w-full items-center justify-center">
-                  <Text className="font-display-medium text-2xl text-dono-text">
+                  <Text className="font-retro-bold text-2xl text-dono-text">
                     {initials}
                   </Text>
                 </View>
@@ -302,7 +302,7 @@ export default function AccountPage() {
               disabled={uploadingAvatar || savingProfile}
               className={`flex-1 ${uploadingAvatar ? "opacity-50" : ""}`}
             >
-              <Text className="font-sans-medium text-sm text-dono-text">
+              <Text className="font-retro-bold text-sm text-dono-text">
                 {uploadingAvatar ? "Uploading..." : "Upload photo"}
               </Text>
               <Text className="mt-0.5 text-xs text-dono-muted">
@@ -370,7 +370,7 @@ export default function AccountPage() {
                 >
                   <Text
                     className={`text-sm ${
-                      selected ? "font-sans-medium text-dono-primary" : "text-dono-muted"
+                      selected ? "font-retro-bold text-dono-primary" : "text-dono-muted"
                     }`}
                   >
                     {option}
@@ -392,7 +392,7 @@ export default function AccountPage() {
               savingProfile ? "opacity-50" : ""
             }`}
           >
-            <Text className="font-sans-medium text-sm text-white">
+            <Text className="font-retro-bold text-sm text-white">
               {savingProfile ? "Saving..." : "Save changes"}
             </Text>
           </Pressable>
@@ -420,7 +420,7 @@ export default function AccountPage() {
                   key={message.id}
                   className="rounded-xl border border-dono-border bg-dono-bg p-4"
                 >
-                  <Text className="font-sans-medium text-dono-text">
+                  <Text className="font-retro-bold text-dono-text">
                     {message.campaignTitle}
                   </Text>
                   <Text className="mt-2 text-sm text-dono-text">{message.body}</Text>
@@ -452,7 +452,7 @@ export default function AccountPage() {
               </Text>
               <Link href="/campaigns" asChild>
                 <Pressable>
-                  <Text className="font-sans-medium text-sm text-dono-primary">
+                  <Text className="font-retro-bold text-sm text-dono-primary">
                     Browse campaigns →
                   </Text>
                 </Pressable>
@@ -465,7 +465,7 @@ export default function AccountPage() {
                   key={donation.id}
                   className="rounded-xl border border-dono-border bg-dono-bg p-4"
                 >
-                  <Text className="font-sans-medium text-dono-text">
+                  <Text className="font-retro-bold text-dono-text">
                     {donation.campaignTitle}
                   </Text>
                   <Text className="mt-1 text-sm text-dono-muted">
@@ -477,7 +477,7 @@ export default function AccountPage() {
                       disabled={cancelingId === donation.id}
                       className="mt-3 items-center self-start rounded-full border border-dono-border px-4 py-2"
                     >
-                      <Text className="font-sans-medium text-sm text-dono-muted">
+                      <Text className="font-retro-bold text-sm text-dono-muted">
                         {cancelingId === donation.id
                           ? "Canceling..."
                           : "Cancel subscription"}
@@ -493,7 +493,7 @@ export default function AccountPage() {
         <View className="border-t border-dono-border pt-6">
           <View className="flex-row items-center justify-between gap-6">
             <View className="flex-1">
-              <Text className="font-sans-medium text-dono-text">Sign out</Text>
+              <Text className="font-retro-bold text-dono-text">Sign out</Text>
               <Text className="mt-1 text-sm text-dono-muted">
                 You&apos;ll need to sign back in to manage campaigns.
               </Text>
@@ -502,7 +502,7 @@ export default function AccountPage() {
               onPress={handleSignOut}
               className="rounded-full border border-red-300 bg-white px-6 py-2.5"
             >
-              <Text className="font-sans-medium text-sm text-red-600">Sign out</Text>
+              <Text className="font-retro-bold text-sm text-red-600">Sign out</Text>
             </Pressable>
           </View>
         </View>

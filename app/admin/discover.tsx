@@ -55,7 +55,7 @@ export default function AdminDiscoverPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-display-medium text-2xl text-dono-text">
+          <Text className="font-retro-bold text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -83,14 +83,14 @@ export default function AdminDiscoverPage() {
 
         <View className="gap-8">
           <View>
-            <Text className="mb-4 text-lg font-sans-medium text-dono-text">
+            <Text className="mb-4 text-lg font-retro-bold text-dono-text">
               {trimmedSearch ? "Matching posts" : "All live posts"}
             </Text>
             {campaigns === undefined ? (
               <ActivityIndicator color="#17211B" />
             ) : liveCampaigns.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white p-6">
-                <Text className="text-center font-sans-medium text-dono-text">
+                <Text className="text-center font-retro-bold text-dono-text">
                   {trimmedSearch ? "No matches" : "No live posts yet"}
                 </Text>
                 <Text className="mt-2 text-center text-sm text-dono-muted">

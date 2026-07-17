@@ -42,7 +42,7 @@ export function Header() {
         <View className="flex-1 flex-row items-center">
           <Link href="/" asChild>
             <Pressable className="flex-row items-center gap-2">
-              <Text className="font-display-medium text-xl text-dono-text">Dono</Text>
+              <Text className="font-retro-bold text-xl text-dono-text">Dono</Text>
             </Pressable>
           </Link>
         </View>
@@ -62,7 +62,7 @@ export function Header() {
                   >
                     <Text
                       className={cn(
-                        "font-sans-medium text-sm",
+                        "font-retro-bold text-sm",
                         active ? "text-dono-primary" : "text-dono-muted",
                       )}
                     >
@@ -81,7 +81,7 @@ export function Header() {
               <Link href="/create" asChild>
                 <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
                   <Plus size={16} color="#fff" />
-                  <Text className="font-sans-medium text-sm text-white">
+                  <Text className="font-retro-bold text-sm text-white">
                     Start a Campaign
                   </Text>
                 </Pressable>
@@ -98,7 +98,7 @@ export function Header() {
                         accessibilityLabel="Your profile picture"
                       />
                     ) : (
-                      <Text className="font-mono-medium text-sm text-dono-primary">
+                      <Text className="font-retro-mono-bold text-sm text-dono-primary">
                         {initials}
                       </Text>
                     )}
@@ -109,7 +109,7 @@ export function Header() {
               {!isLoading && !isAuthenticated && (
                 <Link href="/signin" asChild>
                   <Pressable className="rounded-full border border-dono-border px-4 py-2">
-                    <Text className="font-sans-medium text-sm text-dono-muted">
+                    <Text className="font-retro-bold text-sm text-dono-muted">
                       Sign in
                     </Text>
                   </Pressable>
@@ -153,7 +153,7 @@ export function Header() {
                   />
                   <Text
                     className={cn(
-                      "font-sans-medium text-sm",
+                      "font-retro-bold text-sm",
                       active ? "text-dono-primary" : "text-dono-muted",
                     )}
                   >
@@ -169,7 +169,7 @@ export function Header() {
               className="mt-2 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-accent px-4 py-2.5"
             >
               <Plus size={16} color="#fff" />
-              <Text className="font-sans-medium text-sm text-white">
+              <Text className="font-retro-bold text-sm text-white">
                 Start a Campaign
               </Text>
             </Pressable>
@@ -180,7 +180,7 @@ export function Header() {
                 onPress={() => setMobileOpen(false)}
                 className="mt-2 items-center rounded-full border border-dono-border px-4 py-2.5"
               >
-                <Text className="font-sans-medium text-sm text-dono-muted">
+                <Text className="font-retro-bold text-sm text-dono-muted">
                   Sign in
                 </Text>
               </Pressable>
@@ -216,7 +216,7 @@ export function MobileNav() {
                 />
                 <Text
                   className={cn(
-                    "font-sans-medium text-xs",
+                    "font-retro-bold text-xs",
                     isActive ? "text-dono-primary" : "text-dono-muted",
                   )}
                 >
@@ -240,7 +240,7 @@ export function Footer() {
         <View className={cn("gap-8", isWide ? "flex-row flex-wrap" : "")}>
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
             <View className="mb-4 flex-row items-center gap-2">
-              <Text className="font-display-medium text-lg text-dono-text">Dono</Text>
+              <Text className="font-retro-bold text-lg text-dono-text">Dono</Text>
             </View>
             <Text className="text-sm text-dono-muted">
               Community infrastructure for transparent university giving.
@@ -248,7 +248,7 @@ export function Footer() {
           </View>
 
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
-            <Text className="mb-3 font-sans-medium text-sm text-dono-text">
+            <Text className="mb-3 font-retro-bold text-sm text-dono-text">
               Platform
             </Text>
             {(

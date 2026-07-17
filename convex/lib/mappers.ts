@@ -24,6 +24,7 @@ export function toCampaign(campaign: CampaignDoc) {
     college: campaign.college,
     image: campaign.image,
     images: campaign.images,
+    videoUrl: campaign.videoUrl,
     createdAt: campaign.createdAt,
     deadline: campaign.deadline,
     status: campaign.status,

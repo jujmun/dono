@@ -74,7 +74,7 @@ export function CampaignCard({
             </CampaignImage>
             <View className="p-4">
               <Text
-                className="font-display-medium text-base text-dono-text"
+                className="font-retro-bold text-base text-dono-text"
                 numberOfLines={2}
               >
                 {campaign.title}
@@ -85,7 +85,7 @@ export function CampaignCard({
                 </Text>
               ) : null}
               <View className="mt-2 flex-row items-center justify-between">
-                <Text className="font-mono text-xs text-dono-muted">{fundedLabel}</Text>
+                <Text className="font-retro-mono text-xs text-dono-muted">{fundedLabel}</Text>
               </View>
 
               <View className="mt-3">
@@ -93,19 +93,19 @@ export function CampaignCard({
               </View>
 
               <View className="mt-3 flex-row items-center justify-between border-t border-dashed border-dono-border pt-3">
-                <Text className="font-mono text-xs text-dono-text">
+                <Text className="font-retro-mono text-xs text-dono-text">
                   {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
                 </Text>
                 <View className="flex-row items-center gap-3">
                   <View className="flex-row items-center gap-1">
                     <Heart size={12} color="#56615A" />
-                    <Text className="font-mono text-xs text-dono-muted">
+                    <Text className="font-retro-mono text-xs text-dono-muted">
                       {campaign.likes}
                     </Text>
                   </View>
                   <View className="flex-row items-center gap-1">
                     <Users size={12} color="#56615A" />
-                    <Text className="font-mono text-xs text-dono-muted">
+                    <Text className="font-retro-mono text-xs text-dono-muted">
                       {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
                     </Text>
                   </View>
@@ -130,14 +130,14 @@ export function CampaignCard({
           <View className="p-5">
             <View className="flex-row items-start justify-between gap-4">
               <View className="min-w-0 flex-1">
-                <Text className="font-display-medium text-xl text-dono-text" numberOfLines={2}>
+                <Text className="font-retro-bold text-xl text-dono-text" numberOfLines={2}>
                   {campaign.title}
                 </Text>
                 {subtitle ? (
                   <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
                 ) : null}
               </View>
-              <Text className="shrink-0 font-mono text-sm text-dono-muted">
+              <Text className="shrink-0 font-retro-mono text-sm text-dono-muted">
                 {fundedLabel}
               </Text>
             </View>
@@ -147,19 +147,19 @@ export function CampaignCard({
             </View>
 
             <View className="mt-4 flex-row items-center justify-between border-t border-dashed border-dono-border pt-4">
-              <Text className="font-mono text-sm text-dono-text">
+              <Text className="font-retro-mono text-sm text-dono-text">
                 {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
               </Text>
               <View className="flex-row items-center gap-4">
                 <View className="flex-row items-center gap-1.5">
                   <Heart size={14} color="#56615A" />
-                  <Text className="font-mono text-sm text-dono-muted">
+                  <Text className="font-retro-mono text-sm text-dono-muted">
                     {campaign.likes} like{campaign.likes === 1 ? "" : "s"}
                   </Text>
                 </View>
                 <View className="flex-row items-center gap-1.5">
                   <Users size={14} color="#56615A" />
-                  <Text className="font-mono text-sm text-dono-muted">
+                  <Text className="font-retro-mono text-sm text-dono-muted">
                     {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
                   </Text>
                 </View>

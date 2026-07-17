@@ -132,7 +132,7 @@ export function ProfileSetupForm({
               />
             ) : (
               <View className="h-full w-full items-center justify-center">
-                <Text className="font-display-medium text-3xl text-dono-text">{initials}</Text>
+                <Text className="font-retro-bold text-3xl text-dono-text">{initials}</Text>
               </View>
             )}
           </View>
@@ -209,7 +209,7 @@ export function ProfileSetupForm({
               >
                 <Text
                   className={`text-sm ${
-                    selected ? "font-sans-medium text-dono-primary" : "text-dono-muted"
+                    selected ? "font-retro-bold text-dono-primary" : "text-dono-muted"
                   }`}
                 >
                   {option}
@@ -236,7 +236,7 @@ export function ProfileSetupForm({
         {loading ? (
           <ActivityIndicator color="#fff" />
         ) : (
-          <Text className="font-sans-medium text-sm text-white">{submitLabel}</Text>
+          <Text className="font-retro-bold text-sm text-white">{submitLabel}</Text>
         )}
       </Pressable>
     </View>

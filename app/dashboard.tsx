@@ -82,48 +82,47 @@ export default function DashboardPage() {
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-7xl px-4 py-8">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">Your Impact</Text>
-          <Text className="mt-1 text-dono-muted">
-            Track your generosity and see the difference you&apos;ve made
-          </Text>
-        </View>
+      <View className="mb-8">
+        <Text className="font-retro-bold text-[32px] text-retro-ink">Your Impact</Text>
+        <Text className="mt-1 text-dono-muted">
+          Track your generosity and see the difference you&apos;ve made
+        </Text>
+      </View>
 
-        <View className="mb-8 flex-row gap-4">
-          {[
-            {
-              icon: Gift,
-              label: "Total Donated",
-              value: formatCurrency(impact.totalDonated),
-            },
-            {
-              icon: Heart,
-              label: "Campaigns Supported",
-              value: impact.campaignsSupported.toString(),
-            },
-            {
-              icon: Users,
-              label: "Communities",
-              value: impact.communitiesFollowed.toString(),
-            },
-          ].map((stat) => (
-            <View
-              key={stat.label}
-              className="flex-1 rounded-2xl border border-dono-border bg-white p-4"
-            >
-              <stat.icon size={20} color="#17211B" />
-              <Text className="mt-2 font-mono-medium text-xl text-dono-text">{stat.value}</Text>
-              <Text className="text-xs text-dono-muted">{stat.label}</Text>
-            </View>
-          ))}
-        </View>
+      <View className="mb-8 flex-row flex-wrap gap-4">
+        {[
+          {
+            icon: Gift,
+            label: "Total Donated",
+            value: formatCurrency(impact.totalDonated),
+          },
+          {
+            icon: Heart,
+            label: "Campaigns Supported",
+            value: impact.campaignsSupported.toString(),
+          },
+          {
+            icon: Users,
+            label: "Communities",
+            value: impact.communitiesFollowed.toString(),
+          },
+        ].map((stat) => (
+          <View
+            key={stat.label}
+            className="min-w-[140px] flex-1 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4 shadow-[5px_5px_0_#211E1A]"
+          >
+            <stat.icon size={20} color="#211E1A" />
+            <Text className="mt-2 font-retro-bold text-xl text-retro-ink">{stat.value}</Text>
+            <Text className="font-retro-mono text-xs text-dono-muted">{stat.label}</Text>
+          </View>
+        ))}
+      </View>
 
         <View className="gap-8">
           <View>
             <View className="mb-4 flex-row items-center gap-2">
               <TrendingUp size={20} color="#17211B" />
-              <Text className="text-lg font-sans-medium text-dono-text">Your Impact</Text>
+              <Text className="text-lg font-retro-bold text-dono-text">Your Impact</Text>
             </View>
             <View className="gap-3">
               {impact.impactHighlights.length > 0 ? (
@@ -150,7 +149,7 @@ export default function DashboardPage() {
           <View>
             <View className="mb-4 flex-row items-center gap-2">
               <Calendar size={20} color="#17211B" />
-              <Text className="text-lg font-sans-medium text-dono-text">
+              <Text className="text-lg font-retro-bold text-dono-text">
                 Recent Donations
               </Text>
             </View>
@@ -162,7 +161,7 @@ export default function DashboardPage() {
                     className="flex-row items-center justify-between rounded-xl border border-dono-border bg-white p-4"
                   >
                     <View>
-                      <Text className="font-sans-medium text-sm text-dono-text">
+                      <Text className="font-retro-bold text-sm text-dono-text">
                         {donation.campaign}
                       </Text>
                       <Text className="text-xs text-dono-muted">
@@ -173,7 +172,7 @@ export default function DashboardPage() {
                         })}
                       </Text>
                     </View>
-                    <Text className="font-mono-medium text-sm text-dono-primary">
+                    <Text className="font-retro-mono-bold text-sm text-dono-primary">
                       {formatCurrency(donation.amount)}
                     </Text>
                   </View>
@@ -191,12 +190,12 @@ export default function DashboardPage() {
 
         <View className="mt-8">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-lg font-sans-medium text-dono-text">
+            <Text className="text-lg font-retro-bold text-dono-text">
               Campaigns You Follow
             </Text>
             <Link href="/campaigns" asChild>
               <Pressable className="flex-row items-center gap-1">
-                <Text className="font-sans-medium text-sm text-dono-primary">Browse more</Text>
+                <Text className="font-retro-bold text-sm text-dono-primary">Browse more</Text>
                 <ArrowRight size={16} color="#17211B" />
               </Pressable>
             </Link>
@@ -215,12 +214,12 @@ export default function DashboardPage() {
 
         <View className="mt-8">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-lg font-sans-medium text-dono-text">
+            <Text className="text-lg font-retro-bold text-dono-text">
               Communities You Follow
             </Text>
             <Link href="/societies" asChild>
               <Pressable className="flex-row items-center gap-1">
-                <Text className="font-sans-medium text-sm text-dono-primary">Browse more</Text>
+                <Text className="font-retro-bold text-sm text-dono-primary">Browse more</Text>
                 <ArrowRight size={16} color="#17211B" />
               </Pressable>
             </Link>
@@ -242,7 +241,6 @@ export default function DashboardPage() {
             </View>
           )}
         </View>
-      </View>
     </AppShell>
   );
 }

@@ -32,11 +32,15 @@ import {
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
 import { categoryLabels, formatCurrency } from "@/lib/constants";
-import { MAX_CAMPAIGN_IMAGES } from "@/lib/campaign-images";
+import {
+  MAX_CAMPAIGN_IMAGES,
+  MIN_CAMPAIGN_IMAGES,
+} from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { encodeImpactItems } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
+import { parseCampaignVideoUrl } from "@/lib/video-url";
 import { api } from "@convex/_generated/api";
 
 const dinoLogo = require("../assets/dino-hero.png");
@@ -94,6 +98,7 @@ export default function CreateCampaignPage() {
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
+  const setCampaignVideoUrl = useMutation(api.campaignCreator.setVideoUrl);
   const setImpactItems = useMutation(api.campaignCreator.setImpactItems);
   const createVerificationSession = useAction(
     api.campaignIdentity.createVerificationSession,
@@ -107,6 +112,7 @@ export default function CreateCampaignPage() {
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
+  const [videoUrl, setVideoUrl] = useState("");
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -310,10 +316,19 @@ export default function CreateCampaignPage() {
     );
   };
 
+  const parsedVideoUrl = parseCampaignVideoUrl(videoUrl);
+  const videoUrlInvalid = videoUrl.trim().length > 0 && !parsedVideoUrl;
+  const photosIncomplete =
+    pickedImages.length > 0 && pickedImages.length < MIN_CAMPAIGN_IMAGES;
+
   const canProceed = () => {
     switch (step) {
       case 0:
-        return form.title && form.category && form.creatorType;
+        return (
+          Boolean(form.title && form.category && form.creatorType) &&
+          !videoUrlInvalid &&
+          !photosIncomplete
+        );
       case 1:
         return form.description && form.story;
       case 2:
@@ -328,7 +343,13 @@ export default function CreateCampaignPage() {
   };
 
   const inputClass =
-    "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+    "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
+  const primaryBtnClass =
+    "items-center rounded-full border-2 border-retro-ink bg-retro-mint px-5 py-2.5 shadow-[3px_3px_0_#211E1A]";
+  const accentBtnClass =
+    "items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-6 py-2.5 shadow-[3px_3px_0_#211E1A]";
+  const secondaryBtnClass =
+    "items-center rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-2.5 shadow-[3px_3px_0_#211E1A]";
 
   if (isLoading) {
     return (
@@ -354,8 +375,8 @@ export default function CreateCampaignPage() {
         className={`mx-auto w-full px-4 py-8 ${step === 3 ? "max-w-7xl" : "max-w-2xl"}`}
       >
         <View className="mb-8 items-center">
-          <Text className="font-display-medium text-2xl text-dono-text">Start a Campaign</Text>
-          <Text className="mt-1 text-center text-dono-muted">
+          <Text className="font-retro-bold text-2xl text-retro-ink">Start a Campaign</Text>
+          <Text className="mt-1 text-center text-[#5c574f]">
             Free for students. Reach alumni who care about your community.
           </Text>
         </View>
@@ -368,7 +389,7 @@ export default function CreateCampaignPage() {
                   {i > 0 ? (
                     <View
                       className={`h-0.5 flex-1 ${
-                        i <= step ? "bg-dono-primary" : "bg-dono-border"
+                        i <= step ? "bg-retro-mint" : "bg-retro-ink/20"
                       }`}
                     />
                   ) : (
@@ -376,7 +397,7 @@ export default function CreateCampaignPage() {
                   )}
                   <View
                     className={`h-8 w-8 shrink-0 items-center justify-center rounded-full ${
-                      i <= step ? "bg-dono-primary" : "bg-dono-surface-muted"
+                      i <= step ? "bg-retro-mint" : "bg-retro-cream"
                     }`}
                   >
                     {i < step ? (
@@ -389,7 +410,7 @@ export default function CreateCampaignPage() {
                     ) : (
                       <Text
                         className={`text-xs font-bold ${
-                          i === step ? "text-white" : "text-dono-muted"
+                          i === step ? "text-white" : "text-[#5c574f]"
                         }`}
                       >
                         {i + 1}
@@ -399,7 +420,7 @@ export default function CreateCampaignPage() {
                   {i < steps.length - 1 ? (
                     <View
                       className={`h-0.5 flex-1 ${
-                        i < step ? "bg-dono-primary" : "bg-dono-border"
+                        i < step ? "bg-retro-mint" : "bg-retro-ink/20"
                       }`}
                     />
                   ) : (
@@ -409,10 +430,10 @@ export default function CreateCampaignPage() {
                 <Text
                   className={`mt-2 text-center text-xs ${
                     i === step
-                      ? "font-sans-medium text-dono-text"
+                      ? "font-retro-bold text-retro-ink"
                       : i < step
-                        ? "text-dono-muted"
-                        : "text-dono-muted"
+                        ? "text-[#5c574f]"
+                        : "text-[#5c574f]"
                   }`}
                   numberOfLines={1}
                 >
@@ -423,11 +444,11 @@ export default function CreateCampaignPage() {
           </View>
         </View>
 
-        <View className="rounded-2xl border border-dono-border bg-white p-6">
+        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-6 shadow-[5px_5px_0_#211E1A]">
           {step === 0 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Campaign Title
                 </Text>
                 <TextInput
@@ -440,10 +461,33 @@ export default function CreateCampaignPage() {
               </View>
 
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                  Campaign Video
+                </Text>
+                <TextInput
+                  value={videoUrl}
+                  onChangeText={setVideoUrl}
+                  placeholder="https://youtube.com/watch?v=… or vimeo.com/…"
+                  placeholderTextColor="#56615A"
+                  autoCapitalize="none"
+                  autoCorrect={false}
+                  className={inputClass}
+                />
+                <Text className="mt-1.5 text-xs text-[#5c574f]">
+                  Optional. Paste a YouTube or Vimeo link for the main media box.
+                </Text>
+                {videoUrlInvalid ? (
+                  <Text className="mt-1 text-xs text-red-600">
+                    Enter a valid YouTube or Vimeo URL.
+                  </Text>
+                ) : null}
+              </View>
+
+              <View>
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Campaign Photos
                 </Text>
-                <View className="overflow-hidden rounded-2xl border border-dono-border">
+                <View className="overflow-hidden rounded-2xl border border-retro-ink">
                   <CampaignImage image={campaignImageSource} className="h-48">
                     {form.category ? (
                       <View className="absolute left-4 top-4">
@@ -452,7 +496,7 @@ export default function CreateCampaignPage() {
                     ) : null}
                   </CampaignImage>
                 </View>
-                {pickedImages.length > 1 ? (
+                {pickedImages.length > 0 ? (
                   <ScrollView
                     horizontal
                     showsHorizontalScrollIndicator={false}
@@ -464,7 +508,7 @@ export default function CreateCampaignPage() {
                         <CampaignImage image={image.uri} className="h-16 w-24 rounded-lg" />
                         <Pressable
                           onPress={() => removeCampaignImage(index)}
-                          className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-dono-text"
+                          className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-retro-ink"
                         >
                           <Text className="text-xs font-bold text-white">×</Text>
                         </Pressable>
@@ -476,14 +520,14 @@ export default function CreateCampaignPage() {
                   <Pressable
                     onPress={() => void pickCampaignImages()}
                     disabled={pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES}
-                    className={`flex-row items-center gap-2 rounded-full border border-dono-border px-4 py-2 ${
+                    className={`flex-row items-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
                       pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES
                         ? "opacity-50"
                         : ""
                     }`}
                   >
                     <ImagePlus size={16} color="#17211B" />
-                    <Text className="font-sans-medium text-sm text-dono-text">
+                    <Text className="font-retro-bold text-sm text-retro-ink">
                       {pickingImage
                         ? "Opening library..."
                         : pickedImages.length > 0
@@ -494,38 +538,44 @@ export default function CreateCampaignPage() {
                   {pickedImages.length > 0 ? (
                     <Pressable
                       onPress={() => setPickedImages([])}
-                      className="rounded-full border border-dono-border px-4 py-2"
+                      className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2"
                     >
-                      <Text className="font-sans-medium text-sm text-dono-muted">
+                      <Text className="font-retro-bold text-sm text-[#5c574f]">
                         Remove all
                       </Text>
                     </Pressable>
                   ) : null}
                 </View>
-                <Text className="mt-1.5 text-xs text-dono-muted">
-                  Optional. Add up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each).
+                <Text className="mt-1.5 text-xs text-[#5c574f]">
+                  Optional. If you add photos, include {MIN_CAMPAIGN_IMAGES}–
+                  {MAX_CAMPAIGN_IMAGES} (JPG or PNG, 5MB each).
                 </Text>
+                {photosIncomplete ? (
+                  <Text className="mt-1 text-xs text-red-600">
+                    Add at least {MIN_CAMPAIGN_IMAGES} photos, or remove all.
+                  </Text>
+                ) : null}
               </View>
 
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">Category</Text>
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">Category</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2">
                     {Object.entries(categoryLabels).map(([key, label]) => (
                       <Pressable
                         key={key}
                         onPress={() => update("category", key)}
-                        className={`rounded-xl border px-3 py-2.5 ${
+                        className={`rounded-lg border-2 px-3 py-2.5 ${
                           form.category === key
-                            ? "border-dono-primary bg-dono-primary/5"
-                            : "border-dono-border"
+                            ? "border-retro-ink bg-retro-mint/10"
+                            : "border-retro-ink"
                         }`}
                       >
                         <Text
-                          className={`font-sans-medium text-xs ${
+                          className={`font-retro-bold text-xs ${
                             form.category === key
-                              ? "text-dono-primary"
-                              : "text-dono-muted"
+                              ? "text-retro-mint"
+                              : "text-[#5c574f]"
                           }`}
                         >
                           {label}
@@ -537,7 +587,7 @@ export default function CreateCampaignPage() {
               </View>
 
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   I am creating this as a...
                 </Text>
                 <View className="flex-row flex-wrap gap-2">
@@ -545,17 +595,17 @@ export default function CreateCampaignPage() {
                     <Pressable
                       key={type}
                       onPress={() => update("creatorType", type)}
-                      className={`rounded-xl border px-3 py-2.5 ${
+                      className={`rounded-lg border-2 px-3 py-2.5 ${
                         form.creatorType === type
-                          ? "border-dono-primary bg-dono-primary/5"
-                          : "border-dono-border"
+                          ? "border-retro-ink bg-retro-mint/10"
+                          : "border-retro-ink"
                       }`}
                     >
                       <Text
-                        className={`font-sans-medium text-xs ${
+                        className={`font-retro-bold text-xs ${
                           form.creatorType === type
-                            ? "text-dono-primary"
-                            : "text-dono-muted"
+                            ? "text-retro-mint"
+                            : "text-[#5c574f]"
                         }`}
                       >
                         {type}
@@ -570,7 +620,7 @@ export default function CreateCampaignPage() {
           {step === 1 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Short Description
                 </Text>
                 <TextInput
@@ -582,7 +632,7 @@ export default function CreateCampaignPage() {
                 />
               </View>
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Your Story
                 </Text>
                 <TextInput
@@ -602,7 +652,7 @@ export default function CreateCampaignPage() {
           {step === 2 && (
             <View className="gap-5">
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Funding Goal (£)
                 </Text>
                 <TextInput
@@ -621,10 +671,10 @@ export default function CreateCampaignPage() {
               </View>
 
               <View>
-                <Text className="mb-1.5 font-sans-medium text-sm text-dono-text">
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   What your donation funds
                 </Text>
-                <Text className="mb-3 text-xs text-dono-muted">
+                <Text className="mb-3 text-xs text-[#5c574f]">
                   Itemise how you&apos;ll spend the money (amounts in £). Line items must
                   add up to your funding goal — donors see this as a transparent ledger.
                 </Text>
@@ -636,23 +686,23 @@ export default function CreateCampaignPage() {
                         onChangeText={(v) => updateFundLine(index, "label", v)}
                         placeholder="e.g. Core textbook"
                         placeholderTextColor="#56615A"
-                        className="min-w-0 flex-1 rounded-lg border border-dono-border/80 bg-white px-3 py-2.5 text-sm text-dono-text"
+                        className="min-w-0 flex-1 rounded-lg border border-retro-ink/80 bg-white px-3 py-2.5 text-sm text-retro-ink"
                       />
-                      <View className="w-[5.5rem] flex-row items-center rounded-lg border border-dono-border/80 bg-white">
-                        <Text className="pl-3 font-mono text-sm text-dono-muted">£</Text>
+                      <View className="w-[5.5rem] flex-row items-center rounded-lg border border-retro-ink/80 bg-white">
+                        <Text className="pl-3 font-retro-mono text-sm text-[#5c574f]">£</Text>
                         <TextInput
                           value={line.amount}
                           onChangeText={(v) => updateFundLine(index, "amount", v)}
                           placeholder="0"
                           placeholderTextColor="#56615A"
                           keyboardType="numeric"
-                          className="min-w-0 flex-1 py-2.5 pr-3 text-right font-mono text-sm text-dono-text"
+                          className="min-w-0 flex-1 py-2.5 pr-3 text-right font-retro-mono text-sm text-retro-ink"
                         />
                       </View>
                       {fundLines.length > MIN_FUND_LINES ? (
                         <Pressable
                           onPress={() => removeFundLine(index)}
-                          className="h-10 w-10 items-center justify-center rounded-lg border border-dono-border/80 bg-white"
+                          className="h-10 w-10 items-center justify-center rounded-lg border border-retro-ink/80 bg-white"
                           accessibilityLabel="Remove line item"
                         >
                           <Trash2 size={14} color="#56615A" />
@@ -665,10 +715,10 @@ export default function CreateCampaignPage() {
                   {fundLines.length < MAX_FUND_LINES ? (
                     <Pressable
                       onPress={addFundLine}
-                      className="mb-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-dashed border-dono-border bg-white/80 py-2.5"
+                      className="mb-1 flex-row items-center justify-center gap-1.5 rounded-lg border border-dashed border-retro-ink bg-white/80 py-2.5"
                     >
                       <Plus size={14} color="#56615A" />
-                      <Text className="font-sans-medium text-xs text-dono-muted">
+                      <Text className="font-retro-bold text-xs text-[#5c574f]">
                         Add line item
                       </Text>
                     </Pressable>
@@ -708,10 +758,10 @@ export default function CreateCampaignPage() {
           {step === 3 && (
             <View className="gap-4">
               <View>
-                <Text className="text-lg font-sans-medium text-dono-text">
+                <Text className="text-lg font-retro-bold text-retro-ink">
                   Review your campaign
                 </Text>
-                <Text className="mt-1 text-sm text-dono-muted">
+                <Text className="mt-1 text-sm text-[#5c574f]">
                   This is how donors will see your campaign once it&apos;s live.
                 </Text>
               </View>
@@ -725,14 +775,14 @@ export default function CreateCampaignPage() {
                 impactLines={previewImpactLines}
               />
 
-              <View className="rounded-xl border border-dono-border bg-white p-4">
+              <View className="rounded-xl border border-retro-ink bg-white p-4">
                 <View className="mb-1.5 flex-row items-center gap-2">
                   <ShieldCheck size={16} color="#17211B" />
-                  <Text className="font-sans-medium text-sm text-dono-text">
+                  <Text className="font-retro-bold text-sm text-retro-ink">
                     Identity Check
                   </Text>
                 </View>
-                <Text className="mb-3 text-xs text-dono-muted">
+                <Text className="mb-3 text-xs text-[#5c574f]">
                   You'll be asked for a quick photo of your ID and a selfie so we can
                   confirm it's really you — it only takes a minute.
                 </Text>
@@ -742,14 +792,14 @@ export default function CreateCampaignPage() {
                 <Pressable
                   onPress={() => void handleVerifyIdentity()}
                   disabled={verifying || stripeVerified}
-                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2.5 ${
+                  className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
                     verifying || stripeVerified ? "opacity-50" : ""
                   }`}
                 >
                   {verifying ? (
                     <ActivityIndicator color="#fff" />
                   ) : (
-                    <Text className="font-sans-medium text-sm text-white">
+                    <Text className="font-retro-bold text-sm text-retro-paper">
                       Verify your identity
                     </Text>
                   )}
@@ -759,7 +809,7 @@ export default function CreateCampaignPage() {
                     That didn't go through — please try again.
                   </Text>
                 ) : !campaignSlug ? (
-                  <Text className="mt-2 text-xs text-dono-muted">
+                  <Text className="mt-2 text-xs text-[#5c574f]">
                     You'll be able to continue once you've started this check.
                   </Text>
                 ) : null}
@@ -769,10 +819,10 @@ export default function CreateCampaignPage() {
 
           {step === 4 && (
             <View className="gap-5">
-              <Text className="text-lg font-sans-medium text-dono-text">
+              <Text className="text-lg font-retro-bold text-retro-ink">
                 Before your campaign goes live
               </Text>
-              <Text className="text-sm leading-relaxed text-dono-muted">
+              <Text className="text-sm leading-relaxed text-[#5c574f]">
                 We take moderation seriously. Every campaign is reviewed by our team to
                 make sure it meets Dono's guidelines and has the best possible chance of
                 reaching alumni and getting funded. We'll reach out directly if anything
@@ -786,9 +836,9 @@ export default function CreateCampaignPage() {
             {step > 0 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
-                className="rounded-full border border-dono-border px-5 py-2.5"
+                className={secondaryBtnClass}
               >
-                <Text className="font-sans-medium text-sm text-dono-muted">Back</Text>
+                <Text className="font-retro-bold text-sm text-[#5c574f]">Back</Text>
               </Pressable>
             ) : (
               <View />
@@ -798,22 +848,22 @@ export default function CreateCampaignPage() {
               <Pressable
                 onPress={() => setStep(step + 1)}
                 disabled={!canProceed()}
-                className={`flex-row items-center gap-2 rounded-full bg-dono-primary px-5 py-2.5 ${
+                className={`flex-row ${primaryBtnClass} gap-2 ${
                   !canProceed() ? "opacity-50" : ""
                 }`}
               >
-                <Text className="font-sans-medium text-sm text-white">Continue</Text>
+                <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
                 <ArrowRight size={16} color="#fff" />
               </Pressable>
             ) : step === 3 ? (
               <Pressable
                 onPress={() => setStep(4)}
                 disabled={!canProceed()}
-                className={`rounded-full px-6 py-2.5 ${
-                  stripeVerified ? "bg-dono-primary" : "bg-dono-accent"
-                } ${!canProceed() ? "opacity-50" : ""}`}
+                className={`${stripeVerified ? primaryBtnClass : accentBtnClass} ${
+                  !canProceed() ? "opacity-50" : ""
+                }`}
               >
-                <Text className="font-sans-medium text-sm text-white">Continue</Text>
+                <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
               </Pressable>
             ) : (
               <Pressable
@@ -835,6 +885,7 @@ export default function CreateCampaignPage() {
                   })
                     .then(async () => {
                       let imageUploadFailed = false;
+                      let videoSaveFailed = false;
                       try {
                         await setImpactItems({
                           slug,
@@ -845,18 +896,32 @@ export default function CreateCampaignPage() {
                           "Campaign created but fund breakdown could not be saved. Edit from your dashboard.",
                         );
                       }
-                      if (pickedImages.length > 0) {
+                      if (parsedVideoUrl) {
                         try {
-                          const allUploaded = await uploadCampaignImages({
+                          await setCampaignVideoUrl({
                             slug,
-                            images: pickedImages,
-                            generateUploadUrl: generateImageUploadUrl,
-                            setImage: setCampaignImage,
-                            setImages: setCampaignImages,
+                            videoUrl: parsedVideoUrl.watchUrl,
                           });
-                          imageUploadFailed = !allUploaded;
                         } catch {
+                          videoSaveFailed = true;
+                        }
+                      }
+                      if (pickedImages.length > 0) {
+                        if (pickedImages.length < MIN_CAMPAIGN_IMAGES) {
                           imageUploadFailed = true;
+                        } else {
+                          try {
+                            const allUploaded = await uploadCampaignImages({
+                              slug,
+                              images: pickedImages,
+                              generateUploadUrl: generateImageUploadUrl,
+                              setImage: setCampaignImage,
+                              setImages: setCampaignImages,
+                            });
+                            imageUploadFailed = !allUploaded;
+                          } catch {
+                            imageUploadFailed = true;
+                          }
                         }
                       }
 
@@ -869,10 +934,12 @@ export default function CreateCampaignPage() {
                         campaign_has_image:
                           pickedImages.length > 0 && !imageUploadFailed,
                         campaign_image_count: pickedImages.length,
+                        campaign_has_video: Boolean(parsedVideoUrl) && !videoSaveFailed,
                         campaign_impact_items: impactItemLabels.length,
                       });
                       setForm(initialForm);
                       setPickedImages([]);
+                      setVideoUrl("");
                       setFundLines(initialFundLines());
                       setCampaignSlug(null);
                       setStep(0);
@@ -888,11 +955,11 @@ export default function CreateCampaignPage() {
                       setSubmitting(false);
                     });
                 }}
-                className={`rounded-full bg-dono-accent px-6 py-2.5 ${
+                className={`${accentBtnClass} ${
                   submitting || !campaignSlug ? "opacity-50" : ""
                 }`}
               >
-                <Text className="font-sans-medium text-sm text-white">
+                <Text className="font-retro-bold text-sm text-retro-paper">
                   {submitting
                     ? pickedImages.length > 0
                       ? "Creating & uploading..."

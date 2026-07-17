@@ -49,11 +49,11 @@ export function ActivityFeedItem({ item }: ActivityFeedItemProps) {
 
       <View className="min-w-0 flex-1">
         <Text className="text-sm text-dono-text">
-          <Text className="font-sans-medium">{item.user}</Text>{" "}
+          <Text className="font-retro-bold">{item.user}</Text>{" "}
           <Text className="text-dono-muted">{item.action}</Text>{" "}
           <Text className="font-medium">{item.target}</Text>
           {item.amount != null && (
-            <Text className="font-sans-medium text-dono-primary">
+            <Text className="font-retro-bold text-dono-primary">
               {" "}
               {formatCurrency(item.amount)}
             </Text>
@@ -112,7 +112,7 @@ function EngagementStatChip({
       )}
       <Text
         className={cn(
-          "font-sans-medium text-sm",
+          "font-retro-bold text-sm",
           active ? "text-red-700" : "text-dono-text",
         )}
       >
