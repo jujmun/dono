@@ -15,6 +15,14 @@ import {
   Inter_400Regular,
   Inter_500Medium,
 } from "@expo-google-fonts/inter";
+import {
+  Fredoka_500Medium,
+  Fredoka_700Bold,
+} from "@expo-google-fonts/fredoka";
+import {
+  SpaceMono_400Regular,
+  SpaceMono_700Bold,
+} from "@expo-google-fonts/space-mono";
 import { ConvexAuthProvider } from "@convex-dev/auth/react";
 import { ConvexReactClient, useConvexAuth, useMutation } from "convex/react";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -159,6 +167,10 @@ export default function RootLayout() {
     JetBrainsMono_500Medium,
     Inter_400Regular,
     Inter_500Medium,
+    Fredoka_500Medium,
+    Fredoka_700Bold,
+    SpaceMono_400Regular,
+    SpaceMono_700Bold,
   });
 
   const tree = (

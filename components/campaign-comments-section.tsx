@@ -21,6 +21,8 @@ type CampaignCommentsSectionProps = {
   campaignSlug: string;
   isAuthenticated: boolean;
   className?: string;
+  /** When true, omit outer card chrome and section heading (e.g. inside RetroPanel). */
+  embedded?: boolean;
 };
 
 function formatCommentTime(timestamp: number) {
@@ -41,7 +43,7 @@ function formatCommentTime(timestamp: number) {
 
 export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionProps>(
   function CampaignCommentsSection(
-    { campaignSlug, isAuthenticated, className },
+    { campaignSlug, isAuthenticated, className, embedded = false },
     ref,
   ) {
     const profile = useCurrentProfile();
@@ -95,9 +97,18 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
       <View
         ref={ref}
         nativeID="campaign-comments"
-        className={cn("mb-8 rounded-2xl border border-dono-border bg-white p-6", className)}
+        className={cn(
+          embedded
+            ? "mb-0"
+            : "mb-8 rounded-2xl border border-dono-border bg-white p-6",
+          className,
+        )}
       >
-        <Text className="mb-4 text-lg font-sans-medium text-dono-text">Comments</Text>
+        {!embedded ? (
+          <Text className="mb-4 text-lg font-sans-medium text-dono-text">
+            Comments
+          </Text>
+        ) : null}
 
         {isAuthenticated ? (
           <View className="mb-6">
@@ -108,36 +119,86 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               placeholderTextColor="#56615A"
               multiline
               maxLength={MAX_COMMENT_LENGTH}
-              className="min-h-[88px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
+              className={cn(
+                "min-h-[88px] px-4 py-3 text-sm text-dono-text",
+                embedded
+                  ? "rounded-lg border-2 border-retro-ink bg-white"
+                  : "rounded-xl border border-dono-border",
+              )}
               textAlignVertical="top"
             />
             <View className="mt-3 flex-row items-center justify-between">
-              <Text className="text-xs text-dono-muted">
+              <Text
+                className={cn(
+                  "text-xs",
+                  embedded ? "text-[#5c574f]" : "text-dono-muted",
+                )}
+              >
                 {body.length}/{MAX_COMMENT_LENGTH}
               </Text>
               <Pressable
                 onPress={() => void handlePost()}
                 disabled={posting || !body.trim()}
-                className={`rounded-full bg-dono-primary px-4 py-2 ${
-                  posting || !body.trim() ? "opacity-50" : ""
-                }`}
+                className={cn(
+                  "px-4 py-2",
+                  embedded
+                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[2px_2px_0_#211E1A]"
+                    : "rounded-full bg-dono-primary",
+                  posting || !body.trim() ? "opacity-50" : "",
+                )}
               >
                 {posting ? (
-                  <ActivityIndicator size="small" color="#fff" />
+                  <ActivityIndicator
+                    size="small"
+                    color={embedded ? "#211E1A" : "#fff"}
+                  />
                 ) : (
-                  <Text className="font-sans-medium text-sm text-white">Post</Text>
+                  <Text
+                    className={cn(
+                      "font-sans-medium text-sm",
+                      embedded ? "font-retro-bold text-retro-paper" : "text-white",
+                    )}
+                  >
+                    Post
+                  </Text>
                 )}
               </Pressable>
             </View>
           </View>
         ) : (
-          <View className="mb-6 rounded-xl border border-dashed border-dono-border bg-dono-surface-muted/60 px-4 py-4">
-            <Text className="text-sm text-dono-muted">
+          <View
+            className={cn(
+              "mb-6 px-4 py-4",
+              embedded
+                ? "rounded-[10px] border-2 border-dashed border-retro-ink bg-retro-cream"
+                : "rounded-xl border border-dashed border-dono-border bg-dono-surface-muted/60",
+            )}
+          >
+            <Text
+              className={cn(
+                "text-sm",
+                embedded ? "text-[13.5px] text-retro-ink" : "text-dono-muted",
+              )}
+            >
               Sign in to join the conversation.
             </Text>
             <Link href="/signin" asChild>
-              <Pressable className="mt-3 self-start rounded-full bg-dono-primary px-4 py-2">
-                <Text className="font-sans-medium text-sm text-white">Sign in</Text>
+              <Pressable
+                className={cn(
+                  "mt-3 self-start px-4 py-2",
+                  embedded
+                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                    : "rounded-full bg-dono-primary",
+                )}
+              >
+                <Text
+                  className={cn(
+                    "font-sans-medium text-sm",
+                    embedded ? "font-retro-bold text-retro-paper" : "text-white",
+                  )}
+                >
+                  Sign in
+                </Text>
               </Pressable>
             </Link>
           </View>
@@ -150,7 +211,14 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
         {comments === undefined ? (
           <ActivityIndicator color="#17211B" />
         ) : comments.length === 0 ? (
-          <Text className="text-sm text-dono-muted">
+          <Text
+            className={cn(
+              "text-sm",
+              embedded
+                ? "text-[12.5px] italic text-[#5c574f]"
+                : "text-dono-muted",
+            )}
+          >
             Be the first to show your support.
           </Text>
         ) : (
