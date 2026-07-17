@@ -2,7 +2,12 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
-import { getProfileByUserId, requireAdmin, requireVerifiedUser } from "./lib/authz";
+import {
+  getProfileByUserId,
+  optionalUserId,
+  requireAdmin,
+  requireVerifiedUser,
+} from "./lib/authz";
 import { logAdminAction } from "./adminAudit";
 import {
   assertNotRateLimited,
@@ -238,12 +243,21 @@ export const create = mutation({
     if (!baseSlug) baseSlug = "society";
     let slug = baseSlug;
     let suffix = 1;
-    while (
-      await ctx.db
+    // Societies share the /societies/[slug] URL namespace with the legacy
+    // communities catalog, so a slug must be unique across both tables.
+    const slugTaken = async (candidate: string) => {
+      const society = await ctx.db
         .query("societies")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .unique()
-    ) {
+        .withIndex("by_slug", (q) => q.eq("slug", candidate))
+        .unique();
+      if (society) return true;
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", candidate))
+        .unique();
+      return Boolean(community);
+    };
+    while (await slugTaken(slug)) {
       slug = `${baseSlug}-${suffix}`;
       suffix += 1;
     }
@@ -339,6 +353,27 @@ export const listActive = query({
       .withIndex("by_status", (q) => q.eq("status", "active"))
       .collect();
     return await Promise.all(societies.map((s) => toPublicSociety(ctx, s)));
+  },
+});
+
+/**
+ * Public landing-page lookup. Active societies are visible to everyone;
+ * a pending or rejected society is returned only to its creator (so they
+ * can preview their page), and looks like "not found" to anyone else.
+ */
+export const getPublicBySlug = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society) return null;
+    if (society.status !== "active") {
+      const userId = await optionalUserId(ctx);
+      if (!userId || society.creatorId !== userId) return null;
+    }
+    return await toPublicSociety(ctx, society);
   },
 });
 
