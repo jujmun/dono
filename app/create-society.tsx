@@ -8,6 +8,7 @@ import {
   ActivityIndicator,
   Animated,
   Easing,
+  Modal,
 } from "react-native";
 import { Link } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -30,6 +31,8 @@ import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+
+const dinoLogo = require("../assets/dino-hero.png");
 
 const steps = ["Details", "About", "Verification", "Review", "Submit"];
 
@@ -104,6 +107,9 @@ export default function CreateSocietyPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
   const createSociety = useMutation(api.societies.create);
+  const updateVerificationMaterials = useMutation(
+    api.societies.updateVerificationMaterials,
+  );
   const createVerificationSession = useAction(
     api.societyIdentity.createVerificationSession,
   );
@@ -121,6 +127,11 @@ export default function CreateSocietyPage() {
   const [pickingId, setPickingId] = useState(false);
   const [societySlug, setSocietySlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [docsPopupVisible, setDocsPopupVisible] = useState(false);
+  const [syncingMaterials, setSyncingMaterials] = useState(false);
+  // Storage ids of docs already uploaded, keyed by local uri, so revisions
+  // after the society exists don't re-upload unchanged files.
+  const uploadedDocIds = useRef(new Map<string, Id<"_storage">>());
 
   // Once a slug exists, this reflects the webhook-driven status in real time.
   const verification = useQuery(
@@ -242,7 +253,7 @@ export default function CreateSocietyPage() {
     setError(null);
     const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (!permission.granted) {
-      setError("Photo library permission is required to add an ID document.");
+      setError("Photo library permission is required to add your student card.");
       return;
     }
 
@@ -259,7 +270,7 @@ export default function CreateSocietyPage() {
 
       const asset = result.assets[0];
       if (asset.fileSize && asset.fileSize > MAX_FILE_BYTES) {
-        setError("The ID document must be 5MB or smaller.");
+        setError("The student card image must be 5MB or smaller.");
         return;
       }
 
@@ -285,7 +296,7 @@ export default function CreateSocietyPage() {
   const ensureSocietyCreated = async (): Promise<string> => {
     if (societySlug) return societySlug;
     if (!idDocument) {
-      throw new Error("An ID document is required.");
+      throw new Error("A student card is required.");
     }
 
     const coverImageStorageId = coverImage
@@ -294,7 +305,9 @@ export default function CreateSocietyPage() {
 
     const supportingDocumentStorageIds: Id<"_storage">[] = [];
     for (const doc of supportingDocs) {
-      supportingDocumentStorageIds.push(await uploadPickedFile(doc));
+      const storageId = await uploadPickedFile(doc);
+      uploadedDocIds.current.set(doc.uri, storageId);
+      supportingDocumentStorageIds.push(storageId);
     }
 
     const idDocumentStorageId = await uploadPickedFile(idDocument);
@@ -338,10 +351,56 @@ export default function CreateSocietyPage() {
   const websiteInvalid = !isValidOptionalUrl(form.website);
   const secondaryLinkInvalid = !isValidOptionalUrl(form.secondaryLink);
   const manualFieldsValid =
-    supportingDocs.length > 0 &&
-    idDocument !== null &&
-    !websiteInvalid &&
-    !secondaryLinkInvalid;
+    idDocument !== null && !websiteInvalid && !secondaryLinkInvalid;
+
+  /**
+   * The society record is created the moment identity verification starts,
+   * so documents or links changed after that are pushed to the server as the
+   * user leaves the verification step.
+   */
+  const syncVerificationMaterials = async (slug: string) => {
+    const supportingDocumentStorageIds: Id<"_storage">[] = [];
+    for (const doc of supportingDocs) {
+      let storageId = uploadedDocIds.current.get(doc.uri);
+      if (!storageId) {
+        storageId = await uploadPickedFile(doc);
+        uploadedDocIds.current.set(doc.uri, storageId);
+      }
+      supportingDocumentStorageIds.push(storageId);
+    }
+    await updateVerificationMaterials({
+      slug,
+      websiteUrl: form.website,
+      secondaryLink: form.secondaryLink.trim() || undefined,
+      supportingDocumentStorageIds,
+    });
+  };
+
+  const continueFromVerification = async () => {
+    if (!societySlug) return;
+    setError(null);
+    setSyncingMaterials(true);
+    try {
+      await syncVerificationMaterials(societySlug);
+      setStep(3);
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setSyncingMaterials(false);
+    }
+  };
+
+  const handleContinue = () => {
+    if (step === 2) {
+      if (supportingDocs.length === 0) {
+        setDocsPopupVisible(true);
+        return;
+      }
+      void continueFromVerification();
+      return;
+    }
+    setStep(step + 1);
+  };
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
   const stripeVerified = stripeStatus === "verified";
@@ -434,7 +493,12 @@ export default function CreateSocietyPage() {
                   }`}
                 >
                   {i < step ? (
-                    <CheckCircle2 size={16} color="#fff" />
+                    <Image
+                      source={dinoLogo}
+                      style={{ width: 18, height: 18, tintColor: "#fff" }}
+                      resizeMode="contain"
+                      accessibilityLabel="Step complete"
+                    />
                   ) : (
                     <Text
                       className={`text-xs font-bold ${
@@ -556,7 +620,8 @@ export default function CreateSocietyPage() {
                 </View>
                 <Text className="mb-3 text-xs text-dono-muted">
                   Upload your society's constitution or proof of official university
-                  recognition. At least one document is required.
+                  recognition. Optional — but approval is less likely without
+                  supporting documentation.
                 </Text>
 
                 {supportingDocs.length > 0 ? (
@@ -612,7 +677,9 @@ export default function CreateSocietyPage() {
                 </View>
                 <View className="gap-4">
                   <View>
-                    <Text className="mb-1.5 text-sm text-dono-muted">Website URL</Text>
+                    <Text className="mb-1.5 text-sm text-dono-muted">
+                      Website URL (optional)
+                    </Text>
                     <TextInput
                       value={form.website}
                       onChangeText={(v) => update("website", v)}
@@ -657,13 +724,13 @@ export default function CreateSocietyPage() {
                 <View className="mb-1.5 flex-row items-center gap-2">
                   <IdCard size={16} color="#17211B" />
                   <Text className="font-sans-medium text-sm text-dono-text">
-                    Identity Verification
+                    Student Verification
                   </Text>
                 </View>
                 <Text className="mb-3 text-xs text-dono-muted">
-                  Upload a photo ID (e.g. student card or passport) to confirm you're a real
-                  student setting up this society. This is used for verification only and is
-                  never shown publicly.
+                  Upload a photo of your student card to confirm you're a current student
+                  setting up this society. Only student cards are accepted. This is used
+                  for verification only and is never shown publicly.
                 </Text>
 
                 {idDocument ? (
@@ -672,7 +739,7 @@ export default function CreateSocietyPage() {
                       source={{ uri: idDocument.uri }}
                       style={{ width: 40, height: 40, borderRadius: 8 }}
                       resizeMode="cover"
-                      accessibilityLabel="ID document thumbnail"
+                      accessibilityLabel="Student card thumbnail"
                     />
                     <Text className="flex-1 text-sm text-dono-text" numberOfLines={1}>
                       {idDocument.name}
@@ -695,7 +762,11 @@ export default function CreateSocietyPage() {
                 >
                   <IdCard size={16} color="#17211B" />
                   <Text className="font-sans-medium text-sm text-dono-text">
-                    {pickingId ? "Opening library..." : idDocument ? "Replace ID" : "Add ID document"}
+                    {pickingId
+                      ? "Opening library..."
+                      : idDocument
+                        ? "Replace student card"
+                        : "Add student card"}
                   </Text>
                 </Pressable>
               </View>
@@ -731,7 +802,7 @@ export default function CreateSocietyPage() {
                 </Pressable>
                 {!manualFieldsValid ? (
                   <Text className="mt-2 text-xs text-dono-muted">
-                    Add your supporting documents, ID, and website above first.
+                    Add your student card above first.
                   </Text>
                 ) : stripeFailed ? (
                   <Text className="mt-2 text-xs text-rose-700">
@@ -791,7 +862,7 @@ export default function CreateSocietyPage() {
                 <View className="flex-row items-center gap-2">
                   <CheckCircle2 size={14} color={idDocument ? "#17211B" : "#56615A"} />
                   <Text className="text-sm text-dono-muted">
-                    {idDocument ? "ID document provided" : "No ID document provided"}
+                    {idDocument ? "Student card provided" : "No student card provided"}
                   </Text>
                 </View>
                 <Text className="text-sm text-dono-muted">
@@ -856,14 +927,22 @@ export default function CreateSocietyPage() {
 
             {step < 4 ? (
               <Pressable
-                onPress={() => setStep(step + 1)}
-                disabled={!canProceed()}
+                onPress={handleContinue}
+                disabled={!canProceed() || syncingMaterials}
                 className={`flex-row items-center gap-2 rounded-full bg-dono-primary px-5 py-2.5 ${
-                  !canProceed() ? "opacity-50" : ""
+                  !canProceed() || syncingMaterials ? "opacity-50" : ""
                 }`}
               >
-                <Text className="font-sans-medium text-sm text-white">Continue</Text>
-                <ArrowRight size={16} color="#fff" />
+                {syncingMaterials ? (
+                  <ActivityIndicator color="#fff" />
+                ) : (
+                  <>
+                    <Text className="font-sans-medium text-sm text-white">
+                      {step === 3 ? "Submit" : "Continue"}
+                    </Text>
+                    <ArrowRight size={16} color="#fff" />
+                  </>
+                )}
               </Pressable>
             ) : null}
           </View>
@@ -875,6 +954,58 @@ export default function CreateSocietyPage() {
           )}
         </View>
       </View>
+
+      <Modal
+        visible={docsPopupVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setDocsPopupVisible(false)}
+      >
+        <Pressable
+          className="flex-1 items-center justify-center bg-black/50 px-6"
+          onPress={() => setDocsPopupVisible(false)}
+        >
+          <Pressable
+            onPress={(event) => event.stopPropagation()}
+            className="w-full max-w-md"
+          >
+            <View className="rounded-3xl border border-dono-border bg-white p-6">
+              <View className="mb-3 flex-row items-center gap-2">
+                <Paperclip size={18} color="#17211B" />
+                <Text className="flex-1 font-sans-medium text-base text-dono-text">
+                  Continue without supporting documents?
+                </Text>
+              </View>
+              <Text className="text-sm leading-relaxed text-dono-muted">
+                Approval is less likely without supporting documentation. Adding
+                your society's constitution or proof of university recognition
+                makes it much easier for us to approve your society.
+              </Text>
+              <View className="mt-5 flex-row justify-end gap-2">
+                <Pressable
+                  onPress={() => setDocsPopupVisible(false)}
+                  className="rounded-full border border-dono-border px-4 py-2.5"
+                >
+                  <Text className="font-sans-medium text-sm text-dono-text">
+                    Add documents
+                  </Text>
+                </Pressable>
+                <Pressable
+                  onPress={() => {
+                    setDocsPopupVisible(false);
+                    void continueFromVerification();
+                  }}
+                  className="rounded-full bg-dono-primary px-4 py-2.5"
+                >
+                  <Text className="font-sans-medium text-sm text-white">
+                    Continue anyway
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          </Pressable>
+        </Pressable>
+      </Modal>
     </AppShell>
   );
 }
