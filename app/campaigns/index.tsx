@@ -6,21 +6,28 @@ import {
   Pressable,
   ActivityIndicator,
   ScrollView,
+  useWindowDimensions,
 } from "react-native";
 import { useQuery } from "convex/react";
 import { Search, SlidersHorizontal } from "lucide-react-native";
-import { AppShell } from "@/components/app-shell";
-import { CampaignCardGrid } from "@/components/campaign-card-grid";
+import {
+  RetroBrowserShell,
+  RetroCampaignCard,
+} from "@/components/campaigns/retro";
 import { categoryLabels } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
+import { cn } from "@/lib/utils";
 
 const categories = ["all", ...Object.keys(categoryLabels)];
 
 export default function CampaignsPage() {
+  const { width } = useWindowDimensions();
+  const columns = width >= 1200 ? 3 : width >= 820 ? 2 : 1;
   const campaigns = (useQuery(api.campaigns.list) ?? undefined) as
     | Campaign[]
     | undefined;
+
   const [search, setSearch] = useState("");
   const [category, setCategory] = useState("all");
 
@@ -34,70 +41,89 @@ export default function CampaignsPage() {
   });
 
   return (
-    <AppShell>
-      <View className="mx-auto w-full max-w-7xl px-4 py-8">
-        <View className="mb-8">
-          <Text className="font-display-medium text-2xl text-dono-text">Campaigns</Text>
-          <Text className="mt-1 text-dono-muted">
-            Support specific, tangible projects at universities across the UK
-          </Text>
-        </View>
+    <RetroBrowserShell path="campaigns">
+      <Text className="mb-1.5 font-retro-bold text-[32px] text-retro-ink">
+        Campaigns
+      </Text>
+      <Text className="mb-5 text-sm text-[#4a453c]">
+        Support specific, tangible projects at universities across the UK
+      </Text>
 
-        <View className="mb-6">
-          <View className="relative">
-            <View className="absolute left-3 top-3 z-10">
-              <Search size={16} color="#56615A" />
-            </View>
-            <TextInput
-              placeholder="Search campaigns, universities..."
-              placeholderTextColor="#56615A"
-              value={search}
-              onChangeText={setSearch}
-              className="w-full rounded-xl border border-dono-border bg-white py-2.5 pl-10 pr-4 text-sm text-dono-text"
-            />
-          </View>
-        </View>
+      <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5 shadow-[3px_3px_0_#211E1A]">
+        <Search size={16} color="#8a8478" />
+        <TextInput
+          placeholder="Search campaigns, universities…"
+          placeholderTextColor="#8a8478"
+          value={search}
+          onChangeText={setSearch}
+          className="min-w-0 flex-1 font-retro-mono text-[13px] text-retro-ink outline-none"
+        />
+      </View>
 
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          className="mb-6"
-          contentContainerClassName="items-center gap-2"
-        >
-          <SlidersHorizontal size={16} color="#56615A" />
-          {categories.map((cat) => (
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        className="mb-5"
+        contentContainerClassName="flex-row items-center gap-2"
+      >
+        <View className="rounded-lg border-2 border-retro-ink bg-retro-cream px-2.5 py-2">
+          <SlidersHorizontal size={14} color="#211E1A" />
+        </View>
+        {categories.map((cat) => {
+          const on = category === cat;
+          return (
             <Pressable
               key={cat}
               onPress={() => setCategory(cat)}
-              className={`rounded-full px-3.5 py-1.5 ${
-                category === cat
-                  ? "bg-dono-primary"
-                  : "border border-dono-border bg-white"
-              }`}
+              className={cn(
+                "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
+                on
+                  ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                  : "bg-retro-paper",
+              )}
             >
               <Text
-                className={`font-sans-medium text-xs ${
-                  category === cat ? "text-white" : "text-dono-muted"
-                }`}
+                className={cn(
+                  "font-retro-bold text-[12.5px]",
+                  on ? "text-retro-paper" : "text-retro-ink",
+                )}
               >
                 {cat === "all" ? "All" : categoryLabels[cat]}
               </Text>
             </Pressable>
-          ))}
-        </ScrollView>
+          );
+        })}
+      </ScrollView>
 
-        {campaigns === undefined ? (
-          <ActivityIndicator color="#17211B" />
-        ) : filtered.length === 0 ? (
-          <View className="rounded-2xl border border-dono-border bg-white p-12">
-            <Text className="text-center text-dono-muted">
-              No campaigns match your search.
-            </Text>
-          </View>
-        ) : (
-          <CampaignCardGrid campaigns={filtered} />
-        )}
-      </View>
-    </AppShell>
+      {campaigns === undefined ? (
+        <ActivityIndicator color="#211E1A" className="py-12" />
+      ) : filtered.length === 0 ? (
+        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-10 shadow-[5px_5px_0_#211E1A]">
+          <Text className="text-center font-retro-mono text-sm text-[#5c574f]">
+            No campaigns match your search.
+          </Text>
+        </View>
+      ) : (
+        <View className="flex-row flex-wrap gap-[22px]">
+          {filtered.map((campaign, index) => (
+            <View
+              key={campaign.id}
+              style={{
+                flexGrow: 1,
+                flexBasis:
+                  columns === 3 ? "30%" : columns === 2 ? "45%" : "100%",
+                maxWidth:
+                  columns === 3 ? "32%" : columns === 2 ? "48.5%" : "100%",
+              }}
+            >
+              <RetroCampaignCard
+                campaign={campaign}
+                accent={index % 2 === 0 ? "indigo" : "tan"}
+              />
+            </View>
+          ))}
+        </View>
+      )}
+    </RetroBrowserShell>
   );
 }

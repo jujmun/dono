@@ -4,48 +4,31 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
-  TextInput,
   Platform,
+  useWindowDimensions,
 } from "react-native";
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
-import {
-  Heart,
-  Share2,
-  UserPlus,
-  Gift,
-  Clock,
-  MapPin,
-  CheckCircle2,
-  ArrowLeft,
-} from "lucide-react-native";
 import { usePostHog } from "posthog-react-native";
-import { AppShell } from "@/components/app-shell";
-import { CampaignImageGallery } from "@/components/campaign-image-gallery";
-import { ProgressBar } from "@/components/ui/progress-bar";
-import { CategoryBadge } from "@/components/ui/category-badge";
-import { EngagementStats } from "@/components/activity-feed";
-import { CampaignCommentsSection } from "@/components/campaign-comments-section";
-import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import {
-  FundBreakdownSection,
+  RetroBrowserShell,
+  RetroDonateSidebar,
+  RetroPanel,
+} from "@/components/campaigns/retro";
+import { CampaignImageGallery } from "@/components/campaign-image-gallery";
+import { CampaignCommentsSection } from "@/components/campaign-comments-section";
+import {
   ReceiptDivider,
   ReceiptLedger,
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
-import { formatCurrency, getProgress } from "@/lib/constants";
+import { categoryLabels, formatCurrency } from "@/lib/constants";
 import { buildGoalLineItems } from "@/lib/receipt";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
-import { DonateAnonymouslyToggle } from "@/components/donate-anonymously-toggle";
-import {
-  PRESET_DONATION_AMOUNTS,
-} from "@/components/donate-sheet-types";
-
-const donationAmounts = [...PRESET_DONATION_AMOUNTS];
 
 type DonationThankYouState = {
   amount?: number;
@@ -58,6 +41,8 @@ export default function CampaignDetailPage() {
     payment_intent?: string;
     redirect_status?: string;
   }>();
+  const { width } = useWindowDimensions();
+  const isWide = width >= 820;
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
@@ -82,13 +67,6 @@ export default function CampaignDetailPage() {
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
   }) as Campaign | null | undefined;
-
-  const related = useQuery(
-    api.campaigns.listRelated,
-    campaign
-      ? { slug: campaign.id, category: campaign.category, limit: 2 }
-      : "skip"
-  ) as Campaign[] | undefined;
 
   useEffect(() => {
     if (campaign) {
@@ -142,35 +120,44 @@ export default function CampaignDetailPage() {
 
   if (campaign === undefined) {
     return (
-      <AppShell>
+      <RetroBrowserShell path={id ? `campaigns/${id}` : "campaigns"}>
         <View className="items-center py-16">
-          <ActivityIndicator color="#17211B" />
+          <ActivityIndicator color="#211E1A" />
         </View>
-      </AppShell>
+      </RetroBrowserShell>
     );
   }
 
   if (campaign === null) {
     return (
-      <AppShell>
-        <View className="mx-auto w-full max-w-7xl px-4 py-16">
-          <Text className="text-center text-dono-muted">Campaign not found.</Text>
-          <Link href="/campaigns" asChild>
-            <Pressable className="mt-4 items-center">
-              <Text className="font-sans-medium text-dono-primary">Back to campaigns</Text>
-            </Pressable>
-          </Link>
-        </View>
-      </AppShell>
+      <RetroBrowserShell path={id ? `campaigns/${id}` : "campaigns/not-found"}>
+        <Text className="text-center font-retro-mono text-sm text-[#5c574f]">
+          Campaign not found.
+        </Text>
+        <Link href="/campaigns" asChild>
+          <Pressable className="mt-4 items-center">
+            <Text className="font-retro-mono-bold text-sm text-retro-ink">
+              ← BACK TO CAMPAIGNS
+            </Text>
+          </Pressable>
+        </Link>
+      </RetroBrowserShell>
     );
   }
 
-  const progress = getProgress(campaign.raised, campaign.goal);
-  const resolvedAmount = customAmount
-    ? Number(customAmount)
-    : selectedAmount;
+  const resolvedAmount = customAmount ? Number(customAmount) : selectedAmount;
   const liked = engagement?.liked ?? false;
   const following = engagement?.followingCampaign ?? false;
+  const categoryLabel =
+    categoryLabels[campaign.category] ?? campaign.category;
+  const deadlineLabel = new Date(campaign.deadline).toLocaleDateString(
+    "en-GB",
+    {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    },
+  );
 
   const handleToggleLike = async () => {
     if (!id || likeLoading) return;
@@ -243,291 +230,239 @@ export default function CampaignDetailPage() {
     setDonateSheetOpen(true);
   };
 
-  const donationPanel = (
-    <View className="rounded-2xl border border-dono-border bg-white p-6">
-      <View className="mb-4 flex-row items-baseline justify-between">
-        <Text className="font-mono-medium text-3xl text-dono-primary">
-          {formatCurrency(campaign.raised)}
-        </Text>
-        <Text className="text-sm text-dono-muted">
-          of {formatCurrency(campaign.goal)}
-        </Text>
-      </View>
-      <ProgressBar value={progress} className="mt-3" showLabel />
-      <Text className="mt-2 text-sm text-dono-muted">
-        {campaign.likes} like{campaign.likes === 1 ? "" : "s"} · {campaign.donors} donor
-        {campaign.donors === 1 ? "" : "s"} · {campaign.followers} follower
-        {campaign.followers === 1 ? "" : "s"}
-      </Text>
-
-      {campaign.status !== "funded" && (
-        <>
-          <View className="mb-4 mt-4 flex-row gap-2">
-            {donationAmounts.map((amount) => (
-              <Pressable
-                key={amount}
-                onPress={() => {
-                  setCustomAmount("");
-                  setSelectedAmount(amount);
-                  posthog?.capture("donation_amount_selected", {
-                    campaign_id: campaign.id,
-                    campaign_title: campaign.title,
-                    amount,
-                  });
-                }}
-                className={`flex-1 items-center rounded-xl border py-2.5 ${
-                  !customAmount && selectedAmount === amount
-                    ? "border-dono-primary bg-dono-primary/5"
-                    : "border-dono-border"
-                }`}
-              >
-                <Text className="font-sans-medium text-sm text-dono-text">£{amount}</Text>
-              </Pressable>
-            ))}
-          </View>
-          <TextInput
-            value={customAmount}
-            onChangeText={setCustomAmount}
-            keyboardType="numeric"
-            placeholder="Custom amount (£)"
-            className="mb-4 rounded-xl border border-dono-border px-4 py-3 text-dono-text"
-          />
-          <DonateAnonymouslyToggle
-            value={donateAnonymously}
-            onChange={setDonateAnonymously}
-            className="mb-4"
-          />
-          <Pressable
-            onPress={openDonateSheet}
-            className="mb-3 flex-row items-center justify-center gap-2 rounded-full bg-dono-accent py-3"
-          >
-            <Gift size={16} color="#fff" />
-            <Text className="font-sans-medium text-sm text-white">Donate Now</Text>
-          </Pressable>
-          <DonateSheet
-            visible={donateSheetOpen}
-            campaignId={campaign.id}
-            campaignTitle={campaign.title}
-            selectedAmount={resolvedAmount}
-            isAuthenticated={isAuthenticated}
-            donorEmail={donorEmail}
-            onDonorEmailChange={setDonorEmail}
-            donateAnonymously={donateAnonymously}
-            onDonateAnonymouslyChange={setDonateAnonymously}
-            onClose={() => setDonateSheetOpen(false)}
-            onSuccess={(amount, options) => {
-              setThankYou({
-                amount,
-                pendingConfirmation: options?.pendingConfirmation,
-              });
-            }}
-            frequency="one_time"
-          />
-        </>
-      )}
-
-      <View className="flex-row gap-2">
-        <Pressable
-          onPress={() => void handleToggleLike()}
-          disabled={likeLoading}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
-            liked
-              ? "border-red-200 bg-red-50"
-              : "border-dono-border"
-          }`}
-        >
-          {likeLoading ? (
-            <ActivityIndicator size="small" color={liked ? "#C62828" : "#56615A"} />
-          ) : (
-            <Heart
-              size={16}
-              color={liked ? "#C62828" : "#56615A"}
-              fill={liked ? "#C62828" : "transparent"}
-            />
-          )}
-          <Text
-            className={`font-sans-medium text-sm ${
-              liked ? "text-red-700" : "text-dono-muted"
-            }`}
-          >
-            {liked ? "Liked" : "Like"} · {campaign.likes}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() => void handleToggleFollow()}
-          disabled={followLoading}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-xl border py-2.5 ${
-            following
-              ? "border-dono-primary bg-dono-primary/5"
-              : "border-dono-border"
-          }`}
-        >
-          {followLoading ? (
-            <ActivityIndicator size="small" color="#17211B" />
-          ) : (
-            <UserPlus
-              size={16}
-              color={following ? "#17211B" : "#56615A"}
-            />
-          )}
-          <Text
-            className={`font-sans-medium text-sm ${
-              following ? "text-dono-primary" : "text-dono-muted"
-            }`}
-          >
-            {following ? "Following" : "Follow"}
-          </Text>
-        </Pressable>
-        <Pressable
-          onPress={() =>
-            posthog?.capture("campaign_shared", {
-              campaign_id: campaign.id,
-              campaign_title: campaign.title,
-              campaign_category: campaign.category,
-            })
-          }
-          className="items-center justify-center rounded-xl border border-dono-border px-3 py-2.5"
-        >
-          <Share2 size={16} color="#56615A" />
-        </Pressable>
-      </View>
-    </View>
+  const donateSidebar = (
+    <RetroDonateSidebar
+      campaign={campaign}
+      selectedAmount={selectedAmount}
+      customAmount={customAmount}
+      donateAnonymously={donateAnonymously}
+      liked={liked}
+      following={following}
+      likeLoading={likeLoading}
+      followLoading={followLoading}
+      onSelectPreset={(amount) => {
+        setCustomAmount("");
+        setSelectedAmount(amount);
+        posthog?.capture("donation_amount_selected", {
+          campaign_id: campaign.id,
+          campaign_title: campaign.title,
+          amount,
+        });
+      }}
+      onCustomAmountChange={setCustomAmount}
+      onAnonymousChange={setDonateAnonymously}
+      onDonate={openDonateSheet}
+      onToggleLike={() => void handleToggleLike()}
+      onToggleFollow={() => void handleToggleFollow()}
+      onShare={() =>
+        posthog?.capture("campaign_shared", {
+          campaign_id: campaign.id,
+          campaign_title: campaign.title,
+          campaign_category: campaign.category,
+        })
+      }
+    />
   );
 
   return (
-    <AppShell>
-      <View className="mx-auto w-full max-w-7xl px-4 py-6">
-        <Link href="/campaigns" asChild>
-          <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">Back to campaigns</Text>
-          </Pressable>
-        </Link>
+    <RetroBrowserShell path={`campaigns/${campaign.id}`}>
+      <Link href="/campaigns" asChild>
+        <Pressable className="mb-4 self-start">
+          <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+            ← BACK TO CAMPAIGNS
+          </Text>
+        </Pressable>
+      </Link>
 
-        <View className="flex-col lg:flex-row lg:items-start lg:gap-8">
-          <View className="order-2 min-w-0 flex-1 lg:order-1">
-        <CampaignImageGallery
-          image={campaign.image}
-          images={campaign.images}
-          category={campaign.category}
-          className="mb-6"
-          heroClassName="h-56 rounded-2xl"
+      <View
+        className="flex-row flex-wrap gap-6"
+        style={{ alignItems: "flex-start" }}
+      >
+        <View
+          style={{
+            flexGrow: 1,
+            flexBasis: isWide ? "58%" : "100%",
+            maxWidth: isWide ? "62%" : "100%",
+            minWidth: 0,
+          }}
         >
-          <View className="absolute left-4 top-4">
-            <CategoryBadge category={campaign.category} />
-          </View>
-          {campaign.status === "funded" && (
-            <View className="absolute right-4 top-4 flex-row items-center gap-1.5 rounded-full bg-white/90 px-3 py-1">
-              <CheckCircle2 size={16} color="#047857" />
-              <Text className="text-sm font-semibold text-green-700">Fully Funded</Text>
-            </View>
-          )}
-        </CampaignImageGallery>
+          {!isWide ? <View className="mb-5">{donateSidebar}</View> : null}
 
-        <View className="mb-3 flex-row flex-wrap items-center gap-2">
-          <Text className="font-display-medium text-2xl text-dono-text">{campaign.title}</Text>
-          {campaign.verifications.length > 0 ? (
-            <CheckCircle2 size={20} color="#168456" accessibilityLabel="Verified campaign" />
+          <CampaignImageGallery
+            image={campaign.image}
+            images={campaign.images}
+            category={campaign.category}
+            className="mb-5"
+            heroClassName="min-h-[260px] rounded-[14px] border-[3px] border-retro-ink bg-retro-indigo shadow-[5px_5px_0_#211E1A]"
+          >
+            <View className="absolute left-3.5 top-3.5 rounded-full border-2 border-retro-ink bg-retro-paper px-3.5 py-1 shadow-[3px_3px_0_#211E1A]">
+              <Text className="font-retro-bold text-[12.5px] text-retro-ink">
+                {categoryLabel}
+              </Text>
+            </View>
+            {campaign.status === "funded" ? (
+              <View className="absolute right-3.5 top-3.5 rounded-full border-2 border-retro-ink bg-retro-mint px-3 py-1">
+                <Text className="font-retro-bold text-[12px] text-retro-paper">
+                  Fully Funded
+                </Text>
+              </View>
+            ) : null}
+          </CampaignImageGallery>
+
+          <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
+            <Text className="font-retro-bold text-[26px] text-retro-ink">
+              {campaign.title}
+            </Text>
+            {campaign.verifications.length > 0 ? (
+              <View
+                className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint"
+                accessibilityLabel="Verified campaign"
+              >
+                <Text className="text-[11px] font-bold text-white">✓</Text>
+              </View>
+            ) : null}
+          </View>
+
+          <View className="mb-3.5 flex-row flex-wrap gap-4">
+            <Text className="font-retro-mono text-[12.5px] text-[#4a453c]">
+              📍{" "}
+              {(campaign.university +
+                (campaign.college ? ` · ${campaign.college}` : "")
+              ).toUpperCase()}
+            </Text>
+            <Text className="font-retro-mono text-[12.5px] text-[#4a453c]">
+              ⏱ DEADLINE: {deadlineLabel.toUpperCase()}
+            </Text>
+          </View>
+
+          <View className="mb-5 flex-row flex-wrap gap-3">
+            <Pressable
+              onPress={() => void handleToggleLike()}
+              className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5"
+            >
+              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+                ♡ {campaign.likes} like{campaign.likes === 1 ? "" : "s"}
+              </Text>
+            </Pressable>
+            <View className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5">
+              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+                🎁 {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+              </Text>
+            </View>
+            <View className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5">
+              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+                👥 {campaign.followers} follower
+                {campaign.followers === 1 ? "" : "s"}
+              </Text>
+            </View>
+            <Pressable
+              onPress={scrollToComments}
+              className="rounded-full border-2 border-retro-ink bg-retro-cream px-3 py-1.5"
+            >
+              <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+                💬 {campaign.comments} comment
+                {campaign.comments === 1 ? "" : "s"}
+              </Text>
+            </Pressable>
+          </View>
+
+          <View nativeID="campaign-comments">
+            <RetroPanel title="Comments.log" accent="marigold">
+              <CampaignCommentsSection
+                ref={commentsSectionRef}
+                campaignSlug={campaign.id}
+                isAuthenticated={isAuthenticated}
+                embedded
+              />
+            </RetroPanel>
+          </View>
+
+          <RetroPanel title="The_Story.txt" accent="marigold">
+            <Text className="text-sm leading-6 text-retro-ink">
+              {campaign.story}
+            </Text>
+          </RetroPanel>
+
+          {(campaign.impactItems?.length ?? 0) >= 2 ? (
+            <RetroPanel title="Fund_Breakdown.sys" accent="marigold">
+              <ReceiptLedger>
+                {buildGoalLineItems(campaign).map((line) => (
+                  <ReceiptLineRow key={line.label} {...line} />
+                ))}
+                <ReceiptDivider />
+                <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
+              </ReceiptLedger>
+              <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
+                Raised {formatCurrency(campaign.raised)} of{" "}
+                {formatCurrency(campaign.goal)}
+              </Text>
+            </RetroPanel>
+          ) : null}
+
+          {campaign.updates.length > 0 ? (
+            <RetroPanel title="Updates.log" accent="marigold">
+              <View className="gap-4">
+                {campaign.updates.map((update) => (
+                  <View
+                    key={update.id}
+                    className="rounded-lg border-2 border-retro-ink bg-retro-cream p-3.5"
+                  >
+                    <View className="mb-1.5 flex-row items-center justify-between gap-2">
+                      <Text className="flex-1 font-sans-medium text-retro-ink">
+                        {update.title}
+                      </Text>
+                      <Text className="font-retro-mono text-[11px] text-[#5c574f]">
+                        {new Date(update.date).toLocaleDateString("en-GB", {
+                          day: "numeric",
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </Text>
+                    </View>
+                    <Text className="text-sm leading-5 text-[#4a453c]">
+                      {update.content}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+            </RetroPanel>
           ) : null}
         </View>
 
-        <View className="mb-4 gap-2">
-          <View className="flex-row items-center gap-1">
-            <MapPin size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">
-              {campaign.university}
-              {campaign.college ? ` · ${campaign.college}` : ""}
-            </Text>
+        {isWide ? (
+          <View
+            style={{
+              flexGrow: 1,
+              flexBasis: "34%",
+              maxWidth: "38%",
+              minWidth: 280,
+            }}
+            className="lg:sticky lg:top-4"
+          >
+            {donateSidebar}
           </View>
-          <View className="flex-row items-center gap-1">
-            <Clock size={16} color="#56615A" />
-            <Text className="font-mono text-sm text-dono-muted">
-              Deadline:{" "}
-              {new Date(campaign.deadline).toLocaleDateString("en-GB", {
-                day: "numeric",
-                month: "long",
-                year: "numeric",
-              })}
-            </Text>
-          </View>
-        </View>
-
-        <EngagementStats
-          likes={campaign.likes}
-          donors={campaign.donors}
-          followers={campaign.followers}
-          comments={campaign.comments}
-          liked={liked}
-          likeLoading={likeLoading}
-          onLikePress={() => void handleToggleLike()}
-          onCommentPress={scrollToComments}
-          className="mb-6"
-        />
-
-        <CampaignCommentsSection
-          ref={commentsSectionRef}
-          campaignSlug={campaign.id}
-          isAuthenticated={isAuthenticated}
-        />
-
-        <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-          <Text className="mb-3 text-lg font-sans-medium text-dono-text">The Story</Text>
-          <Text className="leading-relaxed text-dono-muted">{campaign.story}</Text>
-        </View>
-
-        {(campaign.impactItems?.length ?? 0) >= 2 && (
-          <FundBreakdownSection className="mb-8">
-            <ReceiptLedger>
-              {buildGoalLineItems(campaign).map((line) => (
-                <ReceiptLineRow key={line.label} {...line} />
-              ))}
-              <ReceiptDivider />
-              <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
-            </ReceiptLedger>
-          </FundBreakdownSection>
-        )}
-
-        {campaign.updates.length > 0 && (
-          <View className="mb-8">
-            <Text className="mb-4 text-lg font-sans-medium text-dono-text">Updates</Text>
-            <View className="gap-4">
-              {campaign.updates.map((update) => (
-                <View
-                  key={update.id}
-                  className="rounded-2xl border border-dono-border bg-white p-5"
-                >
-                  <View className="mb-2 flex-row items-center justify-between">
-                    <Text className="font-sans-medium text-dono-text">{update.title}</Text>
-                    <Text className="text-xs text-dono-muted">
-                      {new Date(update.date).toLocaleDateString("en-GB", {
-                        day: "numeric",
-                        month: "short",
-                        year: "numeric",
-                      })}
-                    </Text>
-                  </View>
-                  <Text className="text-sm leading-relaxed text-dono-muted">
-                    {update.content}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {(related?.length ?? 0) > 0 && (
-          <View className="mt-4">
-            <Text className="mb-6 font-display-medium text-xl text-dono-text">Related Campaigns</Text>
-            <CampaignCardGrid campaigns={related!} />
-          </View>
-        )}
-          </View>
-
-          <View className="order-1 mb-8 w-full shrink-0 self-start lg:order-2 lg:sticky lg:top-6 lg:mb-0 lg:w-80">
-            {donationPanel}
-          </View>
-        </View>
+        ) : null}
       </View>
+
+      <DonateSheet
+        visible={donateSheetOpen}
+        campaignId={campaign.id}
+        campaignTitle={campaign.title}
+        selectedAmount={resolvedAmount}
+        isAuthenticated={isAuthenticated}
+        donorEmail={donorEmail}
+        onDonorEmailChange={setDonorEmail}
+        donateAnonymously={donateAnonymously}
+        onDonateAnonymouslyChange={setDonateAnonymously}
+        onClose={() => setDonateSheetOpen(false)}
+        onSuccess={(amount, options) => {
+          setThankYou({
+            amount,
+            pendingConfirmation: options?.pendingConfirmation,
+          });
+        }}
+        frequency="one_time"
+      />
 
       <DonationThankYouModal
         visible={thankYou != null}
@@ -536,6 +471,6 @@ export default function CampaignDetailPage() {
         pendingConfirmation={thankYou?.pendingConfirmation}
         onClose={() => setThankYou(null)}
       />
-    </AppShell>
+    </RetroBrowserShell>
   );
 }

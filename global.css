@@ -8,4 +8,50 @@
     font-family: "Inter_400Regular", "Inter", -apple-system, sans-serif;
     font-weight: 400;
   }
+
+  /* Kill browser focus ring on RN-web inputs (retro UI uses ink borders instead) */
+  input:focus,
+  textarea:focus,
+  select:focus {
+    outline: none;
+  }
+}
+
+@layer utilities {
+  .retro-desktop-bg {
+    background-color: #fbeedd;
+    background-image:
+      linear-gradient(#fbeedd 1px, transparent 1px),
+      linear-gradient(90deg, #fbeedd 1px, transparent 1px),
+      repeating-linear-gradient(
+        0deg,
+        rgba(33, 30, 26, 0.05) 0,
+        rgba(33, 30, 26, 0.05) 1px,
+        transparent 1px,
+        transparent 28px
+      ),
+      repeating-linear-gradient(
+        90deg,
+        rgba(33, 30, 26, 0.05) 0,
+        rgba(33, 30, 26, 0.05) 1px,
+        transparent 1px,
+        transparent 28px
+      );
+    background-size: 100% 28px, 28px 100%, 28px 28px, 28px 28px;
+  }
+}
+
+@keyframes retro-ticker {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.retro-ticker-track {
+  display: inline-flex;
+  white-space: nowrap;
+  animation: retro-ticker 28s linear infinite;
 }
