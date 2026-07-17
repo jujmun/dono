@@ -44,6 +44,30 @@ export const listMine = query({
   },
 });
 
+/** Live status for the wizard's own in-progress campaign — owner-only, mirrors societies.getMine. */
+export const getMyVerificationStatus = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.createdBy !== userId) {
+      return null;
+    }
+    return {
+      slug: campaign.slug,
+      status: campaign.status,
+      stripeVerificationStatus: campaign.stripeVerificationStatus ?? null,
+      stripeVerificationLastErrorCode:
+        campaign.stripeVerificationLastErrorCode ?? null,
+      stripeVerificationLastErrorReason:
+        campaign.stripeVerificationLastErrorReason ?? null,
+    };
+  },
+});
+
 export const update = mutation({
   args: {
     slug: v.string(),

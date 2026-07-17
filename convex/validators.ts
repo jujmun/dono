@@ -70,6 +70,22 @@ export const campaignFields = {
   societyApprovedAt: v.optional(v.number()),
   societyApprovedBy: v.optional(v.id("users")),
   societyRejectionNote: v.optional(v.string()),
+  /** Stripe Identity — mirrors the society fields of the same names. */
+  stripeVerificationSessionId: v.optional(v.string()),
+  stripeVerificationStatus: v.optional(
+    v.union(
+      v.literal("created"),
+      v.literal("requires_input"),
+      v.literal("processing"),
+      v.literal("verified"),
+      v.literal("canceled"),
+    ),
+  ),
+  verifiedName: v.optional(v.string()),
+  verifiedDob: v.optional(v.string()),
+  /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
+  stripeVerificationLastErrorCode: v.optional(v.string()),
+  stripeVerificationLastErrorReason: v.optional(v.string()),
 };
 
 export const verificationStatusValidator = v.union(

@@ -6,8 +6,6 @@ import {
   Pressable,
   Image,
   ActivityIndicator,
-  Animated,
-  Easing,
   Modal,
 } from "react-native";
 import { Link } from "expo-router";
@@ -26,6 +24,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
+import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
@@ -69,38 +68,6 @@ function isValidOptionalUrl(value: string): boolean {
 
 function fileNameFromAsset(asset: ImagePicker.ImagePickerAsset): string {
   return asset.fileName ?? asset.uri.split("/").pop() ?? "file";
-}
-
-/** Pulsing (bigger/smaller) shield icon — reads as "still working on it". */
-function VerifyingIndicator({ size, color }: { size: number; color: string }) {
-  const scale = useRef(new Animated.Value(1)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(scale, {
-          toValue: 1.25,
-          duration: 700,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-        Animated.timing(scale, {
-          toValue: 1,
-          duration: 700,
-          easing: Easing.inOut(Easing.ease),
-          useNativeDriver: true,
-        }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [scale]);
-
-  return (
-    <Animated.View style={{ transform: [{ scale }] }}>
-      <ShieldCheck size={size} color={color} />
-    </Animated.View>
-  );
 }
 
 export default function CreateSocietyPage() {
@@ -807,6 +774,10 @@ export default function CreateSocietyPage() {
                 ) : stripeFailed ? (
                   <Text className="mt-2 text-xs text-rose-700">
                     That didn't go through — please try again.
+                  </Text>
+                ) : !societySlug ? (
+                  <Text className="mt-2 text-xs text-dono-muted">
+                    You'll be able to continue once you've started this check.
                   </Text>
                 ) : null}
               </View>
