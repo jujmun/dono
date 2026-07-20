@@ -85,6 +85,12 @@ export function getFriendlyAuthError(error: unknown) {
   if (/forbidden|permission/i.test(message)) {
     return "You do not have permission to do that.";
   }
+  // Not one of the known auth patterns above — this mapper is reused for
+  // non-auth mutations too (e.g. campaign creation), so prefer the server's
+  // own message over the generic fallback below when we have one.
+  if (convexPayload?.message) {
+    return convexPayload.message;
+  }
   return "Something went wrong. Please try again.";
 }
 

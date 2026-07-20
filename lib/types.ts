@@ -52,6 +52,10 @@ export interface Campaign {
   college?: string;
   image: string;
   images?: string[];
+  /** Campaign page template id — see lib/campaign-templates.ts. */
+  template: string;
+  /** Freeform supplementary text set from the Review step. */
+  additionalNotes?: string;
   /** YouTube or Vimeo watch URL for the campaign media hero. */
   videoUrl?: string;
   createdAt: string;

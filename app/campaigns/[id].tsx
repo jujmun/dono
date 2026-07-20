@@ -27,6 +27,8 @@ import {
 } from "@/components/ui/receipt-lines";
 import { formatCurrency } from "@/lib/constants";
 import { buildGoalLineItems } from "@/lib/receipt";
+import { getCampaignTemplate } from "@/lib/campaign-templates";
+import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
@@ -162,6 +164,16 @@ export default function CampaignDetailPage() {
   );
   const creatorInitial = (campaign.creator.name || "?").trim().charAt(0).toUpperCase();
   const goalLines = buildGoalLineItems(campaign);
+  // Only resolve the campaign's template while the feature is enabled — with
+  // it off, `accent` stays undefined (each component's own default applies:
+  // indigo for the media hero/photo grid, marigold for RetroPanel, matching
+  // the original hardcoded pre-template look) and `heroLayout` defaults to
+  // "media-first" so the section order below is unchanged too.
+  const resolvedTemplate = ENABLE_CAMPAIGN_TEMPLATES
+    ? getCampaignTemplate(campaign.template)
+    : null;
+  const accent = resolvedTemplate?.unlocks.accent;
+  const heroLayout = resolvedTemplate?.unlocks.heroLayout ?? "media-first";
 
   const handleToggleLike = async () => {
     if (!id || likeLoading) return;
@@ -260,6 +272,125 @@ export default function CampaignDetailPage() {
     />
   );
 
+  // Section pieces, composed below in an order driven by the campaign's
+  // chosen template (lib/campaign-templates.ts) — media-first keeps the
+  // original layout, gallery-grid promotes photos, text-first leads with
+  // the story.
+  const heroSection = (
+    <View
+      key="hero"
+      className="mb-6 flex-row flex-wrap gap-5"
+      style={{ alignItems: "flex-start" }}
+    >
+      <View
+        style={{
+          flexGrow: 1,
+          flexBasis: isWide ? "58%" : "100%",
+          maxWidth: isWide ? "64%" : "100%",
+          minWidth: 0,
+        }}
+      >
+        <CampaignMediaHero campaign={campaign} accent={accent} />
+      </View>
+      <View
+        style={{
+          flexGrow: 1,
+          flexBasis: isWide ? "30%" : "100%",
+          maxWidth: isWide ? "34%" : "100%",
+          minWidth: isWide ? 260 : undefined,
+        }}
+        className={isWide ? "lg:sticky lg:top-4" : ""}
+      >
+        {donateSidebar}
+      </View>
+    </View>
+  );
+
+  const storyPanel = (
+    <RetroPanel title="Why?" accent={accent} className="mb-0 h-full">
+      <Text className="text-sm leading-6 text-retro-ink">{campaign.story}</Text>
+    </RetroPanel>
+  );
+
+  const breakdownPanel = (
+    <RetroPanel title="Cost breakdown" accent="sky" className="mb-0 h-full">
+      <ReceiptLedger>
+        {goalLines.map((line) => (
+          <ReceiptLineRow key={line.label} {...line} />
+        ))}
+        <ReceiptDivider />
+        <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
+      </ReceiptLedger>
+      <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
+        Raised {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+      </Text>
+    </RetroPanel>
+  );
+
+  const storyAndBreakdownSection = (
+    <View
+      key="story-breakdown"
+      className="mb-6 flex-row flex-wrap gap-5"
+      style={{ alignItems: "stretch" }}
+    >
+      <View
+        style={{
+          flexGrow: 1,
+          flexBasis: isWide ? "48%" : "100%",
+          maxWidth: isWide ? "50%" : "100%",
+        }}
+      >
+        {storyPanel}
+      </View>
+      <View
+        style={{
+          flexGrow: 1,
+          flexBasis: isWide ? "45%" : "100%",
+          maxWidth: isWide ? "48%" : "100%",
+        }}
+      >
+        {breakdownPanel}
+      </View>
+    </View>
+  );
+
+  const galleryGridSection = (
+    <View key="gallery" className="mb-6">
+      <CampaignPhotoGrid campaign={campaign} accent={accent} />
+    </View>
+  );
+
+  const pageSections = (() => {
+    switch (heroLayout) {
+      case "gallery-grid":
+        return [heroSection, galleryGridSection, storyAndBreakdownSection];
+      case "text-first":
+        return [
+          <View key="story" className="mb-6">
+            {storyPanel}
+          </View>,
+          heroSection,
+          <View key="breakdown" className="mb-6">
+            {breakdownPanel}
+          </View>,
+          galleryGridSection,
+        ];
+      case "ledger-first":
+        return [
+          <View key="breakdown" className="mb-6">
+            {breakdownPanel}
+          </View>,
+          heroSection,
+          <View key="story" className="mb-6">
+            {storyPanel}
+          </View>,
+          galleryGridSection,
+        ];
+      default:
+        return [heroSection, storyAndBreakdownSection, galleryGridSection];
+    }
+  })();
+
   return (
     <AppShell>
       <Link href="/campaigns" asChild>
@@ -301,83 +432,17 @@ export default function CampaignDetailPage() {
         </View>
       </View>
 
-      {/* Media + donate */}
-      <View
-        className="mb-6 flex-row flex-wrap gap-5"
-        style={{ alignItems: "flex-start" }}
-      >
-        <View
-          style={{
-            flexGrow: 1,
-            flexBasis: isWide ? "58%" : "100%",
-            maxWidth: isWide ? "64%" : "100%",
-            minWidth: 0,
-          }}
-        >
-          <CampaignMediaHero campaign={campaign} />
-        </View>
-        <View
-          style={{
-            flexGrow: 1,
-            flexBasis: isWide ? "30%" : "100%",
-            maxWidth: isWide ? "34%" : "100%",
-            minWidth: isWide ? 260 : undefined,
-          }}
-          className={isWide ? "lg:sticky lg:top-4" : ""}
-        >
-          {donateSidebar}
-        </View>
-      </View>
+      {pageSections}
 
-      {/* Why? + Cost breakdown */}
-      <View
-        className="mb-6 flex-row flex-wrap gap-5"
-        style={{ alignItems: "stretch" }}
-      >
-        <View
-          style={{
-            flexGrow: 1,
-            flexBasis: isWide ? "48%" : "100%",
-            maxWidth: isWide ? "50%" : "100%",
-          }}
-        >
-          <RetroPanel title="Why?" accent="marigold" className="mb-0 h-full">
+      {campaign.additionalNotes ? (
+        <View className="mb-6">
+          <RetroPanel title="Anything else?" accent={accent}>
             <Text className="text-sm leading-6 text-retro-ink">
-              {campaign.story}
+              {campaign.additionalNotes}
             </Text>
           </RetroPanel>
         </View>
-        <View
-          style={{
-            flexGrow: 1,
-            flexBasis: isWide ? "45%" : "100%",
-            maxWidth: isWide ? "48%" : "100%",
-          }}
-        >
-          <RetroPanel
-            title="Cost breakdown"
-            accent="sky"
-            className="mb-0 h-full"
-          >
-            <ReceiptLedger>
-              {goalLines.map((line) => (
-                <ReceiptLineRow key={line.label} {...line} />
-              ))}
-              <ReceiptDivider />
-              <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
-            </ReceiptLedger>
-            <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
-              Raised {formatCurrency(campaign.raised)} of{" "}
-              {formatCurrency(campaign.goal)}
-            </Text>
-          </RetroPanel>
-        </View>
-      </View>
-
-      {/* 2×2 photo grid */}
-      <View className="mb-6">
-        <CampaignPhotoGrid campaign={campaign} />
-      </View>
+      ) : null}
 
       {/* Comments + updates */}
       <View nativeID="campaign-comments" className="mb-4">

@@ -5,17 +5,22 @@ interface ProgressBarProps {
   value: number;
   className?: string;
   showLabel?: boolean;
+  /** Overrides the default dono-primary fill color, e.g. with a campaign template's accent. */
+  fillColor?: string;
 }
 
-export function ProgressBar({ value, className, showLabel = false }: ProgressBarProps) {
+export function ProgressBar({ value, className, showLabel = false, fillColor }: ProgressBarProps) {
   const width = `${Math.min(value, 100)}%`;
 
   return (
     <View className={cn("w-full", className)}>
       <View className="h-2 w-full overflow-hidden rounded-full bg-dono-surface-muted">
         <View
-          className="h-full rounded-full bg-dono-primary"
-          style={{ width: width as `${number}%` }}
+          className={cn("h-full rounded-full", !fillColor && "bg-dono-primary")}
+          style={{
+            width: width as `${number}%`,
+            ...(fillColor ? { backgroundColor: fillColor } : null),
+          }}
         />
       </View>
       {showLabel && (

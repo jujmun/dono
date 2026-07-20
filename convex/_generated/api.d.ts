@@ -33,6 +33,7 @@ import type * as http from "../http.js";
 import type * as lib_aggregates from "../lib/aggregates.js";
 import type * as lib_applyDonationToCampaign from "../lib/applyDonationToCampaign.js";
 import type * as lib_authz from "../lib/authz.js";
+import type * as lib_campaignTemplates from "../lib/campaignTemplates.js";
 import type * as lib_campaignVisibility from "../lib/campaignVisibility.js";
 import type * as lib_donationAmounts from "../lib/donationAmounts.js";
 import type * as lib_emails from "../lib/emails.js";
@@ -93,6 +94,7 @@ declare const fullApi: ApiFromModules<{
   "lib/aggregates": typeof lib_aggregates;
   "lib/applyDonationToCampaign": typeof lib_applyDonationToCampaign;
   "lib/authz": typeof lib_authz;
+  "lib/campaignTemplates": typeof lib_campaignTemplates;
   "lib/campaignVisibility": typeof lib_campaignVisibility;
   "lib/donationAmounts": typeof lib_donationAmounts;
   "lib/emails": typeof lib_emails;

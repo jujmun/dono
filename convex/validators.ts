@@ -88,6 +88,16 @@ export const campaignFields = {
   /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
   stripeVerificationLastErrorCode: v.optional(v.string()),
   stripeVerificationLastErrorReason: v.optional(v.string()),
+  /** Campaign page template id — see lib/campaign-templates.ts. Optional so
+   * existing rows fall back to the default at read time (convex/lib/mappers.ts). */
+  template: v.optional(v.string()),
+  /** Freeform supplementary text set from the Review step, shown on the public page if present. */
+  additionalNotes: v.optional(v.string()),
+  /** Legacy field from an earlier design-editor experiment — no current code
+   * reads or writes this, but at least one existing campaign document has it
+   * set, and Convex schema validation requires every field present in real
+   * data to be declared. Kept only so the schema matches existing data. */
+  design: v.optional(v.string()),
 };
 
 export const verificationStatusValidator = v.union(
