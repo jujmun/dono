@@ -47,6 +47,19 @@ export const createConnectOnboardingLink = action({
       });
     }
 
+    if (args.communitySlug) {
+      const access = await ctx.runQuery(
+        internal.stripeConnectInternal.assertCanManageSocietyConnect,
+        { userId, communitySlug: args.communitySlug },
+      );
+      if (!access.allowed) {
+        throw new ConvexError({
+          code: "FORBIDDEN",
+          message: "You do not have permission for this action.",
+        });
+      }
+    }
+
     const stripe = getStripeClient();
     const existing = (await ctx.runQuery(
       internal.stripeConnectInternal.getByUserId,
@@ -98,6 +111,19 @@ export const refreshConnectAccountStatus = action({
         code: "UNAUTHENTICATED",
         message: "You must be signed in to perform this action.",
       });
+    }
+
+    if (args.communitySlug) {
+      const access = await ctx.runQuery(
+        internal.stripeConnectInternal.assertCanManageSocietyConnect,
+        { userId, communitySlug: args.communitySlug },
+      );
+      if (!access.allowed) {
+        throw new ConvexError({
+          code: "FORBIDDEN",
+          message: "You do not have permission for this action.",
+        });
+      }
     }
 
     const record = await ctx.runQuery(internal.stripeConnectInternal.getByUserId, {

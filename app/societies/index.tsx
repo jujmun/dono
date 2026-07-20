@@ -105,7 +105,7 @@ export default function SocietiesPage() {
           </Text>
         </View>
       ) : (
-        <SocietyCardGrid societies={filtered} />
+        <SocietyCardGrid societies={filtered} showConnectCta={tab === "mine"} />
       )}
 
       {showMineLoginGate ? (

@@ -115,6 +115,10 @@ async function toMineSociety(ctx: QueryCtx, society: SocietyDoc) {
   const coverImageUrl = society.coverImageStorageId
     ? await ctx.storage.getUrl(society.coverImageStorageId)
     : null;
+  const connectAccount = await ctx.db
+    .query("stripeConnectAccounts")
+    .withIndex("by_community", (q) => q.eq("communitySlug", society.slug))
+    .first();
   return {
     slug: society.slug,
     name: society.name,
@@ -129,6 +133,8 @@ async function toMineSociety(ctx: QueryCtx, society: SocietyDoc) {
     moderatedAt: society.moderatedAt ?? null,
     supportingDocumentCount: society.supportingDocumentStorageIds.length,
     hasIdDocument: Boolean(society.idDocumentStorageId),
+    connectOnboardingComplete: connectAccount?.onboardingComplete ?? false,
+    connectPayoutsEnabled: connectAccount?.payoutsEnabled ?? false,
   };
 }
 
@@ -402,6 +408,15 @@ export const listPendingForAdmin = query({
   },
 });
 
+function initialsFromName(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase() || "SO";
+}
+
 export const approve = mutation({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
@@ -417,6 +432,70 @@ export const approve = mutation({
       });
     }
     await ctx.db.patch(society._id, { status: "active" });
+
+    // Bridge into the membership catalog so join / campaign-on-behalf /
+    // Connect payouts (keyed by communities.slug) work for approved societies.
+    const existingCommunity = await ctx.db
+      .query("communities")
+      .withIndex("by_slug", (q) => q.eq("slug", society.slug))
+      .unique();
+    if (existingCommunity) {
+      await ctx.db.patch(existingCommunity._id, {
+        name: society.name,
+        description: society.description,
+        type: "society",
+        verified: true,
+        verificationType: "society",
+        verificationStatus: "verified",
+        createdBy: society.creatorId,
+      });
+    } else {
+      const coverImage = society.coverImageStorageId
+        ? ((await ctx.storage.getUrl(society.coverImageStorageId)) ?? "default")
+        : "default";
+      await ctx.db.insert("communities", {
+        slug: society.slug,
+        name: society.name,
+        type: "society",
+        description: society.description,
+        avatar: initialsFromName(society.name),
+        coverImage,
+        university: "University of Oxford",
+        followers: 0,
+        campaigns: 0,
+        totalRaised: 0,
+        verified: true,
+        verificationType: "society",
+        verificationStatus: "verified",
+        createdBy: society.creatorId,
+      });
+    }
+
+    const existingMembership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", society.slug).eq("userId", society.creatorId),
+      )
+      .unique();
+    if (existingMembership) {
+      await ctx.db.patch(existingMembership._id, {
+        role: "leader",
+        status: "approved",
+        reviewedAt: Date.now(),
+        reviewedBy: adminUserId,
+      });
+    } else {
+      await ctx.db.insert("societyMembers", {
+        communitySlug: society.slug,
+        userId: society.creatorId,
+        role: "leader",
+        status: "approved",
+        createdAt: Date.now(),
+        reviewedAt: Date.now(),
+        reviewedBy: adminUserId,
+      });
+    }
+
     await logAdminAction(ctx, {
       adminUserId,
       action: "society.approve",

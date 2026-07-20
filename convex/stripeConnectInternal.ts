@@ -1,6 +1,6 @@
 import { ConvexError, v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
-import { requireSocietyLeader } from "./lib/authz";
+import { internalMutation, internalQuery, query } from "./_generated/server";
+import { optionalUserId, requireSocietyLeader, requireVerifiedUser } from "./lib/authz";
 import { DONATION_CURRENCY } from "./lib/donationAmounts";
 
 export const getByUserId = internalQuery({
@@ -157,5 +157,101 @@ export const markPayoutTransferred = internalMutation({
       stripeTransferId: args.stripeTransferId,
     });
     return null;
+  },
+});
+
+/**
+ * Allow Connect onboarding only for the society submission creator or an
+ * approved society leader (post admin-approve / communities bridge).
+ */
+export const assertCanManageSocietyConnect = internalQuery({
+  args: {
+    userId: v.id("users"),
+    communitySlug: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.communitySlug))
+      .unique();
+    if (society && society.creatorId === args.userId) {
+      return { allowed: true as const };
+    }
+
+    const membership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", args.communitySlug).eq("userId", args.userId),
+      )
+      .unique();
+    if (
+      membership &&
+      membership.status === "approved" &&
+      membership.role === "leader"
+    ) {
+      return { allowed: true as const };
+    }
+
+    return { allowed: false as const };
+  },
+});
+
+/** Connect onboarding status for the current user + society slug. */
+export const getMyConnectStatus = query({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await optionalUserId(ctx);
+    if (!userId) return null;
+
+    const accounts = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    const account =
+      accounts.find((a) => a.communitySlug === args.communitySlug) ?? null;
+    if (!account) {
+      return {
+        exists: false as const,
+        onboardingComplete: false,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+      };
+    }
+    return {
+      exists: true as const,
+      onboardingComplete: account.onboardingComplete,
+      chargesEnabled: account.chargesEnabled,
+      payoutsEnabled: account.payoutsEnabled,
+    };
+  },
+});
+
+/**
+ * Leader-or-creator view: Connect status for a society slug keyed by
+ * communitySlug (any Connect row for that community, typically the creator's).
+ */
+export const getSocietyConnectStatus = query({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    await requireVerifiedUser(ctx);
+    // Prefer community-scoped lookup so payouts resolve the same way.
+    const account = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) => q.eq("communitySlug", args.communitySlug))
+      .first();
+    if (!account) {
+      return {
+        exists: false as const,
+        onboardingComplete: false,
+        chargesEnabled: false,
+        payoutsEnabled: false,
+      };
+    }
+    return {
+      exists: true as const,
+      onboardingComplete: account.onboardingComplete,
+      chargesEnabled: account.chargesEnabled,
+      payoutsEnabled: account.payoutsEnabled,
+    };
   },
 });
