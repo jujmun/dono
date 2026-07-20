@@ -9,15 +9,28 @@ import {
 import { parseCampaignVideoUrl } from "@/lib/video-url";
 import type { Campaign } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import type { RetroPanelAccent } from "./retro-panel";
+
+const accentFrameClasses: Record<RetroPanelAccent, string> = {
+  coral: "bg-retro-coral",
+  marigold: "bg-retro-marigold",
+  sky: "bg-retro-sky",
+  mint: "bg-retro-mint",
+  pink: "bg-retro-pink",
+  indigo: "bg-retro-indigo",
+};
 
 interface CampaignMediaHeroProps {
   campaign: Campaign;
   className?: string;
+  /** Campaign template accent — defaults to indigo (the original hardcoded look). */
+  accent?: RetroPanelAccent;
 }
 
 export function CampaignMediaHero({
   campaign,
   className,
+  accent = "indigo",
 }: CampaignMediaHeroProps) {
   const parsedVideo = parseCampaignVideoUrl(campaign.videoUrl);
 
@@ -38,7 +51,12 @@ export function CampaignMediaHero({
 
   return (
     <View className={className}>
-      <View className="relative overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-indigo shadow-[5px_5px_0_#211E1A]">
+      <View
+        className={cn(
+          "relative overflow-hidden rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
+          accentFrameClasses[accent],
+        )}
+      >
         {parsedVideo && Platform.OS === "web" ? (
           <View className="relative min-h-[280px] w-full md:min-h-[340px]">
             <iframe
@@ -109,23 +127,24 @@ export function CampaignMediaHero({
 
 interface CampaignPhotoGridProps {
   campaign: Campaign;
+  /** Campaign template accent — defaults to indigo (the original hardcoded look). */
+  accent?: RetroPanelAccent;
 }
 
-/** Always 2×2 — real images first, indigo placeholder boxes for the rest. */
-export function CampaignPhotoGrid({ campaign }: CampaignPhotoGridProps) {
+/** Responsive wrap-grid of every uploaded photo (2 to MAX_CAMPAIGN_IMAGES — no fixed cell count). */
+export function CampaignPhotoGrid({ campaign, accent = "indigo" }: CampaignPhotoGridProps) {
   const images = getCampaignImages(campaign);
-  const filled = images.slice(0, 4);
-
-  const cells: (string | null)[] = Array.from({ length: 4 }, (_, i) =>
-    filled[i] ?? null,
-  );
+  if (images.length === 0) return null;
 
   return (
     <View className="flex-row flex-wrap gap-4">
-      {cells.map((uri, index) => (
+      {images.map((uri, index) => (
         <View
-          key={uri ? `${uri}-${index}` : `placeholder-${index}`}
-          className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-indigo shadow-[5px_5px_0_#211E1A]"
+          key={`${uri}-${index}`}
+          className={cn(
+            "overflow-hidden rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
+            accentFrameClasses[accent],
+          )}
           style={{
             flexGrow: 1,
             flexBasis: "45%",
@@ -133,15 +152,7 @@ export function CampaignPhotoGrid({ campaign }: CampaignPhotoGridProps) {
             minHeight: 160,
           }}
         >
-          {uri ? (
-            <CampaignImage image={uri} className="h-40 w-full md:h-52" />
-          ) : (
-            <View className="h-40 w-full items-center justify-center md:h-52">
-              <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-paper">
-                <Text className="font-retro-bold text-xl text-retro-ink">+</Text>
-              </View>
-            </View>
-          )}
+          <CampaignImage image={uri} className="h-40 w-full md:h-52" />
         </View>
       ))}
     </View>

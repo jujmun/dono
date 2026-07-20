@@ -13,6 +13,7 @@ import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
   ArrowRight,
+  Check,
   ImagePlus,
   Plus,
   ShieldCheck,
@@ -41,6 +42,9 @@ import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { encodeImpactItems } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { parseCampaignVideoUrl } from "@/lib/video-url";
+import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign-templates";
+import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
+import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import { api } from "@convex/_generated/api";
 
 const dinoLogo = require("../assets/dino-hero.png");
@@ -58,6 +62,7 @@ const creatorTypes = [
 ];
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
+const MAX_ADDITIONAL_NOTES_LENGTH = 2000;
 const MIN_FUND_LINES = 2;
 const MAX_FUND_LINES = 5;
 
@@ -89,6 +94,83 @@ const initialForm = {
   goal: "",
 };
 
+/** Thumbnail strip + add/remove controls — shared by the Details step and
+ * the Review step's "Add more" panel, both operating on the same picked-images state. */
+function PhotoThumbnailPicker({
+  pickedImages,
+  pickingImage,
+  onPick,
+  onRemove,
+  onRemoveAll,
+  photosIncomplete,
+}: {
+  pickedImages: PickedImage[];
+  pickingImage: boolean;
+  onPick: () => void;
+  onRemove: (index: number) => void;
+  onRemoveAll: () => void;
+  photosIncomplete: boolean;
+}) {
+  return (
+    <View>
+      {pickedImages.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerClassName="gap-2"
+        >
+          {pickedImages.map((image, index) => (
+            <View key={`${image.uri}-${index}`} className="relative">
+              <CampaignImage image={image.uri} className="h-16 w-24 rounded-lg" />
+              <Pressable
+                onPress={() => onRemove(index)}
+                className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-retro-ink"
+              >
+                <Text className="text-xs font-bold text-white">×</Text>
+              </Pressable>
+            </View>
+          ))}
+        </ScrollView>
+      ) : null}
+      <View className={`flex-row flex-wrap gap-2 ${pickedImages.length > 0 ? "mt-3" : ""}`}>
+        <Pressable
+          onPress={onPick}
+          disabled={pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES}
+          className={`flex-row items-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
+            pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES ? "opacity-50" : ""
+          }`}
+        >
+          <ImagePlus size={16} color="#17211B" />
+          <Text className="font-retro-bold text-sm text-retro-ink">
+            {pickingImage
+              ? "Opening library..."
+              : pickedImages.length > 0
+                ? "Add more photos"
+                : "Add photos"}
+          </Text>
+        </Pressable>
+        {pickedImages.length > 0 ? (
+          <Pressable
+            onPress={onRemoveAll}
+            className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2"
+          >
+            <Text className="font-retro-bold text-sm text-[#5c574f]">Remove all</Text>
+          </Pressable>
+        ) : null}
+      </View>
+      <Text className="mt-1.5 text-xs text-[#5c574f]">
+        Optional. If you add photos, include {MIN_CAMPAIGN_IMAGES}–{MAX_CAMPAIGN_IMAGES} (JPG or
+        PNG, 5MB each).
+      </Text>
+      {photosIncomplete ? (
+        <Text className="mt-1 text-xs text-red-600">
+          Add at least {MIN_CAMPAIGN_IMAGES} photos, or remove all.
+        </Text>
+      ) : null}
+    </View>
+  );
+}
+
 export default function CreateCampaignPage() {
   const router = useRouter();
   const posthog = usePostHog();
@@ -111,8 +193,10 @@ export default function CreateCampaignPage() {
   const [pickingImage, setPickingImage] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [template, setTemplate] = useState<string>(DEFAULT_CAMPAIGN_TEMPLATE_ID);
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
+  const [additionalNotes, setAdditionalNotes] = useState("");
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -257,6 +341,7 @@ export default function CreateCampaignPage() {
       description: form.description,
       story: form.story,
       goal: Number(form.goal),
+      template,
     });
     setCampaignSlug(result.slug);
     return result.slug;
@@ -496,65 +581,16 @@ export default function CreateCampaignPage() {
                     ) : null}
                   </CampaignImage>
                 </View>
-                {pickedImages.length > 0 ? (
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    className="mt-3"
-                    contentContainerClassName="gap-2"
-                  >
-                    {pickedImages.map((image, index) => (
-                      <View key={`${image.uri}-${index}`} className="relative">
-                        <CampaignImage image={image.uri} className="h-16 w-24 rounded-lg" />
-                        <Pressable
-                          onPress={() => removeCampaignImage(index)}
-                          className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-retro-ink"
-                        >
-                          <Text className="text-xs font-bold text-white">×</Text>
-                        </Pressable>
-                      </View>
-                    ))}
-                  </ScrollView>
-                ) : null}
-                <View className="mt-3 flex-row flex-wrap gap-2">
-                  <Pressable
-                    onPress={() => void pickCampaignImages()}
-                    disabled={pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES}
-                    className={`flex-row items-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
-                      pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES
-                        ? "opacity-50"
-                        : ""
-                    }`}
-                  >
-                    <ImagePlus size={16} color="#17211B" />
-                    <Text className="font-retro-bold text-sm text-retro-ink">
-                      {pickingImage
-                        ? "Opening library..."
-                        : pickedImages.length > 0
-                          ? "Add more photos"
-                          : "Add photos"}
-                    </Text>
-                  </Pressable>
-                  {pickedImages.length > 0 ? (
-                    <Pressable
-                      onPress={() => setPickedImages([])}
-                      className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2"
-                    >
-                      <Text className="font-retro-bold text-sm text-[#5c574f]">
-                        Remove all
-                      </Text>
-                    </Pressable>
-                  ) : null}
+                <View className="mt-3">
+                  <PhotoThumbnailPicker
+                    pickedImages={pickedImages}
+                    pickingImage={pickingImage}
+                    onPick={() => void pickCampaignImages()}
+                    onRemove={removeCampaignImage}
+                    onRemoveAll={() => setPickedImages([])}
+                    photosIncomplete={photosIncomplete}
+                  />
                 </View>
-                <Text className="mt-1.5 text-xs text-[#5c574f]">
-                  Optional. If you add photos, include {MIN_CAMPAIGN_IMAGES}–
-                  {MAX_CAMPAIGN_IMAGES} (JPG or PNG, 5MB each).
-                </Text>
-                {photosIncomplete ? (
-                  <Text className="mt-1 text-xs text-red-600">
-                    Add at least {MIN_CAMPAIGN_IMAGES} photos, or remove all.
-                  </Text>
-                ) : null}
               </View>
 
               <View>
@@ -765,6 +801,57 @@ export default function CreateCampaignPage() {
                   This is how donors will see your campaign once it&apos;s live.
                 </Text>
               </View>
+
+              {ENABLE_CAMPAIGN_TEMPLATES ? (
+                <View>
+                  <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                    Choose a template
+                  </Text>
+                  <Text className="mb-3 text-xs text-[#5c574f]">
+                    Sets your campaign page's layout and accent color. The preview below
+                    updates as you pick.
+                  </Text>
+                  <View className="flex-row flex-wrap gap-3">
+                    {CAMPAIGN_TEMPLATES.map((tpl) => {
+                      const selected = template === tpl.id;
+                      return (
+                        <Pressable
+                          key={tpl.id}
+                          onPress={() => setTemplate(tpl.id)}
+                          accessibilityRole="button"
+                          accessibilityState={{ selected }}
+                          className={`w-full overflow-hidden rounded-2xl border-2 sm:w-[calc(50%-0.5rem)] ${
+                            selected ? "border-retro-ink" : "border-retro-ink/30"
+                          }`}
+                        >
+                          <View
+                            className={`p-3 ${selected ? "bg-retro-mint/10" : "bg-white"}`}
+                          >
+                            <View className="flex-row items-center justify-between">
+                              <Text className="font-retro-bold text-sm text-retro-ink">
+                                {tpl.name}
+                              </Text>
+                              {selected ? (
+                                <View className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint">
+                                  <Check size={12} color="#fff" />
+                                </View>
+                              ) : null}
+                            </View>
+                            <Text className="mb-3 mt-0.5 text-xs text-[#5c574f]">
+                              {tpl.description}
+                            </Text>
+                            <CampaignTemplateWireframe
+                              heroLayout={tpl.unlocks.heroLayout}
+                              accentHex={tpl.unlocks.accentHex}
+                            />
+                          </View>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                </View>
+              ) : null}
+
               <CampaignPreview
                 title={form.title}
                 category={form.category}
@@ -773,7 +860,79 @@ export default function CreateCampaignPage() {
                 goal={Number(form.goal)}
                 imageUris={pickedImageUris}
                 impactLines={previewImpactLines}
+                template={ENABLE_CAMPAIGN_TEMPLATES ? template : undefined}
+                additionalNotes={additionalNotes}
               />
+
+              <View className="rounded-xl border border-retro-ink bg-white p-4">
+                <View className="mb-3 flex-row items-center gap-2">
+                  <View className="h-6 w-6 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint">
+                    <Plus size={14} color="#fff" />
+                  </View>
+                  <Text className="font-retro-bold text-sm text-retro-ink">Add more</Text>
+                </View>
+                <Text className="mb-3 text-xs text-[#5c574f]">
+                  Add more photos, a video, or any extra details donors should know —
+                  the preview above updates as you go.
+                </Text>
+
+                <View className="gap-4">
+                  <View>
+                    <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                      Photos
+                    </Text>
+                    <PhotoThumbnailPicker
+                      pickedImages={pickedImages}
+                      pickingImage={pickingImage}
+                      onPick={() => void pickCampaignImages()}
+                      onRemove={removeCampaignImage}
+                      onRemoveAll={() => setPickedImages([])}
+                      photosIncomplete={photosIncomplete}
+                    />
+                  </View>
+
+                  <View>
+                    <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                      Video
+                    </Text>
+                    <TextInput
+                      value={videoUrl}
+                      onChangeText={setVideoUrl}
+                      placeholder="https://youtube.com/watch?v=… or vimeo.com/…"
+                      placeholderTextColor="#56615A"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      className={inputClass}
+                    />
+                    {videoUrlInvalid ? (
+                      <Text className="mt-1 text-xs text-red-600">
+                        Enter a valid YouTube or Vimeo URL.
+                      </Text>
+                    ) : null}
+                  </View>
+
+                  <View>
+                    <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                      Additional notes
+                    </Text>
+                    <TextInput
+                      value={additionalNotes}
+                      onChangeText={(v) =>
+                        setAdditionalNotes(v.slice(0, MAX_ADDITIONAL_NOTES_LENGTH))
+                      }
+                      placeholder="Anything else donors should know — timelines, acknowledgements, links…"
+                      placeholderTextColor="#56615A"
+                      multiline
+                      numberOfLines={4}
+                      textAlignVertical="top"
+                      className={`${inputClass} min-h-[100px]`}
+                    />
+                    <Text className="mt-1.5 text-xs text-[#5c574f]">
+                      Optional. {additionalNotes.length}/{MAX_ADDITIONAL_NOTES_LENGTH}
+                    </Text>
+                  </View>
+                </View>
+              </View>
 
               <View className="rounded-xl border border-retro-ink bg-white p-4">
                 <View className="mb-1.5 flex-row items-center gap-2">
@@ -882,6 +1041,8 @@ export default function CreateCampaignPage() {
                     description: form.description,
                     story: form.story,
                     goal: Number(form.goal),
+                    template,
+                    additionalNotes,
                   })
                     .then(async () => {
                       let imageUploadFailed = false;
@@ -936,10 +1097,13 @@ export default function CreateCampaignPage() {
                         campaign_image_count: pickedImages.length,
                         campaign_has_video: Boolean(parsedVideoUrl) && !videoSaveFailed,
                         campaign_impact_items: impactItemLabels.length,
+                        campaign_template: template,
                       });
                       setForm(initialForm);
+                      setTemplate(DEFAULT_CAMPAIGN_TEMPLATE_ID);
                       setPickedImages([]);
                       setVideoUrl("");
+                      setAdditionalNotes("");
                       setFundLines(initialFundLines());
                       setCampaignSlug(null);
                       setStep(0);

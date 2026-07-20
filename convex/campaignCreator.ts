@@ -13,12 +13,14 @@ import {
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
+import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_CATEGORY_LENGTH = 60;
 const MAX_UNIVERSITY_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_STORY_LENGTH = 5000;
+const MAX_ADDITIONAL_NOTES_LENGTH = 2000;
 const MAX_UPDATE_TITLE = 120;
 const MAX_UPDATE_CONTENT = 5000;
 const MIN_GOAL = 1;
@@ -78,6 +80,9 @@ export const update = mutation({
     description: v.optional(v.string()),
     story: v.optional(v.string()),
     goal: v.optional(v.number()),
+    template: v.optional(v.string()),
+    /** Empty string clears the notes. */
+    additionalNotes: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -138,6 +143,19 @@ export const update = mutation({
         throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid goal." });
       }
       patch.goal = args.goal;
+    }
+    if (args.template !== undefined) {
+      if (!isValidCampaignTemplateId(args.template)) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid template selection." });
+      }
+      patch.template = args.template;
+    }
+    if (args.additionalNotes !== undefined) {
+      const additionalNotes = args.additionalNotes.trim();
+      if (additionalNotes.length > MAX_ADDITIONAL_NOTES_LENGTH) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid additional notes." });
+      }
+      patch.additionalNotes = additionalNotes || undefined;
     }
 
     if (Object.keys(patch).length > 0) {
@@ -310,7 +328,7 @@ export const setImage = mutation({
 });
 
 const MIN_CAMPAIGN_IMAGES = 2;
-const MAX_CAMPAIGN_IMAGES = 4;
+const MAX_CAMPAIGN_IMAGES = 10;
 
 export const setVideoUrl = mutation({
   args: {

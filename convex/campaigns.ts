@@ -9,6 +9,7 @@ import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
 import { isPublicCampaign, isPublicStatus } from "./lib/campaignVisibility";
+import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 
 function slugify(title: string) {
   return title
@@ -441,6 +442,7 @@ export const create = mutation({
     description: v.string(),
     story: v.string(),
     goal: v.number(),
+    template: v.string(),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -450,6 +452,13 @@ export const create = mutation({
     const university = args.university.trim();
     const description = args.description.trim();
     const story = args.story.trim();
+
+    if (!isValidCampaignTemplateId(args.template)) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Invalid template selection.",
+      });
+    }
 
     if (!title || title.length > MAX_TITLE_LENGTH) {
       throw new ConvexError({
@@ -537,6 +546,7 @@ export const create = mutation({
       verifications: [{ type: "student", label: "New Campaign" }],
       university,
       image: "default",
+      template: args.template,
       createdAt: today.toISOString().slice(0, 10),
       deadline: deadline.toISOString().slice(0, 10),
       status: "pending",

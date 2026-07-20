@@ -1,4 +1,5 @@
 import type { Doc } from "../_generated/dataModel";
+import { DEFAULT_CAMPAIGN_TEMPLATE_ID } from "./campaignTemplates";
 
 type CampaignDoc = Doc<"campaigns">;
 type CommunityDoc = Doc<"communities">;
@@ -24,6 +25,8 @@ export function toCampaign(campaign: CampaignDoc) {
     college: campaign.college,
     image: campaign.image,
     images: campaign.images,
+    template: campaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID,
+    additionalNotes: campaign.additionalNotes,
     videoUrl: campaign.videoUrl,
     createdAt: campaign.createdAt,
     deadline: campaign.deadline,
