@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Image,
 } from "react-native";
-import { useRouter } from "expo-router";
+import { useRouter, Link } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -53,14 +53,6 @@ const steps = ["Details", "Story", "Goal", "Review", "Submit"];
 
 const DEFAULT_UNIVERSITY = "University of Oxford";
 
-const creatorTypes = [
-  "Individual Student",
-  "Student Society",
-  "College",
-  "Department",
-  "University",
-];
-
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_ADDITIONAL_NOTES_LENGTH = 2000;
 const MIN_FUND_LINES = 2;
@@ -88,7 +80,7 @@ interface PickedImage {
 const initialForm = {
   title: "",
   category: "",
-  creatorType: "",
+  communitySlug: "",
   description: "",
   story: "",
   goal: "",
@@ -187,6 +179,10 @@ export default function CreateCampaignPage() {
   );
   const refreshVerificationStatus = useAction(
     api.campaignIdentity.refreshVerificationStatus,
+  );
+  const mySocieties = useQuery(
+    api.societyMembers.listMyApprovedSocieties,
+    isAuthenticated ? {} : "skip",
   );
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -336,8 +332,7 @@ export default function CreateCampaignPage() {
     const result = await createCampaign({
       title: form.title,
       category: form.category,
-      creatorType: form.creatorType,
-      university: DEFAULT_UNIVERSITY,
+      communitySlug: form.communitySlug,
       description: form.description,
       story: form.story,
       goal: Number(form.goal),
@@ -410,7 +405,7 @@ export default function CreateCampaignPage() {
     switch (step) {
       case 0:
         return (
-          Boolean(form.title && form.category && form.creatorType) &&
+          Boolean(form.title && form.category && form.communitySlug) &&
           !videoUrlInvalid &&
           !photosIncomplete
         );
@@ -624,31 +619,59 @@ export default function CreateCampaignPage() {
 
               <View>
                 <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
-                  I am creating this as a...
+                  Posting on behalf of
                 </Text>
-                <View className="flex-row flex-wrap gap-2">
-                  {creatorTypes.map((type) => (
-                    <Pressable
-                      key={type}
-                      onPress={() => update("creatorType", type)}
-                      className={`rounded-lg border-2 px-3 py-2.5 ${
-                        form.creatorType === type
-                          ? "border-retro-ink bg-retro-mint/10"
-                          : "border-retro-ink"
-                      }`}
-                    >
-                      <Text
-                        className={`font-retro-bold text-xs ${
-                          form.creatorType === type
-                            ? "text-retro-mint"
-                            : "text-[#5c574f]"
+                {mySocieties === undefined ? (
+                  <ActivityIndicator color="#17211B" />
+                ) : mySocieties.length === 0 ? (
+                  <View className="gap-3 rounded-xl border-2 border-retro-ink bg-retro-cream p-4">
+                    <Text className="text-sm text-[#5c574f]">
+                      Campaigns can only be created by society members. Join a
+                      society or create one first.
+                    </Text>
+                    <View className="flex-row flex-wrap gap-2">
+                      <Link href="/societies" asChild>
+                        <Pressable className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
+                          <Text className="font-retro-bold text-xs text-retro-ink">
+                            Browse societies
+                          </Text>
+                        </Pressable>
+                      </Link>
+                      <Link href="/create-society" asChild>
+                        <Pressable className="rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
+                          <Text className="font-retro-bold text-xs text-retro-paper">
+                            Create a society
+                          </Text>
+                        </Pressable>
+                      </Link>
+                    </View>
+                  </View>
+                ) : (
+                  <View className="flex-row flex-wrap gap-2">
+                    {mySocieties.map((society) => (
+                      <Pressable
+                        key={society.slug}
+                        onPress={() => update("communitySlug", society.slug)}
+                        className={`rounded-lg border-2 px-3 py-2.5 ${
+                          form.communitySlug === society.slug
+                            ? "border-retro-ink bg-retro-mint/10"
+                            : "border-retro-ink"
                         }`}
                       >
-                        {type}
-                      </Text>
-                    </Pressable>
-                  ))}
-                </View>
+                        <Text
+                          className={`font-retro-bold text-xs ${
+                            form.communitySlug === society.slug
+                              ? "text-retro-mint"
+                              : "text-[#5c574f]"
+                          }`}
+                        >
+                          {society.name}
+                          {society.role === "leader" ? " · Leader" : ""}
+                        </Text>
+                      </Pressable>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
           )}
@@ -1089,7 +1112,7 @@ export default function CreateCampaignPage() {
                       posthog?.capture("campaign_created", {
                         campaign_title: form.title,
                         campaign_category: form.category,
-                        campaign_creator_type: form.creatorType,
+                        campaign_community_slug: form.communitySlug,
                         campaign_university: DEFAULT_UNIVERSITY,
                         campaign_goal: Number(form.goal),
                         campaign_has_image:

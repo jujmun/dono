@@ -2,6 +2,7 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import { mutation, query } from "./_generated/server";
 import {
+  optionalUserId,
   requireSocietyLeader,
   requireVerifiedUser,
 } from "./lib/authz";
@@ -241,6 +242,57 @@ export const listMyLeaderSocieties = query({
       }
     }
     return results;
+  },
+});
+
+/** Approved memberships for the campaign-create society picker. */
+export const listMyApprovedSocieties = query({
+  args: {},
+  handler: async (ctx) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const memberships = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const results = [];
+    for (const membership of memberships.filter((m) => m.status === "approved")) {
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", membership.communitySlug))
+        .unique();
+      if (
+        community &&
+        community.type === "society" &&
+        (community.verificationStatus === "verified" ||
+          (community.verificationStatus === undefined && community.verified))
+      ) {
+        results.push({
+          slug: community.slug,
+          name: community.name,
+          role: membership.role,
+          university: community.university,
+        });
+      }
+    }
+    return results.sort((a, b) => a.name.localeCompare(b.name));
+  },
+});
+
+/** Current user's membership for a society (any status), or null. */
+export const getMyMembership = query({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await optionalUserId(ctx);
+    if (!userId) return null;
+    const membership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", args.communitySlug).eq("userId", userId),
+      )
+      .unique();
+    if (!membership) return null;
+    return toSocietyMembership(membership);
   },
 });
 

@@ -7,10 +7,13 @@ import {
   Image,
   ActivityIndicator,
   Modal,
+  Linking,
+  Platform,
 } from "react-native";
-import { Link } from "expo-router";
+import { Link, useLocalSearchParams } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
+import * as ExpoLinking from "expo-linking";
 import {
   CheckCircle2,
   ArrowRight,
@@ -20,6 +23,7 @@ import {
   Globe,
   Link2,
   ShieldCheck,
+  Banknote,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
@@ -33,11 +37,43 @@ import type { Id } from "@convex/_generated/dataModel";
 
 const dinoLogo = require("../assets/dino-hero.png");
 
-const steps = ["Details", "About", "Verification", "Review", "Submit"];
+const steps = ["Details", "About", "Verification", "Payouts", "Review", "Submit"];
 
 const DEFAULT_UNIVERSITY = "University of Oxford";
 const MAX_DOCUMENTS = 5;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const CREATE_SOCIETY_SLUG_KEY = "dono:create-society:slug";
+
+function persistSocietySlug(slug: string) {
+  if (Platform.OS === "web" && typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.setItem(CREATE_SOCIETY_SLUG_KEY, slug);
+    } catch {
+      // Ignore quota / private-mode failures — URL + in-memory still work.
+    }
+  }
+}
+
+function readPersistedSocietySlug(): string | null {
+  if (Platform.OS === "web" && typeof sessionStorage !== "undefined") {
+    try {
+      return sessionStorage.getItem(CREATE_SOCIETY_SLUG_KEY);
+    } catch {
+      return null;
+    }
+  }
+  return null;
+}
+
+function clearPersistedSocietySlug() {
+  if (Platform.OS === "web" && typeof sessionStorage !== "undefined") {
+    try {
+      sessionStorage.removeItem(CREATE_SOCIETY_SLUG_KEY);
+    } catch {
+      // ignore
+    }
+  }
+}
 
 interface PickedFile {
   uri: string;
@@ -72,6 +108,7 @@ function fileNameFromAsset(asset: ImagePicker.ImagePickerAsset): string {
 
 export default function CreateSocietyPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const params = useLocalSearchParams<{ connect?: string; slug?: string }>();
   const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
   const createSociety = useMutation(api.societies.create);
   const updateVerificationMaterials = useMutation(
@@ -82,6 +119,12 @@ export default function CreateSocietyPage() {
   );
   const refreshVerificationStatus = useAction(
     api.societyIdentity.refreshVerificationStatus,
+  );
+  const createConnectOnboardingLink = useAction(
+    api.stripeConnect.createConnectOnboardingLink,
+  );
+  const refreshConnectAccountStatus = useAction(
+    api.stripeConnect.refreshConnectAccountStatus,
   );
   const [step, setStep] = useState(0);
   const [error, setError] = useState<string | null>(null);
@@ -94,6 +137,7 @@ export default function CreateSocietyPage() {
   const [pickingId, setPickingId] = useState(false);
   const [societySlug, setSocietySlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [connectLoading, setConnectLoading] = useState(false);
   const [docsPopupVisible, setDocsPopupVisible] = useState(false);
   const [syncingMaterials, setSyncingMaterials] = useState(false);
   // Storage ids of docs already uploaded, keyed by local uri, so revisions
@@ -101,10 +145,65 @@ export default function CreateSocietyPage() {
   const uploadedDocIds = useRef(new Map<string, Id<"_storage">>());
 
   // Once a slug exists, this reflects the webhook-driven status in real time.
+  // Skip until Convex auth is ready — Stripe return restores slug before the
+  // session finishes loading, and getMine requires a signed-in user.
   const verification = useQuery(
     api.societies.getMine,
-    societySlug ? { slug: societySlug } : "skip",
+    societySlug && isAuthenticated && !isLoading
+      ? { slug: societySlug }
+      : "skip",
   );
+  const connectStatus = useQuery(
+    api.stripeConnectInternal.getMyConnectStatus,
+    societySlug && isAuthenticated && !isLoading
+      ? { communitySlug: societySlug }
+      : "skip",
+  );
+
+  // #region agent log
+  fetch('http://127.0.0.1:7751/ingest/5beb672d-420c-42f5-80af-728dc75ed71f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72f4eb'},body:JSON.stringify({sessionId:'72f4eb',runId:'post-fix',hypothesisId:'A',location:'app/create-society.tsx:render',message:'create-society auth vs slug query gate',data:{isAuthenticated,isLoading,societySlug,connectParam:typeof params.connect==='string'?params.connect:null,slugParam:typeof params.slug==='string'?params.slug:null,getMineWillRun:Boolean(societySlug&&isAuthenticated&&!isLoading),willSkipAuthGate:!isLoading&&!isAuthenticated},timestamp:Date.now()})}).catch(()=>{});
+  // #endregion
+
+  // Resume after Stripe Connect redirect (full page reload drops React state).
+  const resumeHandled = useRef(false);
+  useEffect(() => {
+    if (resumeHandled.current) return;
+    // Wait for auth — otherwise getMine / refreshConnect race UNAUTHENTICATED.
+    if (isLoading || !isAuthenticated) return;
+    const connectParam =
+      typeof params.connect === "string" ? params.connect : null;
+    if (connectParam !== "return" && connectParam !== "refresh") return;
+
+    const paramSlug =
+      typeof params.slug === "string" && params.slug.trim()
+        ? params.slug.trim()
+        : null;
+    const restoredSlug = paramSlug ?? readPersistedSocietySlug();
+    // #region agent log
+    fetch('http://127.0.0.1:7751/ingest/5beb672d-420c-42f5-80af-728dc75ed71f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72f4eb'},body:JSON.stringify({sessionId:'72f4eb',runId:'post-fix',hypothesisId:'B',location:'app/create-society.tsx:resumeEffect',message:'Stripe resume effect firing',data:{connectParam,paramSlug,restoredSlug,isAuthenticated,isLoading},timestamp:Date.now()})}).catch(()=>{});
+    // #endregion
+    if (!restoredSlug) return;
+
+    resumeHandled.current = true;
+    setSocietySlug(restoredSlug);
+    persistSocietySlug(restoredSlug);
+    setStep(3);
+    void refreshConnectAccountStatus({ communitySlug: restoredSlug }).catch(
+      () => {},
+    );
+  }, [
+    params.connect,
+    params.slug,
+    refreshConnectAccountStatus,
+    isAuthenticated,
+    isLoading,
+  ]);
+
+  // #region agent log
+  useEffect(() => {
+    fetch('http://127.0.0.1:7751/ingest/5beb672d-420c-42f5-80af-728dc75ed71f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'72f4eb'},body:JSON.stringify({sessionId:'72f4eb',runId:'post-fix',hypothesisId:'C',location:'app/create-society.tsx:authTransition',message:'auth state transition',data:{isAuthenticated,isLoading,societySlug},timestamp:Date.now()})}).catch(()=>{});
+  }, [isAuthenticated, isLoading, societySlug]);
+  // #endregion
 
   // Fallback to the webhook: directly poll Stripe every few seconds while
   // unverified, in case the webhook is delayed, misconfigured, or hasn't
@@ -291,6 +390,7 @@ export default function CreateSocietyPage() {
     });
 
     setSocietySlug(result.slug);
+    persistSocietySlug(result.slug);
     return result.slug;
   };
 
@@ -357,6 +457,48 @@ export default function CreateSocietyPage() {
     }
   };
 
+  const connectReturnUrls = (slug: string) => {
+    if (Platform.OS === "web" && typeof window !== "undefined") {
+      const origin = window.location.origin;
+      return {
+        returnUrl: `${origin}/create-society?connect=return&slug=${encodeURIComponent(slug)}`,
+        refreshUrl: `${origin}/create-society?connect=refresh&slug=${encodeURIComponent(slug)}`,
+      };
+    }
+    return {
+      returnUrl: ExpoLinking.createURL("/create-society", {
+        queryParams: { connect: "return", slug },
+      }),
+      refreshUrl: ExpoLinking.createURL("/create-society", {
+        queryParams: { connect: "refresh", slug },
+      }),
+    };
+  };
+
+  const handleConnectOnboarding = async () => {
+    if (!societySlug) return;
+    setError(null);
+    setConnectLoading(true);
+    try {
+      persistSocietySlug(societySlug);
+      const urls = connectReturnUrls(societySlug);
+      const { url } = await createConnectOnboardingLink({
+        communitySlug: societySlug,
+        returnUrl: urls.returnUrl,
+        refreshUrl: urls.refreshUrl,
+      });
+      await Linking.openURL(url);
+      // Soft refresh after returning — user may stay in this tab on web.
+      void refreshConnectAccountStatus({ communitySlug: societySlug }).catch(
+        () => {},
+      );
+    } catch (err) {
+      setError(getFriendlyAuthError(err) || "Could not start payout setup.");
+    } finally {
+      setConnectLoading(false);
+    }
+  };
+
   const handleContinue = () => {
     if (step === 2) {
       if (supportingDocs.length === 0) {
@@ -382,6 +524,22 @@ export default function CreateSocietyPage() {
     stripeStatus === "canceled" ||
     (stripeStatus === "requires_input" && hasVerificationError);
 
+  const connectReady =
+    connectStatus?.exists === true &&
+    (connectStatus.onboardingComplete || connectStatus.payoutsEnabled);
+  const connectStarted = connectStatus?.exists === true;
+
+  // Poll Connect status while on the Payouts step after the user opens Stripe.
+  useEffect(() => {
+    if (!societySlug || step !== 3 || connectReady) return;
+    const interval = setInterval(() => {
+      void refreshConnectAccountStatus({ communitySlug: societySlug }).catch(
+        () => {},
+      );
+    }, 4000);
+    return () => clearInterval(interval);
+  }, [societySlug, step, connectReady, refreshConnectAccountStatus]);
+
   const canProceed = () => {
     switch (step) {
       case 0:
@@ -394,6 +552,9 @@ export default function CreateSocietyPage() {
         // finish in the background — don't block moving on while it's still
         // processing; the final step shows a waiting state until it's done.
         return societySlug !== null;
+      case 3:
+        // Require at least that a Connect account was created / onboarding started.
+        return connectStarted;
       default:
         return true;
     }
@@ -789,6 +950,63 @@ export default function CreateSocietyPage() {
           )}
 
           {step === 3 && (
+            <View className="gap-5">
+              <View>
+                <View className="mb-1.5 flex-row items-center gap-2">
+                  <Banknote size={16} color="#17211B" />
+                  <Text className="font-retro-bold text-sm text-retro-ink">
+                    Payout account
+                  </Text>
+                </View>
+                <Text className="mb-3 text-sm text-[#5c574f]">
+                  Set up a Stripe Express account so your society can receive
+                  campaign donations. This is separate from identity verification
+                  and only takes a few minutes.
+                </Text>
+                {connectReady ? (
+                  <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
+                    <ShieldCheck size={14} color="#15803d" />
+                    <Text className="text-xs text-green-800">
+                      Payout setup complete
+                    </Text>
+                  </View>
+                ) : connectStarted ? (
+                  <View className="flex-row items-center gap-2 rounded-xl bg-amber-50 px-3 py-2">
+                    <VerifyingIndicator size={14} color="#b45309" />
+                    <Text className="text-xs text-amber-800">
+                      Finish the Stripe form if it&apos;s still open — we&apos;ll
+                      update this automatically.
+                    </Text>
+                  </View>
+                ) : null}
+                <Pressable
+                  onPress={() => void handleConnectOnboarding()}
+                  disabled={!societySlug || connectLoading || connectReady}
+                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
+                    !societySlug || connectLoading || connectReady ? "opacity-50" : ""
+                  }`}
+                >
+                  {connectLoading ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="font-retro-bold text-sm text-retro-paper">
+                      {connectStarted
+                        ? "Continue payout setup"
+                        : "Set up payouts with Stripe"}
+                    </Text>
+                  )}
+                </Pressable>
+                {!connectStarted ? (
+                  <Text className="mt-2 text-xs text-[#5c574f]">
+                    You need to start payout setup before continuing. You can finish
+                    bank details later from My Societies if you leave mid-flow.
+                  </Text>
+                ) : null}
+              </View>
+            </View>
+          )}
+
+          {step === 4 && (
             <View className="gap-4">
               <View>
                 <Text className="text-lg font-retro-bold text-retro-ink">
@@ -847,11 +1065,24 @@ export default function CreateSocietyPage() {
                   Secondary link: {form.secondaryLink.trim() || "Not provided"}
                 </Text>
                 <View className="mt-1">{renderVerificationStatus()}</View>
+                <View className="mt-2 flex-row items-center gap-2">
+                  <CheckCircle2
+                    size={14}
+                    color={connectReady ? "#17211B" : "#56615A"}
+                  />
+                  <Text className="text-sm text-[#5c574f]">
+                    {connectReady
+                      ? "Payout account ready"
+                      : connectStarted
+                        ? "Payout setup started"
+                        : "Payout setup not started"}
+                  </Text>
+                </View>
               </View>
             </View>
           )}
 
-          {step === 4 && (
+          {step === 5 && (
             <View className="items-center gap-3 py-4">
               {stripeVerified ? (
                 <>
@@ -860,12 +1091,16 @@ export default function CreateSocietyPage() {
                     Application submitted
                   </Text>
                   <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
-                    Thanks — we've received your society, its verification documents, and
-                    your Stripe identity check. We'll review it and let you know once a
-                    decision is made.
+                    Thanks — we&apos;ve received your society, its verification
+                    documents, your Stripe identity check
+                    {connectStarted ? ", and payout account setup" : ""}. We&apos;ll
+                    review it and let you know once a decision is made.
                   </Text>
                   <Link href="/societies" asChild>
-                    <Pressable className="mt-2 rounded-full border-2 border-retro-ink bg-retro-mint px-6 py-2.5 shadow-[3px_3px_0_#211E1A]">
+                    <Pressable
+                      onPress={() => clearPersistedSocietySlug()}
+                      className="mt-2 rounded-full border-2 border-retro-ink bg-retro-mint px-6 py-2.5 shadow-[3px_3px_0_#211E1A]"
+                    >
                       <Text className="font-retro-bold text-sm text-retro-paper">
                         Back to Societies
                       </Text>
@@ -880,8 +1115,8 @@ export default function CreateSocietyPage() {
                   </Text>
                   <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
                     Your society has already been submitted. This usually takes a
-                    minute or two — feel free to leave this page open, it'll update
-                    automatically the moment it's done.
+                    minute or two — feel free to leave this page open, it&apos;ll
+                    update automatically the moment it&apos;s done.
                   </Text>
                 </>
               )}
@@ -889,7 +1124,7 @@ export default function CreateSocietyPage() {
           )}
 
           <View className="mt-8 flex-row justify-between">
-            {step > 0 ? (
+            {step > 0 && step < 5 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
                 className={secondaryBtnClass}
@@ -900,7 +1135,7 @@ export default function CreateSocietyPage() {
               <View />
             )}
 
-            {step < 4 ? (
+            {step < 5 ? (
               <Pressable
                 onPress={handleContinue}
                 disabled={!canProceed() || syncingMaterials}
@@ -913,7 +1148,7 @@ export default function CreateSocietyPage() {
                 ) : (
                   <>
                     <Text className="font-retro-bold text-sm text-retro-paper">
-                      {step === 3 ? "Submit" : "Continue"}
+                      {step === 4 ? "Submit" : "Continue"}
                     </Text>
                     <ArrowRight size={16} color="#fff" />
                   </>

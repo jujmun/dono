@@ -110,6 +110,8 @@ export interface MySociety extends Society {
   moderatedAt: number | null;
   supportingDocumentCount: number;
   hasIdDocument: boolean;
+  connectOnboardingComplete: boolean;
+  connectPayoutsEnabled: boolean;
 }
 
 /** Admin-only shape — the one place real file URLs for verification docs appear. */

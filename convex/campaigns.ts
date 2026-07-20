@@ -4,7 +4,11 @@ import type { Id } from "./_generated/dataModel";
 import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
-import { requireAdmin, requireVerifiedUser, resolveCreatorContact } from "./lib/authz";
+import {
+  requireAdmin,
+  requireSocietyMember,
+  resolveCreatorContact,
+} from "./lib/authz";
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
@@ -58,14 +62,6 @@ function matchesSearch(
     campaign.creator.name.toLowerCase().includes(q)
   );
 }
-
-const creatorTypeMap: Record<string, string> = {
-  "Individual Student": "student",
-  "Student Society": "society",
-  College: "college",
-  Department: "department",
-  University: "department",
-};
 
 const placeholderCampaignSlugs = [
   "anatomy-models",
@@ -460,21 +456,23 @@ export const create = mutation({
   args: {
     title: v.string(),
     category: v.string(),
-    creatorType: v.string(),
-    university: v.string(),
+    communitySlug: v.string(),
     description: v.string(),
     story: v.string(),
     goal: v.number(),
     template: v.string(),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    const communitySlug = args.communitySlug.trim();
+    const { userId, community, membership } = await requireSocietyMember(
+      ctx,
+      communitySlug,
+    );
     const title = args.title.trim();
     const category = args.category.trim();
-    const creatorTypeInput = args.creatorType.trim();
-    const university = args.university.trim();
     const description = args.description.trim();
     const story = args.story.trim();
+    const university = community.university.trim();
 
     if (!isValidCampaignTemplateId(args.template)) {
       throw new ConvexError({
@@ -520,15 +518,15 @@ export const create = mutation({
       });
     }
 
-    const user = await ctx.db.get(userId);
-    const creatorName = user?.name ?? creatorTypeInput;
-    const creatorType = creatorTypeMap[creatorTypeInput] ?? "student";
+    const creatorName = community.name;
     const initials = creatorName
       .split(" ")
       .map((part) => part[0])
       .join("")
       .slice(0, 2)
       .toUpperCase();
+    const isLeader = membership.role === "leader";
+    const now = Date.now();
 
     let baseSlug = slugify(title);
     let slug = baseSlug;
@@ -543,7 +541,6 @@ export const create = mutation({
       suffix += 1;
     }
 
-    const communityId = slugify(`${university}-${creatorType}`);
     const today = new Date();
     const deadline = new Date(today);
     deadline.setMonth(deadline.getMonth() + 2);
@@ -562,11 +559,11 @@ export const create = mutation({
       comments: 0,
       creator: {
         name: creatorName,
-        type: creatorType,
-        avatar: initials || "DN",
-        communityId,
+        type: "society",
+        avatar: initials || "SO",
+        communityId: communitySlug,
       },
-      verifications: [{ type: "student", label: "New Campaign" }],
+      verifications: [{ type: "society", label: "Society Campaign" }],
       university,
       image: "default",
       template: args.template,
@@ -576,8 +573,9 @@ export const create = mutation({
       updates: [],
       impactItems: [],
       createdBy: userId,
-      ...(creatorType === "society"
-        ? { societyApprovalStatus: "pending" as const }
+      societyApprovalStatus: isLeader ? ("approved" as const) : ("pending" as const),
+      ...(isLeader
+        ? { societyApprovedAt: now, societyApprovedBy: userId }
         : {}),
     });
 
@@ -595,7 +593,7 @@ export const create = mutation({
       const leaders = await ctx.db
         .query("societyMembers")
         .withIndex("by_community_status", (q) =>
-          q.eq("communitySlug", communityId).eq("status", "approved"),
+          q.eq("communitySlug", communitySlug).eq("status", "approved"),
         )
         .collect();
       for (const leader of leaders.filter((m) => m.role === "leader")) {
