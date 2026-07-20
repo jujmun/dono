@@ -6,6 +6,7 @@ import {
   campaignFields,
   communityFields,
   fundFields,
+  notificationFields,
   societyFields,
   societyMemberFields,
 } from "./validators";
@@ -95,6 +96,9 @@ export default defineSchema({
   activityItems: defineTable(activityFields)
     .index("by_slug", ["slug"])
     .index("by_createdAt", ["timestamp"]),
+  notifications: defineTable(notificationFields)
+    .index("by_user", ["userId"])
+    .index("by_user_read", ["userId", "read"]),
   stripeCustomers: defineTable({
     userId: v.id("users"),
     stripeCustomerId: v.string(),

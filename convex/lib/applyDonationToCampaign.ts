@@ -2,7 +2,13 @@ type CampaignCounters = {
   raised: number;
   donors: number;
   goal: number;
-  status: "pending" | "rejected" | "active" | "funded" | "completed";
+  status:
+    | "pending"
+    | "rejected"
+    | "active"
+    | "funded"
+    | "completed"
+    | "changes_requested";
 };
 
 export function computeCampaignAfterDonation(

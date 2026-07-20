@@ -15,12 +15,13 @@ import {
   ChevronRight,
   RefreshCw,
   RotateCcw,
-  Send,
   Trash2,
   X,
 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminMessageThread } from "@/components/admin-message-thread";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import {
   AdminStatusChip,
@@ -83,11 +84,9 @@ export default function AdminCampaignReviewPage() {
   const reject = useMutation(api.campaigns.reject);
   const takeDown = useMutation(api.campaigns.takeDown);
   const restore = useMutation(api.campaigns.restore);
-  const sendComment = useMutation(api.reviewMessages.send);
   const refreshIdentity = useAction(
     api.campaignIdentity.refreshVerificationStatus,
   );
-  const [comment, setComment] = useState("");
   const [reason, setReason] = useState("");
   const [reasonMode, setReasonMode] = useState<"reject" | "takedown" | null>(
     null,
@@ -95,7 +94,7 @@ export default function AdminCampaignReviewPage() {
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [busy, setBusy] = useState<
-    "approve" | "reject" | "comment" | "takedown" | "restore" | "refresh" | null
+    "approve" | "reject" | "takedown" | "restore" | "refresh" | null
   >(null);
 
   if (profile === undefined || (adminUser && detail === undefined)) {
@@ -149,20 +148,23 @@ export default function AdminCampaignReviewPage() {
   const campaign = detail.campaign;
   const student = detail.student;
   const identity = detail.identity;
-  const messages = detail.messages;
   const pending = campaign.status === "pending";
+  // approve/reject both operate on pending or changes_requested campaigns
+  // (see convex/lib/campaignVisibility.ts isUnderReview) — gate the decision
+  // buttons and back-nav on either, not "pending" alone.
+  const underReview = pending || campaign.status === "changes_requested";
   const moderated = campaign.status === "rejected";
   const isLive =
     campaign.status === "active" ||
     campaign.status === "funded" ||
     campaign.status === "completed";
 
-  const backHref = pending
+  const backHref = underReview
     ? ("/admin" as Href)
     : moderated
       ? ("/admin/archive" as Href)
       : ("/admin/discover" as Href);
-  const backLabel = pending
+  const backLabel = underReview
     ? "Back to waiting posts"
     : moderated
       ? "Back to removed"
@@ -207,26 +209,6 @@ export default function AdminCampaignReviewPage() {
       setBusy(null);
       setReasonMode(null);
       setReason("");
-    }
-  };
-
-  const handleSendComment = async () => {
-    const body = comment.trim();
-    if (!body) {
-      setError("Write a comment before sending.");
-      return;
-    }
-    setError(null);
-    setInfo(null);
-    setBusy("comment");
-    try {
-      await sendComment({ slug: campaign.id, body });
-      setComment("");
-      setInfo("Comment sent to the student by email.");
-    } catch (err) {
-      setError(getFriendlyAuthError(err));
-    } finally {
-      setBusy(null);
     }
   };
 
@@ -433,67 +415,21 @@ export default function AdminCampaignReviewPage() {
         </View>
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
-          <Text className="font-retro-bold text-base text-dono-text">
-            Comments to student
-          </Text>
-          <Text className="mt-1 text-sm text-dono-muted">
-            Feedback is emailed to the student and kept on this review thread.
-          </Text>
-
-          {messages.length === 0 ? (
-            <Text className="mt-4 text-sm text-dono-muted">
-              No comments yet.
-            </Text>
+          {student ? (
+            <AdminMessageThread
+              userId={student.userId as Id<"users">}
+              campaignContext={{ slug: campaign.id, title: campaign.title }}
+            />
           ) : (
-            <View className="mt-4 gap-3">
-              {messages.map((message) => (
-                <View
-                  key={message.id}
-                  className="rounded-xl bg-dono-surface-muted px-4 py-3"
-                >
-                  <Text className="text-sm text-dono-text">{message.body}</Text>
-                  <Text className="mt-2 text-xs text-dono-muted">
-                    {formatMessageTime(message.createdAt)}
-                    {message.emailSentAt ? " · emailed" : ""}
-                  </Text>
-                </View>
-              ))}
-            </View>
+            <>
+              <Text className="font-retro-bold text-base text-dono-text">
+                Messages
+              </Text>
+              <Text className="mt-1 text-sm text-dono-muted">
+                Messaging needs a linked student account.
+              </Text>
+            </>
           )}
-
-          <TextInput
-            value={comment}
-            onChangeText={setComment}
-            multiline
-            numberOfLines={4}
-            placeholder="Ask for changes, clarify requirements, or share next steps..."
-            placeholderTextColor="#56615A"
-            className="mt-4 min-h-[100px] rounded-xl border border-dono-border px-4 py-3 text-sm text-dono-text"
-            textAlignVertical="top"
-          />
-          <View className="mt-3 flex-row items-center justify-between gap-3">
-            {!student ? (
-              <Text className="flex-1 text-xs text-dono-muted">
-                Comments need a linked student account with an email address.
-              </Text>
-            ) : (
-              <View className="flex-1" />
-            )}
-            <Pressable
-              onPress={() => {
-                void handleSendComment();
-              }}
-              disabled={busy !== null || !student || !comment.trim()}
-              className={`flex-row items-center gap-2 rounded-xl border border-dono-border bg-dono-surface-muted px-4 py-2.5 ${
-                busy !== null || !student || !comment.trim() ? "opacity-50" : ""
-              }`}
-            >
-              <Send size={15} color="#17211B" />
-              <Text className="font-retro-bold text-sm text-dono-text">
-                {busy === "comment" ? "Sending..." : "Send"}
-              </Text>
-            </Pressable>
-          </View>
         </View>
 
         {error ? (
@@ -568,20 +504,20 @@ export default function AdminCampaignReviewPage() {
           </View>
         ) : null}
 
-        {(pending || isLive || moderated) && !reasonMode ? (
+        {(underReview || isLive || moderated) && !reasonMode ? (
           <View className="mt-8 rounded-2xl border border-dono-border bg-white p-5">
             <Text className="font-retro-bold text-base text-dono-text">
               Your decision
             </Text>
             <Text className="mt-1 text-sm text-dono-muted">
-              {pending
+              {underReview
                 ? "Approve to publish, or deny with a reason."
                 : moderated
                   ? "Put this post back on the site."
                   : "Remove this post from the site."}
             </Text>
 
-            {pending ? (
+            {underReview ? (
               <View className="mt-4 flex-row gap-2">
                 <Pressable
                   onPress={() => {

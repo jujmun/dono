@@ -1,0 +1,212 @@
+import { useState } from "react";
+import { Modal, Pressable, ScrollView, Text, View } from "react-native";
+import { useRouter } from "expo-router";
+import { useMutation, useQuery } from "convex/react";
+import { Bell, Pencil } from "lucide-react-native";
+import { api } from "@convex/_generated/api";
+import type { Id } from "@convex/_generated/dataModel";
+import { RetroPanel } from "@/components/retro";
+import { cn } from "@/lib/utils";
+import type { Notification } from "@/lib/types";
+
+const PAGE_SIZE = 15;
+
+function formatNotificationDate(ms: number) {
+  return new Date(ms).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  });
+}
+
+function NotificationRow({
+  notification,
+  onPress,
+  onEditCampaign,
+}: {
+  notification: Notification;
+  onPress: (notification: Notification) => void;
+  onEditCampaign: (notification: Notification) => void;
+}) {
+  return (
+    <Pressable
+      onPress={() => onPress(notification)}
+      className={cn(
+        "flex-row items-start gap-2.5 border-b border-retro-ink/10 px-3.5 py-3",
+        !notification.read && "bg-retro-mint/10",
+      )}
+    >
+      <View
+        className={cn(
+          "mt-1.5 h-2 w-2 shrink-0 rounded-full",
+          notification.read ? "bg-transparent" : "bg-retro-mint",
+        )}
+      />
+      <View className="min-w-0 flex-1">
+        {notification.relatedEntityTitle ? (
+          <View className="mb-1 flex-row items-center self-start rounded-md bg-retro-mint/15 px-1.5 py-0.5">
+            <Text
+              className="text-[10px] font-retro-bold uppercase text-retro-mint"
+              numberOfLines={1}
+            >
+              {notification.relatedEntityTitle}
+            </Text>
+          </View>
+        ) : null}
+        <Text
+          className={cn(
+            "text-sm text-retro-ink",
+            !notification.read && "font-retro-bold",
+          )}
+        >
+          {notification.message}
+        </Text>
+        <Text className="mt-1 font-retro-mono text-[11px] text-[#5c574f]">
+          {formatNotificationDate(notification.createdAt)}
+        </Text>
+        {notification.isEditRequest ? (
+          <Pressable
+            onPress={(event) => {
+              event.stopPropagation();
+              onEditCampaign(notification);
+            }}
+            className="mt-2 flex-row items-center gap-1.5 self-start rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-1.5"
+          >
+            <Pencil size={12} color="#211E1A" />
+            <Text className="font-retro-bold text-xs text-retro-ink">
+              Edit Campaign
+            </Text>
+          </Pressable>
+        ) : null}
+      </View>
+    </Pressable>
+  );
+}
+
+export function NotificationBell() {
+  const router = useRouter();
+  const [open, setOpen] = useState(false);
+  const [visibleCount, setVisibleCount] = useState(PAGE_SIZE);
+
+  // Live via Convex's reactive useQuery subscriptions — no polling needed.
+  // A future push-based improvement (e.g. platform push notifications for
+  // native) would layer on top of this, not replace it.
+  const unreadCount = useQuery(api.notifications.getUnreadCount);
+  const page = useQuery(
+    api.notifications.list,
+    open ? { limit: visibleCount } : "skip",
+  );
+  const markRead = useMutation(api.notifications.markRead);
+  const markAllRead = useMutation(api.notifications.markAllRead);
+
+  const items = (page?.items ?? []) as Notification[];
+  const hasMore = Boolean(page?.nextCursor);
+  const badgeLabel =
+    unreadCount === undefined
+      ? null
+      : unreadCount > 9
+        ? "9+"
+        : unreadCount > 0
+          ? String(unreadCount)
+          : null;
+
+  const handlePressNotification = (notification: Notification) => {
+    if (!notification.read) {
+      void markRead({ notificationId: notification.id as Id<"notifications"> });
+    }
+    // Edit-request campaigns are "changes_requested" — not public, so the
+    // normal campaign page 404s. The Edit Campaign button (below) is the
+    // real destination for those; a plain row tap just marks it read.
+    if (
+      !notification.isEditRequest &&
+      notification.relatedEntityType === "campaign" &&
+      notification.relatedEntityId
+    ) {
+      setOpen(false);
+      router.push(`/campaigns/${notification.relatedEntityId}`);
+    }
+  };
+
+  const handleEditCampaign = (notification: Notification) => {
+    if (!notification.read) {
+      void markRead({ notificationId: notification.id as Id<"notifications"> });
+    }
+    if (notification.relatedEntityId) {
+      setOpen(false);
+      router.push(`/edit-campaign?slug=${encodeURIComponent(notification.relatedEntityId)}`);
+    }
+  };
+
+  return (
+    <>
+      <Pressable
+        onPress={() => setOpen(true)}
+        accessibilityLabel="Notifications"
+        className="relative h-9 w-9 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream"
+      >
+        <Bell size={16} color="#211E1A" />
+        {badgeLabel ? (
+          <View className="absolute -right-1.5 -top-1.5 h-[18px] min-w-[18px] items-center justify-center rounded-full border-2 border-retro-paper bg-retro-coral px-1">
+            <Text className="font-retro-bold text-[9px] leading-none text-white">
+              {badgeLabel}
+            </Text>
+          </View>
+        ) : null}
+      </Pressable>
+
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable className="flex-1 bg-black/40" onPress={() => setOpen(false)}>
+          <View className="flex-1 items-end px-4 pb-4 pt-16" pointerEvents="box-none">
+            <Pressable
+              onPress={(event) => event.stopPropagation()}
+              className="w-full max-w-sm"
+            >
+              <RetroPanel title="Notifications" accent="mint" bodyClassName="p-0">
+                <View className="flex-row items-center justify-between border-b border-retro-ink/10 px-3.5 py-2.5">
+                  <Text className="font-retro-mono text-[11px] text-[#5c574f]">
+                    {unreadCount ? `${unreadCount} unread` : "You're all caught up"}
+                  </Text>
+                  {unreadCount ? (
+                    <Pressable onPress={() => void markAllRead({})}>
+                      <Text className="font-retro-bold text-[11px] text-retro-mint">
+                        Mark all read
+                      </Text>
+                    </Pressable>
+                  ) : null}
+                </View>
+
+                <ScrollView style={{ maxHeight: 360 }}>
+                  {items.length === 0 ? (
+                    <Text className="px-3.5 py-6 text-center text-sm text-[#5c574f]">
+                      No notifications yet.
+                    </Text>
+                  ) : (
+                    items.map((notification) => (
+                      <NotificationRow
+                        key={notification.id}
+                        notification={notification}
+                        onPress={handlePressNotification}
+                        onEditCampaign={handleEditCampaign}
+                      />
+                    ))
+                  )}
+                </ScrollView>
+
+                {hasMore ? (
+                  <Pressable
+                    onPress={() => setVisibleCount((count) => count + PAGE_SIZE)}
+                    className="items-center border-t border-retro-ink/10 px-3.5 py-2.5"
+                  >
+                    <Text className="font-retro-bold text-xs text-retro-ink">
+                      Load more
+                    </Text>
+                  </Pressable>
+                ) : null}
+              </RetroPanel>
+            </Pressable>
+          </View>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}

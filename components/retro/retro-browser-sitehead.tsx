@@ -11,6 +11,7 @@ import { useConvexAuth } from "convex/react";
 import { Menu, X } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { NotificationBell } from "@/components/notification-bell";
 
 const baseNavItems = [
   { href: "/campaigns", label: "Campaigns" },
@@ -91,6 +92,7 @@ export function RetroBrowserSitehead() {
               </Text>
             </Pressable>
           </Link>
+          {!isLoading && isAuthenticated ? <NotificationBell /> : null}
           {!isLoading && isAuthenticated ? (
             <Link href="/account" asChild>
               <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-retro-ink bg-retro-cream">

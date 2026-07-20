@@ -20,3 +20,15 @@ export function isPublicCampaign(campaign: CampaignDoc) {
 export function requiresSocietyApproval(creatorType: string) {
   return creatorType === "society";
 }
+
+/** True while a campaign is awaiting an admin decision — either freshly
+ * submitted or sent back for edits. approve/reject both operate on either. */
+export function isUnderReview(status: string) {
+  return status === "pending" || status === "changes_requested";
+}
+
+/** True while the owner is allowed to edit fields / resubmit — mirrors the
+ * guard already used by campaignCreator.update and .resubmit. */
+export function isEditableByOwner(status: string) {
+  return status === "pending" || status === "rejected" || status === "changes_requested";
+}

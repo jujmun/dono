@@ -60,7 +60,7 @@ export interface Campaign {
   videoUrl?: string;
   createdAt: string;
   deadline: string;
-  status: "pending" | "rejected" | "active" | "funded" | "completed";
+  status: "pending" | "rejected" | "active" | "funded" | "completed" | "changes_requested";
   updates: CampaignUpdate[];
   impactItems?: string[];
   /** Admin moderation fields (optional; present on admin payloads). */
@@ -180,4 +180,24 @@ export interface DonoWrapped {
   topCommunity: string;
   rank: string;
   impactStatement: string;
+}
+
+export type NotificationType =
+  | "campaign_pending"
+  | "campaign_active"
+  | "campaign_rejected"
+  | "admin_message"
+  | "onboarding";
+
+export interface Notification {
+  id: string;
+  type: NotificationType;
+  message: string;
+  relatedEntityType?: "campaign";
+  relatedEntityId?: string;
+  relatedEntityTitle?: string | null;
+  read: boolean;
+  createdAt: number;
+  senderId?: string;
+  isEditRequest?: boolean;
 }
