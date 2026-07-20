@@ -14,6 +14,8 @@ import {
 } from "./auth/rateLimit";
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
+import { isEditableByOwner } from "./lib/campaignVisibility";
+import { buildCampaignEditedMessage, createNotification } from "./lib/notifications";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_CATEGORY_LENGTH = 60;
@@ -71,6 +73,27 @@ export const getMyVerificationStatus = query({
   },
 });
 
+/** Owner-scoped, full campaign regardless of public status — getBySlug
+ * (public) returns null for pending/rejected/changes_requested, so the
+ * owner's own edit page needs this instead. */
+export const getMineForEdit = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.createdBy !== userId) {
+      return null;
+    }
+    return {
+      ...toCampaign(campaign),
+      editable: isEditableByOwner(campaign.status),
+    };
+  },
+});
+
 export const update = mutation({
   args: {
     slug: v.string(),
@@ -83,6 +106,11 @@ export const update = mutation({
     template: v.optional(v.string()),
     /** Empty string clears the notes. */
     additionalNotes: v.optional(v.string()),
+    /** True only from app/edit-campaign.tsx (post-submission edits) — logs a
+     * campaign_edited event so admins see it in the review thread. Left
+     * unset by the create-wizard's own Complete-step call, which also uses
+     * this mutation but isn't "an edit" in the sense admins care about. */
+    logEdit: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -95,10 +123,10 @@ export const update = mutation({
       throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
     }
     await requireRecordOwner(ctx, campaign.createdBy);
-    if (campaign.status !== "pending" && campaign.status !== "rejected") {
+    if (!isEditableByOwner(campaign.status)) {
       throw new ConvexError({
         code: "INVALID_STATE",
-        message: "Only pending or rejected campaigns can be edited.",
+        message: "Only pending, rejected, or changes-requested campaigns can be edited.",
       });
     }
 
@@ -161,6 +189,19 @@ export const update = mutation({
     if (Object.keys(patch).length > 0) {
       await ctx.db.patch(campaign._id, patch);
     }
+
+    if (args.logEdit && campaign.createdBy) {
+      const title = (patch.title as string | undefined) ?? campaign.title;
+      await createNotification(ctx, {
+        userId: campaign.createdBy,
+        type: "campaign_edited",
+        message: buildCampaignEditedMessage(title),
+        relatedEntityType: "campaign",
+        relatedEntityId: campaign.slug,
+        read: true,
+      });
+    }
+
     return null;
   },
 });
@@ -174,7 +215,10 @@ export const resubmit = mutation({
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
 
-    if (!campaign || campaign.status !== "rejected") {
+    if (
+      !campaign ||
+      (campaign.status !== "rejected" && campaign.status !== "changes_requested")
+    ) {
       throw new ConvexError({
         code: "NOT_FOUND",
         message: "Rejected campaign not found.",

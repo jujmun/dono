@@ -12,8 +12,14 @@ import {
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
-import { isPublicCampaign, isPublicStatus } from "./lib/campaignVisibility";
+import { isPublicCampaign, isPublicStatus, isUnderReview } from "./lib/campaignVisibility";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
+import {
+  buildCampaignActiveMessage,
+  buildCampaignPendingMessage,
+  buildCampaignRejectedMessage,
+  createNotification,
+} from "./lib/notifications";
 
 function slugify(title: string) {
   return title
@@ -295,7 +301,7 @@ export const approve = mutation({
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
-    if (!campaign || campaign.status !== "pending") {
+    if (!campaign || !isUnderReview(campaign.status)) {
       throw new ConvexError({
         code: "NOT_FOUND",
         message: "Pending campaign not found.",
@@ -336,6 +342,13 @@ export const approve = mutation({
         userAvatar: avatar,
         campaignTitle: campaign.title,
       });
+      await createNotification(ctx, {
+        userId: campaign.createdBy,
+        type: "campaign_active",
+        message: buildCampaignActiveMessage(campaign.title),
+        relatedEntityType: "campaign",
+        relatedEntityId: campaign.slug,
+      });
     }
 
     return null;
@@ -351,7 +364,7 @@ export const reject = mutation({
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .unique();
-    if (!campaign || campaign.status !== "pending") {
+    if (!campaign || !isUnderReview(campaign.status)) {
       throw new ConvexError({
         code: "NOT_FOUND",
         message: "Pending campaign not found.",
@@ -370,6 +383,16 @@ export const reject = mutation({
       adminUserId,
       body: `Your campaign was not approved.\n\nReason: ${reason}`,
     });
+    if (campaign.createdBy) {
+      // No relatedEntityId here: rejected campaigns aren't public
+      // (isPublicCampaign requires active/funded/completed), and there's no
+      // private "my campaign" status page yet for a link to land on.
+      await createNotification(ctx, {
+        userId: campaign.createdBy,
+        type: "campaign_rejected",
+        message: buildCampaignRejectedMessage(campaign.title),
+      });
+    }
     return null;
   },
 });
@@ -556,7 +579,17 @@ export const create = mutation({
         : {}),
     });
 
-    if (!isLeader) {
+    // No relatedEntityId here: a "pending" campaign isn't public
+    // (isPublicCampaign requires active/funded/completed) and getBySlug
+    // returns null for it even to its own creator, so there's nowhere for
+    // a link to land yet.
+    await createNotification(ctx, {
+      userId,
+      type: "campaign_pending",
+      message: buildCampaignPendingMessage(title),
+    });
+
+    if (creatorType === "society") {
       const leaders = await ctx.db
         .query("societyMembers")
         .withIndex("by_community_status", (q) =>

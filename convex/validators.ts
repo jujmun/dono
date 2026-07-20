@@ -51,6 +51,9 @@ export const campaignFields = {
     v.literal("active"),
     v.literal("funded"),
     v.literal("completed"),
+    /** Admin requested edits during review — see convex/notifications.ts
+     * sendFromAdmin's isEditRequest handling. Not public (campaignVisibility.ts). */
+    v.literal("changes_requested"),
   ),
   updates: v.array(campaignUpdateValidator),
   impactItems: v.optional(v.array(v.string())),
@@ -208,4 +211,33 @@ export const activityFields = {
   target: v.string(),
   amount: v.optional(v.number()),
   timestamp: v.string(),
+};
+
+export const notificationFields = {
+  /** Recipient. */
+  userId: v.id("users"),
+  type: v.union(
+    v.literal("campaign_pending"),
+    v.literal("campaign_active"),
+    v.literal("campaign_rejected"),
+    v.literal("admin_message"),
+    v.literal("onboarding"),
+    /** System event, not a real notification — the owner edited a campaign
+     * via app/edit-campaign.tsx. Created read:true (never bumps the
+     * recipient's own unread badge); surfaced only in the admin thread. */
+    v.literal("campaign_edited"),
+  ),
+  message: v.string(),
+  /** Optional link target — only "campaign" today, but a union so more
+   * entity types can be added without a schema migration. */
+  relatedEntityType: v.optional(v.union(v.literal("campaign"))),
+  /** Campaign slug when relatedEntityType is "campaign". */
+  relatedEntityId: v.optional(v.string()),
+  read: v.boolean(),
+  createdAt: v.number(),
+  /** Set only for admin-sent messages (type "admin_message"). */
+  senderId: v.optional(v.id("users")),
+  /** Admin flagged this message as an edit request (type "admin_message" +
+   * relatedEntityType "campaign" only) — surfaces an "Edit Campaign" button. */
+  isEditRequest: v.optional(v.boolean()),
 };

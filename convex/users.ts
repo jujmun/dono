@@ -24,6 +24,7 @@ import {
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
+import { createNotification, ONBOARDING_MESSAGE } from "./lib/notifications";
 
 function roleForEmail(email: string): "user" | "admin" {
   return isAdminIdentityEmail(email) ? "admin" : "user";
@@ -131,6 +132,35 @@ export const getStudentForAdmin = query({
       createdAt: profile.createdAt,
       campaigns: theirs,
     };
+  },
+});
+
+/** Recipient picker for admin messaging (Feature 2) — name/email are the
+ * only identifiers profiles have today (no username field). Mirrors
+ * campaigns.listPendingForAdmin's .collect() + in-memory filter convention. */
+export const searchForAdmin = query({
+  args: { search: v.optional(v.string()) },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const term = args.search?.trim().toLowerCase();
+    const profiles = await ctx.db.query("profiles").collect();
+    const matches = term
+      ? profiles.filter(
+          (p) =>
+            (p.name ?? "").toLowerCase().includes(term) ||
+            p.email.toLowerCase().includes(term),
+        )
+      : profiles;
+
+    return matches
+      .sort((a, b) => (a.name ?? a.email).localeCompare(b.name ?? b.email))
+      .slice(0, 25)
+      .map((p) => ({
+        userId: p.userId,
+        name: p.name ?? "",
+        email: p.email,
+        role: p.role,
+      }));
   },
 });
 
@@ -384,6 +414,13 @@ export const ensureMyProfile = mutation({
       updatedAt: now,
     });
     await linkGuestDonationsForUser(ctx, userId, user.email);
+    // TODO: replace with real onboarding flow — placeholder notification
+    // only, no relatedEntityId (no onboarding route exists yet).
+    await createNotification(ctx, {
+      userId,
+      type: "onboarding",
+      message: ONBOARDING_MESSAGE,
+    });
   },
 });
 

@@ -4,6 +4,7 @@ import type { Campaign } from "@/lib/types";
 
 export function humanCampaignStatus(campaign: Campaign): string {
   if (campaign.status === "pending") return "Waiting";
+  if (campaign.status === "changes_requested") return "Changes requested";
   if (campaign.status === "rejected") return "Removed";
   if (
     campaign.status === "active" ||
@@ -107,7 +108,7 @@ export function selfieMatchChip(record: {
 export function statusChipTone(
   label: string,
 ): "waiting" | "live" | "removed" | "neutral" {
-  if (label === "Waiting") return "waiting";
+  if (label === "Waiting" || label === "Changes requested") return "waiting";
   if (label === "Live" || label === "Funded" || label === "Completed") {
     return "live";
   }
