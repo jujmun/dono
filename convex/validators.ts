@@ -249,6 +249,9 @@ export const notificationFields = {
   /** Admin flagged this message as an edit request (type "admin_message" +
    * relatedEntityType "campaign" only) — surfaces an "Edit Campaign" button. */
   isEditRequest: v.optional(v.boolean()),
+  /** True when this row was created as part of groups.sendBroadcast's
+   * fan-out to every member of a group, rather than a 1:1 admin message. */
+  isBroadcast: v.optional(v.boolean()),
   /** Soft delete — admins can remove a message from the chat (their own or
    * anyone else's) without losing the audit trail. Filtered out of every
    * read path; the row itself is kept. */

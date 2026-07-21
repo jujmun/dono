@@ -31,6 +31,7 @@ function toNotification(
   n: Doc<"notifications">,
   relatedEntityTitle: string | null,
   deletable: boolean,
+  senderRole: "admin" | null,
 ) {
   return {
     id: n._id,
@@ -42,8 +43,30 @@ function toNotification(
     read: n.read,
     createdAt: n.createdAt,
     senderId: n.senderId,
+    senderRole,
     isEditRequest: n.isEditRequest ?? false,
+    isBroadcast: n.isBroadcast ?? false,
     deletable,
+  };
+}
+
+/** Cached per-query — the sender is almost always the same admin across a
+ * page of notifications. Only "admin" is possible today (see senderId's
+ * doc comment), but this resolves live from profiles.role rather than
+ * assuming, so a future sender type shows up here without a client change. */
+function senderRoleResolver(ctx: QueryCtx) {
+  const cache = new Map<Id<"users">, "admin" | null>();
+  return async (senderId: Id<"users"> | undefined): Promise<"admin" | null> => {
+    if (!senderId) return null;
+    const cached = cache.get(senderId);
+    if (cached !== undefined) return cached;
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", senderId))
+      .unique();
+    const role = profile?.role === "admin" ? "admin" : null;
+    cache.set(senderId, role);
+    return role;
   };
 }
 
@@ -145,6 +168,7 @@ export const list = query({
     const page = mine.slice(start, start + limit);
     const resolveCampaignTitle = await campaignTitleResolver(ctx);
     const resolveCampaignStatus = campaignStatusResolver(ctx);
+    const resolveSenderRole = senderRoleResolver(ctx);
     const items = await Promise.all(
       page.map(async (n) => {
         const title =
@@ -152,7 +176,8 @@ export const list = query({
             ? await resolveCampaignTitle(n.relatedEntityId)
             : null;
         const deletable = await isDeletableByRecipient(n, resolveCampaignStatus);
-        return toNotification(n, title, deletable);
+        const senderRole = await resolveSenderRole(n.senderId);
+        return toNotification(n, title, deletable, senderRole);
       }),
     );
 

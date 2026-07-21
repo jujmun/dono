@@ -340,6 +340,7 @@ export const sendBroadcast = mutation({
         type: "admin_message",
         message: validated.message,
         senderId: adminUserId,
+        isBroadcast: true,
       });
     }
 

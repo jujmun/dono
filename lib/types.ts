@@ -210,6 +210,10 @@ export interface Notification {
   read: boolean;
   createdAt: number;
   senderId?: string;
+  /** Sender's role, resolved server-side — null for system-generated notifications. */
+  senderRole?: "admin" | null;
   isEditRequest?: boolean;
+  /** True when sent via the admin "Groups" broadcast feature rather than 1:1. */
+  isBroadcast?: boolean;
   deletable: boolean;
 }

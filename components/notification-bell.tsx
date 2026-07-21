@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
-import { Bell, Pencil, Trash2 } from "lucide-react-native";
+import { Bell, Megaphone, Pencil, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { RetroPanel } from "@/components/retro";
@@ -47,14 +47,28 @@ function NotificationRow({
         )}
       />
       <View className="min-w-0 flex-1">
-        {notification.relatedEntityTitle ? (
-          <View className="mb-1 flex-row items-center self-start rounded-md bg-retro-mint/15 px-1.5 py-0.5">
-            <Text
-              className="text-[10px] font-retro-bold uppercase text-retro-mint"
-              numberOfLines={1}
-            >
-              {notification.relatedEntityTitle}
-            </Text>
+        {notification.senderRole || notification.relatedEntityTitle ? (
+          <View className="mb-1 flex-row flex-wrap items-center gap-1.5">
+            {notification.senderRole ? (
+              <View className="flex-row items-center gap-1 self-start rounded-md bg-retro-sky/15 px-1.5 py-0.5">
+                {notification.isBroadcast ? (
+                  <Megaphone size={10} color="#2E97D6" />
+                ) : null}
+                <Text className="text-[10px] font-retro-bold uppercase text-retro-sky">
+                  {notification.senderRole === "admin" ? "Admin" : notification.senderRole}
+                </Text>
+              </View>
+            ) : null}
+            {notification.relatedEntityTitle ? (
+              <View className="flex-row items-center self-start rounded-md bg-retro-mint/15 px-1.5 py-0.5">
+                <Text
+                  className="text-[10px] font-retro-bold uppercase text-retro-mint"
+                  numberOfLines={1}
+                >
+                  {notification.relatedEntityTitle}
+                </Text>
+              </View>
+            ) : null}
           </View>
         ) : null}
         <Text
