@@ -101,7 +101,7 @@ export default function AdminSocietyReviewPage() {
           <Link href={"/admin" as Href} asChild>
             <Pressable className="mt-4 items-center">
               <Text className="font-retro-bold text-dono-primary">
-                Back to waiting
+                Back to pending
               </Text>
             </Pressable>
           </Link>
@@ -120,12 +120,12 @@ export default function AdminSocietyReviewPage() {
         <View className="mx-auto w-full max-w-lg px-4 py-16">
           <Text className="text-center text-dono-muted">
             This society is still awaiting its first review — approve or deny
-            it from the Waiting tab.
+            it from the Pending tab.
           </Text>
           <Link href={"/admin" as Href} asChild>
             <Pressable className="mt-4 items-center">
               <Text className="font-retro-bold text-dono-primary">
-                Go to Waiting
+                Go to Pending
               </Text>
             </Pressable>
           </Link>

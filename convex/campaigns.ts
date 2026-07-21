@@ -215,8 +215,8 @@ export const listModeratedForAdmin = query({
   },
 });
 
-/** Counts behind the Waiting/Live/Removed nav — spans both campaigns and
- * societies, since the admin "Waiting" tab (and, as of the societies
+/** Counts behind the Pending/Live/Removed nav — spans both campaigns and
+ * societies, since the admin "Pending" tab (and, as of the societies
  * archive/restore work, "Live" and "Removed" too) shows both entity types
  * together. */
 export const getAdminStats = query({

@@ -3,7 +3,7 @@ import { cn } from "@/lib/utils";
 import type { AdminSociety, Campaign } from "@/lib/types";
 
 export function humanCampaignStatus(campaign: Campaign): string {
-  if (campaign.status === "pending") return "Waiting";
+  if (campaign.status === "pending") return "Pending";
   if (campaign.status === "changes_requested") return "Changes requested";
   if (campaign.status === "rejected") return "Removed";
   if (
@@ -17,7 +17,7 @@ export function humanCampaignStatus(campaign: Campaign): string {
 }
 
 export function humanSocietyStatus(society: Pick<AdminSociety, "status">): string {
-  if (society.status === "pending") return "Waiting";
+  if (society.status === "pending") return "Pending";
   if (society.status === "rejected") return "Removed";
   return "Live";
 }
@@ -35,13 +35,13 @@ export function AdminStatusChip({
   tone = "neutral",
 }: {
   label: string;
-  tone?: "neutral" | "waiting" | "live" | "removed";
+  tone?: "neutral" | "pending" | "live" | "removed";
 }) {
   return (
     <View
       className={cn(
         "rounded-md px-2 py-0.5",
-        tone === "waiting" && "bg-amber-50",
+        tone === "pending" && "bg-amber-50",
         tone === "live" && "bg-emerald-50",
         tone === "removed" && "bg-rose-50",
         tone === "neutral" && "bg-dono-surface-muted",
@@ -50,7 +50,7 @@ export function AdminStatusChip({
       <Text
         className={cn(
           "text-xs font-retro-bold",
-          tone === "waiting" && "text-amber-800",
+          tone === "pending" && "text-amber-800",
           tone === "live" && "text-emerald-800",
           tone === "removed" && "text-rose-700",
           tone === "neutral" && "text-dono-muted",
@@ -72,13 +72,13 @@ export type StripeVerificationStatus =
 
 export function stripeStatusChip(
   status: StripeVerificationStatus | undefined,
-): { label: string; tone: "neutral" | "waiting" | "live" | "removed" } {
+): { label: string; tone: "neutral" | "pending" | "live" | "removed" } {
   switch (status) {
     case "verified":
       return { label: "Verified", tone: "live" };
     case "processing":
     case "created":
-      return { label: "Pending", tone: "waiting" };
+      return { label: "Pending", tone: "pending" };
     case "requires_input":
       return { label: "Needs attention", tone: "removed" };
     case "canceled":
@@ -98,7 +98,7 @@ export function stripeStatusChip(
 export function selfieMatchChip(record: {
   stripeVerificationStatus: StripeVerificationStatus | undefined;
   stripeVerificationLastErrorCode: string | null | undefined;
-}): { label: string; tone: "neutral" | "waiting" | "live" | "removed" } {
+}): { label: string; tone: "neutral" | "pending" | "live" | "removed" } {
   if (record.stripeVerificationStatus === "verified") {
     return { label: "Selfie match: Yes", tone: "live" };
   }
@@ -108,13 +108,13 @@ export function selfieMatchChip(record: {
   ) {
     return { label: "Selfie match: No", tone: "removed" };
   }
-  return { label: "Selfie match: Pending", tone: "waiting" };
+  return { label: "Selfie match: Pending", tone: "pending" };
 }
 
 export function statusChipTone(
   label: string,
-): "waiting" | "live" | "removed" | "neutral" {
-  if (label === "Waiting" || label === "Changes requested") return "waiting";
+): "pending" | "live" | "removed" | "neutral" {
+  if (label === "Pending" || label === "Changes requested") return "pending";
   if (label === "Live" || label === "Funded" || label === "Completed") {
     return "live";
   }

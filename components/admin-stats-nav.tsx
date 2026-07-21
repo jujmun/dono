@@ -6,7 +6,7 @@ import { useAuthActions } from "@convex-dev/auth/react";
 import { api } from "@convex/_generated/api";
 import { cn } from "@/lib/utils";
 
-export type AdminSection = "waiting" | "live" | "removed";
+export type AdminSection = "pending" | "live" | "removed";
 
 const sections: {
   key: AdminSection;
@@ -16,8 +16,8 @@ const sections: {
   href: Href;
 }[] = [
   {
-    key: "waiting",
-    label: "Waiting",
+    key: "pending",
+    label: "Pending",
     title: "Needs review",
     subtitle: "New posts waiting for your decision",
     href: "/admin",
@@ -46,7 +46,7 @@ export function AdminStatsNav({ active }: { active: AdminSection }) {
 
   const countFor = (key: AdminSection) => {
     if (!stats) return "—";
-    if (key === "waiting") return stats.pending;
+    if (key === "pending") return stats.pending;
     if (key === "live") return stats.live;
     return stats.moderated;
   };

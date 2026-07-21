@@ -14,7 +14,7 @@ import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
 /**
- * Top-level site chrome only — Waiting/Live/Removed navigation between the
+ * Top-level site chrome only — Pending/Live/Removed navigation between the
  * three moderation-queue pages lives entirely in AdminStatsNav (rendered on
  * all three of those pages, with live counts). This used to duplicate that
  * with its own Review/Discover/Archive labels for the same three routes;

@@ -23,6 +23,7 @@ import {
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminStatsNav } from "@/components/admin-stats-nav";
+import { ReviewTypeToggle, type ReviewType } from "@/components/review-type-toggle";
 import {
   AdminStatusChip,
   selfieMatchChip,
@@ -35,13 +36,6 @@ import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { formatCurrency } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { AdminSociety, Campaign } from "@/lib/types";
-
-type ReviewType = "campaigns" | "societies";
-
-const reviewTypeTabs: { id: ReviewType; label: string }[] = [
-  { id: "campaigns", label: "Campaigns" },
-  { id: "societies", label: "Societies" },
-];
 
 function formatSubmittedAt(ms: number) {
   return new Date(ms).toLocaleDateString("en-GB", {
@@ -171,31 +165,9 @@ export default function AdminPortalPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <AdminStatsNav active="waiting" />
+        <AdminStatsNav active="pending" />
 
-        <View className="mb-6 flex-row gap-2">
-          {reviewTypeTabs.map((t) => (
-            <Pressable
-              key={t.id}
-              onPress={() => setReviewType(t.id)}
-              className={cn(
-                "rounded-full px-3.5 py-1.5",
-                reviewType === t.id
-                  ? "bg-dono-primary"
-                  : "border border-dono-border bg-white",
-              )}
-            >
-              <Text
-                className={cn(
-                  "font-retro-bold text-xs",
-                  reviewType === t.id ? "text-white" : "text-dono-muted",
-                )}
-              >
-                {t.label}
-              </Text>
-            </Pressable>
-          ))}
-        </View>
+        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />
@@ -246,7 +218,7 @@ export default function AdminPortalPage() {
                   <View className="flex-row items-start justify-between gap-3">
                     <View className="flex-1">
                       <View className="mb-2 flex-row flex-wrap gap-2">
-                        <AdminStatusChip label="Waiting" tone="waiting" />
+                        <AdminStatusChip label="Pending" tone="pending" />
                         <AdminStatusChip
                           label={`ID: ${stripeStatusChip(campaign.stripeVerificationStatus).label}`}
                           tone={stripeStatusChip(campaign.stripeVerificationStatus).tone}
@@ -322,7 +294,7 @@ export default function AdminPortalPage() {
                       className="rounded-2xl border border-dono-border bg-white p-5"
                     >
                       <View className="mb-2">
-                        <AdminStatusChip label="Waiting" tone="waiting" />
+                        <AdminStatusChip label="Pending" tone="pending" />
                       </View>
                       <Text className="font-retro-bold text-lg text-dono-text">
                         {society.name}
