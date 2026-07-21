@@ -163,6 +163,12 @@ export const societyFields = {
   moderationNote: v.optional(v.string()),
   moderatedAt: v.optional(v.number()),
   moderatedBy: v.optional(v.id("users")),
+  /** Mirrors campaignFields.moderationAction — "rejected" for a pre-approval
+   * denial, "taken_down" for pulling a previously-active society. */
+  moderationAction: v.optional(
+    v.union(v.literal("rejected"), v.literal("taken_down")),
+  ),
+  restoredAt: v.optional(v.number()),
   /** Stripe Identity — additive alongside the manual idDocumentStorageId above. */
   stripeVerificationSessionId: v.optional(v.string()),
   stripeVerificationStatus: v.optional(
@@ -223,9 +229,12 @@ export const notificationFields = {
     v.literal("admin_message"),
     v.literal("onboarding"),
     /** System event, not a real notification — the owner edited a campaign
-     * via app/edit-campaign.tsx. Created read:true (never bumps the
-     * recipient's own unread badge); surfaced only in the admin thread. */
+     * via the edit flow. Created read:true (never bumps the recipient's own
+     * unread badge); surfaced only in the admin thread. */
     v.literal("campaign_edited"),
+    /** Sent to every admin when an owner resubmits a changes-requested/
+     * rejected campaign for re-review — see campaignCreator.resubmit. */
+    v.literal("campaign_resubmitted"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more
@@ -240,4 +249,9 @@ export const notificationFields = {
   /** Admin flagged this message as an edit request (type "admin_message" +
    * relatedEntityType "campaign" only) — surfaces an "Edit Campaign" button. */
   isEditRequest: v.optional(v.boolean()),
+  /** Soft delete — admins can remove a message from the chat (their own or
+   * anyone else's) without losing the audit trail. Filtered out of every
+   * read path; the row itself is kept. */
+  deletedAt: v.optional(v.number()),
+  deletedBy: v.optional(v.id("users")),
 };

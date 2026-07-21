@@ -17,10 +17,12 @@ interface SearchResult {
 }
 
 function formatConversationTime(ms: number) {
-  return new Date(ms).toLocaleDateString("en-GB", {
+  return new Date(ms).toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 
@@ -157,7 +159,17 @@ export default function AdminMessagesPage() {
                         </Text>
                       </View>
                       <Text className="text-xs text-dono-muted">{c.recipientEmail}</Text>
-                      <Text className="mt-2 text-sm text-dono-text" numberOfLines={2}>
+                      {c.lastMessageContext ? (
+                        <View className="mb-1 mt-2 flex-row items-center self-start rounded-md bg-dono-primary/10 px-1.5 py-0.5">
+                          <Text
+                            className="text-[10px] font-retro-bold uppercase text-dono-primary"
+                            numberOfLines={1}
+                          >
+                            {c.lastMessageContext}
+                          </Text>
+                        </View>
+                      ) : null}
+                      <Text className="mt-1 text-sm text-dono-text" numberOfLines={2}>
                         {c.lastMessage}
                       </Text>
                     </Pressable>

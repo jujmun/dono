@@ -1,6 +1,6 @@
 import { View, Text } from "react-native";
 import { cn } from "@/lib/utils";
-import type { Campaign } from "@/lib/types";
+import type { AdminSociety, Campaign } from "@/lib/types";
 
 export function humanCampaignStatus(campaign: Campaign): string {
   if (campaign.status === "pending") return "Waiting";
@@ -16,8 +16,14 @@ export function humanCampaignStatus(campaign: Campaign): string {
   return campaign.status;
 }
 
+export function humanSocietyStatus(society: Pick<AdminSociety, "status">): string {
+  if (society.status === "pending") return "Waiting";
+  if (society.status === "rejected") return "Removed";
+  return "Live";
+}
+
 export function moderationActionLabel(
-  action: Campaign["moderationAction"],
+  action: "rejected" | "taken_down" | null | undefined,
 ): string | null {
   if (action === "taken_down") return "Taken down";
   if (action === "rejected") return "Denied";

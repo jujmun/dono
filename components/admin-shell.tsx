@@ -13,17 +13,21 @@ import { RetroBrowserFooter } from "@/components/retro/retro-browser-footer";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 
+/**
+ * Top-level site chrome only — Waiting/Live/Removed navigation between the
+ * three moderation-queue pages lives entirely in AdminStatsNav (rendered on
+ * all three of those pages, with live counts). This used to duplicate that
+ * with its own Review/Discover/Archive labels for the same three routes;
+ * the "Dashboard" link below is the one way back into that flow from
+ * anywhere else in the portal (e.g. Messages or a campaign/society detail
+ * page), rather than a second copy of the same three destinations.
+ */
 const adminNavItems = [
-  { href: "/admin", label: "Review", match: (p: string) => p === "/admin" },
   {
-    href: "/admin/discover",
-    label: "Discover",
-    match: (p: string) => p.startsWith("/admin/discover"),
-  },
-  {
-    href: "/admin/archive",
-    label: "Archive",
-    match: (p: string) => p.startsWith("/admin/archive"),
+    href: "/admin",
+    label: "Dashboard",
+    match: (p: string) =>
+      p === "/admin" || p.startsWith("/admin/discover") || p.startsWith("/admin/archive"),
   },
   {
     href: "/admin/messages",

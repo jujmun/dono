@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Image,
 } from "react-native";
-import { useRouter, Link } from "expo-router";
+import { useRouter, useLocalSearchParams, Link } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -39,7 +39,7 @@ import {
 } from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
-import { encodeImpactItems } from "@/lib/fund-breakdown";
+import { encodeImpactItems, parseImpactItem } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { parseCampaignVideoUrl } from "@/lib/video-url";
 import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign-templates";
@@ -166,9 +166,12 @@ function PhotoThumbnailPicker({
 export default function CreateCampaignPage() {
   const router = useRouter();
   const posthog = usePostHog();
+  const { editSlug } = useLocalSearchParams<{ editSlug?: string }>();
+  const isEditMode = Boolean(editSlug);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
   const updateCampaign = useMutation(api.campaignCreator.update);
+  const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
@@ -182,7 +185,11 @@ export default function CreateCampaignPage() {
   );
   const mySocieties = useQuery(
     api.societyMembers.listMyApprovedSocieties,
-    isAuthenticated ? {} : "skip",
+    isAuthenticated && !isEditMode ? {} : "skip",
+  );
+  const editCampaign = useQuery(
+    api.campaignCreator.getMineForEdit,
+    isAuthenticated && editSlug ? { slug: editSlug } : "skip",
   );
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -196,6 +203,42 @@ export default function CreateCampaignPage() {
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
+  const [loadedEditSlug, setLoadedEditSlug] = useState<string | null>(null);
+
+  // Edit mode operates on the existing campaign doc — adopt its slug
+  // immediately so ensureCampaignCreated never creates a new one.
+  useEffect(() => {
+    if (editSlug && campaignSlug === null) {
+      setCampaignSlug(editSlug);
+    }
+  }, [editSlug, campaignSlug]);
+
+  // Populate the form once, when the campaign first loads — not on every
+  // refetch, so it doesn't clobber in-progress edits.
+  useEffect(() => {
+    if (editCampaign && loadedEditSlug !== editCampaign.id) {
+      setForm({
+        title: editCampaign.title,
+        category: editCampaign.category,
+        communitySlug: editCampaign.creator.communityId,
+        description: editCampaign.description,
+        story: editCampaign.story,
+        goal: String(editCampaign.goal),
+      });
+      setTemplate(editCampaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID);
+      setVideoUrl(editCampaign.videoUrl ?? "");
+      setAdditionalNotes(editCampaign.additionalNotes ?? "");
+      const decodedLines = (editCampaign.impactItems ?? []).map((item) => {
+        const parsed = parseImpactItem(item);
+        return {
+          label: parsed.label,
+          amount: parsed.amount !== undefined ? String(parsed.amount) : "",
+        };
+      });
+      setFundLines(decodedLines.length > 0 ? decodedLines : initialFundLines());
+      setLoadedEditSlug(editCampaign.id);
+    }
+  }, [editCampaign, loadedEditSlug]);
 
   // Once a slug exists, this reflects the webhook-driven status in real time.
   const verification = useQuery(
@@ -319,7 +362,7 @@ export default function CreateCampaignPage() {
   };
 
   const campaignImageSource =
-    pickedImages[0]?.uri ?? (form.category || "default");
+    pickedImages[0]?.uri ?? editCampaign?.image ?? (form.category || "default");
   const pickedImageUris = pickedImages.map((image) => image.uri);
 
   /**
@@ -414,6 +457,12 @@ export default function CreateCampaignPage() {
       case 2:
         return form.goal && Number(form.goal) > 0 && fundLinesComplete;
       case 3:
+        // Edit mode already has a campaign record, so campaignSlug is never
+        // the useful signal there — require the identity check to have been
+        // started (at any point) or already verified instead.
+        if (isEditMode) {
+          return stripeVerified || stripeStatus !== null;
+        }
         // The identity check must at least be started (which also creates the
         // campaign record). Verification itself can finish in the background.
         return campaignSlug !== null;
@@ -449,15 +498,65 @@ export default function CreateCampaignPage() {
     );
   }
 
+  if (isEditMode && editCampaign === undefined) {
+    return (
+      <AppShell>
+        <View className="items-center py-16">
+          <ActivityIndicator color="#17211B" />
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (isEditMode && editCampaign === null) {
+    return (
+      <AppShell>
+        <View className="mx-auto w-full max-w-2xl px-4 py-16">
+          <Text className="text-center text-[#5c574f]">
+            Campaign not found, or you don&apos;t own this campaign.
+          </Text>
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (isEditMode && editCampaign && !editCampaign.editable) {
+    return (
+      <AppShell>
+        <View className="mx-auto w-full max-w-2xl px-4 py-16">
+          <Text className="font-retro-bold text-xl text-retro-ink">
+            This campaign can&apos;t be edited right now
+          </Text>
+          <Text className="mt-2 text-sm text-[#5c574f]">
+            Only campaigns that are pending, rejected, or have changes
+            requested can be edited.
+          </Text>
+          <Pressable
+            onPress={() => router.push(`/campaigns/${editCampaign.id}`)}
+            className={`mt-6 self-start ${primaryBtnClass}`}
+          >
+            <Text className="font-retro-bold text-sm text-retro-paper">
+              View campaign
+            </Text>
+          </Pressable>
+        </View>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <View
         className={`mx-auto w-full px-4 py-8 ${step === 3 ? "max-w-7xl" : "max-w-2xl"}`}
       >
         <View className="mb-8 items-center">
-          <Text className="font-retro-bold text-2xl text-retro-ink">Start a Campaign</Text>
+          <Text className="font-retro-bold text-2xl text-retro-ink">
+            {isEditMode ? "Edit Campaign" : "Start a Campaign"}
+          </Text>
           <Text className="mt-1 text-center text-[#5c574f]">
-            Free for students. Reach alumni who care about your community.
+            {isEditMode
+              ? "Update your campaign and resubmit it for review."
+              : "Free for students. Reach alumni who care about your community."}
           </Text>
         </View>
 
@@ -621,7 +720,16 @@ export default function CreateCampaignPage() {
                 <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Posting on behalf of
                 </Text>
-                {mySocieties === undefined ? (
+                {isEditMode ? (
+                  <View className="gap-1 rounded-xl border-2 border-retro-ink bg-retro-cream p-4">
+                    <Text className="font-retro-bold text-xs text-retro-ink">
+                      {editCampaign?.creator.name ?? "Loading..."}
+                    </Text>
+                    <Text className="text-xs text-[#5c574f]">
+                      The society a campaign posts under can&apos;t be changed.
+                    </Text>
+                  </View>
+                ) : mySocieties === undefined ? (
                   <ActivityIndicator color="#17211B" />
                 ) : mySocieties.length === 0 ? (
                   <View className="gap-3 rounded-xl border-2 border-retro-ink bg-retro-cream p-4">
@@ -882,6 +990,7 @@ export default function CreateCampaignPage() {
                 story={form.story}
                 goal={Number(form.goal)}
                 imageUris={pickedImageUris}
+                imageUri={pickedImageUris.length === 0 ? editCampaign?.image : undefined}
                 impactLines={previewImpactLines}
                 template={ENABLE_CAMPAIGN_TEMPLATES ? template : undefined}
                 additionalNotes={additionalNotes}
@@ -957,58 +1066,61 @@ export default function CreateCampaignPage() {
                 </View>
               </View>
 
-              <View className="rounded-xl border border-retro-ink bg-white p-4">
-                <View className="mb-1.5 flex-row items-center gap-2">
-                  <ShieldCheck size={16} color="#17211B" />
-                  <Text className="font-retro-bold text-sm text-retro-ink">
-                    Identity Check
-                  </Text>
-                </View>
-                <Text className="mb-3 text-xs text-[#5c574f]">
-                  You'll be asked for a quick photo of your ID and a selfie so we can
-                  confirm it's really you — it only takes a minute.
-                </Text>
-
-                {renderVerificationStatus()}
-
-                <Pressable
-                  onPress={() => void handleVerifyIdentity()}
-                  disabled={verifying || stripeVerified}
-                  className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
-                    verifying || stripeVerified ? "opacity-50" : ""
-                  }`}
-                >
-                  {verifying ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="font-retro-bold text-sm text-retro-paper">
-                      Verify your identity
+              {isEditMode && stripeVerified ? null : (
+                <View className="rounded-xl border border-retro-ink bg-white p-4">
+                  <View className="mb-1.5 flex-row items-center gap-2">
+                    <ShieldCheck size={16} color="#17211B" />
+                    <Text className="font-retro-bold text-sm text-retro-ink">
+                      Identity Check
                     </Text>
-                  )}
-                </Pressable>
-                {stripeFailed ? (
-                  <Text className="mt-2 text-xs text-rose-700">
-                    That didn't go through — please try again.
+                  </View>
+                  <Text className="mb-3 text-xs text-[#5c574f]">
+                    You'll be asked for a quick photo of your ID and a selfie so we can
+                    confirm it's really you — it only takes a minute.
                   </Text>
-                ) : !campaignSlug ? (
-                  <Text className="mt-2 text-xs text-[#5c574f]">
-                    You'll be able to continue once you've started this check.
-                  </Text>
-                ) : null}
-              </View>
+
+                  {renderVerificationStatus()}
+
+                  <Pressable
+                    onPress={() => void handleVerifyIdentity()}
+                    disabled={verifying || stripeVerified}
+                    className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
+                      verifying || stripeVerified ? "opacity-50" : ""
+                    }`}
+                  >
+                    {verifying ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text className="font-retro-bold text-sm text-retro-paper">
+                        Verify your identity
+                      </Text>
+                    )}
+                  </Pressable>
+                  {stripeFailed ? (
+                    <Text className="mt-2 text-xs text-rose-700">
+                      That didn't go through — please try again.
+                    </Text>
+                  ) : !campaignSlug || (isEditMode && stripeStatus === null) ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      You'll be able to continue once you've started this check.
+                    </Text>
+                  ) : null}
+                </View>
+              )}
             </View>
           )}
 
           {step === 4 && (
             <View className="gap-5">
               <Text className="text-lg font-retro-bold text-retro-ink">
-                Before your campaign goes live
+                {isEditMode
+                  ? "Before your changes go live"
+                  : "Before your campaign goes live"}
               </Text>
               <Text className="text-sm leading-relaxed text-[#5c574f]">
-                We take moderation seriously. Every campaign is reviewed by our team to
-                make sure it meets Dono's guidelines and has the best possible chance of
-                reaching alumni and getting funded. We'll reach out directly if anything
-                needs adjusting.
+                {isEditMode
+                  ? "Resubmitting sends your campaign back to our team for review, the same as a new submission. We'll reach out directly if anything still needs adjusting."
+                  : "We take moderation seriously. Every campaign is reviewed by our team to make sure it meets Dono's guidelines and has the best possible chance of reaching alumni and getting funded. We'll reach out directly if anything needs adjusting."}
               </Text>
               {renderVerificationStatus()}
             </View>
@@ -1055,8 +1167,9 @@ export default function CreateCampaignPage() {
                   if (!slug) return;
                   setError(null);
                   setSubmitting(true);
-                  // The campaign was created when the identity check started —
-                  // push any fields edited since, then attach the extras.
+                  // The campaign was created when the identity check started
+                  // (or already existed, in edit mode) — push any fields
+                  // edited since, then attach the extras.
                   void updateCampaign({
                     slug,
                     title: form.title,
@@ -1066,6 +1179,7 @@ export default function CreateCampaignPage() {
                     goal: Number(form.goal),
                     template,
                     additionalNotes,
+                    ...(isEditMode ? { logEdit: true } : {}),
                   })
                     .then(async () => {
                       let imageUploadFailed = false;
@@ -1077,14 +1191,17 @@ export default function CreateCampaignPage() {
                         });
                       } catch {
                         setError(
-                          "Campaign created but fund breakdown could not be saved. Edit from your dashboard.",
+                          "Campaign saved but fund breakdown could not be saved. Try again from this page.",
                         );
                       }
-                      if (parsedVideoUrl) {
+                      // Edit mode always pushes the video field, including
+                      // clearing it — create mode only sets it when non-empty
+                      // since a brand-new campaign starts with none anyway.
+                      if (parsedVideoUrl || isEditMode) {
                         try {
                           await setCampaignVideoUrl({
                             slug,
-                            videoUrl: parsedVideoUrl.watchUrl,
+                            videoUrl: parsedVideoUrl?.watchUrl ?? "",
                           });
                         } catch {
                           videoSaveFailed = true;
@@ -1109,19 +1226,27 @@ export default function CreateCampaignPage() {
                         }
                       }
 
-                      posthog?.capture("campaign_created", {
-                        campaign_title: form.title,
-                        campaign_category: form.category,
-                        campaign_community_slug: form.communitySlug,
-                        campaign_university: DEFAULT_UNIVERSITY,
-                        campaign_goal: Number(form.goal),
-                        campaign_has_image:
-                          pickedImages.length > 0 && !imageUploadFailed,
-                        campaign_image_count: pickedImages.length,
-                        campaign_has_video: Boolean(parsedVideoUrl) && !videoSaveFailed,
-                        campaign_impact_items: impactItemLabels.length,
-                        campaign_template: template,
-                      });
+                      if (isEditMode) {
+                        await resubmitCampaign({ slug });
+                      }
+
+                      posthog?.capture(
+                        isEditMode ? "campaign_resubmitted" : "campaign_created",
+                        {
+                          campaign_title: form.title,
+                          campaign_category: form.category,
+                          campaign_community_slug: form.communitySlug,
+                          campaign_university: DEFAULT_UNIVERSITY,
+                          campaign_goal: Number(form.goal),
+                          campaign_has_image:
+                            pickedImages.length > 0 && !imageUploadFailed,
+                          campaign_image_count: pickedImages.length,
+                          campaign_has_video:
+                            Boolean(parsedVideoUrl) && !videoSaveFailed,
+                          campaign_impact_items: impactItemLabels.length,
+                          campaign_template: template,
+                        },
+                      );
                       setForm(initialForm);
                       setTemplate(DEFAULT_CAMPAIGN_TEMPLATE_ID);
                       setPickedImages([]);
@@ -1135,7 +1260,10 @@ export default function CreateCampaignPage() {
                     })
                     .catch((err: Error) => {
                       setError(
-                        getFriendlyAuthError(err) || "Failed to create campaign.",
+                        getFriendlyAuthError(err) ||
+                          (isEditMode
+                            ? "Failed to resubmit campaign."
+                            : "Failed to create campaign."),
                       );
                     })
                     .finally(() => {
@@ -1148,10 +1276,14 @@ export default function CreateCampaignPage() {
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">
                   {submitting
-                    ? pickedImages.length > 0
-                      ? "Creating & uploading..."
-                      : "Completing..."
-                    : "Complete"}
+                    ? isEditMode
+                      ? "Resubmitting..."
+                      : pickedImages.length > 0
+                        ? "Creating & uploading..."
+                        : "Completing..."
+                    : isEditMode
+                      ? "Resubmit for review"
+                      : "Complete"}
                 </Text>
               </Pressable>
             )}

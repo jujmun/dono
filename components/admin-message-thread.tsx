@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { View, Text, TextInput, Pressable, ActivityIndicator } from "react-native";
 import { useMutation, useQuery } from "convex/react";
-import { Send } from "lucide-react-native";
+import { Send, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -68,11 +68,27 @@ export function AdminMessageThread({
 }: AdminMessageThreadProps) {
   const thread = useQuery(api.notifications.listThreadWithUser, { userId });
   const sendFromAdmin = useMutation(api.notifications.sendFromAdmin);
+  const deleteMessage = useMutation(api.notifications.deleteMessage);
 
   const [body, setBody] = useState("");
   const [requestChanges, setRequestChanges] = useState(false);
   const [sending, setSending] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const handleDelete = async (id: string) => {
+    setError(null);
+    setDeletingId(id);
+    try {
+      await deleteMessage({ notificationId: id as Id<"notifications"> });
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setDeletingId(null);
+      setConfirmDeleteId(null);
+    }
+  };
 
   const handleSend = async () => {
     const trimmed = body.trim();
@@ -123,40 +139,97 @@ export function AdminMessageThread({
                 {group.title}
               </Text>
               <View className="gap-3">
-                {group.items.map((message) =>
-                  message.type === "campaign_edited" ? (
-                    <View key={message.id} className="flex-row items-center gap-2 py-0.5">
-                      <View className="h-1.5 w-1.5 rounded-full bg-dono-primary/50" />
-                      <Text className="text-xs italic text-dono-muted">
-                        {message.message} · {formatMessageTime(message.createdAt)}
-                      </Text>
-                    </View>
-                  ) : (
+                {group.items.map((message) => {
+                  if (message.type === "campaign_edited") {
+                    return (
+                      <View key={message.id} className="flex-row items-center gap-2 py-0.5">
+                        <View className="h-1.5 w-1.5 rounded-full bg-dono-primary/50" />
+                        <Text className="text-xs italic text-dono-muted">
+                          {message.message} · {formatMessageTime(message.createdAt)}
+                        </Text>
+                      </View>
+                    );
+                  }
+                  if (message.type === "review_note") {
+                    return (
+                      <View
+                        key={message.id}
+                        className="rounded-xl border border-dono-border bg-dono-surface-muted/60 px-4 py-3"
+                      >
+                        <View className="flex-row flex-wrap items-center gap-2">
+                          <View className="rounded-md bg-dono-ink/10 px-1.5 py-0.5">
+                            <Text className="text-[10px] font-retro-bold uppercase text-dono-muted">
+                              Moderation note
+                            </Text>
+                          </View>
+                          <Text className="text-xs text-dono-muted">
+                            {message.senderName} · {formatMessageTime(message.createdAt)}
+                          </Text>
+                        </View>
+                        <Text className="mt-1.5 text-sm text-dono-text">
+                          {message.message}
+                        </Text>
+                      </View>
+                    );
+                  }
+                  const confirming = confirmDeleteId === message.id;
+                  return (
                     <View
                       key={message.id}
                       className="rounded-xl bg-dono-surface-muted px-4 py-3"
                     >
-                      <View className="flex-row flex-wrap items-center gap-2">
-                        <Text className="font-retro-bold text-xs text-dono-text">
-                          {message.senderName}
-                        </Text>
-                        <Text className="text-xs text-dono-muted">
-                          {formatMessageTime(message.createdAt)}
-                        </Text>
-                        {message.isEditRequest ? (
-                          <View className="rounded-md bg-amber-100 px-1.5 py-0.5">
-                            <Text className="text-[10px] font-retro-bold text-amber-800">
-                              Edit request
-                            </Text>
-                          </View>
-                        ) : null}
+                      <View className="flex-row flex-wrap items-center justify-between gap-2">
+                        <View className="flex-row flex-wrap items-center gap-2">
+                          <Text className="font-retro-bold text-xs text-dono-text">
+                            {message.senderName}
+                          </Text>
+                          <Text className="text-xs text-dono-muted">
+                            {formatMessageTime(message.createdAt)}
+                          </Text>
+                          {message.isEditRequest ? (
+                            <View className="rounded-md bg-amber-100 px-1.5 py-0.5">
+                              <Text className="text-[10px] font-retro-bold text-amber-800">
+                                Edit request
+                              </Text>
+                            </View>
+                          ) : null}
+                        </View>
+                        <Pressable
+                          onPress={() =>
+                            setConfirmDeleteId(confirming ? null : message.id)
+                          }
+                          accessibilityLabel="Delete message"
+                          className="h-6 w-6 items-center justify-center rounded-full"
+                        >
+                          <Trash2 size={13} color="#56615A" />
+                        </Pressable>
                       </View>
                       <Text className="mt-1.5 text-sm text-dono-text">
                         {message.message}
                       </Text>
+                      {confirming ? (
+                        <View className="mt-2 flex-row items-center justify-end gap-3 border-t border-dono-border/60 pt-2">
+                          <Text className="flex-1 text-xs text-dono-muted">
+                            Delete this message for good?
+                          </Text>
+                          <Pressable onPress={() => setConfirmDeleteId(null)}>
+                            <Text className="text-xs font-retro-bold text-dono-muted">
+                              Cancel
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => void handleDelete(message.id)}
+                            disabled={deletingId === message.id}
+                          >
+                            <Text className="text-xs font-retro-bold text-rose-700">
+                              {deletingId === message.id ? "Deleting..." : "Delete"}
+                            </Text>
+                          </Pressable>
+                        </View>
+                      ) : null}
                     </View>
-                  ),
-                )}
+                  );
+                })}
               </View>
             </View>
           ))

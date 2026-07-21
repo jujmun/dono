@@ -126,6 +126,10 @@ export interface AdminSociety {
   status: "pending" | "active" | "rejected";
   createdAt: number;
   creatorId: string;
+  moderationNote: string | null;
+  moderatedAt: number | null;
+  moderationAction: "rejected" | "taken_down" | null;
+  restoredAt: number | null;
   supportingDocumentUrls: string[];
   idDocumentUrl: string | null;
   stripeVerificationStatus:
@@ -189,7 +193,8 @@ export type NotificationType =
   | "campaign_active"
   | "campaign_rejected"
   | "admin_message"
-  | "onboarding";
+  | "onboarding"
+  | "campaign_resubmitted";
 
 export interface Notification {
   id: string;

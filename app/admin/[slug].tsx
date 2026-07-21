@@ -21,6 +21,7 @@ import {
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
+import { AdminHardDeleteDialog } from "@/components/admin-hard-delete-dialog";
 import { AdminMessageThread } from "@/components/admin-message-thread";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import {
@@ -46,6 +47,13 @@ type AdminReviewPayload = {
     email: string;
     avatarUrl: string | null;
   } | null;
+  counts: {
+    follows: number;
+    likes: number;
+    comments: number;
+    reviewMessages: number;
+    hasFinancialActivity: boolean;
+  };
   identity: {
     stripeVerificationStatus: StripeVerificationStatus;
     stripeVerificationLastErrorCode: string | null;
@@ -84,6 +92,7 @@ export default function AdminCampaignReviewPage() {
   const reject = useMutation(api.campaigns.reject);
   const takeDown = useMutation(api.campaigns.takeDown);
   const restore = useMutation(api.campaigns.restore);
+  const hardDelete = useMutation(api.campaigns.hardDelete);
   const refreshIdentity = useAction(
     api.campaignIdentity.refreshVerificationStatus,
   );
@@ -586,6 +595,33 @@ export default function AdminCampaignReviewPage() {
                   {busy === "restore" ? "Working..." : "Put back live"}
                 </Text>
               </Pressable>
+            ) : null}
+
+            {moderated ? (
+              <AdminHardDeleteDialog
+                entityLabel="campaign"
+                entityName={campaign.title}
+                blockedReason={
+                  detail.counts.hasFinancialActivity
+                    ? "This campaign has donation or payout records and cannot be permanently deleted."
+                    : null
+                }
+                cascadeSummary={[
+                  `${detail.counts.follows} follow${detail.counts.follows === 1 ? "" : "s"}`,
+                  `${detail.counts.likes} like${detail.counts.likes === 1 ? "" : "s"}`,
+                  `${detail.counts.comments} comment${detail.counts.comments === 1 ? "" : "s"}`,
+                  `${detail.counts.reviewMessages} review message${detail.counts.reviewMessages === 1 ? "" : "s"}`,
+                  "Any campaign photos on file",
+                  "Its notification history",
+                ]}
+                onConfirm={async () => {
+                  await hardDelete({
+                    slug: campaign.id,
+                    confirmTitle: campaign.title,
+                  });
+                  router.replace("/admin/archive" as Href);
+                }}
+              />
             ) : null}
           </View>
         ) : null}

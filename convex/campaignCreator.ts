@@ -15,7 +15,11 @@ import {
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isEditableByOwner } from "./lib/campaignVisibility";
-import { buildCampaignEditedMessage, createNotification } from "./lib/notifications";
+import {
+  buildCampaignEditedMessage,
+  buildCampaignResubmittedMessage,
+  createNotification,
+} from "./lib/notifications";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_CATEGORY_LENGTH = 60;
@@ -106,10 +110,11 @@ export const update = mutation({
     template: v.optional(v.string()),
     /** Empty string clears the notes. */
     additionalNotes: v.optional(v.string()),
-    /** True only from app/edit-campaign.tsx (post-submission edits) — logs a
-     * campaign_edited event so admins see it in the review thread. Left
-     * unset by the create-wizard's own Complete-step call, which also uses
-     * this mutation but isn't "an edit" in the sense admins care about. */
+    /** True only from app/create.tsx's edit mode (?editSlug=..., reached from
+     * an admin-changes-requested notification) — logs a campaign_edited
+     * event so admins see it in the review thread. Left unset by the same
+     * wizard's brand-new-campaign Complete-step call, which isn't "an edit"
+     * in the sense admins care about. */
     logEdit: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
@@ -236,6 +241,22 @@ export const resubmit = mutation({
         ? { societyApprovalStatus: "pending" as const }
         : {}),
     });
+
+    const admins = await ctx.db
+      .query("profiles")
+      .withIndex("by_role", (q) => q.eq("role", "admin"))
+      .collect();
+    const message = buildCampaignResubmittedMessage(campaign.title);
+    for (const admin of admins) {
+      await createNotification(ctx, {
+        userId: admin.userId,
+        type: "campaign_resubmitted",
+        message,
+        relatedEntityType: "campaign",
+        relatedEntityId: campaign.slug,
+      });
+    }
+
     return null;
   },
 });
