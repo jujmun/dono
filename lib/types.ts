@@ -68,6 +68,10 @@ export interface Campaign {
   moderatedAt?: number;
   moderationAction?: "rejected" | "taken_down";
   restoredAt?: number;
+  /** Society-approval gate for society-created campaigns; irrelevant for other creator types. */
+  societyApprovalStatus?: "pending" | "approved" | "rejected";
+  societyApprovedAt?: number;
+  societyRejectionNote?: string;
 }
 
 export interface CampaignUpdate {
@@ -206,6 +210,10 @@ export interface Notification {
   read: boolean;
   createdAt: number;
   senderId?: string;
+  /** Sender's role, resolved server-side — null for system-generated notifications. */
+  senderRole?: "admin" | null;
   isEditRequest?: boolean;
+  /** True when sent via the admin "Groups" broadcast feature rather than 1:1. */
+  isBroadcast?: boolean;
   deletable: boolean;
 }

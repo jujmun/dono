@@ -42,3 +42,46 @@ export const creatorTypeLabels: Record<string, string> = {
   department: "Department",
   category: "Category",
 };
+
+interface CampaignApprovalStage {
+  label: string;
+}
+
+type ApprovalCampaign = {
+  status: string;
+  creator: { type: string };
+  societyApprovalStatus?: "pending" | "approved" | "rejected";
+};
+
+/**
+ * Human-readable approval stage for a non-live campaign, or null if it's already
+ * public (active/funded/completed). Society-created campaigns must clear a society
+ * leader review before admin review; other creator types skip straight to admin.
+ */
+export function getCampaignApprovalStage(
+  campaign: ApprovalCampaign,
+): CampaignApprovalStage | null {
+  if (campaign.status === "rejected") {
+    return { label: "Rejected" };
+  }
+  if (
+    campaign.creator.type === "society" &&
+    campaign.societyApprovalStatus === "rejected"
+  ) {
+    return { label: "Rejected by society" };
+  }
+  if (campaign.status !== "pending" && campaign.status !== "changes_requested") {
+    return null;
+  }
+  if (
+    campaign.creator.type === "society" &&
+    campaign.societyApprovalStatus !== "approved"
+  ) {
+    return { label: "Awaiting society leader approval" };
+  }
+  return { label: "Awaiting admin approval" };
+}
+
+export function isCampaignRejected(campaign: ApprovalCampaign): boolean {
+  return getCampaignApprovalStage(campaign)?.label.startsWith("Rejected") ?? false;
+}

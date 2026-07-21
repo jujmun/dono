@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { type Href, Link, usePathname } from "expo-router";
+import { Link, usePathname } from "expo-router";
 import {
   View,
   Text,
@@ -31,13 +31,6 @@ export function RetroBrowserSitehead() {
     .charAt(0)
     .toUpperCase();
 
-  const navItems: { href: Href; label: string }[] = [
-    ...baseNavItems,
-    ...(isAuthenticated
-      ? [{ href: "/account" as Href, label: "You" }]
-      : []),
-  ];
-
   return (
     <View className="border-b-[3px] border-retro-ink bg-retro-paper">
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
@@ -50,7 +43,7 @@ export function RetroBrowserSitehead() {
 
         {showNav ? (
           <View className="flex-row items-center gap-2">
-            {navItems.map((item) => {
+            {baseNavItems.map((item) => {
               const active =
                 pathname === item.href || pathname.startsWith(`${item.href}/`);
               return (
@@ -124,7 +117,7 @@ export function RetroBrowserSitehead() {
 
       {mobileOpen && !showNav ? (
         <View className="gap-1 border-t-2 border-retro-ink px-4 py-2">
-          {navItems.map((item) => (
+          {baseNavItems.map((item) => (
             <Link key={item.label} href={item.href} asChild>
               <Pressable
                 onPress={() => setMobileOpen(false)}

@@ -64,7 +64,7 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
         <Pressable className="active:opacity-95">
           <CampaignImage
             image={society.coverImageUrl ?? "default"}
-            className="h-28 border-b-[3px] border-retro-ink bg-retro-indigo"
+            className="h-[170px] border-b-[3px] border-retro-ink bg-retro-indigo"
           >
             <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]">
               <Text className="font-retro-bold text-sm text-retro-paper">

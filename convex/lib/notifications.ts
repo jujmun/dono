@@ -61,6 +61,8 @@ interface CreateNotificationArgs {
   relatedEntityId?: string;
   senderId?: Id<"users">;
   isEditRequest?: boolean;
+  /** True for rows created by groups.sendBroadcast's fan-out loop. */
+  isBroadcast?: boolean;
   /** Defaults false. campaign_edited events pass true — it's a system
    * marker for the admin thread, not something that should bump the
    * owner's own unread badge. */
@@ -81,5 +83,6 @@ export async function createNotification(ctx: MutationCtx, args: CreateNotificat
     createdAt: Date.now(),
     senderId: args.senderId,
     isEditRequest: args.isEditRequest,
+    isBroadcast: args.isBroadcast,
   });
 }
