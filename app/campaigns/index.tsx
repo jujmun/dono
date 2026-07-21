@@ -8,23 +8,44 @@ import {
   ScrollView,
   useWindowDimensions,
 } from "react-native";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Search, SlidersHorizontal } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
+import { LoginGate } from "@/components/login-gate";
 import { RetroCampaignCard } from "@/components/retro";
-import { categoryLabels } from "@/lib/constants";
+import {
+  categoryLabels,
+  getCampaignApprovalStage,
+  isCampaignRejected,
+} from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { cn } from "@/lib/utils";
 
 const categories = ["all", ...Object.keys(categoryLabels)];
 
+type CampaignsTab = "discover" | "mine";
+
+const tabs: { id: CampaignsTab; label: string }[] = [
+  { id: "discover", label: "Discover Campaigns" },
+  { id: "mine", label: "My Campaigns" },
+];
+
 export default function CampaignsPage() {
   const { width } = useWindowDimensions();
   const columns = width >= 1200 ? 3 : width >= 820 ? 2 : 1;
+  const { isAuthenticated } = useConvexAuth();
+
+  const [tab, setTab] = useState<CampaignsTab>("discover");
   const campaigns = (useQuery(api.campaigns.list) ?? undefined) as
     | Campaign[]
     | undefined;
+  const myCampaignsRaw = (useQuery(
+    api.campaignCreator.listMine,
+    isAuthenticated ? {} : "skip",
+  ) ?? undefined) as Campaign[] | undefined;
+  const myCampaigns = myCampaignsRaw?.filter((c) => !isCampaignRejected(c));
+  const ownedIds = new Set((myCampaignsRaw ?? []).map((c) => c.id));
 
   const [search, setSearch] = useState("");
   const [showFilters, setShowFilters] = useState(false);
@@ -40,7 +61,10 @@ export default function CampaignsPage() {
     );
   };
 
-  const filtered = (campaigns ?? []).filter((c) => {
+  const scoped = tab === "mine" ? myCampaigns : campaigns;
+  const showMineLoginGate = tab === "mine" && !isAuthenticated;
+
+  const filtered = (scoped ?? []).filter((c) => {
     const matchesSearch =
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.university.toLowerCase().includes(search.toLowerCase()) ||
@@ -69,6 +93,30 @@ export default function CampaignsPage() {
           onChangeText={setSearch}
           className="min-w-0 flex-1 font-retro-mono text-[13px] text-retro-ink outline-none"
         />
+      </View>
+
+      <View className="mb-5 flex-row flex-wrap gap-2">
+        {tabs.map((t) => (
+          <Pressable
+            key={t.id}
+            onPress={() => setTab(t.id)}
+            className={cn(
+              "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
+              tab === t.id
+                ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                : "bg-retro-paper",
+            )}
+          >
+            <Text
+              className={cn(
+                "font-retro-bold text-[12.5px]",
+                tab === t.id ? "text-retro-paper" : "text-retro-ink",
+              )}
+            >
+              {t.label}
+            </Text>
+          </Pressable>
+        ))}
       </View>
 
       <View className="mb-5 flex-row items-center gap-2">
@@ -121,12 +169,14 @@ export default function CampaignsPage() {
         )}
       </View>
 
-      {campaigns === undefined ? (
+      {showMineLoginGate ? null : scoped === undefined ? (
         <ActivityIndicator color="#211E1A" className="py-12" />
       ) : filtered.length === 0 ? (
         <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-10 shadow-[5px_5px_0_#211E1A]">
           <Text className="text-center font-retro-mono text-sm text-[#5c574f]">
-            No campaigns match your search.
+            {tab === "mine"
+              ? "You haven't created any campaigns yet."
+              : "No campaigns match your search."}
           </Text>
         </View>
       ) : (
@@ -145,11 +195,21 @@ export default function CampaignsPage() {
               <RetroCampaignCard
                 campaign={campaign}
                 accent={index % 2 === 0 ? "indigo" : "tan"}
+                owned={tab === "discover" && ownedIds.has(campaign.id)}
+                href={
+                  tab === "mine" && getCampaignApprovalStage(campaign)
+                    ? `/create?editSlug=${campaign.id}`
+                    : undefined
+                }
               />
             </View>
           ))}
         </View>
       )}
+
+      {showMineLoginGate ? (
+        <LoginGate message="Sign in to see the campaigns you've created." />
+      ) : null}
     </AppShell>
   );
 }

@@ -5,26 +5,30 @@ import {
   categoryLabels,
   creatorTypeLabels,
   formatCurrency,
+  getCampaignApprovalStage,
   getProgress,
 } from "@/lib/constants";
+import { cn } from "@/lib/utils";
 import { getPrimaryCampaignImage } from "@/lib/campaign-images";
 import {
   buildGoalLineItems,
   buildReceiptFooter,
 } from "@/lib/receipt";
 import { CampaignImage } from "@/components/ui/campaign-image";
-import { cn } from "@/lib/utils";
 
 interface RetroCampaignCardProps {
   campaign: Campaign;
   accent?: "indigo" | "tan";
   href?: Href;
+  /** Highlights campaigns the current user owns (e.g. in the Discover tab). */
+  owned?: boolean;
 }
 
 export function RetroCampaignCard({
   campaign,
   accent = "indigo",
   href,
+  owned = false,
 }: RetroCampaignCardProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const imageSource = getPrimaryCampaignImage(campaign);
@@ -38,12 +42,22 @@ export function RetroCampaignCard({
     campaign.status === "funded" ? "FUNDED" : `${progress}% FUNDED`;
   const tagMarigold =
     campaign.category === "travel" || campaign.category === "events";
+  const approvalStage = getCampaignApprovalStage(campaign);
   const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
 
   return (
     <Link href={destination} asChild>
-      <Pressable className="active:opacity-90">
-        <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper shadow-[5px_5px_0_#211E1A]">
+      <Pressable
+        className={cn("active:opacity-90", approvalStage && "opacity-60")}
+      >
+        <View
+          className={cn(
+            "overflow-hidden rounded-[14px] border-[3px] bg-retro-paper",
+            owned
+              ? "border-retro-mint shadow-[5px_5px_0_#159E88]"
+              : "border-retro-ink shadow-[5px_5px_0_#211E1A]",
+          )}
+        >
           <CampaignImage
             image={imageSource}
             className={cn(
@@ -61,6 +75,21 @@ export function RetroCampaignCard({
                 {categoryLabel}
               </Text>
             </View>
+            {approvalStage && (
+              <View
+                className={cn(
+                  "absolute inset-x-3.5 bottom-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1.5 shadow-[3px_3px_0_#211E1A]",
+                  approvalStage.label === "Rejected" ||
+                    approvalStage.label === "Rejected by society"
+                    ? "bg-retro-coral"
+                    : "bg-retro-marigold",
+                )}
+              >
+                <Text className="text-center font-retro-bold text-xs text-retro-ink">
+                  {approvalStage.label}
+                </Text>
+              </View>
+            )}
           </CampaignImage>
 
           <View className="px-[18px] pb-[18px] pt-4">
