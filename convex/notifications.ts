@@ -9,6 +9,24 @@ import {
   validateAdminMessageBody,
 } from "./lib/notifications";
 
+/** Shared shape for the merged admin<->student thread — either a real
+ * notifications-table row (admin_message/campaign_edited) or a read-only
+ * campaignReviewMessages row (system-generated reject/take-down reason). */
+interface ThreadItem {
+  id: string;
+  kind: "message" | "review_note";
+  type: string;
+  message: string;
+  createdAt: number;
+  read: boolean;
+  senderId: Id<"users"> | undefined;
+  senderName: string;
+  relatedEntityType: "campaign" | undefined;
+  relatedEntityId: string | undefined;
+  relatedEntityTitle: string | null;
+  isEditRequest: boolean;
+}
+
 function toNotification(n: Doc<"notifications">, relatedEntityTitle: string | null) {
   return {
     id: n._id,
@@ -75,7 +93,7 @@ export const list = query({
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .order("desc")
         .collect()
-    ).filter((n) => n.type !== "campaign_edited");
+    ).filter((n) => n.type !== "campaign_edited" && !n.deletedAt);
 
     let start = 0;
     if (args.cursor) {
@@ -111,7 +129,7 @@ export const getUnreadCount = query({
       .query("notifications")
       .withIndex("by_user_read", (q) => q.eq("userId", userId).eq("read", false))
       .collect();
-    return unread.length;
+    return unread.filter((n) => !n.deletedAt).length;
   },
 });
 
@@ -207,42 +225,51 @@ export const sendFromAdmin = mutation({
   },
 });
 
-/** Full chronological admin<->user conversation — every admin_message (plus
- * campaign_edited system events, so admins can see when the owner responds)
- * with this user, regardless of which admin sent it or which campaign (if
- * any) prompted it. This is "the thread", used both from the campaign
- * review screen and the general admin messages page, so there's exactly one
- * conversation model instead of per-campaign isolated comment boxes. */
-export const listThreadWithUser = query({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const messages = await ctx.db
-      .query("notifications")
-      .withIndex("by_user", (q) => q.eq("userId", args.userId))
-      .collect();
-    const thread = messages
-      .filter((n) => n.type === "admin_message" || n.type === "campaign_edited")
-      .sort((a, b) => a.createdAt - b.createdAt);
+/** Merges the notifications-table thread (admin_message/campaign_edited,
+ * soft-deleted rows excluded) with campaignReviewMessages — the separate,
+ * system-generated record of reject/take-down reasons, which previously
+ * never surfaced in this thread at all. Shared by listThreadWithUser and
+ * listRecentConversations so both see the same complete history. */
+async function resolveThreadItemsForUser(
+  ctx: QueryCtx,
+  userId: Id<"users">,
+): Promise<ThreadItem[]> {
+  const notifs = await ctx.db
+    .query("notifications")
+    .withIndex("by_user", (q) => q.eq("userId", userId))
+    .collect();
+  const reviewNotes = await ctx.db
+    .query("campaignReviewMessages")
+    .withIndex("by_student", (q) => q.eq("studentUserId", userId))
+    .collect();
 
-    const senderCache = new Map<Id<"users">, { name: string; email: string }>();
-    const recipient = await profileDisplayName(ctx, args.userId);
-    const resolveCampaignTitle = await campaignTitleResolver(ctx);
+  const senderCache = new Map<Id<"users">, { name: string; email: string }>();
+  const resolveSender = async (senderId: Id<"users"> | undefined) => {
+    if (!senderId) return { name: "Unknown", email: "" };
+    const cached = senderCache.get(senderId);
+    if (cached) return cached;
+    const sender = await profileDisplayName(ctx, senderId);
+    senderCache.set(senderId, sender);
+    return sender;
+  };
+  const resolveCampaignTitle = await campaignTitleResolver(ctx);
 
-    const items = await Promise.all(
-      thread.map(async (n) => {
-        let sender = { name: "Unknown", email: "" };
-        if (n.senderId) {
-          const cached = senderCache.get(n.senderId);
-          sender = cached ?? (await profileDisplayName(ctx, n.senderId));
-          if (!cached) senderCache.set(n.senderId, sender);
-        }
+  const messageItems: ThreadItem[] = await Promise.all(
+    notifs
+      .filter(
+        (n) =>
+          (n.type === "admin_message" || n.type === "campaign_edited") &&
+          !n.deletedAt,
+      )
+      .map(async (n) => {
+        const sender = await resolveSender(n.senderId);
         const relatedEntityTitle =
           n.relatedEntityType === "campaign" && n.relatedEntityId
             ? await resolveCampaignTitle(n.relatedEntityId)
             : null;
         return {
           id: n._id,
+          kind: "message" as const,
           type: n.type,
           message: n.message,
           createdAt: n.createdAt,
@@ -255,46 +282,160 @@ export const listThreadWithUser = query({
           isEditRequest: n.isEditRequest ?? false,
         };
       }),
-    );
+  );
 
+  const reviewItems: ThreadItem[] = await Promise.all(
+    reviewNotes.map(async (m) => {
+      const sender = await resolveSender(m.adminUserId);
+      const relatedEntityTitle = await resolveCampaignTitle(m.campaignSlug);
+      return {
+        id: m._id,
+        kind: "review_note" as const,
+        type: "review_note",
+        message: m.body,
+        createdAt: m.createdAt,
+        read: true,
+        senderId: m.adminUserId,
+        senderName: sender.name,
+        relatedEntityType: "campaign" as const,
+        relatedEntityId: m.campaignSlug,
+        relatedEntityTitle,
+        isEditRequest: false,
+      };
+    }),
+  );
+
+  return [...messageItems, ...reviewItems].sort(
+    (a, b) => a.createdAt - b.createdAt,
+  );
+}
+
+/** Full chronological admin<->user conversation — every admin_message (plus
+ * campaign_edited system events so admins see when the owner responds, and
+ * campaignReviewMessages moderation notes so the reject/take-down reason
+ * shows up alongside everything else) with this user, regardless of which
+ * admin sent it or which campaign (if any) prompted it. This is "the
+ * thread", used both from the campaign review screen and the general admin
+ * messages page, so there's exactly one conversation model instead of
+ * per-campaign isolated comment boxes. */
+export const listThreadWithUser = query({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const recipient = await profileDisplayName(ctx, args.userId);
+    const items = await resolveThreadItemsForUser(ctx, args.userId);
     return { recipient, items };
   },
 });
 
 /** Landing view for app/admin/messages.tsx — one row per user an admin has
- * ever messaged (or who has edited a campaign since), most-recently-active
- * first, so admins can find an existing conversation — or notice a reply —
- * without re-searching by name every time. */
+ * ever messaged (or who has edited a campaign / gotten a moderation note
+ * since), most-recently-active first, so admins can find an existing
+ * conversation — or notice a reply — without re-searching by name every
+ * time. */
 export const listRecentConversations = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
     const all = await ctx.db.query("notifications").collect();
-    const adminMessages = all.filter(
-      (n) => n.type === "admin_message" || n.type === "campaign_edited",
-    );
+    const reviewNotes = await ctx.db.query("campaignReviewMessages").collect();
 
-    const latestByUser = new Map<Id<"users">, Doc<"notifications">>();
-    for (const n of adminMessages) {
+    const latestByUser = new Map<
+      Id<"users">,
+      { message: string; createdAt: number; relatedEntityTitle: string | null }
+    >();
+    const resolveCampaignTitle = await campaignTitleResolver(ctx);
+
+    for (const n of all) {
+      if (
+        (n.type !== "admin_message" && n.type !== "campaign_edited") ||
+        n.deletedAt
+      ) {
+        continue;
+      }
       const existing = latestByUser.get(n.userId);
       if (!existing || n.createdAt > existing.createdAt) {
-        latestByUser.set(n.userId, n);
+        const relatedEntityTitle =
+          n.relatedEntityType === "campaign" && n.relatedEntityId
+            ? await resolveCampaignTitle(n.relatedEntityId)
+            : null;
+        latestByUser.set(n.userId, {
+          message: n.message,
+          createdAt: n.createdAt,
+          relatedEntityTitle,
+        });
+      }
+    }
+    for (const m of reviewNotes) {
+      const existing = latestByUser.get(m.studentUserId);
+      if (!existing || m.createdAt > existing.createdAt) {
+        const relatedEntityTitle = await resolveCampaignTitle(m.campaignSlug);
+        latestByUser.set(m.studentUserId, {
+          message: m.body,
+          createdAt: m.createdAt,
+          relatedEntityTitle,
+        });
       }
     }
 
     const conversations = await Promise.all(
-      Array.from(latestByUser.values()).map(async (n) => {
-        const recipient = await profileDisplayName(ctx, n.userId);
+      Array.from(latestByUser.entries()).map(async ([userId, last]) => {
+        const recipient = await profileDisplayName(ctx, userId);
         return {
-          userId: n.userId,
+          userId,
           recipientName: recipient.name,
           recipientEmail: recipient.email,
-          lastMessage: n.message,
-          lastMessageAt: n.createdAt,
+          lastMessage: last.message,
+          lastMessageAt: last.createdAt,
+          lastMessageContext: last.relatedEntityTitle,
         };
       }),
     );
 
     return conversations.sort((a, b) => b.lastMessageAt - a.lastMessageAt);
+  },
+});
+
+/** Admin-only soft delete — hides a chat message from every read path
+ * (bell, thread, recent-conversations) while keeping the row itself for the
+ * audit trail. Works on any admin_message regardless of who sent it, so it
+ * covers both "sent by another admin" and "sent by the student" if/when a
+ * student-reply path exists — today only admins can create admin_message
+ * rows (see sendFromAdmin), but the mutation doesn't assume that. Does not
+ * apply to campaignReviewMessages (the official moderation record), which
+ * is intentionally not deletable from here. */
+export const deleteMessage = mutation({
+  args: { notificationId: v.id("notifications") },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification || notification.type !== "admin_message") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Message not found.",
+      });
+    }
+    if (notification.deletedAt) {
+      return null;
+    }
+
+    await ctx.db.patch(args.notificationId, {
+      deletedAt: Date.now(),
+      deletedBy: adminUserId,
+    });
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "notification.deleteMessage",
+      targetType: "notification",
+      targetId: args.notificationId,
+      metadata: JSON.stringify({
+        recipientUserId: notification.userId,
+        senderId: notification.senderId ?? null,
+        message: notification.message.slice(0, 500),
+      }),
+    });
+
+    return null;
   },
 });

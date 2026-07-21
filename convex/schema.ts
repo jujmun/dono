@@ -127,7 +127,8 @@ export default defineSchema({
     canceledAt: v.optional(v.number()),
   })
     .index("by_user", ["userId"])
-    .index("by_subscription", ["stripeSubscriptionId"]),
+    .index("by_subscription", ["stripeSubscriptionId"])
+    .index("by_campaign", ["campaignId"]),
   donations: defineTable({
     userId: v.optional(v.id("users")),
     donorEmail: v.optional(v.string()),
@@ -152,7 +153,8 @@ export default defineSchema({
     .index("by_paymentIntent", ["stripePaymentIntentId"])
     .index("by_invoice", ["stripeInvoiceId"])
     .index("by_donorEmail", ["donorEmail"])
-    .index("by_fund", ["fundId"]),
+    .index("by_fund", ["fundId"])
+    .index("by_campaign", ["campaignId"]),
   fundAllocations: defineTable({
     fundId: v.id("communityFunds"),
     donationId: v.id("donations"),
@@ -161,7 +163,8 @@ export default defineSchema({
     createdAt: v.number(),
   })
     .index("by_donation", ["donationId"])
-    .index("by_fund", ["fundId"]),
+    .index("by_fund", ["fundId"])
+    .index("by_campaign", ["campaignId"]),
   /** Binds uploaded Convex files to the user who attached them. */
   storageOwners: defineTable({
     userId: v.id("users"),

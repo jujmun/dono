@@ -161,6 +161,10 @@ async function toAdminSociety(ctx: QueryCtx, society: SocietyDoc) {
     status: society.status,
     createdAt: society.createdAt,
     creatorId: society.creatorId,
+    moderationNote: society.moderationNote ?? null,
+    moderatedAt: society.moderatedAt ?? null,
+    moderationAction: society.moderationAction ?? null,
+    restoredAt: society.restoredAt ?? null,
     supportingDocumentUrls,
     idDocumentUrl,
     stripeVerificationStatus: society.stripeVerificationStatus ?? null,
@@ -417,6 +421,94 @@ function initialsFromName(name: string) {
     .toUpperCase() || "SO";
 }
 
+/** Bridges a society into the membership catalog so join / campaign-on-behalf
+ * / Connect payouts (all keyed by communities.slug) work for it — used by
+ * both `approve` (first time active) and `restore` (which can bring back a
+ * society that was rejected pre-approval and so was never bridged yet). */
+async function bridgeSocietyIntoCommunity(
+  ctx: MutationCtx,
+  society: SocietyDoc,
+  adminUserId: Id<"users">,
+) {
+  const existingCommunity = await ctx.db
+    .query("communities")
+    .withIndex("by_slug", (q) => q.eq("slug", society.slug))
+    .unique();
+  if (existingCommunity) {
+    await ctx.db.patch(existingCommunity._id, {
+      name: society.name,
+      description: society.description,
+      type: "society",
+      verified: true,
+      verificationType: "society",
+      verificationStatus: "verified",
+      createdBy: society.creatorId,
+    });
+  } else {
+    const coverImage = society.coverImageStorageId
+      ? ((await ctx.storage.getUrl(society.coverImageStorageId)) ?? "default")
+      : "default";
+    await ctx.db.insert("communities", {
+      slug: society.slug,
+      name: society.name,
+      type: "society",
+      description: society.description,
+      avatar: initialsFromName(society.name),
+      coverImage,
+      university: "University of Oxford",
+      followers: 0,
+      campaigns: 0,
+      totalRaised: 0,
+      verified: true,
+      verificationType: "society",
+      verificationStatus: "verified",
+      createdBy: society.creatorId,
+    });
+  }
+
+  const existingMembership = await ctx.db
+    .query("societyMembers")
+    .withIndex("by_community_user", (q) =>
+      q.eq("communitySlug", society.slug).eq("userId", society.creatorId),
+    )
+    .unique();
+  if (existingMembership) {
+    await ctx.db.patch(existingMembership._id, {
+      role: "leader",
+      status: "approved",
+      reviewedAt: Date.now(),
+      reviewedBy: adminUserId,
+    });
+  } else {
+    await ctx.db.insert("societyMembers", {
+      communitySlug: society.slug,
+      userId: society.creatorId,
+      role: "leader",
+      status: "approved",
+      createdAt: Date.now(),
+      reviewedAt: Date.now(),
+      reviewedBy: adminUserId,
+    });
+  }
+}
+
+/** Revokes public/membership visibility — the inverse of
+ * bridgeSocietyIntoCommunity. Only patches the communities row's
+ * verification flags rather than deleting it, so a later restore doesn't
+ * need to recreate followers/campaigns counters from scratch. */
+async function unbridgeSocietyFromCommunity(ctx: MutationCtx, slug: string) {
+  const community = await ctx.db
+    .query("communities")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+  if (community) {
+    await ctx.db.patch(community._id, {
+      verified: false,
+      verificationStatus: "rejected",
+    });
+  }
+}
+
 export const approve = mutation({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
@@ -432,69 +524,7 @@ export const approve = mutation({
       });
     }
     await ctx.db.patch(society._id, { status: "active" });
-
-    // Bridge into the membership catalog so join / campaign-on-behalf /
-    // Connect payouts (keyed by communities.slug) work for approved societies.
-    const existingCommunity = await ctx.db
-      .query("communities")
-      .withIndex("by_slug", (q) => q.eq("slug", society.slug))
-      .unique();
-    if (existingCommunity) {
-      await ctx.db.patch(existingCommunity._id, {
-        name: society.name,
-        description: society.description,
-        type: "society",
-        verified: true,
-        verificationType: "society",
-        verificationStatus: "verified",
-        createdBy: society.creatorId,
-      });
-    } else {
-      const coverImage = society.coverImageStorageId
-        ? ((await ctx.storage.getUrl(society.coverImageStorageId)) ?? "default")
-        : "default";
-      await ctx.db.insert("communities", {
-        slug: society.slug,
-        name: society.name,
-        type: "society",
-        description: society.description,
-        avatar: initialsFromName(society.name),
-        coverImage,
-        university: "University of Oxford",
-        followers: 0,
-        campaigns: 0,
-        totalRaised: 0,
-        verified: true,
-        verificationType: "society",
-        verificationStatus: "verified",
-        createdBy: society.creatorId,
-      });
-    }
-
-    const existingMembership = await ctx.db
-      .query("societyMembers")
-      .withIndex("by_community_user", (q) =>
-        q.eq("communitySlug", society.slug).eq("userId", society.creatorId),
-      )
-      .unique();
-    if (existingMembership) {
-      await ctx.db.patch(existingMembership._id, {
-        role: "leader",
-        status: "approved",
-        reviewedAt: Date.now(),
-        reviewedBy: adminUserId,
-      });
-    } else {
-      await ctx.db.insert("societyMembers", {
-        communitySlug: society.slug,
-        userId: society.creatorId,
-        role: "leader",
-        status: "approved",
-        createdAt: Date.now(),
-        reviewedAt: Date.now(),
-        reviewedBy: adminUserId,
-      });
-    }
+    await bridgeSocietyIntoCommunity(ctx, society, adminUserId);
 
     await logAdminAction(ctx, {
       adminUserId,
@@ -526,6 +556,7 @@ export const reject = mutation({
       moderationNote: reason,
       moderatedAt: Date.now(),
       moderatedBy: adminUserId,
+      moderationAction: "rejected",
     });
     await logAdminAction(ctx, {
       adminUserId,
@@ -533,6 +564,277 @@ export const reject = mutation({
       targetType: "society",
       targetId: args.slug,
     });
+    return null;
+  },
+});
+
+/** Remove a live (active) society from public view — mirrors
+ * campaigns.takeDown. Revokes community verification too, so members can no
+ * longer create campaigns on its behalf (requireSocietyMember/Leader gate on
+ * communities.verificationStatus, not societies.status). */
+export const takeDown = mutation({
+  args: { slug: v.string(), reason: v.string() },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const reason = requireModerationReason(args.reason);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society || society.status !== "active") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Active society not found.",
+      });
+    }
+    await ctx.db.patch(society._id, {
+      status: "rejected",
+      moderationNote: reason,
+      moderatedAt: Date.now(),
+      moderatedBy: adminUserId,
+      moderationAction: "taken_down",
+    });
+    await unbridgeSocietyFromCommunity(ctx, args.slug);
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "society.takeDown",
+      targetType: "society",
+      targetId: args.slug,
+    });
+    return null;
+  },
+});
+
+/** Restore a rejected society — works whether it was denied pre-approval or
+ * taken down after going live (mirrors campaigns.restore, which is equally
+ * permissive). Re-runs the community bridge unconditionally: a pre-approval
+ * denial was never bridged in the first place, so a plain "patch back to
+ * verified" would leave campaign-creation broken with no communities row. */
+export const restore = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society || society.status !== "rejected") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Removed society not found.",
+      });
+    }
+    await ctx.db.patch(society._id, {
+      status: "active",
+      restoredAt: Date.now(),
+      moderationNote: undefined,
+      moderatedAt: undefined,
+      moderatedBy: undefined,
+      moderationAction: undefined,
+    });
+    await bridgeSocietyIntoCommunity(ctx, society, adminUserId);
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "society.restore",
+      targetType: "society",
+      targetId: args.slug,
+    });
+    return null;
+  },
+});
+
+export const listModeratedForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const societies = await ctx.db
+      .query("societies")
+      .withIndex("by_status", (q) => q.eq("status", "rejected"))
+      .collect();
+    return (
+      await Promise.all(societies.map((s) => toAdminSociety(ctx, s)))
+    ).sort((a, b) => (b.moderatedAt ?? 0) - (a.moderatedAt ?? 0));
+  },
+});
+
+export const listActiveForAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const societies = await ctx.db
+      .query("societies")
+      .withIndex("by_status", (q) => q.eq("status", "active"))
+      .collect();
+    return await Promise.all(societies.map((s) => toAdminSociety(ctx, s)));
+  },
+});
+
+/** Full detail for the admin society page — verification docs plus the
+ * dependent-record counts a hard delete needs to check. */
+export const getForAdmin = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society) return null;
+
+    const [members, follows, campaigns, connectAccount] = await Promise.all([
+      ctx.db
+        .query("societyMembers")
+        .withIndex("by_community", (q) => q.eq("communitySlug", args.slug))
+        .collect(),
+      ctx.db
+        .query("communityFollows")
+        .withIndex("by_community_user", (q) => q.eq("communitySlug", args.slug))
+        .collect(),
+      ctx.db
+        .query("campaigns")
+        .withIndex("by_community", (q) => q.eq("creator.communityId", args.slug))
+        .collect(),
+      ctx.db
+        .query("stripeConnectAccounts")
+        .withIndex("by_community", (q) => q.eq("communitySlug", args.slug))
+        .first(),
+    ]);
+
+    return {
+      society: await toAdminSociety(ctx, society),
+      creatorId: society.creatorId,
+      counts: {
+        members: members.length,
+        followers: follows.length,
+        campaigns: campaigns.length,
+        hasConnectAccount: Boolean(connectAccount),
+        connectHasActivity: Boolean(
+          connectAccount &&
+            (connectAccount.chargesEnabled || connectAccount.payoutsEnabled),
+        ),
+      },
+    };
+  },
+});
+
+/**
+ * Permanently deletes a society — only from "rejected" (the archived state).
+ * Requires the admin to re-type the society's exact name as an extra
+ * confirmation step, on top of the client-side dialog. Refuses if any
+ * campaigns still reference this society (an admin must deal with those
+ * individually first — this never cascades into campaign/donation data) or
+ * if a Stripe Connect account with real charges/payouts activity exists.
+ * Cascades: societyMembers, communityFollows, the bridged communities row,
+ * an inert Connect account row, and verification-document storage.
+ */
+export const hardDelete = mutation({
+  args: { slug: v.string(), confirmName: v.string() },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society || society.status !== "rejected") {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "Only a removed society can be permanently deleted.",
+      });
+    }
+    if (args.confirmName.trim() !== society.name) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Typed name did not match the society name.",
+      });
+    }
+
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_community", (q) => q.eq("creator.communityId", args.slug))
+      .collect();
+    if (campaigns.length > 0) {
+      throw new ConvexError({
+        code: "HAS_DEPENDENTS",
+        message:
+          "This society still has campaigns attached. Remove or delete those first.",
+      });
+    }
+
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) => q.eq("communitySlug", args.slug))
+      .first();
+    if (
+      connectAccount &&
+      (connectAccount.chargesEnabled || connectAccount.payoutsEnabled)
+    ) {
+      throw new ConvexError({
+        code: "HAS_FINANCIAL_ACTIVITY",
+        message:
+          "This society has an active Stripe payout account and cannot be permanently deleted.",
+      });
+    }
+
+    const [members, follows] = await Promise.all([
+      ctx.db
+        .query("societyMembers")
+        .withIndex("by_community", (q) => q.eq("communitySlug", args.slug))
+        .collect(),
+      ctx.db
+        .query("communityFollows")
+        .withIndex("by_community_user", (q) => q.eq("communitySlug", args.slug))
+        .collect(),
+    ]);
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "society.hardDelete",
+      targetType: "society",
+      targetId: args.slug,
+      metadata: JSON.stringify({
+        name: society.name,
+        members: members.length,
+        followers: follows.length,
+      }),
+    });
+
+    for (const member of members) {
+      await ctx.db.delete(member._id);
+    }
+    for (const follow of follows) {
+      await ctx.db.delete(follow._id);
+    }
+    if (connectAccount) {
+      await ctx.db.delete(connectAccount._id);
+    }
+
+    const community = await ctx.db
+      .query("communities")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (community) {
+      await ctx.db.delete(community._id);
+    }
+
+    const storageIds = [
+      society.coverImageStorageId,
+      society.idDocumentStorageId,
+      ...society.supportingDocumentStorageIds,
+    ].filter((id): id is Id<"_storage"> => Boolean(id));
+    for (const storageId of storageIds) {
+      await ctx.storage.delete(storageId);
+      const owner = await ctx.db
+        .query("storageOwners")
+        .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+        .unique();
+      if (owner) {
+        await ctx.db.delete(owner._id);
+      }
+    }
+
+    await ctx.db.delete(society._id);
     return null;
   },
 });

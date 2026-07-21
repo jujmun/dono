@@ -215,11 +215,18 @@ export const listModeratedForAdmin = query({
   },
 });
 
+/** Counts behind the Waiting/Live/Removed nav — spans both campaigns and
+ * societies, since the admin "Waiting" tab (and, as of the societies
+ * archive/restore work, "Live" and "Removed" too) shows both entity types
+ * together. */
 export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const campaigns = await ctx.db.query("campaigns").collect();
+    const [campaigns, societies] = await Promise.all([
+      ctx.db.query("campaigns").collect(),
+      ctx.db.query("societies").collect(),
+    ]);
     let pending = 0;
     let live = 0;
     let moderated = 0;
@@ -227,6 +234,11 @@ export const getAdminStats = query({
       if (c.status === "pending") pending += 1;
       else if (isPublicStatusLocal(c.status)) live += 1;
       else if (c.status === "rejected") moderated += 1;
+    }
+    for (const s of societies) {
+      if (s.status === "pending") pending += 1;
+      else if (s.status === "active") live += 1;
+      else if (s.status === "rejected") moderated += 1;
     }
     return { pending, live, moderated };
   },
@@ -268,10 +280,46 @@ export const getForAdmin = query({
       .query("campaignReviewMessages")
       .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
       .collect();
+    const [donations, recurring, payouts] = await Promise.all([
+      ctx.db
+        .query("donations")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .collect(),
+      ctx.db
+        .query("recurringDonations")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .collect(),
+      ctx.db
+        .query("campaignPayouts")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .collect(),
+    ]);
+    const [follows, likes, comments] = await Promise.all([
+      ctx.db
+        .query("campaignFollows")
+        .withIndex("by_campaign_user", (q) => q.eq("campaignSlug", campaign.slug))
+        .collect(),
+      ctx.db
+        .query("campaignLikes")
+        .withIndex("by_campaign_user", (q) => q.eq("campaignSlug", campaign.slug))
+        .collect(),
+      ctx.db
+        .query("campaignComments")
+        .withIndex("by_campaign", (q) => q.eq("campaignSlug", campaign.slug))
+        .collect(),
+    ]);
 
     return {
       campaign: toCampaign(campaign),
       student,
+      counts: {
+        follows: follows.length,
+        likes: likes.length,
+        comments: comments.length,
+        reviewMessages: messages.length,
+        hasFinancialActivity:
+          donations.length > 0 || recurring.length > 0 || payouts.length > 0,
+      },
       identity: {
         stripeVerificationStatus: campaign.stripeVerificationStatus ?? null,
         stripeVerificationLastErrorCode:
@@ -697,6 +745,135 @@ export const updateVerificationFromWebhook = internalMutation({
         args.status === "requires_input" ? args.lastErrorReason : undefined,
     });
     return { updated: true };
+  },
+});
+
+/**
+ * Permanently deletes a campaign — only from "rejected" (covers both a
+ * pre-launch denial and a taken-down live campaign; see moderationAction to
+ * tell them apart). Requires the admin to re-type the campaign's exact
+ * title as an extra confirmation step, on top of the client-side dialog.
+ * Refuses if any real money ever touched this campaign — donations,
+ * recurring donations, or payouts — even though the campaign is otherwise
+ * "archived", since those are financial/audit records, not moderation
+ * clutter. Cascades: follows, likes, comments, review messages, related
+ * notifications, and image storage.
+ */
+export const hardDelete = mutation({
+  args: { slug: v.string(), confirmTitle: v.string() },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.status !== "rejected") {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "Only a removed campaign can be permanently deleted.",
+      });
+    }
+    if (args.confirmTitle.trim() !== campaign.title) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Typed title did not match the campaign title.",
+      });
+    }
+
+    const [donations, recurring, payouts] = await Promise.all([
+      ctx.db
+        .query("donations")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .collect(),
+      ctx.db
+        .query("recurringDonations")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .collect(),
+      ctx.db
+        .query("campaignPayouts")
+        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+        .collect(),
+    ]);
+    if (donations.length > 0 || recurring.length > 0 || payouts.length > 0) {
+      throw new ConvexError({
+        code: "HAS_FINANCIAL_ACTIVITY",
+        message:
+          "This campaign has donation or payout records and cannot be permanently deleted.",
+      });
+    }
+
+    const [follows, likes, comments, reviewMessages, notifications] =
+      await Promise.all([
+        ctx.db
+          .query("campaignFollows")
+          .withIndex("by_campaign_user", (q) => q.eq("campaignSlug", campaign.slug))
+          .collect(),
+        ctx.db
+          .query("campaignLikes")
+          .withIndex("by_campaign_user", (q) => q.eq("campaignSlug", campaign.slug))
+          .collect(),
+        ctx.db
+          .query("campaignComments")
+          .withIndex("by_campaign", (q) => q.eq("campaignSlug", campaign.slug))
+          .collect(),
+        ctx.db
+          .query("campaignReviewMessages")
+          .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+          .collect(),
+        ctx.db.query("notifications").collect(),
+      ]);
+    const relatedNotifications = notifications.filter(
+      (n) => n.relatedEntityType === "campaign" && n.relatedEntityId === campaign.slug,
+    );
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "campaign.hardDelete",
+      targetType: "campaign",
+      targetId: args.slug,
+      metadata: JSON.stringify({
+        title: campaign.title,
+        follows: follows.length,
+        likes: likes.length,
+        comments: comments.length,
+        reviewMessages: reviewMessages.length,
+        notifications: relatedNotifications.length,
+      }),
+    });
+
+    for (const follow of follows) {
+      await ctx.db.delete(follow._id);
+    }
+    for (const like of likes) {
+      await ctx.db.delete(like._id);
+    }
+    for (const comment of comments) {
+      await ctx.db.delete(comment._id);
+    }
+    for (const message of reviewMessages) {
+      await ctx.db.delete(message._id);
+    }
+    for (const notification of relatedNotifications) {
+      await ctx.db.delete(notification._id);
+    }
+
+    const storageIds = [
+      campaign.imageStorageId,
+      ...(campaign.imageStorageIds ?? []),
+    ].filter((id): id is Id<"_storage"> => Boolean(id));
+    for (const storageId of storageIds) {
+      await ctx.storage.delete(storageId);
+      const owner = await ctx.db
+        .query("storageOwners")
+        .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+        .unique();
+      if (owner) {
+        await ctx.db.delete(owner._id);
+      }
+    }
+
+    await ctx.db.delete(campaign._id);
+    return null;
   },
 });
 

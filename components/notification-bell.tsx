@@ -12,10 +12,12 @@ import type { Notification } from "@/lib/types";
 const PAGE_SIZE = 15;
 
 function formatNotificationDate(ms: number) {
-  return new Date(ms).toLocaleDateString("en-GB", {
+  return new Date(ms).toLocaleString("en-GB", {
     day: "numeric",
     month: "short",
     year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
   });
 }
 

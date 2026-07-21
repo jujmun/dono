@@ -425,7 +425,13 @@ export default function AccountPage() {
                   </Text>
                   <Text className="mt-2 text-sm text-dono-text">{message.body}</Text>
                   <Text className="mt-2 text-xs text-dono-muted">
-                    {new Date(message.createdAt).toLocaleString("en-GB")}
+                    {new Date(message.createdAt).toLocaleString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                    })}
                   </Text>
                 </View>
               ))}

@@ -163,6 +163,12 @@ export const societyFields = {
   moderationNote: v.optional(v.string()),
   moderatedAt: v.optional(v.number()),
   moderatedBy: v.optional(v.id("users")),
+  /** Mirrors campaignFields.moderationAction — "rejected" for a pre-approval
+   * denial, "taken_down" for pulling a previously-active society. */
+  moderationAction: v.optional(
+    v.union(v.literal("rejected"), v.literal("taken_down")),
+  ),
+  restoredAt: v.optional(v.number()),
   /** Stripe Identity — additive alongside the manual idDocumentStorageId above. */
   stripeVerificationSessionId: v.optional(v.string()),
   stripeVerificationStatus: v.optional(
@@ -243,4 +249,9 @@ export const notificationFields = {
   /** Admin flagged this message as an edit request (type "admin_message" +
    * relatedEntityType "campaign" only) — surfaces an "Edit Campaign" button. */
   isEditRequest: v.optional(v.boolean()),
+  /** Soft delete — admins can remove a message from the chat (their own or
+   * anyone else's) without losing the audit trail. Filtered out of every
+   * read path; the row itself is kept. */
+  deletedAt: v.optional(v.number()),
+  deletedBy: v.optional(v.id("users")),
 };
