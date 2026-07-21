@@ -34,6 +34,11 @@ const adminNavItems = [
     label: "Messages",
     match: (p: string) => p.startsWith("/admin/messages"),
   },
+  {
+    href: "/admin/groups",
+    label: "Groups",
+    match: (p: string) => p.startsWith("/admin/groups"),
+  },
 ] as const;
 
 function AdminSitehead() {

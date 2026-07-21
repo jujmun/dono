@@ -207,4 +207,5 @@ export interface Notification {
   createdAt: number;
   senderId?: string;
   isEditRequest?: boolean;
+  deletable: boolean;
 }
