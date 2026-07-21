@@ -316,7 +316,7 @@ export const getForAdmin = query({
         follows: follows.length,
         likes: likes.length,
         comments: comments.length,
-        reviewMessages: messages.length,
+        reviewMessages: messages.filter((m) => !m.deletedAt).length,
         hasFinancialActivity:
           donations.length > 0 || recurring.length > 0 || payouts.length > 0,
       },
@@ -330,6 +330,7 @@ export const getForAdmin = query({
         verifiedDob: campaign.verifiedDob ?? null,
       },
       messages: messages
+        .filter((m) => !m.deletedAt)
         .sort((a, b) => a.createdAt - b.createdAt)
         .map((m) => ({
           id: m._id,

@@ -11,6 +11,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdmin, requireVerifiedUser, resolveCreatorContact } from "./lib/authz";
 import { getAuthFromAddress } from "./auth/otpConfig";
+import { logAdminAction } from "./adminAudit";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -60,6 +61,7 @@ export const listMine = query({
 
     const enriched = await Promise.all(
       messages
+        .filter((m) => !m.deletedAt)
         .sort((a, b) => b.createdAt - a.createdAt)
         .map(async (m) => {
           const campaign = await ctx.db.get(m.campaignId);
@@ -121,6 +123,43 @@ export const send = mutation({
     }
 
     return { messageId };
+  },
+});
+
+/** Admin-only soft delete — same shape as notifications.deleteMessage.
+ * Hides a moderation note from the student's "Review feedback" list and the
+ * merged admin thread while keeping the row (and the fact an email may
+ * already have gone out) for the audit trail. */
+export const deleteReviewMessage = mutation({
+  args: { messageId: v.id("campaignReviewMessages") },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const message = await ctx.db.get(args.messageId);
+    if (!message) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Message not found." });
+    }
+    if (message.deletedAt) {
+      return null;
+    }
+
+    await ctx.db.patch(args.messageId, {
+      deletedAt: Date.now(),
+      deletedBy: adminUserId,
+    });
+
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "reviewMessage.delete",
+      targetType: "campaignReviewMessage",
+      targetId: args.messageId,
+      metadata: JSON.stringify({
+        campaignSlug: message.campaignSlug,
+        studentUserId: message.studentUserId,
+        body: message.body.slice(0, 500),
+      }),
+    });
+
+    return null;
   },
 });
 

@@ -238,10 +238,12 @@ async function resolveThreadItemsForUser(
     .query("notifications")
     .withIndex("by_user", (q) => q.eq("userId", userId))
     .collect();
-  const reviewNotes = await ctx.db
-    .query("campaignReviewMessages")
-    .withIndex("by_student", (q) => q.eq("studentUserId", userId))
-    .collect();
+  const reviewNotes = (
+    await ctx.db
+      .query("campaignReviewMessages")
+      .withIndex("by_student", (q) => q.eq("studentUserId", userId))
+      .collect()
+  ).filter((m) => !m.deletedAt);
 
   const senderCache = new Map<Id<"users">, { name: string; email: string }>();
   const resolveSender = async (senderId: Id<"users"> | undefined) => {
@@ -367,6 +369,7 @@ export const listRecentConversations = query({
       }
     }
     for (const m of reviewNotes) {
+      if (m.deletedAt) continue;
       const existing = latestByUser.get(m.studentUserId);
       if (!existing || m.createdAt > existing.createdAt) {
         const relatedEntityTitle = await resolveCampaignTitle(m.campaignSlug);
