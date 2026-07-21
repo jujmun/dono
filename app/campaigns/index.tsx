@@ -27,14 +27,27 @@ export default function CampaignsPage() {
     | undefined;
 
   const [search, setSearch] = useState("");
-  const [category, setCategory] = useState("all");
+  const [showFilters, setShowFilters] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+
+  const toggleCategory = (cat: string) => {
+    if (cat === "all") {
+      setSelectedCategories([]);
+      return;
+    }
+    setSelectedCategories((prev) =>
+      prev.includes(cat) ? prev.filter((c) => c !== cat) : [...prev, cat],
+    );
+  };
 
   const filtered = (campaigns ?? []).filter((c) => {
     const matchesSearch =
       c.title.toLowerCase().includes(search.toLowerCase()) ||
       c.university.toLowerCase().includes(search.toLowerCase()) ||
       c.description.toLowerCase().includes(search.toLowerCase());
-    const matchesCategory = category === "all" || c.category === category;
+    const matchesCategory =
+      selectedCategories.length === 0 ||
+      selectedCategories.includes(c.category);
     return matchesSearch && matchesCategory;
   });
 
@@ -58,40 +71,55 @@ export default function CampaignsPage() {
         />
       </View>
 
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        className="mb-5"
-        contentContainerClassName="flex-row items-center gap-2"
-      >
-        <View className="rounded-lg border-2 border-retro-ink bg-retro-cream px-2.5 py-2">
+      <View className="mb-5 flex-row items-center gap-2">
+        <Pressable
+          onPress={() => setShowFilters((v) => !v)}
+          className={cn(
+            "rounded-lg border-2 border-retro-ink px-2.5 py-2",
+            showFilters
+              ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+              : "bg-retro-cream",
+          )}
+        >
           <SlidersHorizontal size={14} color="#211E1A" />
-        </View>
-        {categories.map((cat) => {
-          const on = category === cat;
-          return (
-            <Pressable
-              key={cat}
-              onPress={() => setCategory(cat)}
-              className={cn(
-                "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
-                on
-                  ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
-                  : "bg-retro-paper",
-              )}
-            >
-              <Text
-                className={cn(
-                  "font-retro-bold text-[12.5px]",
-                  on ? "text-retro-paper" : "text-retro-ink",
-                )}
-              >
-                {cat === "all" ? "All" : categoryLabels[cat]}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </ScrollView>
+        </Pressable>
+        {showFilters && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            className="min-w-0 flex-1"
+            contentContainerClassName="flex-row items-center gap-2"
+          >
+            {categories.map((cat) => {
+              const on =
+                cat === "all"
+                  ? selectedCategories.length === 0
+                  : selectedCategories.includes(cat);
+              return (
+                <Pressable
+                  key={cat}
+                  onPress={() => toggleCategory(cat)}
+                  className={cn(
+                    "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
+                    on
+                      ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                      : "bg-retro-paper",
+                  )}
+                >
+                  <Text
+                    className={cn(
+                      "font-retro-bold text-[12.5px]",
+                      on ? "text-retro-paper" : "text-retro-ink",
+                    )}
+                  >
+                    {cat === "all" ? "All" : categoryLabels[cat]}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
 
       {campaigns === undefined ? (
         <ActivityIndicator color="#211E1A" className="py-12" />
