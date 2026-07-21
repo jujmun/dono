@@ -21,6 +21,12 @@ export function buildCampaignEditedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was updated.`;
 }
 
+/** Sent to every admin (see campaignCreator.resubmit) when an owner resubmits
+ * a changes-requested/rejected campaign for re-review. */
+export function buildCampaignResubmittedMessage(campaignTitle: string) {
+  return `Campaign '${campaignTitle}' was resubmitted and needs re-review.`;
+}
+
 // TODO: replace with real onboarding flow — this is a placeholder notification
 // only, per the initial in-app notifications pass. relatedEntityId is
 // intentionally omitted so the bell just shows the message with no link.
@@ -48,7 +54,8 @@ interface CreateNotificationArgs {
     | "campaign_rejected"
     | "admin_message"
     | "onboarding"
-    | "campaign_edited";
+    | "campaign_edited"
+    | "campaign_resubmitted";
   message: string;
   relatedEntityType?: "campaign";
   relatedEntityId?: string;

@@ -589,7 +589,7 @@ export const create = mutation({
       message: buildCampaignPendingMessage(title),
     });
 
-    if (creatorType === "society") {
+    if (!isLeader) {
       const leaders = await ctx.db
         .query("societyMembers")
         .withIndex("by_community_status", (q) =>

@@ -223,9 +223,12 @@ export const notificationFields = {
     v.literal("admin_message"),
     v.literal("onboarding"),
     /** System event, not a real notification — the owner edited a campaign
-     * via app/edit-campaign.tsx. Created read:true (never bumps the
-     * recipient's own unread badge); surfaced only in the admin thread. */
+     * via the edit flow. Created read:true (never bumps the recipient's own
+     * unread badge); surfaced only in the admin thread. */
     v.literal("campaign_edited"),
+    /** Sent to every admin when an owner resubmits a changes-requested/
+     * rejected campaign for re-review — see campaignCreator.resubmit. */
+    v.literal("campaign_resubmitted"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more

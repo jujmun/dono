@@ -114,14 +114,21 @@ export function NotificationBell() {
     if (!notification.read) {
       void markRead({ notificationId: notification.id as Id<"notifications"> });
     }
+    if (!notification.relatedEntityId || notification.relatedEntityType !== "campaign") {
+      return;
+    }
+    // A campaign_resubmitted notification goes to admins, about a campaign
+    // that's back to "pending" — not public, so it needs the admin review
+    // page rather than the public campaign page.
+    if (notification.type === "campaign_resubmitted") {
+      setOpen(false);
+      router.push(`/admin/${notification.relatedEntityId}`);
+      return;
+    }
     // Edit-request campaigns are "changes_requested" — not public, so the
     // normal campaign page 404s. The Edit Campaign button (below) is the
     // real destination for those; a plain row tap just marks it read.
-    if (
-      !notification.isEditRequest &&
-      notification.relatedEntityType === "campaign" &&
-      notification.relatedEntityId
-    ) {
+    if (!notification.isEditRequest) {
       setOpen(false);
       router.push(`/campaigns/${notification.relatedEntityId}`);
     }
@@ -133,7 +140,7 @@ export function NotificationBell() {
     }
     if (notification.relatedEntityId) {
       setOpen(false);
-      router.push(`/edit-campaign?slug=${encodeURIComponent(notification.relatedEntityId)}`);
+      router.push(`/create?editSlug=${encodeURIComponent(notification.relatedEntityId)}`);
     }
   };
 
