@@ -212,6 +212,24 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_stripeAccountId", ["stripeAccountId"])
     .index("by_community", ["communitySlug"]),
+  /** Admin-managed custom messaging group — see convex/groups.ts. The four
+   * "automatic" groups (admins, society leaders, campaign creators, one per
+   * active society) have no table of their own — their membership is derived
+   * live from profiles/societyMembers/campaigns/societies. */
+  userGroups: defineTable({
+    name: v.string(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_createdBy", ["createdBy"]),
+  userGroupMembers: defineTable({
+    groupId: v.id("userGroups"),
+    userId: v.id("users"),
+    addedAt: v.number(),
+    addedBy: v.id("users"),
+  })
+    .index("by_group", ["groupId"])
+    .index("by_group_user", ["groupId", "userId"])
+    .index("by_user", ["userId"]),
   campaignPayouts: defineTable({
     campaignId: v.id("campaigns"),
     stripeConnectAccountId: v.id("stripeConnectAccounts"),

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
-import { Bell, Pencil } from "lucide-react-native";
+import { Bell, Pencil, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { RetroPanel } from "@/components/retro";
@@ -25,10 +25,12 @@ function NotificationRow({
   notification,
   onPress,
   onEditCampaign,
+  onDelete,
 }: {
   notification: Notification;
   onPress: (notification: Notification) => void;
   onEditCampaign: (notification: Notification) => void;
+  onDelete: (notification: Notification) => void;
 }) {
   return (
     <Pressable
@@ -81,6 +83,18 @@ function NotificationRow({
           </Pressable>
         ) : null}
       </View>
+      {notification.deletable ? (
+        <Pressable
+          onPress={(event) => {
+            event.stopPropagation();
+            onDelete(notification);
+          }}
+          accessibilityLabel="Delete notification"
+          className="mt-0.5 h-6 w-6 shrink-0 items-center justify-center rounded-full"
+        >
+          <Trash2 size={13} color="#5c574f" />
+        </Pressable>
+      ) : null}
     </Pressable>
   );
 }
@@ -100,6 +114,7 @@ export function NotificationBell() {
   );
   const markRead = useMutation(api.notifications.markRead);
   const markAllRead = useMutation(api.notifications.markAllRead);
+  const deleteMine = useMutation(api.notifications.deleteMine);
 
   const items = (page?.items ?? []) as Notification[];
   const hasMore = Boolean(page?.nextCursor);
@@ -144,6 +159,10 @@ export function NotificationBell() {
       setOpen(false);
       router.push(`/create?editSlug=${encodeURIComponent(notification.relatedEntityId)}`);
     }
+  };
+
+  const handleDeleteNotification = (notification: Notification) => {
+    void deleteMine({ notificationId: notification.id as Id<"notifications"> });
   };
 
   return (
@@ -196,6 +215,7 @@ export function NotificationBell() {
                         notification={notification}
                         onPress={handlePressNotification}
                         onEditCampaign={handleEditCampaign}
+                        onDelete={handleDeleteNotification}
                       />
                     ))
                   )}

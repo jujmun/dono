@@ -29,6 +29,7 @@ import type * as emails from "../emails.js";
 import type * as engagement from "../engagement.js";
 import type * as fixedOtpCleanup from "../fixedOtpCleanup.js";
 import type * as funds from "../funds.js";
+import type * as groups from "../groups.js";
 import type * as http from "../http.js";
 import type * as lib_aggregates from "../lib/aggregates.js";
 import type * as lib_applyDonationToCampaign from "../lib/applyDonationToCampaign.js";
@@ -92,6 +93,7 @@ declare const fullApi: ApiFromModules<{
   engagement: typeof engagement;
   fixedOtpCleanup: typeof fixedOtpCleanup;
   funds: typeof funds;
+  groups: typeof groups;
   http: typeof http;
   "lib/aggregates": typeof lib_aggregates;
   "lib/applyDonationToCampaign": typeof lib_applyDonationToCampaign;

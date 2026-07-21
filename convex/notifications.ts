@@ -27,7 +27,11 @@ interface ThreadItem {
   isEditRequest: boolean;
 }
 
-function toNotification(n: Doc<"notifications">, relatedEntityTitle: string | null) {
+function toNotification(
+  n: Doc<"notifications">,
+  relatedEntityTitle: string | null,
+  deletable: boolean,
+) {
   return {
     id: n._id,
     type: n.type,
@@ -39,6 +43,7 @@ function toNotification(n: Doc<"notifications">, relatedEntityTitle: string | nu
     createdAt: n.createdAt,
     senderId: n.senderId,
     isEditRequest: n.isEditRequest ?? false,
+    deletable,
   };
 }
 
@@ -68,6 +73,42 @@ async function campaignTitleResolver(ctx: QueryCtx) {
     cache.set(slug, title);
     return title;
   };
+}
+
+/** Cached per-query lookup of a campaign's current status by slug — used
+ * only to decide whether an isEditRequest admin_message is still an active,
+ * unresolved change request (see isDeletableByRecipient below). */
+function campaignStatusResolver(ctx: QueryCtx) {
+  const cache = new Map<string, string | null>();
+  return async (slug: string): Promise<string | null> => {
+    const cached = cache.get(slug);
+    if (cached !== undefined) return cached;
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    const status = campaign?.status ?? null;
+    cache.set(slug, status);
+    return status;
+  };
+}
+
+/** PROTECTED (not deletable by the recipient): an unresolved change-request
+ * from an admin — isEditRequest admin_message whose campaign is still
+ * "changes_requested". Both ways out of that status move it off this list:
+ * the owner resubmitting (campaignCreator.resubmit -> "pending") or an admin
+ * closing it out directly (campaigns.approve/reject, which operate on any
+ * isUnderReview campaign, not just "pending"). Every other notification —
+ * including a resolved isEditRequest message — is plain informational and
+ * always deletable from the recipient's own view. */
+async function isDeletableByRecipient(
+  n: Doc<"notifications">,
+  resolveCampaignStatus: (slug: string) => Promise<string | null>,
+): Promise<boolean> {
+  if (n.type !== "admin_message" || !n.isEditRequest) return true;
+  if (n.relatedEntityType !== "campaign" || !n.relatedEntityId) return true;
+  const status = await resolveCampaignStatus(n.relatedEntityId);
+  return status !== "changes_requested";
 }
 
 /** Cursor-paginated, newest first — mirrors campaigns.listPaginated's
@@ -103,13 +144,15 @@ export const list = query({
 
     const page = mine.slice(start, start + limit);
     const resolveCampaignTitle = await campaignTitleResolver(ctx);
+    const resolveCampaignStatus = campaignStatusResolver(ctx);
     const items = await Promise.all(
       page.map(async (n) => {
         const title =
           n.relatedEntityType === "campaign" && n.relatedEntityId
             ? await resolveCampaignTitle(n.relatedEntityId)
             : null;
-        return toNotification(n, title);
+        const deletable = await isDeletableByRecipient(n, resolveCampaignStatus);
+        return toNotification(n, title, deletable);
       }),
     );
 
@@ -157,6 +200,41 @@ export const markAllRead = mutation({
       .withIndex("by_user_read", (q) => q.eq("userId", userId).eq("read", false))
       .collect();
     await Promise.all(unread.map((n) => ctx.db.patch(n._id, { read: true })));
+    return null;
+  },
+});
+
+/** Recipient-only soft delete — hides a notification from the owner's own
+ * bell/list (same deletedAt/deletedBy fields and every-read-path exclusion
+ * as the admin's deleteMessage below), while leaving the row intact for the
+ * admin thread/audit trail. Blocked on an unresolved change-request — see
+ * isDeletableByRecipient — so a user can't dismiss a "please fix this"
+ * message before actually dealing with it. */
+export const deleteMine = mutation({
+  args: { notificationId: v.id("notifications") },
+  handler: async (ctx, args) => {
+    const { userId } = await requireCurrentUser(ctx);
+    const notification = await ctx.db.get(args.notificationId);
+    if (!notification || notification.userId !== userId) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Notification not found." });
+    }
+    if (notification.deletedAt) {
+      return null;
+    }
+
+    const resolveCampaignStatus = campaignStatusResolver(ctx);
+    const deletable = await isDeletableByRecipient(notification, resolveCampaignStatus);
+    if (!deletable) {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "This can be dismissed once it's resolved.",
+      });
+    }
+
+    await ctx.db.patch(args.notificationId, {
+      deletedAt: Date.now(),
+      deletedBy: userId,
+    });
     return null;
   },
 });
