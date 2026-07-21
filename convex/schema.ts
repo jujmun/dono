@@ -182,6 +182,11 @@ export default defineSchema({
     body: v.string(),
     createdAt: v.number(),
     emailSentAt: v.optional(v.number()),
+    /** Soft delete — same pattern as notifications.deletedAt. Filtered out
+     * of the student's own "Review feedback" list and the merged admin
+     * thread; the row itself is kept for the audit trail. */
+    deletedAt: v.optional(v.number()),
+    deletedBy: v.optional(v.id("users")),
   })
     .index("by_campaign", ["campaignId"])
     .index("by_student", ["studentUserId"])

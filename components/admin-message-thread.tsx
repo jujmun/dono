@@ -69,6 +69,7 @@ export function AdminMessageThread({
   const thread = useQuery(api.notifications.listThreadWithUser, { userId });
   const sendFromAdmin = useMutation(api.notifications.sendFromAdmin);
   const deleteMessage = useMutation(api.notifications.deleteMessage);
+  const deleteReviewMessage = useMutation(api.reviewMessages.deleteReviewMessage);
 
   const [body, setBody] = useState("");
   const [requestChanges, setRequestChanges] = useState(false);
@@ -77,11 +78,17 @@ export function AdminMessageThread({
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
   const [deletingId, setDeletingId] = useState<string | null>(null);
 
-  const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string, kind: "message" | "review_note") => {
     setError(null);
     setDeletingId(id);
     try {
-      await deleteMessage({ notificationId: id as Id<"notifications"> });
+      if (kind === "review_note") {
+        await deleteReviewMessage({
+          messageId: id as Id<"campaignReviewMessages">,
+        });
+      } else {
+        await deleteMessage({ notificationId: id as Id<"notifications"> });
+      }
     } catch (err) {
       setError(getFriendlyAuthError(err));
     } finally {
@@ -150,29 +157,60 @@ export function AdminMessageThread({
                       </View>
                     );
                   }
+                  const confirming = confirmDeleteId === message.id;
                   if (message.type === "review_note") {
                     return (
                       <View
                         key={message.id}
                         className="rounded-xl border border-dono-border bg-dono-surface-muted/60 px-4 py-3"
                       >
-                        <View className="flex-row flex-wrap items-center gap-2">
-                          <View className="rounded-md bg-dono-ink/10 px-1.5 py-0.5">
-                            <Text className="text-[10px] font-retro-bold uppercase text-dono-muted">
-                              Moderation note
+                        <View className="flex-row flex-wrap items-center justify-between gap-2">
+                          <View className="flex-row flex-wrap items-center gap-2">
+                            <View className="rounded-md bg-dono-ink/10 px-1.5 py-0.5">
+                              <Text className="text-[10px] font-retro-bold uppercase text-dono-muted">
+                                Moderation note
+                              </Text>
+                            </View>
+                            <Text className="text-xs text-dono-muted">
+                              {message.senderName} · {formatMessageTime(message.createdAt)}
                             </Text>
                           </View>
-                          <Text className="text-xs text-dono-muted">
-                            {message.senderName} · {formatMessageTime(message.createdAt)}
-                          </Text>
+                          <Pressable
+                            onPress={() =>
+                              setConfirmDeleteId(confirming ? null : message.id)
+                            }
+                            accessibilityLabel="Delete moderation note"
+                            className="h-6 w-6 items-center justify-center rounded-full"
+                          >
+                            <Trash2 size={13} color="#56615A" />
+                          </Pressable>
                         </View>
                         <Text className="mt-1.5 text-sm text-dono-text">
                           {message.message}
                         </Text>
+                        {confirming ? (
+                          <View className="mt-2 flex-row items-center justify-end gap-3 border-t border-dono-border/60 pt-2">
+                            <Text className="flex-1 text-xs text-dono-muted">
+                              Delete this moderation note for good?
+                            </Text>
+                            <Pressable onPress={() => setConfirmDeleteId(null)}>
+                              <Text className="text-xs font-retro-bold text-dono-muted">
+                                Cancel
+                              </Text>
+                            </Pressable>
+                            <Pressable
+                              onPress={() => void handleDelete(message.id, "review_note")}
+                              disabled={deletingId === message.id}
+                            >
+                              <Text className="text-xs font-retro-bold text-rose-700">
+                                {deletingId === message.id ? "Deleting..." : "Delete"}
+                              </Text>
+                            </Pressable>
+                          </View>
+                        ) : null}
                       </View>
                     );
                   }
-                  const confirming = confirmDeleteId === message.id;
                   return (
                     <View
                       key={message.id}
@@ -218,7 +256,7 @@ export function AdminMessageThread({
                             </Text>
                           </Pressable>
                           <Pressable
-                            onPress={() => void handleDelete(message.id)}
+                            onPress={() => void handleDelete(message.id, "message")}
                             disabled={deletingId === message.id}
                           >
                             <Text className="text-xs font-retro-bold text-rose-700">
