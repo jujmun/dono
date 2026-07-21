@@ -13,6 +13,7 @@ import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminStatsNav } from "@/components/admin-stats-nav";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
+import { ReviewTypeToggle, type ReviewType } from "@/components/review-type-toggle";
 import { AdminStatusChip } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
@@ -38,15 +39,16 @@ export default function AdminDiscoverPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
   const adminUser = isPortalAdmin(profile);
+  const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();
   const campaigns = (useQuery(
     api.campaigns.list,
-    adminUser ? {} : "skip",
+    adminUser && reviewType === "campaigns" ? {} : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const societies = useQuery(
     api.societies.listActiveForAdmin,
-    adminUser ? {} : "skip",
+    adminUser && reviewType === "societies" ? {} : "skip",
   ) as AdminSociety[] | undefined;
 
   const liveCampaigns = [...(campaigns ?? []).filter((c) =>
@@ -83,12 +85,18 @@ export default function AdminDiscoverPage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="live" />
 
+        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />
           <TextInput
             value={search}
             onChangeText={setSearch}
-            placeholder="Search by name or title…"
+            placeholder={
+              reviewType === "campaigns"
+                ? "Search by name or title…"
+                : "Search by society name…"
+            }
             placeholderTextColor="#56615A"
             className="flex-1 py-2 text-sm text-dono-text"
             autoCapitalize="none"
@@ -96,7 +104,7 @@ export default function AdminDiscoverPage() {
           />
         </View>
 
-        <View className="gap-8">
+        {reviewType === "campaigns" ? (
           <View>
             <Text className="mb-4 text-lg font-retro-bold text-dono-text">
               {trimmedSearch ? "Matching posts" : "All live posts"}
@@ -121,7 +129,7 @@ export default function AdminDiscoverPage() {
               />
             )}
           </View>
-
+        ) : (
           <View>
             <Text className="mb-4 text-lg font-retro-bold text-dono-text">
               {trimmedSearch ? "Matching societies" : "All live societies"}
@@ -173,7 +181,7 @@ export default function AdminDiscoverPage() {
               </View>
             )}
           </View>
-        </View>
+        )}
       </View>
     </AdminShell>
   );

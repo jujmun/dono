@@ -145,7 +145,7 @@ export default function AdminCampaignReviewPage() {
           <Link href={"/admin" as Href} asChild>
             <Pressable className="mt-4 items-center">
               <Text className="font-retro-bold text-dono-primary">
-                Back to waiting posts
+                Back to pending posts
               </Text>
             </Pressable>
           </Link>
@@ -174,7 +174,7 @@ export default function AdminCampaignReviewPage() {
       ? ("/admin/archive" as Href)
       : ("/admin/discover" as Href);
   const backLabel = underReview
-    ? "Back to waiting posts"
+    ? "Back to pending posts"
     : moderated
       ? "Back to removed"
       : "Back to live posts";
