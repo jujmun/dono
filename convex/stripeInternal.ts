@@ -4,9 +4,11 @@ import { internal } from "./_generated/api";
 import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
 import {
   DONATION_CURRENCY,
+  donationAmountToStripeMinorUnits,
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
+import { calculateApplicationFeeMinor } from "./lib/platformFee";
 import { getProfileByUserId } from "./lib/authz";
 import { isAdminIdentityEmail } from "./auth/adminConfig";
 import { getRecurringDonationForUserHandler } from "./lib/stripeOwnership";
@@ -103,6 +105,75 @@ export const getCampaignForDonation = internalQuery({
       campaignId: campaign._id,
       campaignSlug: campaign.slug,
       title: campaign.title,
+      communitySlug: campaign.creator.communityId,
+    };
+  },
+});
+
+export const resolveCampaignMerchantAccount = internalQuery({
+  args: { campaignSlug: v.string() },
+  handler: async (ctx, args) => {
+    const normalizedSlug = normalizeCampaignSlug(args.campaignSlug);
+    if (!normalizedSlug) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Campaign is required.",
+      });
+    }
+
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", normalizedSlug))
+      .unique();
+
+    if (!campaign) {
+      throw new ConvexError({
+        code: "CAMPAIGN_NOT_FOUND",
+        message: "Campaign not found.",
+      });
+    }
+
+    if (campaign.status !== "active") {
+      throw new ConvexError({
+        code: "CAMPAIGN_NOT_ACTIVE",
+        message: "This campaign is not accepting donations.",
+      });
+    }
+
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) =>
+        q.eq("communitySlug", campaign.creator.communityId),
+      )
+      .first();
+
+    if (!connectAccount) {
+      throw new ConvexError({
+        code: "CONNECT_NOT_READY",
+        message: "The beneficiary society has not set up Stripe payments yet.",
+      });
+    }
+
+    if (connectAccount.accountVersion !== "v2") {
+      throw new ConvexError({
+        code: "CONNECT_NOT_READY",
+        message: "The beneficiary society must complete the new Stripe payment setup.",
+      });
+    }
+
+    if (!(connectAccount.cardPaymentsActive ?? connectAccount.chargesEnabled)) {
+      throw new ConvexError({
+        code: "CHARGES_DISABLED",
+        message: "The beneficiary society is still completing Stripe payment setup.",
+      });
+    }
+
+    return {
+      campaignId: campaign._id,
+      campaignSlug: campaign.slug,
+      title: campaign.title,
+      communitySlug: campaign.creator.communityId,
+      stripeAccountId: connectAccount.stripeAccountId,
     };
   },
 });
@@ -150,6 +221,9 @@ export const createPendingDonation = internalMutation({
     campaignId: v.id("campaigns"),
     amount: v.number(),
     stripePaymentIntentId: v.string(),
+    stripeConnectedAccountId: v.string(),
+    grossAmountMinor: v.number(),
+    applicationFeeAmountMinor: v.number(),
   },
   handler: async (ctx, args) => {
     const amountValidation = validateDonationAmount(args.amount);
@@ -170,6 +244,11 @@ export const createPendingDonation = internalMutation({
       type: "one_time",
       paymentStatus: "pending",
       stripePaymentIntentId: args.stripePaymentIntentId,
+      stripeConnectedAccountId: args.stripeConnectedAccountId,
+      grossAmountMinor: args.grossAmountMinor,
+      applicationFeeAmountMinor: args.applicationFeeAmountMinor,
+      applicationFeeRefundedMinor: 0,
+      refundedAmountMinor: 0,
       createdAt: Date.now(),
     });
   },
@@ -227,7 +306,11 @@ export const recordWebhookEvent = internalMutation({
 });
 
 export const markDonationSucceeded = internalMutation({
-  args: { stripePaymentIntentId: v.string() },
+  args: {
+    stripePaymentIntentId: v.string(),
+    stripeChargeId: v.optional(v.string()),
+    stripeConnectedAccountId: v.optional(v.string()),
+  },
   handler: async (ctx, args) => {
     const donation = await ctx.db
       .query("donations")
@@ -238,6 +321,17 @@ export const markDonationSucceeded = internalMutation({
 
     if (!donation) {
       return { alreadyProcessed: true };
+    }
+
+    if (
+      donation.stripeConnectedAccountId &&
+      args.stripeConnectedAccountId &&
+      donation.stripeConnectedAccountId !== args.stripeConnectedAccountId
+    ) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "Connected account mismatch for donation.",
+      });
     }
 
     if (donation.fundId) {
@@ -260,7 +354,10 @@ export const markDonationSucceeded = internalMutation({
       });
     }
 
-    await ctx.db.patch(donation._id, { paymentStatus: "succeeded" });
+    await ctx.db.patch(donation._id, {
+      paymentStatus: "succeeded",
+      ...(args.stripeChargeId ? { stripeChargeId: args.stripeChargeId } : {}),
+    });
 
     const wasFunded = campaign.raised >= campaign.goal;
     const { raised, donors, status } = computeCampaignAfterDonation(
@@ -526,6 +623,83 @@ export const getRecurringDonationForUser = internalQuery({
 });
 
 export const markDonationRefunded = internalMutation({
+  args: {
+    stripePaymentIntentId: v.string(),
+    refundedAmountMinor: v.number(),
+    isFullRefund: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const donation = await ctx.db
+      .query("donations")
+      .withIndex("by_paymentIntent", (q) =>
+        q.eq("stripePaymentIntentId", args.stripePaymentIntentId),
+      )
+      .unique();
+
+    if (
+      !donation ||
+      donation.paymentStatus === "refunded" ||
+      donation.paymentStatus === "failed"
+    ) {
+      return { updated: false, applicationFeeRefundMinor: 0 };
+    }
+
+    const grossAmountMinor =
+      donation.grossAmountMinor ?? donationAmountToStripeMinorUnits(donation.amount);
+    const previousRefundedMinor = donation.refundedAmountMinor ?? 0;
+    const nextRefundedMinor = Math.max(previousRefundedMinor, args.refundedAmountMinor);
+    const incrementalRefundMinor = nextRefundedMinor - previousRefundedMinor;
+
+    if (incrementalRefundMinor <= 0) {
+      return { updated: false, applicationFeeRefundMinor: 0 };
+    }
+
+    const previousFeeRefundedMinor = donation.applicationFeeRefundedMinor ?? 0;
+    const targetFeeRefundedMinor = calculateApplicationFeeMinor(nextRefundedMinor);
+    const applicationFeeRefundMinor = Math.max(
+      0,
+      targetFeeRefundedMinor - previousFeeRefundedMinor,
+    );
+
+    const isFullyRefunded =
+      args.isFullRefund || nextRefundedMinor >= grossAmountMinor;
+
+    const priorPaymentStatus = donation.paymentStatus;
+
+    await ctx.db.patch(donation._id, {
+      paymentStatus: isFullyRefunded ? "refunded" : "partially_refunded",
+      refundedAmountMinor: nextRefundedMinor,
+      applicationFeeRefundedMinor:
+        previousFeeRefundedMinor + applicationFeeRefundMinor,
+    });
+
+    if (
+      donation.campaignId &&
+      (priorPaymentStatus === "succeeded" ||
+        priorPaymentStatus === "partially_refunded")
+    ) {
+      const campaign = await ctx.db.get(donation.campaignId);
+      if (campaign) {
+        const refundPounds = incrementalRefundMinor / 100;
+        await ctx.db.patch(campaign._id, {
+          raised: Math.max(0, campaign.raised - refundPounds),
+          donors: isFullyRefunded
+            ? Math.max(0, campaign.donors - 1)
+            : campaign.donors,
+        });
+        await incrementCommunityRaised(
+          ctx,
+          campaign.creator.communityId,
+          -refundPounds,
+        );
+      }
+    }
+
+    return { updated: true, applicationFeeRefundMinor };
+  },
+});
+
+export const markDonationDisputeOpened = internalMutation({
   args: { stripePaymentIntentId: v.string() },
   handler: async (ctx, args) => {
     const donation = await ctx.db
@@ -535,28 +709,91 @@ export const markDonationRefunded = internalMutation({
       )
       .unique();
 
-    if (!donation || donation.paymentStatus !== "succeeded") {
+    if (!donation || donation.disputeStatus === "open") {
       return { updated: false };
     }
 
-    await ctx.db.patch(donation._id, { paymentStatus: "refunded" });
+    await ctx.db.patch(donation._id, { disputeStatus: "open" });
+    return { updated: true };
+  },
+});
 
-    if (donation.campaignId) {
+export const markDonationDisputeClosed = internalMutation({
+  args: {
+    stripePaymentIntentId: v.string(),
+    status: v.union(v.literal("won"), v.literal("lost")),
+    refundedAmountMinor: v.optional(v.number()),
+    isFullRefund: v.optional(v.boolean()),
+  },
+  handler: async (ctx, args) => {
+    const donation = await ctx.db
+      .query("donations")
+      .withIndex("by_paymentIntent", (q) =>
+        q.eq("stripePaymentIntentId", args.stripePaymentIntentId),
+      )
+      .unique();
+
+    if (!donation) {
+      return { updated: false, applicationFeeRefundMinor: 0 };
+    }
+
+    await ctx.db.patch(donation._id, { disputeStatus: args.status });
+
+    if (args.status !== "lost" || args.refundedAmountMinor == null) {
+      return { updated: true, applicationFeeRefundMinor: 0 };
+    }
+
+    const grossAmountMinor =
+      donation.grossAmountMinor ?? donationAmountToStripeMinorUnits(donation.amount);
+    const previousRefundedMinor = donation.refundedAmountMinor ?? 0;
+    const nextRefundedMinor = Math.max(previousRefundedMinor, args.refundedAmountMinor);
+    const incrementalRefundMinor = nextRefundedMinor - previousRefundedMinor;
+
+    if (incrementalRefundMinor <= 0) {
+      return { updated: true, applicationFeeRefundMinor: 0 };
+    }
+
+    const previousFeeRefundedMinor = donation.applicationFeeRefundedMinor ?? 0;
+    const targetFeeRefundedMinor = calculateApplicationFeeMinor(nextRefundedMinor);
+    const applicationFeeRefundMinor = Math.max(
+      0,
+      targetFeeRefundedMinor - previousFeeRefundedMinor,
+    );
+    const isFullyRefunded =
+      args.isFullRefund ?? nextRefundedMinor >= grossAmountMinor;
+
+    const priorPaymentStatus = donation.paymentStatus;
+
+    await ctx.db.patch(donation._id, {
+      paymentStatus: isFullyRefunded ? "refunded" : "partially_refunded",
+      refundedAmountMinor: nextRefundedMinor,
+      applicationFeeRefundedMinor:
+        previousFeeRefundedMinor + applicationFeeRefundMinor,
+    });
+
+    if (
+      donation.campaignId &&
+      (priorPaymentStatus === "succeeded" ||
+        priorPaymentStatus === "partially_refunded")
+    ) {
       const campaign = await ctx.db.get(donation.campaignId);
       if (campaign) {
+        const refundPounds = incrementalRefundMinor / 100;
         await ctx.db.patch(campaign._id, {
-          raised: Math.max(0, campaign.raised - donation.amount),
-          donors: Math.max(0, campaign.donors - 1),
+          raised: Math.max(0, campaign.raised - refundPounds),
+          donors: isFullyRefunded
+            ? Math.max(0, campaign.donors - 1)
+            : campaign.donors,
         });
         await incrementCommunityRaised(
           ctx,
           campaign.creator.communityId,
-          -donation.amount,
+          -refundPounds,
         );
       }
     }
 
-    return { updated: true };
+    return { updated: true, applicationFeeRefundMinor };
   },
 });
 

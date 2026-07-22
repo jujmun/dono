@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -9,12 +9,133 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { useAction } from "convex/react";
-import { useStripe } from "@stripe/stripe-react-native";
+import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
 import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { DonateAnonymouslyToggle } from "@/components/donate-anonymously-toggle";
 import type { DonateSheetProps } from "./donate-sheet-types";
+
+const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
+
+function ConnectedPaymentForm({
+  campaignId,
+  campaignTitle,
+  selectedAmount,
+  frequency,
+  clientSecret,
+  paymentIntentId,
+  donorEmail,
+  onClose,
+  onSuccess,
+  onPaymentCompleted,
+}: DonateSheetProps & {
+  clientSecret: string;
+  paymentIntentId: string;
+  onPaymentCompleted: () => void;
+}) {
+  const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
+  const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
+  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const posthog = usePostHog();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [sheetReady, setSheetReady] = useState(false);
+
+  const donationType = frequency === "monthly" ? "recurring" : "one_time";
+
+  useEffect(() => {
+    let cancelled = false;
+    setSheetReady(false);
+    void initPaymentSheet({
+      paymentIntentClientSecret: clientSecret,
+      merchantDisplayName: "Dono",
+      returnURL: "dono://stripe-redirect",
+    }).then((result) => {
+      if (!cancelled) {
+        setSheetReady(!result.error);
+        if (result.error) {
+          setError(result.error.message);
+        }
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [clientSecret, initPaymentSheet]);
+
+  const handleDonate = async () => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      posthog?.capture("donation_started", {
+        campaign_id: campaignId,
+        campaign_title: campaignTitle,
+        amount: selectedAmount,
+        donation_type: donationType,
+      });
+
+      const presentResult = await presentPaymentSheet();
+      if (presentResult.error) {
+        if (presentResult.error.code === "Canceled") {
+          if (frequency === "one_time") {
+            await abandonPaymentIntent({
+              paymentIntentId,
+              donorEmail: donorEmail.trim() || undefined,
+            });
+          }
+          return;
+        }
+        throw new Error(presentResult.error.message);
+      }
+
+      posthog?.capture("donation_completed", {
+        campaign_id: campaignId,
+        campaign_title: campaignTitle,
+        amount: selectedAmount,
+        donation_type: donationType,
+      });
+
+      let pendingConfirmation = false;
+      if (frequency === "one_time") {
+        try {
+          await confirmOneTimeDonation({ paymentIntentId });
+        } catch {
+          pendingConfirmation = true;
+        }
+      }
+
+      onPaymentCompleted();
+      onSuccess(
+        selectedAmount,
+        pendingConfirmation ? { pendingConfirmation: true } : undefined,
+      );
+      onClose();
+    } catch (err) {
+      setError(getFriendlyPaymentError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <>
+      {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
+      <Pressable
+        onPress={() => void handleDonate()}
+        disabled={loading || !sheetReady}
+        className="mt-6 flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+      >
+        {loading || !sheetReady ? (
+          <ActivityIndicator color="#fff" />
+        ) : (
+          <Text className="font-retro-bold text-sm text-white">Continue to payment</Text>
+        )}
+      </Pressable>
+    </>
+  );
+}
 
 export function DonateSheet({
   visible,
@@ -34,117 +155,160 @@ export function DonateSheet({
   const createRecurringDonationSubscription = useAction(
     api.stripe.createRecurringDonationSubscription,
   );
-  const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
-  const posthog = usePostHog();
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const paymentCompletedRef = useRef(false);
+  const activePaymentIntentIdRef = useRef<string | null>(null);
+  const donorEmailRef = useRef(donorEmail);
 
-  const donationType = frequency === "monthly" ? "recurring" : "one_time";
+  donorEmailRef.current = donorEmail;
+
   const frequencyLabel =
     frequency === "monthly" ? "Monthly donation" : "One-time donation";
   const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
 
-  const abandonOneTimePayment = async (paymentIntentId: string) => {
-    await abandonPaymentIntent({
-      paymentIntentId,
-      donorEmail: donorEmail.trim() || undefined,
+  const abandonActivePaymentIntent = () => {
+    const piId = activePaymentIntentIdRef.current;
+    if (!piId || paymentCompletedRef.current || frequency !== "one_time") {
+      return;
+    }
+    void abandonPaymentIntent({
+      paymentIntentId: piId,
+      donorEmail: donorEmailRef.current.trim() || undefined,
     });
+    activePaymentIntentIdRef.current = null;
   };
 
-  const handleDonate = async () => {
-    if (monthlyBlockedForGuest) return;
+  useEffect(() => {
+    if (!visible) {
+      abandonActivePaymentIntent();
+      paymentCompletedRef.current = false;
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setStripeAccountId(null);
+      setError(null);
+      return;
+    }
 
+    if (monthlyBlockedForGuest) {
+      setClientSecret(null);
+      setPaymentIntentId(null);
+      setStripeAccountId(null);
+      setLoading(false);
+      setError(null);
+      return;
+    }
+
+    let cancelled = false;
+    paymentCompletedRef.current = false;
     setLoading(true);
     setError(null);
 
-    let paymentIntentId: string | undefined;
+    const createPayment =
+      frequency === "monthly"
+        ? createRecurringDonationSubscription({
+            campaignSlug: campaignId,
+            amount: selectedAmount,
+          })
+        : createPaymentIntent({
+            campaignSlug: campaignId,
+            amount: selectedAmount,
+            donorEmail: donorEmailRef.current.trim() || undefined,
+            anonymous: donateAnonymously,
+          });
 
-    try {
-      posthog?.capture("donation_started", {
-        campaign_id: campaignId,
-        campaign_title: campaignTitle,
-        amount: selectedAmount,
-        donation_type: donationType,
-      });
+    void createPayment
+      .then((result) => {
+        const piId =
+          "paymentIntentId" in result && result.paymentIntentId
+            ? result.paymentIntentId
+            : null;
 
-      const paymentResult =
-        frequency === "monthly"
-          ? await createRecurringDonationSubscription({
-              campaignSlug: campaignId,
-              amount: selectedAmount,
-            })
-          : await createPaymentIntent({
-              campaignSlug: campaignId,
-              amount: selectedAmount,
-              donorEmail: donorEmail.trim() || undefined,
-              anonymous: donateAnonymously,
+        if (cancelled) {
+          if (piId && frequency === "one_time") {
+            void abandonPaymentIntent({
+              paymentIntentId: piId,
+              donorEmail: donorEmailRef.current.trim() || undefined,
             });
-
-      if ("paymentIntentId" in paymentResult && paymentResult.paymentIntentId) {
-        paymentIntentId = paymentResult.paymentIntentId;
-      }
-
-      const clientSecret = paymentResult.clientSecret;
-
-      const initResult = await initPaymentSheet({
-        paymentIntentClientSecret: clientSecret,
-        merchantDisplayName: "Dono",
-        returnURL: "dono://stripe-redirect",
-      });
-
-      if (initResult.error) {
-        throw new Error(initResult.error.message);
-      }
-
-      const presentResult = await presentPaymentSheet();
-      if (presentResult.error) {
-        if (presentResult.error.code === "Canceled") {
-          if (paymentIntentId && frequency === "one_time") {
-            await abandonOneTimePayment(paymentIntentId);
           }
           return;
         }
-        throw new Error(presentResult.error.message);
-      }
 
-      posthog?.capture("donation_completed", {
-        campaign_id: campaignId,
-        campaign_title: campaignTitle,
-        amount: selectedAmount,
-        donation_type: donationType,
+        setClientSecret(result.clientSecret);
+        if (piId) {
+          setPaymentIntentId(piId);
+          activePaymentIntentIdRef.current = piId;
+        }
+        if ("stripeAccountId" in result && result.stripeAccountId) {
+          setStripeAccountId(result.stripeAccountId);
+        }
+      })
+      .catch((err) => {
+        if (!cancelled) {
+          setError(getFriendlyPaymentError(err));
+        }
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setLoading(false);
+        }
       });
 
-      let pendingConfirmation = false;
-      if (paymentIntentId && frequency === "one_time") {
-        try {
-          await confirmOneTimeDonation({
-            paymentIntentId,
-          });
-        } catch {
-          pendingConfirmation = true;
-        }
-      }
+    return () => {
+      cancelled = true;
+      abandonActivePaymentIntent();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
+  }, [
+    visible,
+    campaignId,
+    selectedAmount,
+    frequency,
+    monthlyBlockedForGuest,
+    donateAnonymously,
+    createPaymentIntent,
+    createRecurringDonationSubscription,
+    abandonPaymentIntent,
+  ]);
 
-      onSuccess(
-        selectedAmount,
-        pendingConfirmation ? { pendingConfirmation: true } : undefined,
-      );
-      onClose();
-    } catch (err) {
-      if (paymentIntentId && frequency === "one_time") {
-        try {
-          await abandonOneTimePayment(paymentIntentId);
-        } catch {
-          // Ignore abandon failures; surface the original payment error.
-        }
-      }
-      setError(getFriendlyPaymentError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
+  const paymentForm =
+    clientSecret && paymentIntentId && stripeAccountId ? (
+      <StripeProvider
+        key={stripeAccountId}
+        publishableKey={publishableKey}
+        merchantIdentifier="merchant.com.dono.app"
+        stripeAccountId={stripeAccountId}
+      >
+        <ConnectedPaymentForm
+          visible={visible}
+          campaignId={campaignId}
+          campaignTitle={campaignTitle}
+          selectedAmount={selectedAmount}
+          frequency={frequency}
+          isAuthenticated={isAuthenticated}
+          donorEmail={donorEmail}
+          onDonorEmailChange={onDonorEmailChange}
+          donateAnonymously={donateAnonymously}
+          onDonateAnonymouslyChange={onDonateAnonymouslyChange}
+          onClose={onClose}
+          onSuccess={onSuccess}
+          clientSecret={clientSecret}
+          paymentIntentId={paymentIntentId}
+          onPaymentCompleted={() => {
+            paymentCompletedRef.current = true;
+            activePaymentIntentIdRef.current = null;
+          }}
+        />
+      </StripeProvider>
+    ) : frequency === "monthly" && clientSecret ? (
+      <Text className="mt-4 text-sm text-dono-muted">
+        Monthly donations on native are not yet supported in this build.
+      </Text>
+    ) : null;
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -190,24 +354,18 @@ export function DonateSheet({
                 </Pressable>
               </Link>
             </View>
+          ) : loading ? (
+            <View className="mt-6 items-center py-4">
+              <ActivityIndicator color="#17211B" />
+            </View>
+          ) : error ? (
+            <Text className="mt-4 text-sm text-red-600">{error}</Text>
+          ) : publishableKey ? (
+            paymentForm
           ) : (
-            <>
-              {error ? (
-                <Text className="mt-4 text-sm text-red-600">{error}</Text>
-              ) : null}
-
-              <Pressable
-                onPress={() => void handleDonate()}
-                disabled={loading}
-                className="mt-6 flex-row items-center justify-center rounded-full bg-dono-accent py-3"
-              >
-                {loading ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text className="font-retro-bold text-sm text-white">Continue to payment</Text>
-                )}
-              </Pressable>
-            </>
+            <Text className="mt-4 text-sm text-dono-muted">
+              Stripe is not configured for this environment.
+            </Text>
           )}
 
           <Pressable onPress={onClose} className="mt-3 items-center py-2">

@@ -2,23 +2,20 @@
 
 import { ConvexError, v } from "convex/values";
 import Stripe from "stripe";
-import { action } from "./_generated/server";
+import { action, type ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { getAuthUserId } from "@convex-dev/auth/server";
+import {
+  buildV2MerchantAccountCreateParams,
+  buildV2MerchantOnboardingLinkParams,
+  parseV2ConnectAccountStatus,
+} from "./lib/stripeConnectMerchant";
 
 type ConnectAccountRecord = {
   _id: Id<"stripeConnectAccounts">;
   stripeAccountId: string;
-  payoutsEnabled: boolean;
-};
-
-type ScheduledPayout = {
-  payoutId: Id<"campaignPayouts">;
-  campaignId: Id<"campaigns">;
-  stripeConnectAccountId: Id<"stripeConnectAccounts">;
-  amount: number;
-  currency: string;
+  accountVersion?: "v1" | "v2";
 };
 
 function getStripeClient() {
@@ -30,6 +27,51 @@ function getStripeClient() {
     });
   }
   return new Stripe(secretKey);
+}
+
+async function assertSocietyConnectAccess(
+  ctx: ActionCtx,
+  userId: Id<"users">,
+  communitySlug?: string,
+) {
+  if (!communitySlug) return;
+  const access = await ctx.runQuery(
+    internal.stripeConnectInternal.assertCanManageSocietyConnect,
+    { userId, communitySlug },
+  );
+  if (!access.allowed) {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "You do not have permission for this action.",
+    });
+  }
+}
+
+async function getSocietyDisplayName(ctx: ActionCtx, communitySlug: string) {
+  const society = await ctx.runQuery(internal.societies.getBySlug, {
+    slug: communitySlug,
+  });
+  return society?.name ?? communitySlug;
+}
+
+async function refreshV2AccountStatus(
+  ctx: ActionCtx,
+  stripe: Stripe,
+  stripeAccountId: string,
+) {
+  const account = await stripe.v2.core.accounts.retrieve(stripeAccountId, {
+    include: ["configuration.merchant", "requirements"],
+  });
+  const parsed = parseV2ConnectAccountStatus(account);
+  await ctx.runMutation(internal.stripeConnectInternal.updateAccountStatus, {
+    stripeAccountId,
+    onboardingComplete: parsed.onboardingComplete,
+    cardPaymentsActive: parsed.cardPaymentsActive,
+    cardPaymentsStatus: parsed.cardPaymentsStatus,
+    chargesEnabled: parsed.cardPaymentsActive,
+    payoutsEnabled: parsed.payoutsEnabled,
+  });
+  return parsed;
 }
 
 export const createConnectOnboardingLink = action({
@@ -47,56 +89,62 @@ export const createConnectOnboardingLink = action({
       });
     }
 
-    if (args.communitySlug) {
-      const access = await ctx.runQuery(
-        internal.stripeConnectInternal.assertCanManageSocietyConnect,
-        { userId, communitySlug: args.communitySlug },
-      );
-      if (!access.allowed) {
-        throw new ConvexError({
-          code: "FORBIDDEN",
-          message: "You do not have permission for this action.",
-        });
-      }
-    }
+    await assertSocietyConnectAccess(ctx, userId, args.communitySlug);
 
     const stripe = getStripeClient();
-    const existing = (await ctx.runQuery(
-      internal.stripeConnectInternal.getByUserId,
-      { userId, communitySlug: args.communitySlug },
-    )) as ConnectAccountRecord | null;
+    // Society Connect accounts are community-scoped so any authorized leader
+    // can resume the same merchant account.
+    let existing = (args.communitySlug
+      ? await ctx.runQuery(internal.stripeConnectInternal.getByCommunitySlug, {
+          communitySlug: args.communitySlug,
+        })
+      : await ctx.runQuery(internal.stripeConnectInternal.getByUserId, {
+          userId,
+          communitySlug: args.communitySlug,
+        })) as ConnectAccountRecord | null;
+
+    if (existing && existing.accountVersion !== "v2") {
+      await ctx.runMutation(internal.stripeConnectInternal.deleteAccount, {
+        connectAccountId: existing._id,
+      });
+      existing = null;
+    }
 
     let stripeAccountId: string;
     if (existing) {
       stripeAccountId = existing.stripeAccountId;
     } else {
-      const account = await stripe.accounts.create({
-        type: "express",
-        capabilities: {
-          transfers: { requested: true },
-        },
-        metadata: {
+      const displayName = args.communitySlug
+        ? await getSocietyDisplayName(ctx, args.communitySlug)
+        : "Dono society";
+      const account = await stripe.v2.core.accounts.create(
+        buildV2MerchantAccountCreateParams({
+          displayName,
           userId,
-          ...(args.communitySlug ? { communitySlug: args.communitySlug } : {}),
-        },
-      });
+          communitySlug: args.communitySlug,
+        }),
+      );
       stripeAccountId = account.id;
       await ctx.runMutation(internal.stripeConnectInternal.saveAccount, {
         userId,
         communitySlug: args.communitySlug,
         stripeAccountId,
+        accountVersion: "v2",
         onboardingComplete: false,
+        cardPaymentsActive: false,
+        cardPaymentsStatus: "unrequested",
         chargesEnabled: false,
         payoutsEnabled: false,
       });
     }
 
-    const link = await stripe.accountLinks.create({
-      account: stripeAccountId,
-      refresh_url: args.refreshUrl,
-      return_url: args.returnUrl,
-      type: "account_onboarding",
-    });
+    const link = await stripe.v2.core.accountLinks.create(
+      buildV2MerchantOnboardingLinkParams({
+        stripeAccountId,
+        returnUrl: args.returnUrl,
+        refreshUrl: args.refreshUrl,
+      }),
+    );
 
     return { url: link.url, stripeAccountId };
   },
@@ -113,54 +161,64 @@ export const refreshConnectAccountStatus = action({
       });
     }
 
-    if (args.communitySlug) {
-      const access = await ctx.runQuery(
-        internal.stripeConnectInternal.assertCanManageSocietyConnect,
-        { userId, communitySlug: args.communitySlug },
-      );
-      if (!access.allowed) {
-        throw new ConvexError({
-          code: "FORBIDDEN",
-          message: "You do not have permission for this action.",
+    await assertSocietyConnectAccess(ctx, userId, args.communitySlug);
+
+    const record = args.communitySlug
+      ? await ctx.runQuery(internal.stripeConnectInternal.getByCommunitySlug, {
+          communitySlug: args.communitySlug,
+        })
+      : await ctx.runQuery(internal.stripeConnectInternal.getByUserId, {
+          userId,
+          communitySlug: args.communitySlug,
         });
-      }
+    if (!record) {
+      return {
+        exists: false as const,
+        onboardingComplete: false,
+        chargesEnabled: false,
+        cardPaymentsActive: false,
+        cardPaymentsStatus: "unrequested" as const,
+        payoutsEnabled: false,
+        accountVersion: null,
+        requiresMerchantReonboarding: false,
+      };
     }
 
-    const record = await ctx.runQuery(internal.stripeConnectInternal.getByUserId, {
-      userId,
-      communitySlug: args.communitySlug,
-    });
-    if (!record) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Connect account not found.",
-      });
+    if (record.accountVersion !== "v2") {
+      return {
+        exists: true as const,
+        onboardingComplete: false,
+        chargesEnabled: false,
+        cardPaymentsActive: false,
+        cardPaymentsStatus: "unrequested" as const,
+        payoutsEnabled: false,
+        accountVersion: "v1" as const,
+        requiresMerchantReonboarding: true,
+      };
     }
 
     const stripe = getStripeClient();
-    const account = await stripe.accounts.retrieve(record.stripeAccountId);
-
-    await ctx.runMutation(internal.stripeConnectInternal.updateAccountStatus, {
-      stripeAccountId: record.stripeAccountId,
-      onboardingComplete: account.details_submitted ?? false,
-      chargesEnabled: account.charges_enabled ?? false,
-      payoutsEnabled: account.payouts_enabled ?? false,
-    });
+    const parsed = await refreshV2AccountStatus(ctx, stripe, record.stripeAccountId);
 
     return {
-      onboardingComplete: account.details_submitted ?? false,
-      chargesEnabled: account.charges_enabled ?? false,
-      payoutsEnabled: account.payouts_enabled ?? false,
+      exists: true as const,
+      onboardingComplete: parsed.onboardingComplete,
+      chargesEnabled: parsed.cardPaymentsActive,
+      cardPaymentsActive: parsed.cardPaymentsActive,
+      cardPaymentsStatus: parsed.cardPaymentsStatus,
+      payoutsEnabled: parsed.payoutsEnabled,
+      accountVersion: "v2" as const,
+      requiresMerchantReonboarding: false,
     };
   },
 });
 
-export const scheduleCampaignPayout = action({
-  args: {
-    campaignSlug: v.string(),
-    communitySlug: v.optional(v.string()),
-  },
-  handler: async (ctx, args): Promise<{ transferId: string; amount: number }> => {
+export const createConnectDashboardLink = action({
+  args: { communitySlug: v.string() },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{ url: string; loginEmail: string | null }> => {
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError({
@@ -169,49 +227,46 @@ export const scheduleCampaignPayout = action({
       });
     }
 
-    const payout = (await ctx.runMutation(
-      internal.stripeConnectInternal.schedulePayout,
-      {
-        campaignSlug: args.campaignSlug,
-        communitySlug: args.communitySlug,
-        requestedBy: userId,
-      },
-    )) as ScheduledPayout | null;
+    await assertSocietyConnectAccess(ctx, userId, args.communitySlug);
 
-    if (!payout) {
+    const record = await ctx.runQuery(
+      internal.stripeConnectInternal.getByCommunitySlug,
+      { communitySlug: args.communitySlug },
+    );
+    if (!record) {
       throw new ConvexError({
-        code: "PAYOUT_NOT_ELIGIBLE",
-        message: "Campaign is not eligible for payout.",
+        code: "NOT_FOUND",
+        message: "Connect account not found.",
       });
     }
-
-    const stripe = getStripeClient();
-    const connectAccount = (await ctx.runQuery(
-      internal.stripeConnectInternal.getById,
-      { connectAccountId: payout.stripeConnectAccountId },
-    )) as ConnectAccountRecord | null;
-    if (!connectAccount?.payoutsEnabled) {
+    if (record.accountVersion !== "v2" || !record.cardPaymentsActive) {
       throw new ConvexError({
         code: "CONNECT_NOT_READY",
-        message: "Stripe Connect onboarding must be completed first.",
+        message: "This society must complete the new Stripe payment setup.",
       });
     }
 
-    const transfer = await stripe.transfers.create({
-      amount: Math.round(payout.amount * 100),
-      currency: payout.currency,
-      destination: connectAccount.stripeAccountId,
-      metadata: {
-        campaignId: payout.campaignId,
-        payoutId: payout.payoutId,
-      },
-    });
+    // Full-Dashboard Accounts v2 cannot use Express createLoginLink.
+    // Society leaders sign into the standard Stripe Dashboard with the email
+    // used during Connect onboarding.
+    const FULL_DASHBOARD_LOGIN_URL = "https://dashboard.stripe.com/login";
 
-    await ctx.runMutation(internal.stripeConnectInternal.markPayoutTransferred, {
-      payoutId: payout.payoutId,
-      stripeTransferId: transfer.id,
-    });
+    let loginEmail: string | null = null;
+    try {
+      const stripe = getStripeClient();
+      const account = await stripe.v2.core.accounts.retrieve(
+        record.stripeAccountId,
+        { include: ["configuration.merchant", "identity"] },
+      );
+      const identity = account.identity as
+        | { email?: string | null }
+        | undefined;
+      const email = identity?.email?.trim();
+      if (email) loginEmail = email;
+    } catch {
+      // Best-effort only — still return the login URL.
+    }
 
-    return { transferId: transfer.id, amount: payout.amount };
+    return { url: FULL_DASHBOARD_LOGIN_URL, loginEmail };
   },
 });

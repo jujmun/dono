@@ -12,6 +12,7 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
+import { calculateApplicationFeeMinor } from "./lib/platformFee";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -85,7 +86,20 @@ function getSubscriptionPaymentIntentClientSecret(
   return paymentIntent.client_secret;
 }
 
-async function validateCampaignAndAmount(ctx: ActionCtx, campaignSlug: string, amount: number) {
+async function validateCampaignAndAmount(
+  ctx: ActionCtx,
+  campaignSlug: string,
+  amount: number,
+): Promise<{
+  campaign: {
+    campaignId: Id<"campaigns">;
+    campaignSlug: string;
+    title: string;
+    communitySlug: string;
+    stripeAccountId: string;
+  };
+  amount: number;
+}> {
   const normalizedSlug = normalizeCampaignSlug(campaignSlug);
   if (!normalizedSlug) {
     throw new ConvexError({
@@ -103,7 +117,7 @@ async function validateCampaignAndAmount(ctx: ActionCtx, campaignSlug: string, a
   }
 
   const campaign = await ctx.runQuery(
-    internal.stripeInternal.getCampaignForDonation,
+    internal.stripeInternal.resolveCampaignMerchantAccount,
     { campaignSlug: normalizedSlug },
   );
 
@@ -196,7 +210,6 @@ export const createPaymentIntent = action({
       : `stripePi:guest:${donorEmail ?? "anonymous"}`;
     await enforceStripeCreateQuota(ctx, quotaKey, userId ?? undefined);
 
-    let stripeCustomerId: string | undefined;
     let receiptEmail = donorEmail;
 
     if (userId) {
@@ -205,25 +218,33 @@ export const createPaymentIntent = action({
         internal.stripeInternal.getVerifiedUserContext,
         { userId },
       );
-      stripeCustomerId = await getOrCreateStripeCustomer(ctx, userId, userContext);
       receiptEmail = receiptEmail || userContext.email || undefined;
     }
 
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: donationAmountToStripeMinorUnits(validAmount),
-      currency: "gbp",
-      ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
-      ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        ...(userId ? { userId } : {}),
-        ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
-        ...(anonymous ? { anonymous: "true" } : {}),
-        campaignId: campaign.campaignId,
-        campaignSlug: campaign.campaignSlug,
-        donationType: "one_time",
+    const grossAmountMinor = donationAmountToStripeMinorUnits(validAmount);
+    const applicationFeeAmountMinor = calculateApplicationFeeMinor(grossAmountMinor);
+
+    const paymentIntent = await stripe.paymentIntents.create(
+      {
+        amount: grossAmountMinor,
+        currency: "gbp",
+        application_fee_amount: applicationFeeAmountMinor,
+        ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
+        automatic_payment_methods: { enabled: true },
+        metadata: {
+          ...(userId ? { userId } : {}),
+          ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
+          ...(anonymous ? { anonymous: "true" } : {}),
+          campaignId: campaign.campaignId,
+          campaignSlug: campaign.campaignSlug,
+          donationType: "one_time",
+        },
       },
-    });
+      {
+        stripeAccount: campaign.stripeAccountId,
+        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
+      },
+    );
 
     if (!paymentIntent.client_secret) {
       throw new ConvexError({
@@ -239,11 +260,15 @@ export const createPaymentIntent = action({
       campaignId: campaign.campaignId,
       amount: validAmount,
       stripePaymentIntentId: paymentIntent.id,
+      stripeConnectedAccountId: campaign.stripeAccountId,
+      grossAmountMinor,
+      applicationFeeAmountMinor,
     });
 
     return {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
+      stripeAccountId: campaign.stripeAccountId,
     };
   },
 });
@@ -484,7 +509,13 @@ export const abandonPaymentIntent = action({
 
     const stripe = getStripeClient();
     try {
-      await stripe.paymentIntents.cancel(args.paymentIntentId);
+      await stripe.paymentIntents.cancel(
+        args.paymentIntentId,
+        {},
+        donation.stripeConnectedAccountId
+          ? { stripeAccount: donation.stripeConnectedAccountId }
+          : undefined,
+      );
     } catch (error) {
       if (!isStripeCancelErrorSafeToIgnore(error)) {
         throw error;
@@ -505,8 +536,19 @@ export const confirmOneTimeDonation = action({
     ctx,
     args,
   ): Promise<{ confirmed: true; alreadyProcessed: boolean }> => {
+    const donation = await ctx.runQuery(
+      internal.stripeInternal.getDonationByPaymentIntentId,
+      { stripePaymentIntentId: args.paymentIntentId },
+    );
+
     const stripe = getStripeClient();
-    const paymentIntent = await stripe.paymentIntents.retrieve(args.paymentIntentId);
+    const paymentIntent = await stripe.paymentIntents.retrieve(
+      args.paymentIntentId,
+      {},
+      donation?.stripeConnectedAccountId
+        ? { stripeAccount: donation.stripeConnectedAccountId }
+        : undefined,
+    );
 
     if (paymentIntent.status === "processing") {
       throw new ConvexError({
@@ -522,14 +564,14 @@ export const confirmOneTimeDonation = action({
       });
     }
 
-    const donation = await ctx.runQuery(
-      internal.stripeInternal.getDonationByPaymentIntentId,
-      { stripePaymentIntentId: args.paymentIntentId },
-    );
-
     const isFundDonation =
       paymentIntent.metadata?.donationType === "fund_one_time" ||
       donation?.fundId != null;
+
+    const latestCharge =
+      typeof paymentIntent.latest_charge === "string"
+        ? paymentIntent.latest_charge
+        : paymentIntent.latest_charge?.id;
 
     let alreadyProcessed = false;
     if (isFundDonation) {
@@ -541,7 +583,11 @@ export const confirmOneTimeDonation = action({
     } else {
       const campaignResult: { alreadyProcessed: boolean } = await ctx.runMutation(
         internal.stripeInternal.markDonationSucceeded,
-        { stripePaymentIntentId: args.paymentIntentId },
+        {
+          stripePaymentIntentId: args.paymentIntentId,
+          stripeChargeId: latestCharge,
+          stripeConnectedAccountId: donation?.stripeConnectedAccountId,
+        },
       );
       alreadyProcessed = campaignResult.alreadyProcessed;
     }

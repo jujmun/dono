@@ -23,6 +23,9 @@ export function getFriendlyPaymentError(error: unknown) {
   if (/STRIPE_NOT_CONFIGURED/i.test(message)) {
     return "Payments are not configured for this environment.";
   }
+  if (/CONNECT_NOT_READY|CHARGES_DISABLED|payment setup/i.test(message)) {
+    return "This society is not ready to accept donations yet. Please try again later.";
+  }
   if (/RATE_LIMITED|Too many pending donations/i.test(message)) {
     return "Too many pending donations. Please finish or wait before trying again.";
   }

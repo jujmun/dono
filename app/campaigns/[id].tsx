@@ -73,6 +73,10 @@ export default function CampaignDetailPage() {
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
   }) as Campaign | null | undefined;
+  const donationReadiness = useQuery(
+    api.stripeConnectInternal.getCampaignDonationReadiness,
+    id ? { campaignSlug: id } : "skip",
+  );
 
   useEffect(() => {
     if (campaign) {
@@ -152,6 +156,12 @@ export default function CampaignDetailPage() {
   }
 
   const resolvedAmount = customAmount ? Number(customAmount) : selectedAmount;
+  const donationsDisabled =
+    donationReadiness !== undefined && !donationReadiness.canAcceptDonations;
+  const donationsDisabledReason =
+    donationReadiness && !donationReadiness.canAcceptDonations
+      ? donationReadiness.reason
+      : undefined;
   const liked = engagement?.liked ?? false;
   const following = engagement?.followingCampaign ?? false;
   const deadlineLabel = new Date(campaign.deadline).toLocaleDateString(
@@ -248,6 +258,8 @@ export default function CampaignDetailPage() {
       following={following}
       likeLoading={likeLoading}
       followLoading={followLoading}
+      donationsDisabled={donationsDisabled}
+      donationsDisabledReason={donationsDisabledReason}
       onSelectPreset={(amount) => {
         setCustomAmount("");
         setSelectedAmount(amount);
