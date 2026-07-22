@@ -22,6 +22,8 @@ interface RetroDonateSidebarProps {
   following: boolean;
   likeLoading: boolean;
   followLoading: boolean;
+  donationsDisabled?: boolean;
+  donationsDisabledReason?: string;
   onSelectPreset: (amount: number) => void;
   onCustomAmountChange: (value: string) => void;
   onAnonymousChange: (value: boolean) => void;
@@ -40,6 +42,8 @@ export function RetroDonateSidebar({
   following,
   likeLoading,
   followLoading,
+  donationsDisabled = false,
+  donationsDisabledReason,
   onSelectPreset,
   onCustomAmountChange,
   onAnonymousChange,
@@ -111,13 +115,22 @@ export function RetroDonateSidebar({
 
           <Pressable
             onPress={onDonate}
-            className="mb-3 flex-row items-center justify-center gap-2 rounded-[10px] border-2 border-retro-ink bg-retro-marigold py-3.5 shadow-[3px_3px_0_#211E1A]"
+            disabled={donationsDisabled}
+            className={`mb-3 flex-row items-center justify-center gap-2 rounded-[10px] border-2 border-retro-ink py-3.5 shadow-[3px_3px_0_#211E1A] ${
+              donationsDisabled ? "bg-retro-cream opacity-60" : "bg-retro-marigold"
+            }`}
           >
             <Gift size={18} color="#211E1A" />
             <Text className="font-retro-bold text-[15px] text-retro-ink">
               Donate
             </Text>
           </Pressable>
+
+          {donationsDisabled && donationsDisabledReason ? (
+            <Text className="mb-4 text-center text-xs leading-relaxed text-[#5c574f]">
+              {donationsDisabledReason}
+            </Text>
+          ) : null}
 
           <Pressable
             onPress={() => onAnonymousChange(!donateAnonymously)}

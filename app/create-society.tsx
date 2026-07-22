@@ -526,19 +526,19 @@ export default function CreateSocietyPage() {
 
   const connectReady =
     connectStatus?.exists === true &&
-    (connectStatus.onboardingComplete || connectStatus.payoutsEnabled);
+    (connectStatus.cardPaymentsActive || connectStatus.chargesEnabled);
   const connectStarted = connectStatus?.exists === true;
 
   // Poll Connect status while on the Payouts step after the user opens Stripe.
   useEffect(() => {
-    if (!societySlug || step !== 3 || connectReady) return;
+    if (!societySlug || step !== 3 || connectReady || !connectStarted) return;
     const interval = setInterval(() => {
       void refreshConnectAccountStatus({ communitySlug: societySlug }).catch(
         () => {},
       );
     }, 4000);
     return () => clearInterval(interval);
-  }, [societySlug, step, connectReady, refreshConnectAccountStatus]);
+  }, [societySlug, step, connectReady, connectStarted, refreshConnectAccountStatus]);
 
   const canProceed = () => {
     switch (step) {
@@ -959,15 +959,16 @@ export default function CreateSocietyPage() {
                   </Text>
                 </View>
                 <Text className="mb-3 text-sm text-[#5c574f]">
-                  Set up a Stripe Express account so your society can receive
-                  campaign donations. This is separate from identity verification
-                  and only takes a few minutes.
+                  Set up a Stripe merchant account so your society can accept
+                  campaign donations directly. Dono collects a 5% platform fee on
+                  each gift. This is separate from identity verification and only
+                  takes a few minutes.
                 </Text>
                 {connectReady ? (
                   <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2">
                     <ShieldCheck size={14} color="#15803d" />
                     <Text className="text-xs text-green-800">
-                      Payout setup complete
+                      Stripe payments active
                     </Text>
                   </View>
                 ) : connectStarted ? (
@@ -991,8 +992,8 @@ export default function CreateSocietyPage() {
                   ) : (
                     <Text className="font-retro-bold text-sm text-retro-paper">
                       {connectStarted
-                        ? "Continue payout setup"
-                        : "Set up payouts with Stripe"}
+                        ? "Continue Stripe setup"
+                        : "Set up Stripe payments"}
                     </Text>
                   )}
                 </Pressable>
@@ -1072,10 +1073,10 @@ export default function CreateSocietyPage() {
                   />
                   <Text className="text-sm text-[#5c574f]">
                     {connectReady
-                      ? "Payout account ready"
+                      ? "Stripe payments active"
                       : connectStarted
-                        ? "Payout setup started"
-                        : "Payout setup not started"}
+                        ? "Stripe setup started"
+                        : "Stripe setup not started"}
                   </Text>
                 </View>
               </View>

@@ -1,7 +1,41 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, query } from "./_generated/server";
-import { optionalUserId, requireSocietyLeader, requireVerifiedUser } from "./lib/authz";
-import { DONATION_CURRENCY } from "./lib/donationAmounts";
+import { optionalUserId, requireVerifiedUser } from "./lib/authz";
+import {
+  type MerchantCapabilityStatus,
+  toPublicConnectStatus,
+} from "./lib/stripeConnectMerchant";
+
+function isCardPaymentsActive(account: {
+  cardPaymentsActive?: boolean;
+  chargesEnabled: boolean;
+}) {
+  return account.cardPaymentsActive ?? account.chargesEnabled ?? false;
+}
+
+function mapAccountToPublic(account: {
+  onboardingComplete: boolean;
+  chargesEnabled: boolean;
+  cardPaymentsActive?: boolean;
+  cardPaymentsStatus?: string;
+  payoutsEnabled: boolean;
+  accountVersion?: "v1" | "v2";
+}) {
+  const isV2 = account.accountVersion === "v2";
+  // Legacy Express/transfer accounts must not look "payment ready" for direct charges.
+  const cardPaymentsActive = isV2 && isCardPaymentsActive(account);
+  return toPublicConnectStatus({
+    exists: true,
+    onboardingComplete: isV2 ? account.onboardingComplete : false,
+    cardPaymentsActive,
+    cardPaymentsStatus:
+      (account.cardPaymentsStatus as MerchantCapabilityStatus | undefined) ??
+      (cardPaymentsActive ? "active" : "unrequested"),
+    payoutsEnabled: isV2 ? account.payoutsEnabled : false,
+    accountVersion: isV2 ? "v2" : "v1",
+    requiresMerchantReonboarding: !isV2,
+  });
+}
 
 export const getByUserId = internalQuery({
   args: {
@@ -23,10 +57,40 @@ export const getByUserId = internalQuery({
   },
 });
 
+export const getByCommunitySlug = internalQuery({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) => q.eq("communitySlug", args.communitySlug))
+      .first();
+  },
+});
+
+export const getByStripeAccountId = internalQuery({
+  args: { stripeAccountId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_stripeAccountId", (q) =>
+        q.eq("stripeAccountId", args.stripeAccountId),
+      )
+      .unique();
+  },
+});
+
 export const getById = internalQuery({
   args: { connectAccountId: v.id("stripeConnectAccounts") },
   handler: async (ctx, args) => {
     return await ctx.db.get(args.connectAccountId);
+  },
+});
+
+export const deleteAccount = internalMutation({
+  args: { connectAccountId: v.id("stripeConnectAccounts") },
+  handler: async (ctx, args) => {
+    await ctx.db.delete(args.connectAccountId);
+    return { deleted: true };
   },
 });
 
@@ -35,7 +99,10 @@ export const saveAccount = internalMutation({
     userId: v.id("users"),
     communitySlug: v.optional(v.string()),
     stripeAccountId: v.string(),
+    accountVersion: v.union(v.literal("v1"), v.literal("v2")),
     onboardingComplete: v.boolean(),
+    cardPaymentsActive: v.boolean(),
+    cardPaymentsStatus: v.optional(v.string()),
     chargesEnabled: v.boolean(),
     payoutsEnabled: v.boolean(),
   },
@@ -45,7 +112,10 @@ export const saveAccount = internalMutation({
       userId: args.userId,
       communitySlug: args.communitySlug,
       stripeAccountId: args.stripeAccountId,
+      accountVersion: args.accountVersion,
       onboardingComplete: args.onboardingComplete,
+      cardPaymentsActive: args.cardPaymentsActive,
+      cardPaymentsStatus: args.cardPaymentsStatus,
       chargesEnabled: args.chargesEnabled,
       payoutsEnabled: args.payoutsEnabled,
       createdAt: now,
@@ -58,6 +128,8 @@ export const updateAccountStatus = internalMutation({
   args: {
     stripeAccountId: v.string(),
     onboardingComplete: v.boolean(),
+    cardPaymentsActive: v.boolean(),
+    cardPaymentsStatus: v.optional(v.string()),
     chargesEnabled: v.boolean(),
     payoutsEnabled: v.boolean(),
   },
@@ -72,91 +144,13 @@ export const updateAccountStatus = internalMutation({
 
     await ctx.db.patch(account._id, {
       onboardingComplete: args.onboardingComplete,
+      cardPaymentsActive: args.cardPaymentsActive,
+      cardPaymentsStatus: args.cardPaymentsStatus,
       chargesEnabled: args.chargesEnabled,
       payoutsEnabled: args.payoutsEnabled,
       updatedAt: Date.now(),
     });
     return { updated: true };
-  },
-});
-
-export const schedulePayout = internalMutation({
-  args: {
-    campaignSlug: v.string(),
-    communitySlug: v.optional(v.string()),
-    requestedBy: v.id("users"),
-  },
-  handler: async (ctx, args) => {
-    const campaign = await ctx.db
-      .query("campaigns")
-      .withIndex("by_slug", (q) => q.eq("slug", args.campaignSlug))
-      .unique();
-
-    if (!campaign || (campaign.status !== "funded" && campaign.status !== "completed")) {
-      return null;
-    }
-
-    if (args.communitySlug) {
-      await requireSocietyLeader(ctx, args.communitySlug);
-    } else if (campaign.createdBy !== args.requestedBy) {
-      throw new ConvexError({
-        code: "FORBIDDEN",
-        message: "You cannot request payout for this campaign.",
-      });
-    }
-
-    const slug = args.communitySlug ?? campaign.creator.communityId;
-    const connectAccounts = await ctx.db
-      .query("stripeConnectAccounts")
-      .withIndex("by_community", (q) => q.eq("communitySlug", slug))
-      .collect();
-    const connectAccount = connectAccounts[0];
-
-    if (!connectAccount) {
-      throw new ConvexError({
-        code: "CONNECT_NOT_FOUND",
-        message: "No connected payout account for this beneficiary.",
-      });
-    }
-
-    const existing = await ctx.db
-      .query("campaignPayouts")
-      .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
-      .collect();
-    if (existing.some((p) => p.status === "pending" || p.status === "transferred")) {
-      return null;
-    }
-
-    const payoutId = await ctx.db.insert("campaignPayouts", {
-      campaignId: campaign._id,
-      stripeConnectAccountId: connectAccount._id,
-      amount: campaign.raised,
-      currency: DONATION_CURRENCY,
-      status: "pending",
-      createdAt: Date.now(),
-    });
-
-    return {
-      payoutId,
-      campaignId: campaign._id,
-      stripeConnectAccountId: connectAccount._id,
-      amount: campaign.raised,
-      currency: DONATION_CURRENCY,
-    };
-  },
-});
-
-export const markPayoutTransferred = internalMutation({
-  args: {
-    payoutId: v.id("campaignPayouts"),
-    stripeTransferId: v.string(),
-  },
-  handler: async (ctx, args) => {
-    await ctx.db.patch(args.payoutId, {
-      status: "transferred",
-      stripeTransferId: args.stripeTransferId,
-    });
-    return null;
   },
 });
 
@@ -210,48 +204,95 @@ export const getMyConnectStatus = query({
     const account =
       accounts.find((a) => a.communitySlug === args.communitySlug) ?? null;
     if (!account) {
-      return {
-        exists: false as const,
+      return toPublicConnectStatus({
+        exists: false,
         onboardingComplete: false,
-        chargesEnabled: false,
+        cardPaymentsActive: false,
+        cardPaymentsStatus: "unrequested",
         payoutsEnabled: false,
-      };
+        accountVersion: null,
+        requiresMerchantReonboarding: false,
+      });
     }
-    return {
-      exists: true as const,
-      onboardingComplete: account.onboardingComplete,
-      chargesEnabled: account.chargesEnabled,
-      payoutsEnabled: account.payoutsEnabled,
-    };
+    return mapAccountToPublic(account);
   },
 });
 
 /**
- * Leader-or-creator view: Connect status for a society slug keyed by
- * communitySlug (any Connect row for that community, typically the creator's).
+ * Community-scoped Connect status (any account row for that society slug).
  */
 export const getSocietyConnectStatus = query({
   args: { communitySlug: v.string() },
   handler: async (ctx, args) => {
     await requireVerifiedUser(ctx);
-    // Prefer community-scoped lookup so payouts resolve the same way.
     const account = await ctx.db
       .query("stripeConnectAccounts")
       .withIndex("by_community", (q) => q.eq("communitySlug", args.communitySlug))
       .first();
     if (!account) {
-      return {
-        exists: false as const,
+      return toPublicConnectStatus({
+        exists: false,
         onboardingComplete: false,
-        chargesEnabled: false,
+        cardPaymentsActive: false,
+        cardPaymentsStatus: "unrequested",
         payoutsEnabled: false,
+        accountVersion: null,
+        requiresMerchantReonboarding: false,
+      });
+    }
+    return mapAccountToPublic(account);
+  },
+});
+
+export const getCampaignDonationReadiness = query({
+  args: { campaignSlug: v.string() },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.campaignSlug.trim().toLowerCase()))
+      .unique();
+
+    if (!campaign) {
+      return {
+        canAcceptDonations: false as const,
+        reason: "Campaign not found.",
       };
     }
-    return {
-      exists: true as const,
-      onboardingComplete: account.onboardingComplete,
-      chargesEnabled: account.chargesEnabled,
-      payoutsEnabled: account.payoutsEnabled,
-    };
+    if (campaign.status !== "active") {
+      return {
+        canAcceptDonations: false as const,
+        reason: "This campaign is not accepting donations.",
+      };
+    }
+
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) =>
+        q.eq("communitySlug", campaign.creator.communityId),
+      )
+      .first();
+
+    if (!connectAccount) {
+      return {
+        canAcceptDonations: false as const,
+        reason: "The beneficiary society has not set up Stripe payments yet.",
+      };
+    }
+
+    if (connectAccount.accountVersion !== "v2") {
+      return {
+        canAcceptDonations: false as const,
+        reason: "The beneficiary society must complete the new Stripe payment setup.",
+      };
+    }
+
+    if (!isCardPaymentsActive(connectAccount)) {
+      return {
+        canAcceptDonations: false as const,
+        reason: "The beneficiary society is still completing Stripe payment setup.",
+      };
+    }
+
+    return { canAcceptDonations: true as const };
   },
 });

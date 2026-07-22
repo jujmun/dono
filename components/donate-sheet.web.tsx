@@ -24,7 +24,13 @@ import { DonateAnonymouslyToggle } from "@/components/donate-anonymously-toggle"
 import type { DonateSheetProps } from "./donate-sheet-types";
 
 const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
-const stripePromise = publishableKey ? loadStripe(publishableKey) : null;
+
+function getStripePromise(stripeAccountId: string | null) {
+  if (!publishableKey || !stripeAccountId) {
+    return null;
+  }
+  return loadStripe(publishableKey, { stripeAccount: stripeAccountId });
+}
 
 function PaymentForm({
   campaignId,
@@ -154,6 +160,7 @@ export function DonateSheet({
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const paymentCompletedRef = useRef(false);
@@ -185,6 +192,7 @@ export function DonateSheet({
       paymentCompletedRef.current = false;
       setClientSecret(null);
       setPaymentIntentId(null);
+      setStripeAccountId(null);
       setError(null);
       return;
     }
@@ -192,6 +200,7 @@ export function DonateSheet({
     if (monthlyBlockedForGuest) {
       setClientSecret(null);
       setPaymentIntentId(null);
+      setStripeAccountId(null);
       setLoading(false);
       setError(null);
       return;
@@ -236,6 +245,9 @@ export function DonateSheet({
         if (piId) {
           setPaymentIntentId(piId);
           activePaymentIntentIdRef.current = piId;
+        }
+        if ("stripeAccountId" in result && result.stripeAccountId) {
+          setStripeAccountId(result.stripeAccountId);
         }
       })
       .catch((err) => {
@@ -318,9 +330,13 @@ export function DonateSheet({
             </View>
           ) : error ? (
             <Text className="mt-4 text-sm text-red-600">{error}</Text>
-          ) : clientSecret && paymentIntentId && stripePromise ? (
+          ) : clientSecret && paymentIntentId && stripeAccountId ? (
             <View className="min-h-0 flex-1">
-              <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <Elements
+                key={`${stripeAccountId}:${paymentIntentId}`}
+                stripe={getStripePromise(stripeAccountId)}
+                options={{ clientSecret }}
+              >
                 <PaymentForm
                   visible={visible}
                   campaignId={campaignId}

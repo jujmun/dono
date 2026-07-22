@@ -116,6 +116,8 @@ export interface MySociety extends Society {
   hasIdDocument: boolean;
   connectOnboardingComplete: boolean;
   connectPayoutsEnabled: boolean;
+  connectCardPaymentsActive: boolean;
+  connectCardPaymentsStatus: string;
 }
 
 /** Admin-only shape — the one place real file URLs for verification docs appear. */

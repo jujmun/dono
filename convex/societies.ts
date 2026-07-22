@@ -133,8 +133,22 @@ async function toMineSociety(ctx: QueryCtx, society: SocietyDoc) {
     moderatedAt: society.moderatedAt ?? null,
     supportingDocumentCount: society.supportingDocumentStorageIds.length,
     hasIdDocument: Boolean(society.idDocumentStorageId),
-    connectOnboardingComplete: connectAccount?.onboardingComplete ?? false,
-    connectPayoutsEnabled: connectAccount?.payoutsEnabled ?? false,
+    connectOnboardingComplete:
+      connectAccount?.accountVersion === "v2"
+        ? (connectAccount.onboardingComplete ?? false)
+        : false,
+    connectPayoutsEnabled:
+      connectAccount?.accountVersion === "v2"
+        ? (connectAccount.payoutsEnabled ?? false)
+        : false,
+    connectCardPaymentsActive:
+      connectAccount?.accountVersion === "v2"
+        ? (connectAccount.cardPaymentsActive ?? false)
+        : false,
+    connectCardPaymentsStatus:
+      connectAccount?.accountVersion === "v2"
+        ? (connectAccount.cardPaymentsStatus ?? "unrequested")
+        : "unrequested",
   };
 }
 
@@ -712,7 +726,9 @@ export const getForAdmin = query({
         hasConnectAccount: Boolean(connectAccount),
         connectHasActivity: Boolean(
           connectAccount &&
-            (connectAccount.chargesEnabled || connectAccount.payoutsEnabled),
+            (connectAccount.cardPaymentsActive ||
+              connectAccount.chargesEnabled ||
+              connectAccount.payoutsEnabled),
         ),
       },
     };
@@ -768,7 +784,9 @@ export const hardDelete = mutation({
       .first();
     if (
       connectAccount &&
-      (connectAccount.chargesEnabled || connectAccount.payoutsEnabled)
+      (connectAccount.cardPaymentsActive ||
+        connectAccount.chargesEnabled ||
+        connectAccount.payoutsEnabled)
     ) {
       throw new ConvexError({
         code: "HAS_FINANCIAL_ACTIVITY",

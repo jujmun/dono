@@ -32,7 +32,7 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
   const needsConnect =
     showConnectCta &&
     isMySociety(society) &&
-    !society.connectOnboardingComplete;
+    !society.connectCardPaymentsActive;
 
   const handleCompletePayoutSetup = async () => {
     setConnectLoading(true);
