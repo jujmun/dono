@@ -24,9 +24,9 @@ everything.
 | [product/](product/) | **Product** | The comprehensive product & repository overview: user journeys, product areas, data model, technical architecture |
 | [design/](design/) | **Design & UX** | Psychological, community and donation design strategy; brand, IA, flows, gamification, copy, accessibility |
 | [engineering/](engineering/) | **Engineering** | Payments/disputes/risk architecture and engineering change handoffs |
-| [legal/](legal/) | **Legal & policy** | Terms of Service structure, eligibility, use-of-funds rules, verification, fee model |
+| [legal/](legal/) | **Legal & policy** | Terms of Service structure, eligibility, use-of-funds rules, verification, fee model, IP/branding, and data handling |
 | [corporate/](corporate/) | **Corporate & founders** | Incorporation, cap table, founder equity, vesting, immigration constraints, required documents |
-| [research/](research/) | **Research** | Student survey instrument and responses; college development-office meeting notes |
+| [research/](research/) | **Research** | Student survey instrument and responses; market research; college development-office and advisor meeting notes |
 
 ---
 
@@ -49,6 +49,7 @@ everything.
 
 ### [legal/](legal/) — Legal & policy
 - [legal-terms-context-handoff.md](legal/legal-terms-context-handoff.md) — Legal terms & policy context: operator identity, geographic scope and eligibility, document architecture, proposed Terms of Service structure, verification, use-of-funds and surplus rules, society campaigns, and the fee model.
+- [ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md) — Informal legal guidance on trademark/branding protection, confidentiality, GDPR-safe data handling, and tax.
 
 ### [corporate/](corporate/) — Corporate & founders
 - [founder-context-handoff.md](corporate/founder-context-handoff.md) — Founder structure & incorporation context: five-founder situation, UK Ltd structure, proposed cap table, founder option agreements for visa-holding founders, vesting, directors, required legal documents, and open immigration questions.
@@ -58,9 +59,11 @@ everything.
 - [responses/](research/responses/) — Raw survey response exports:
   - [survey-responses-batch-1.csv](research/responses/survey-responses-batch-1.csv)
   - [survey-responses-batch-2.csv](research/responses/survey-responses-batch-2.csv)
+- [market-research-notes.md](research/market-research-notes.md) — Market data behind the Dono pitch (UK giving decline, student cost pressures), the OxReach prior-art precedent, three-sided customer segmentation, full Fable student-survey analysis, and a note on US fraternity alumni giving.
 - [meetings/](research/meetings/) — Notes from calls with Oxford college development
-  offices, on their existing fundraising models and channels (used to ground
-  Dono's product against how colleges actually raise money today):
+  offices and advisors, on existing fundraising models, channels, and go-to-market
+  advice (used to ground Dono's product against how colleges actually raise money
+  today):
   - [lmh-development-strategy.md](research/meetings/lmh-development-strategy.md) — LMH's two-tier (mass + major gift) fundraising approach.
   - [worcester-fundraising-model.md](research/meetings/worcester-fundraising-model.md) — Worcester's telethon, giving day, and regular giving program.
   - [david-parker-st-hughs-development-fund.md](research/meetings/david-parker-st-hughs-development-fund.md) — St Hugh's Development Fund; Oxford fundraising landscape overview (09 Jul 26).
@@ -70,6 +73,8 @@ everything.
   - [martha-univ-head-of-development.md](research/meetings/martha-univ-head-of-development.md) — Univ Head of Development; donation process and alumni relations (16 Jul 26).
   - [olivia-tan-christ-church.md](research/meetings/olivia-tan-christ-church.md) — Christ Church; fundraising channels and effectiveness (21 Jul 26).
   - [milos-martinez-st-cross-development-office.md](research/meetings/milos-martinez-st-cross-development-office.md) — St Cross Development Office fundraising overview (22 Jul 26).
+  - [sean-rainey-magdalen-development-fund.md](research/meetings/sean-rainey-magdalen-development-fund.md) — Magdalen's contrarian, major-gifts-only view: skeptical of small-donor pipelines and student-led platforms.
+  - [will-gregory-advisor-call.md](research/meetings/will-gregory-advisor-call.md) — Advisor call on UK vs US philanthropy culture, the difficulty of working with universities, and for-profit vs. fiscal-sponsorship structuring.
 
 ---
 

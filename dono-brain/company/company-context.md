@@ -64,6 +64,10 @@ Traditional fundraising is optimised for major donors.
 
 Dono is optimised for thousands of meaningful £10--£50 donations.
 
+Supporting market data (UK giving decline, falling student disposable
+income, trust gaps in where donations go): see
+[market-research-notes.md](../research/market-research-notes.md).
+
 ------------------------------------------------------------------------
 
 # Our Core Insight
@@ -326,6 +330,11 @@ generic crowdfunding platforms.
 
 The community belongs to Dono rather than any individual campaign.
 
+Oxford's own prior attempt at this, OxReach (built with consultancy Hubbub),
+only ever listed 6 projects and skewed toward staff/academics rather than
+students — see [market-research-notes.md](../research/market-research-notes.md#prior-art-oxreach)
+for the precedent.
+
 ------------------------------------------------------------------------
 
 # Business Model
@@ -339,6 +348,12 @@ Revenue sources may include:
 -   Partnerships
 
 Students will never pay to create campaigns.
+
+Dono is a for-profit social venture, not a non-profit — advisor guidance was
+explicit not to present otherwise. If demand for tax-deductible receipts
+emerges, fiscal sponsorship (partnering with an aligned existing non-profit
+for a small cut) is the fallback mechanism, not converting the company
+itself. See [will-gregory-advisor-call.md](../research/meetings/will-gregory-advisor-call.md).
 
 ------------------------------------------------------------------------
 
