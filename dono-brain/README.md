@@ -45,6 +45,7 @@ everything.
 
 ### [engineering/](engineering/) — Engineering
 - [payments-architecture.md](engineering/payments-architecture.md) — Payments, disputes & risk architecture. The governing principle ("donor money must never pass through Dono"), Stripe Connect Standard direct-charge model, refund vs chargeback lifecycles, evidence/data-retention requirements, fraud controls, and deferred items.
+- [product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md) — Engineering source of truth for aligning the build with the legal framework and product roadmap (July 2026): current MVP scope, P0/P1/P2 priorities before and after demo, intentional deviations, database considerations, and out-of-scope items. Feeds the [TODO](TODO.md#engineering--software).
 - [engineering-change-handoff.docx](engineering/engineering-change-handoff.docx) — Engineering change handoff (binary doc).
 
 ### [legal/](legal/) — Legal & policy
@@ -75,6 +76,26 @@ everything.
   - [milos-martinez-st-cross-development-office.md](research/meetings/milos-martinez-st-cross-development-office.md) — St Cross Development Office fundraising overview (22 Jul 26).
   - [sean-rainey-magdalen-development-fund.md](research/meetings/sean-rainey-magdalen-development-fund.md) — Magdalen's contrarian, major-gifts-only view: skeptical of small-donor pipelines and student-led platforms.
   - [will-gregory-advisor-call.md](research/meetings/will-gregory-advisor-call.md) — Advisor call on UK vs US philanthropy culture, the difficulty of working with universities, and for-profit vs. fiscal-sponsorship structuring.
+
+---
+
+## [TODO.md](TODO.md) — the living task list
+
+Unlike everything else in this repo, [TODO.md](TODO.md) is meant to change
+constantly. It's the single cross-team task list, stratified by the team most
+responsible (Engineering/Software, Legal, Finance/Corporate, Design/Product,
+Research/Operations) — a task touching more than one team is listed under each.
+
+### Keeping TODO.md current
+
+- Whenever a domain document introduces new open work (a new handoff, a
+  roadmap, a legal review item), add or update the corresponding tasks in
+  TODO.md under the right team section(s), with a source link back to the
+  document.
+- Check items off as they're completed; don't let the list silently drift out
+  of sync with reality — remove or reword tasks that are no longer accurate
+  rather than leaving stale entries.
+- Update the "Last reviewed" line at the bottom whenever you do a pass over it.
 
 ---
 
