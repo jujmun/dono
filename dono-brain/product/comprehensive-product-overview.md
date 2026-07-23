@@ -129,6 +129,13 @@ A student creator can:
 - preview the campaign;
 - submit it for review.
 
+Survey research (n=23) found embarrassment about asking publicly is the
+single biggest barrier to creating a campaign, ahead of doubting anyone would
+donate — and that institutional (college/university) endorsement matters more
+to trust than any product feature. See
+[research/market-research-notes.md](../research/market-research-notes.md#student-survey-analysis-fable-form-n23)
+for the full segmentation.
+
 ## 5.2 Student societies
 
 Societies are treated as persistent communities rather than merely campaign creators.

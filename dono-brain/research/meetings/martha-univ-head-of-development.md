@@ -34,6 +34,13 @@ Thu, 16 Jul 26
   - Young Univ did raise money for Univ North, but it was aligned to an existing college priority, led by a 34-year-old with a senior city job
 - Most colleges already have straightforward online donation options; Univ’s was noted as particularly easy
 
+### Additional Notes (from raw call notes)
+
+- The college does work with student societies (e.g. rowing) on donations for specific needs
+- Many young alumni already do regular giving on a monthly basis, commonly around £5/month
+- Other, less collegiate UK universities are noted as generally weaker at alumni relations — alumni there report a more corporate, less personal relationship than the college system produces
+- A structured route for students to raise what they need (e.g. students holding seats on the development committee) was floated as more palatable than an open platform
+
 ### Next Steps
 
 - **Anonymize the college in any written materials or outputs**
