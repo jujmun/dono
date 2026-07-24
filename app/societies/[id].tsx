@@ -7,9 +7,11 @@ import {
   Linking,
   TextInput,
   Platform,
+  Image,
 } from "react-native";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useEffect, useState } from "react";
+import * as ImagePicker from "expo-image-picker";
 import {
   UserPlus,
   ArrowLeft,
@@ -29,9 +31,17 @@ import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency } from "@/lib/constants";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { initialsFor, normalizeExternalUrl } from "@/lib/utils";
+import {
+  uploadCampaignUpdateMedia,
+  type CampaignUpdateMediaUpload,
+} from "@/lib/upload-campaign-update-media";
 import type { Campaign, Community, Society, VerificationType } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
+
+const MAX_UPDATE_MEDIA = 6;
+const MAX_UPDATE_MEDIA_BYTES = 5 * 1024 * 1024;
+const MAX_UPDATE_BODY_LENGTH = 500;
 
 /**
  * /societies/[id] serves two entity types that share the URL namespace:
@@ -671,6 +681,7 @@ function SocietyCampaignsAndLeaderPanels({ slug }: { slug: string }) {
     <View className="gap-8">
       {isLeader ? <LeaderJoinRequests slug={slug} /> : null}
       {isLeader ? <LeaderPendingCampaigns slug={slug} /> : null}
+      {isLeader ? <LeaderCampaignUpdates slug={slug} /> : null}
 
       <View>
         <View className="mb-4 flex-row items-center gap-2">
@@ -872,6 +883,242 @@ function LeaderPendingCampaigns({ slug }: { slug: string }) {
                 <Text className="font-retro-bold text-xs text-dono-text">Reject</Text>
               </Pressable>
             </View>
+          </View>
+        ))}
+      </View>
+    </View>
+  );
+}
+
+function LeaderCampaignUpdates({ slug }: { slug: string }) {
+  const updatable = useQuery(api.campaignUpdates.listUpdatableForSocietyLeader, {
+    communitySlug: slug,
+  });
+  const generateUploadUrl = useMutation(
+    api.campaignUpdates.generateUpdateMediaUploadUrl,
+  );
+  const createUpdate = useMutation(api.campaignUpdates.create);
+
+  const [openSlug, setOpenSlug] = useState<string | null>(null);
+  const [headline, setHeadline] = useState("");
+  const [body, setBody] = useState("");
+  const [amountSpent, setAmountSpent] = useState("");
+  const [reconciliationNote, setReconciliationNote] = useState("");
+  const [media, setMedia] = useState<CampaignUpdateMediaUpload[]>([]);
+  const [pickingMedia, setPickingMedia] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (updatable === undefined) {
+    return (
+      <View className="items-center py-4">
+        <ActivityIndicator color="#17211B" />
+      </View>
+    );
+  }
+
+  if (updatable.length === 0) return null;
+
+  const resetForm = () => {
+    setHeadline("");
+    setBody("");
+    setAmountSpent("");
+    setReconciliationNote("");
+    setMedia([]);
+    setError(null);
+  };
+
+  const toggleComposer = (campaignSlug: string) => {
+    setOpenSlug((current) => (current === campaignSlug ? null : campaignSlug));
+    resetForm();
+  };
+
+  const pickMedia = async () => {
+    setError(null);
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      setError("Photo library permission is required to add photos.");
+      return;
+    }
+
+    setPickingMedia(true);
+    try {
+      const remaining = MAX_UPDATE_MEDIA - media.length;
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ["images"],
+        allowsMultipleSelection: true,
+        selectionLimit: remaining,
+        quality: 0.85,
+      });
+
+      if (result.canceled || result.assets.length === 0) return;
+
+      const nextMedia: CampaignUpdateMediaUpload[] = [];
+      for (const asset of result.assets) {
+        if (asset.fileSize && asset.fileSize > MAX_UPDATE_MEDIA_BYTES) {
+          setError("Each photo must be 5MB or smaller.");
+          return;
+        }
+        nextMedia.push({ uri: asset.uri, mimeType: asset.mimeType });
+      }
+      setMedia((current) => [...current, ...nextMedia].slice(0, MAX_UPDATE_MEDIA));
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setPickingMedia(false);
+    }
+  };
+
+  const removeMedia = (index: number) => {
+    setMedia((current) => current.filter((_, i) => i !== index));
+  };
+
+  const handleSubmit = async (campaignSlug: string, raised: number) => {
+    setError(null);
+    if (media.length === 0) {
+      setError("Add at least one photo.");
+      return;
+    }
+    const spent = Number(amountSpent);
+    if (!amountSpent.trim() || Number.isNaN(spent) || spent < 0) {
+      setError("Enter a valid amount spent.");
+      return;
+    }
+    if (spent < raised && !reconciliationNote.trim()) {
+      setError("Add a short note explaining the difference between raised and spent.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const storageIds = await uploadCampaignUpdateMedia({
+        slug: campaignSlug,
+        media,
+        generateUploadUrl,
+      });
+      await createUpdate({
+        slug: campaignSlug,
+        mediaStorageIds: storageIds,
+        headline,
+        body,
+        amountSpent: spent,
+        reconciliationNote: reconciliationNote.trim() || undefined,
+      });
+      setOpenSlug(null);
+      resetForm();
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <View className="rounded-2xl border border-dono-border bg-white p-5">
+      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+        Post a campaign update
+      </Text>
+      <View className="gap-4">
+        {updatable.map((campaign) => (
+          <View key={campaign.slug} className="gap-2 border-b border-dono-border pb-4">
+            <Pressable onPress={() => toggleComposer(campaign.slug)}>
+              <Text className="font-retro-bold text-sm text-dono-text">
+                {campaign.title}
+              </Text>
+              <Text className="text-xs text-dono-muted">
+                {formatCurrency(campaign.raised)} raised of {formatCurrency(campaign.goal)}{" "}
+                goal — funded, ready for an update
+              </Text>
+            </Pressable>
+
+            {openSlug === campaign.slug ? (
+              <View className="mt-2 gap-3">
+                {error ? <Text className="text-xs text-rose-700">{error}</Text> : null}
+
+                <View className="flex-row flex-wrap gap-2">
+                  {media.map((item, index) => (
+                    <View key={item.uri} className="relative">
+                      <Image
+                        source={{ uri: item.uri }}
+                        className="h-16 w-16 rounded-lg"
+                      />
+                      <Pressable
+                        onPress={() => removeMedia(index)}
+                        className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-rose-600"
+                      >
+                        <X size={12} color="#fff" />
+                      </Pressable>
+                    </View>
+                  ))}
+                  <Pressable
+                    onPress={() => void pickMedia()}
+                    disabled={pickingMedia || media.length >= MAX_UPDATE_MEDIA}
+                    className="h-16 w-16 items-center justify-center rounded-lg border border-dashed border-dono-border"
+                  >
+                    {pickingMedia ? (
+                      <ActivityIndicator size="small" color="#17211B" />
+                    ) : (
+                      <Text className="text-xs text-dono-muted">+ Photo</Text>
+                    )}
+                  </Pressable>
+                </View>
+
+                <TextInput
+                  value={headline}
+                  onChangeText={setHeadline}
+                  placeholder="Headline"
+                  placeholderTextColor="#8a8478"
+                  className="rounded-lg border border-dono-border bg-white px-3 py-2 text-sm text-dono-text outline-none"
+                />
+                <View>
+                  <TextInput
+                    value={body}
+                    onChangeText={(v) => setBody(v.slice(0, MAX_UPDATE_BODY_LENGTH))}
+                    placeholder="A couple of sentences on how the funds were used"
+                    placeholderTextColor="#8a8478"
+                    multiline
+                    numberOfLines={3}
+                    textAlignVertical="top"
+                    className="rounded-lg border border-dono-border bg-white px-3 py-2 text-sm text-dono-text outline-none"
+                  />
+                  <Text className="mt-1 text-right text-xs text-dono-muted">
+                    {body.length}/{MAX_UPDATE_BODY_LENGTH}
+                  </Text>
+                </View>
+                <TextInput
+                  value={amountSpent}
+                  onChangeText={setAmountSpent}
+                  placeholder="Amount spent (£)"
+                  placeholderTextColor="#8a8478"
+                  keyboardType="numeric"
+                  className="rounded-lg border border-dono-border bg-white px-3 py-2 text-sm text-dono-text outline-none"
+                />
+                {amountSpent.trim() && Number(amountSpent) < campaign.raised ? (
+                  <TextInput
+                    value={reconciliationNote}
+                    onChangeText={setReconciliationNote}
+                    placeholder="Note explaining the difference between raised and spent (required)"
+                    placeholderTextColor="#8a8478"
+                    multiline
+                    className="rounded-lg border border-dono-border bg-white px-3 py-2 text-sm text-dono-text outline-none"
+                  />
+                ) : null}
+
+                <Pressable
+                  onPress={() => void handleSubmit(campaign.slug, campaign.raised)}
+                  disabled={submitting}
+                  className="flex-row items-center justify-center gap-1 self-start rounded-full bg-dono-primary px-4 py-2"
+                >
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text className="font-retro-bold text-xs text-white">
+                      Post update
+                    </Text>
+                  )}
+                </Pressable>
+              </View>
+            ) : null}
           </View>
         ))}
       </View>

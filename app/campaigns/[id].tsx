@@ -33,10 +33,12 @@ import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
+import { CampaignUpdateDisplay } from "@/components/campaign-update-display";
 
 type DonationThankYouState = {
   amount?: number;
   pendingConfirmation?: boolean;
+  paymentIntentId?: string;
 };
 
 export default function CampaignDetailPage() {
@@ -106,12 +108,12 @@ export default function CampaignDetailPage() {
     void confirmOneTimeDonation({ paymentIntentId })
       .then(() => {
         if (!cancelled) {
-          setThankYou({ pendingConfirmation: false });
+          setThankYou({ pendingConfirmation: false, paymentIntentId });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setThankYou({ pendingConfirmation: true });
+          setThankYou({ pendingConfirmation: true, paymentIntentId });
         }
       })
       .finally(() => {
@@ -477,34 +479,7 @@ export default function CampaignDetailPage() {
         </RetroPanel>
       </View>
 
-      {campaign.updates.length > 0 ? (
-        <RetroPanel title="Updates.log" accent="mint">
-          <View className="gap-4">
-            {campaign.updates.map((update) => (
-              <View
-                key={update.id}
-                className="rounded-lg border-2 border-retro-ink bg-retro-cream p-3.5"
-              >
-                <View className="mb-1.5 flex-row items-center justify-between gap-2">
-                  <Text className="flex-1 font-retro-bold text-retro-ink">
-                    {update.title}
-                  </Text>
-                  <Text className="font-retro-mono text-[11px] text-[#5c574f]">
-                    {new Date(update.date).toLocaleDateString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                    })}
-                  </Text>
-                </View>
-                <Text className="text-sm leading-5 text-[#4a453c]">
-                  {update.content}
-                </Text>
-              </View>
-            ))}
-          </View>
-        </RetroPanel>
-      ) : null}
+      <CampaignUpdateDisplay campaign={campaign} />
 
       <DonateSheet
         visible={donateSheetOpen}
@@ -523,6 +498,7 @@ export default function CampaignDetailPage() {
           setThankYou({
             amount,
             pendingConfirmation: options?.pendingConfirmation,
+            paymentIntentId: options?.paymentIntentId,
           });
         }}
         frequency="one_time"
@@ -533,6 +509,7 @@ export default function CampaignDetailPage() {
         amount={thankYou?.amount}
         campaignTitle={campaign.title}
         pendingConfirmation={thankYou?.pendingConfirmation}
+        paymentIntentId={thankYou?.paymentIntentId}
         onClose={() => setThankYou(null)}
       />
     </AppShell>

@@ -1,4 +1,5 @@
-import { query } from "./_generated/server";
+import { ConvexError, v } from "convex/values";
+import { mutation, query } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireUserId } from "./lib/authz";
 
@@ -167,5 +168,69 @@ export const listMyRecurringDonations = query({
     );
 
     return results.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+export const setEmailUpdateOptIn = mutation({
+  args: {
+    paymentIntentId: v.string(),
+    optedIn: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    const donation = await ctx.db
+      .query("donations")
+      .withIndex("by_paymentIntent", (q) =>
+        q.eq("stripePaymentIntentId", args.paymentIntentId),
+      )
+      .unique();
+
+    if (!donation) {
+      throw new ConvexError({
+        code: "DONATION_NOT_FOUND",
+        message: "Donation not found for this payment.",
+      });
+    }
+
+    const now = Date.now();
+    await ctx.db.patch(donation._id, {
+      emailUpdatesOptIn: args.optedIn,
+      emailUpdatesOptInAt: now,
+    });
+
+    // TODO: unsubscribe flow not built yet. Unticking on a later donation
+    // intentionally does not remove a prior opt-in row below — there is no
+    // way for a donor to withdraw consent yet, so we don't fake one here.
+    if (args.optedIn && donation.campaignId) {
+      const campaignId = donation.campaignId;
+      const existing = donation.userId
+        ? await ctx.db
+            .query("campaignUpdateOptIns")
+            .withIndex("by_user_campaign", (q) =>
+              q.eq("userId", donation.userId).eq("campaignId", campaignId),
+            )
+            .unique()
+        : donation.donorEmail
+          ? await ctx.db
+              .query("campaignUpdateOptIns")
+              .withIndex("by_donorEmail_campaign", (q) =>
+                q.eq("donorEmail", donation.donorEmail).eq("campaignId", campaignId),
+              )
+              .unique()
+          : null;
+
+      if (existing) {
+        await ctx.db.patch(existing._id, { donationId: donation._id, createdAt: now });
+      } else {
+        await ctx.db.insert("campaignUpdateOptIns", {
+          campaignId,
+          donationId: donation._id,
+          userId: donation.userId,
+          donorEmail: donation.donorEmail,
+          createdAt: now,
+        });
+      }
+    }
+
+    return { ok: true };
   },
 });

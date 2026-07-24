@@ -81,6 +81,24 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_createdBy", ["createdBy"])
     .index("by_stripeVerificationSessionId", ["stripeVerificationSessionId"]),
+  /** One row per posted update. One-to-many by design (a campaign can only
+   * post one today — no timeline UI yet) so recurring updates later don't
+   * need a schema migration. */
+  campaignUpdates: defineTable({
+    campaignId: v.id("campaigns"),
+    mediaUrls: v.array(v.string()),
+    headline: v.string(),
+    body: v.string(),
+    amountSpent: v.number(),
+    /** Snapshot of campaigns.raised at posting time — donations may keep
+     * coming in after this, so the live campaign total isn't read later. */
+    amountRaised: v.number(),
+    /** Required only when amountSpent < amountRaised at posting time. */
+    reconciliationNote: v.optional(v.string()),
+    postedByUserId: v.id("users"),
+    postedByRole: v.literal("leader"),
+    createdAt: v.number(),
+  }).index("by_campaign", ["campaignId"]),
   campaignFollows: defineTable({
     userId: v.id("users"),
     campaignSlug: v.string(),
@@ -270,6 +288,8 @@ export default defineSchema({
     estimatedStripeFeeMinor: v.optional(v.number()),
     ageAttested: v.optional(v.boolean()),
     legalAcceptedAt: v.optional(v.number()),
+    emailUpdatesOptIn: v.optional(v.boolean()),
+    emailUpdatesOptInAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -278,6 +298,34 @@ export default defineSchema({
     .index("by_donorEmail", ["donorEmail"])
     .index("by_fund", ["fundId"])
     .index("by_campaign", ["campaignId"]),
+  /** Per-campaign email-update subscriptions captured from the donation
+   * thank-you step. Only opted-in rows are stored — a donor's decision not
+   * to opt in lives solely on the donation row (see `donations.emailUpdatesOptIn`). */
+  campaignUpdateOptIns: defineTable({
+    campaignId: v.id("campaigns"),
+    donationId: v.id("donations"),
+    userId: v.optional(v.id("users")),
+    donorEmail: v.optional(v.string()),
+    createdAt: v.number(),
+    unsubscribedAt: v.optional(v.number()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_user", ["userId"])
+    .index("by_user_campaign", ["userId", "campaignId"])
+    .index("by_donorEmail_campaign", ["donorEmail", "campaignId"]),
+  /** One row per send attempt — doubles as an idempotency guard (skip
+   * optIns already logged "sent" for a given update) and a transparency
+   * record ("this update notified N donors"). */
+  campaignUpdateEmailLog: defineTable({
+    updateId: v.id("campaignUpdates"),
+    optInId: v.id("campaignUpdateOptIns"),
+    recipientEmail: v.string(),
+    status: v.union(v.literal("sent"), v.literal("failed"), v.literal("skipped")),
+    error: v.optional(v.string()),
+    sentAt: v.number(),
+  })
+    .index("by_update", ["updateId"])
+    .index("by_update_optIn", ["updateId", "optInId"]),
   fundAllocations: defineTable({
     fundId: v.id("communityFunds"),
     donationId: v.id("donations"),
