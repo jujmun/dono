@@ -41,6 +41,15 @@ describe("auth validation", () => {
     expect(result.success).toBe(false);
   });
 
+  it("accepts allowlisted outreach admin emails (Oxford domain bypass)", () => {
+    expect(
+      requestOtpSchema.safeParse({ email: "dono.outreach@gmail.com" }).success,
+    ).toBe(true);
+    expect(
+      requestOtpSchema.safeParse({ email: "juyeon27312@gmail.com" }).success,
+    ).toBe(true);
+  });
+
   it("rejects lookalike domains that merely contain ox.ac.uk", () => {
     const result = requestOtpSchema.safeParse({
       email: "test@fakeox.ac.uk.evil.com",

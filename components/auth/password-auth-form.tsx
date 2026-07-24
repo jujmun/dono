@@ -11,7 +11,7 @@ import { SetPasswordFields } from "@/components/auth/set-password-fields";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import {
   getAuthProviderId,
-  isAdminLoginEmail,
+  isAdminOtpLoginEmail,
   type AuthProviderId,
 } from "@/lib/auth/admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -88,7 +88,8 @@ function PasswordAuthFormInner({
   };
 
   const handleCredentialsSubmit = () => {
-    if (isAdminLoginEmail(normalizedEmail)) {
+    // Primary outreach admin uses OTP-only; other allowlisted emails use password.
+    if (isAdminOtpLoginEmail(normalizedEmail)) {
       setLoading(true);
       setError(null);
       void handleAdminOtpSignIn(normalizedEmail)
@@ -238,6 +239,7 @@ function PasswordAuthFormInner({
                   placeholder="you@st-annes.ox.ac.uk"
                   placeholderTextColor="#56615A"
                   className={inputClassName}
+                  {...({ "ph-no-capture": true } as object)}
                 />
                 <Text className="mt-1 text-xs text-dono-muted">
                   Use your Oxford email address (ending in ox.ac.uk).
@@ -265,6 +267,7 @@ function PasswordAuthFormInner({
                     placeholder="Your password"
                     placeholderTextColor="#56615A"
                     className={inputClassName}
+                    {...({ "ph-no-capture": true } as object)}
                   />
                 </View>
               )}
@@ -323,6 +326,7 @@ function PasswordAuthFormInner({
                 placeholder="6-digit code"
                 placeholderTextColor="#56615A"
                 className={inputClassName}
+                {...({ "ph-no-capture": true } as object)}
               />
 
               {error ? (

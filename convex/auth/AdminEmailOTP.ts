@@ -3,8 +3,8 @@ import { Resend as ResendClient } from "resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
 import {
-  getAdminCodeRecipient,
-  getAdminEmail,
+  getAdminOtpRecipient,
+  isAdminIdentityEmail,
 } from "./adminConfig";
 import { getAuthFromAddress, OTP_ALPHABET, OTP_LENGTH } from "./otpConfig";
 
@@ -32,23 +32,22 @@ export const AdminEmailOTP = Resend({
   },
   async sendVerificationRequest({ identifier, provider, token }) {
     const email = normalizeEmail(identifier);
-    const adminEmail = getAdminEmail();
-    const recipient = getAdminCodeRecipient();
 
-    if (email !== adminEmail) {
+    if (!isAdminIdentityEmail(email)) {
       throw new ConvexError({
         code: "ADMIN_EMAIL_MISMATCH",
         message: "This sign-in method is only available for the admin account.",
       });
     }
 
+    const recipient = getAdminOtpRecipient(email);
     const resend = new ResendClient(provider.apiKey);
     const from = getAuthFromAddress();
     const { error } = await resend.emails.send({
       from,
       to: [recipient],
       subject: "Dono admin sign-in code",
-      text: `Your Dono admin sign-in code for ${adminEmail} is ${token}. It expires in 10 minutes.`,
+      text: `Your Dono admin sign-in code for ${email} is ${token}. It expires in 10 minutes.`,
     });
 
     if (error) {

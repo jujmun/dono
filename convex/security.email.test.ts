@@ -18,6 +18,12 @@ describe("Oxford email normalization (auth abuse keying)", () => {
     ).toThrow();
   });
 
+  it("accepts allowlisted outreach admin emails (Oxford domain bypass)", () => {
+    expect(normalizeAndValidateOxfordEmail("juyeon27312@gmail.com")).toBe(
+      "juyeon27312@gmail.com",
+    );
+  });
+
   it("rejects malformed emails", () => {
     expect(() => normalizeAndValidateOxfordEmail("not-an-email")).toThrow();
   });
