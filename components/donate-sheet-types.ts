@@ -14,7 +14,10 @@ export type DonateSheetProps = {
   legalAccepted: boolean;
   onLegalAcceptedChange: (value: boolean) => void;
   onClose: () => void;
-  onSuccess: (amount: number, options?: { pendingConfirmation?: boolean }) => void;
+  onSuccess: (
+    amount: number,
+    options?: { pendingConfirmation?: boolean; paymentIntentId?: string },
+  ) => void;
 };
 
 export const PRESET_DONATION_AMOUNTS = [10, 25, 50, 100] as const;

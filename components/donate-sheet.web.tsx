@@ -114,7 +114,7 @@ function PaymentForm({
       }
 
       onPaymentCompleted();
-      onSuccess(selectedAmount, pendingConfirmation ? { pendingConfirmation: true } : undefined);
+      onSuccess(selectedAmount, { pendingConfirmation, paymentIntentId });
       onClose();
     } catch (err) {
       setError(getFriendlyPaymentError(err));

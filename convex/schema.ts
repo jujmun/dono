@@ -270,6 +270,8 @@ export default defineSchema({
     estimatedStripeFeeMinor: v.optional(v.number()),
     ageAttested: v.optional(v.boolean()),
     legalAcceptedAt: v.optional(v.number()),
+    emailUpdatesOptIn: v.optional(v.boolean()),
+    emailUpdatesOptInAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -278,6 +280,20 @@ export default defineSchema({
     .index("by_donorEmail", ["donorEmail"])
     .index("by_fund", ["fundId"])
     .index("by_campaign", ["campaignId"]),
+  /** Per-campaign email-update subscriptions captured from the donation
+   * thank-you step. Only opted-in rows are stored — a donor's decision not
+   * to opt in lives solely on the donation row (see `donations.emailUpdatesOptIn`). */
+  campaignUpdateOptIns: defineTable({
+    campaignId: v.id("campaigns"),
+    donationId: v.id("donations"),
+    userId: v.optional(v.id("users")),
+    donorEmail: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_user", ["userId"])
+    .index("by_user_campaign", ["userId", "campaignId"])
+    .index("by_donorEmail_campaign", ["donorEmail", "campaignId"]),
   fundAllocations: defineTable({
     fundId: v.id("communityFunds"),
     donationId: v.id("donations"),

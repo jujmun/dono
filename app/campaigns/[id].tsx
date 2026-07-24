@@ -37,6 +37,7 @@ import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
 type DonationThankYouState = {
   amount?: number;
   pendingConfirmation?: boolean;
+  paymentIntentId?: string;
 };
 
 export default function CampaignDetailPage() {
@@ -106,12 +107,12 @@ export default function CampaignDetailPage() {
     void confirmOneTimeDonation({ paymentIntentId })
       .then(() => {
         if (!cancelled) {
-          setThankYou({ pendingConfirmation: false });
+          setThankYou({ pendingConfirmation: false, paymentIntentId });
         }
       })
       .catch(() => {
         if (!cancelled) {
-          setThankYou({ pendingConfirmation: true });
+          setThankYou({ pendingConfirmation: true, paymentIntentId });
         }
       })
       .finally(() => {
@@ -523,6 +524,7 @@ export default function CampaignDetailPage() {
           setThankYou({
             amount,
             pendingConfirmation: options?.pendingConfirmation,
+            paymentIntentId: options?.paymentIntentId,
           });
         }}
         frequency="one_time"
@@ -533,6 +535,7 @@ export default function CampaignDetailPage() {
         amount={thankYou?.amount}
         campaignTitle={campaign.title}
         pendingConfirmation={thankYou?.pendingConfirmation}
+        paymentIntentId={thankYou?.paymentIntentId}
         onClose={() => setThankYou(null)}
       />
     </AppShell>

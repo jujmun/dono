@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Modal, Pressable, Text, View } from "react-native";
 import Animated, {
   Easing,
@@ -13,7 +13,10 @@ import Animated, {
   withTiming,
 } from "react-native-reanimated";
 import { CheckCircle2, Gift, Sparkles } from "lucide-react-native";
+import { useMutation } from "convex/react";
+import { api } from "@convex/_generated/api";
 import { formatCurrency } from "@/lib/constants";
+import { EmailUpdateOptInCheckbox } from "@/components/email-update-opt-in-checkbox";
 
 const CONFETTI_COUNT = 14;
 const CONFETTI_COLORS = ["#2f6844", "#168456", "#047857", "#86efac", "#bbf7d0", "#fbbf24"];
@@ -23,6 +26,7 @@ type DonationThankYouModalProps = {
   amount?: number;
   campaignTitle: string;
   pendingConfirmation?: boolean;
+  paymentIntentId?: string;
   onClose: () => void;
 };
 
@@ -79,11 +83,29 @@ export function DonationThankYouModal({
   amount,
   campaignTitle,
   pendingConfirmation = false,
+  paymentIntentId,
   onClose,
 }: DonationThankYouModalProps) {
   const iconScale = useSharedValue(0.4);
   const glowOpacity = useSharedValue(0);
   const ringScale = useSharedValue(0.6);
+  const [emailUpdatesOptIn, setEmailUpdatesOptIn] = useState(false);
+  const setEmailUpdateOptIn = useMutation(api.donations.setEmailUpdateOptIn);
+
+  useEffect(() => {
+    if (!visible) {
+      setEmailUpdatesOptIn(false);
+    }
+  }, [visible]);
+
+  const handleOptInChange = (value: boolean) => {
+    setEmailUpdatesOptIn(value);
+    if (!paymentIntentId) return;
+    setEmailUpdateOptIn({ paymentIntentId, optedIn: value }).catch(() => {
+      // Best-effort — the donation itself already succeeded, so we don't
+      // want a failed preference save to disrupt the thank-you screen.
+    });
+  };
 
   useEffect(() => {
     if (!visible) {
@@ -199,6 +221,19 @@ export function DonationThankYouModal({
                   </Text>
                 </View>
               </Animated.View>
+
+              {paymentIntentId ? (
+                <Animated.View
+                  entering={FadeInDown.delay(300).springify()}
+                  className="mt-4 w-full"
+                >
+                  <EmailUpdateOptInCheckbox
+                    campaignTitle={campaignTitle}
+                    checked={emailUpdatesOptIn}
+                    onCheckedChange={handleOptInChange}
+                  />
+                </Animated.View>
+              ) : null}
 
               <Animated.View entering={FadeInDown.delay(360).springify()} className="mt-8 w-full">
                 <Pressable
