@@ -758,3 +758,36 @@ export const bootstrapFirstAdmin = internalMutation({
     return { ok: true };
   },
 });
+
+/** Promote an additional admin once one already exists (bootstrapFirstAdmin
+ * refuses once any admin is present). Client apps cannot call this — run
+ * from CLI: `npx convex run users:promoteToAdmin '{"email":"you@college.ox.ac.uk"}'`
+ */
+export const promoteToAdmin = internalMutation({
+  args: { email: v.string() },
+  handler: async (ctx, args) => {
+    const normalized = args.email.trim().toLowerCase();
+    const domain = normalized.split("@")[1] ?? "";
+    const isOxford = domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
+    if (!isOxford) {
+      throw new ConvexError({
+        code: "EMAIL_DOMAIN_NOT_ALLOWED",
+        message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",
+      });
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_email", (q) => q.eq("email", normalized))
+      .unique();
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_NOT_FOUND",
+        message: "No profile found for that email. Sign in once first.",
+      });
+    }
+
+    await ctx.db.patch(profile._id, { role: "admin", updatedAt: Date.now() });
+    return { ok: true };
+  },
+});
