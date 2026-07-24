@@ -21,6 +21,7 @@ import type * as auth_passwordPolicy from "../auth/passwordPolicy.js";
 import type * as auth_rateLimit from "../auth/rateLimit.js";
 import type * as campaignCreator from "../campaignCreator.js";
 import type * as campaignIdentity from "../campaignIdentity.js";
+import type * as campaignUpdates from "../campaignUpdates.js";
 import type * as campaigns from "../campaigns.js";
 import type * as communities from "../communities.js";
 import type * as crons from "../crons.js";
@@ -99,6 +100,7 @@ declare const fullApi: ApiFromModules<{
   "auth/rateLimit": typeof auth_rateLimit;
   campaignCreator: typeof campaignCreator;
   campaignIdentity: typeof campaignIdentity;
+  campaignUpdates: typeof campaignUpdates;
   campaigns: typeof campaigns;
   communities: typeof communities;
   crons: typeof crons;

@@ -81,6 +81,24 @@ export default defineSchema({
     .index("by_status", ["status"])
     .index("by_createdBy", ["createdBy"])
     .index("by_stripeVerificationSessionId", ["stripeVerificationSessionId"]),
+  /** One row per posted update. One-to-many by design (a campaign can only
+   * post one today — no timeline UI yet) so recurring updates later don't
+   * need a schema migration. */
+  campaignUpdates: defineTable({
+    campaignId: v.id("campaigns"),
+    mediaUrls: v.array(v.string()),
+    headline: v.string(),
+    body: v.string(),
+    amountSpent: v.number(),
+    /** Snapshot of campaigns.raised at posting time — donations may keep
+     * coming in after this, so the live campaign total isn't read later. */
+    amountRaised: v.number(),
+    /** Required only when amountSpent < amountRaised at posting time. */
+    reconciliationNote: v.optional(v.string()),
+    postedByUserId: v.id("users"),
+    postedByRole: v.literal("leader"),
+    createdAt: v.number(),
+  }).index("by_campaign", ["campaignId"]),
   campaignFollows: defineTable({
     userId: v.id("users"),
     campaignSlug: v.string(),
