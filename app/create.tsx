@@ -47,6 +47,7 @@ import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign
 import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
+import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { api } from "@convex/_generated/api";
 
 const dinoLogo = require("../assets/dino-hero.png");
@@ -172,6 +173,7 @@ export default function CreateCampaignPage() {
   const isEditMode = Boolean(editSlug);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
+  const updateProfileDateOfBirth = useMutation(api.users.updateProfile);
   const updateCampaign = useMutation(api.campaignCreator.update);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
@@ -190,6 +192,7 @@ export default function CreateCampaignPage() {
     api.societyMembers.listMyApprovedSocieties,
     isAuthenticated && !isEditMode ? {} : "skip",
   );
+  const myProfile = useQuery(api.users.me, isAuthenticated ? {} : "skip");
   const editCampaign = useQuery(
     api.campaignCreator.getMineForEdit,
     isAuthenticated && editSlug ? { slug: editSlug } : "skip",
@@ -207,6 +210,9 @@ export default function CreateCampaignPage() {
   const [plannedUpdateSchedule, setPlannedUpdateSchedule] = useState("");
   const [ownershipStatement, setOwnershipStatement] = useState("");
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [dobInput, setDobInput] = useState("");
+  const [dobError, setDobError] = useState<string | null>(null);
+  const [dobSaving, setDobSaving] = useState(false);
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -380,6 +386,31 @@ export default function CreateCampaignPage() {
    * mirrors the society wizard. Field edits made after this are synced via
    * campaignCreator.update when the user presses Complete.
    */
+  const handleSaveDateOfBirth = async () => {
+    setDobError(null);
+    const trimmed = dobInput.trim();
+    if (!parseIsoDateOnly(trimmed)) {
+      setDobError("Enter your date of birth as YYYY-MM-DD.");
+      return;
+    }
+    if (!isAtLeastAge(trimmed)) {
+      setDobError("You must be at least 18 years old to create a campaign.");
+      return;
+    }
+    setDobSaving(true);
+    try {
+      await updateProfileDateOfBirth({
+        name: myProfile?.name ?? "",
+        dateOfBirth: trimmed,
+      });
+      setDobInput("");
+    } catch (err) {
+      setDobError(getFriendlyAuthError(err));
+    } finally {
+      setDobSaving(false);
+    }
+  };
+
   const ensureCampaignCreated = async (): Promise<string> => {
     if (!legalAccepted) {
       throw new Error("Please accept the campaign terms to continue.");
@@ -404,6 +435,10 @@ export default function CreateCampaignPage() {
 
   const handleVerifyIdentity = async () => {
     setError(null);
+    if (!hasDateOfBirth) {
+      setError("Please confirm your date of birth before verifying your identity.");
+      return;
+    }
     if (!legalAccepted) {
       setError("Please accept the campaign terms before verifying your identity.");
       return;
@@ -426,6 +461,9 @@ export default function CreateCampaignPage() {
       setVerifying(false);
     }
   };
+
+  const dobLoading = isAuthenticated && myProfile === undefined;
+  const hasDateOfBirth = Boolean(myProfile?.dateOfBirth);
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
   const stripeVerified = stripeStatus === "verified";
@@ -1163,6 +1201,44 @@ export default function CreateCampaignPage() {
                     confirm it's really you — it only takes a minute.
                   </Text>
 
+                  {!dobLoading && !hasDateOfBirth ? (
+                    <View className="mb-3 rounded-lg border border-dono-border bg-dono-surface-muted p-3">
+                      <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                        Confirm your date of birth
+                      </Text>
+                      <Text className="mb-2 text-xs text-[#5c574f]">
+                        You must be at least 18 to create a campaign — we need this on
+                        file before you can verify your identity.
+                      </Text>
+                      <TextInput
+                        value={dobInput}
+                        onChangeText={setDobInput}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#56615A"
+                        autoCapitalize="none"
+                        className={inputClass}
+                      />
+                      {dobError ? (
+                        <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
+                      ) : null}
+                      <Pressable
+                        onPress={() => void handleSaveDateOfBirth()}
+                        disabled={dobSaving || !dobInput.trim()}
+                        className={`mt-2 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
+                          dobSaving || !dobInput.trim() ? "opacity-50" : ""
+                        }`}
+                      >
+                        {dobSaving ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text className="font-retro-bold text-sm text-retro-paper">
+                            Save date of birth
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  ) : null}
+
                   <LegalAcceptanceCheckbox
                     context="create_campaign"
                     accepted={legalAccepted}
@@ -1174,9 +1250,11 @@ export default function CreateCampaignPage() {
 
                   <Pressable
                     onPress={() => void handleVerifyIdentity()}
-                    disabled={verifying || stripeVerified || !legalAccepted}
+                    disabled={verifying || stripeVerified || !legalAccepted || !hasDateOfBirth}
                     className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
-                      verifying || stripeVerified || !legalAccepted ? "opacity-50" : ""
+                      verifying || stripeVerified || !legalAccepted || !hasDateOfBirth
+                        ? "opacity-50"
+                        : ""
                     }`}
                   >
                     {verifying ? (
@@ -1187,7 +1265,11 @@ export default function CreateCampaignPage() {
                       </Text>
                     )}
                   </Pressable>
-                  {!legalAccepted ? (
+                  {!hasDateOfBirth ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      Confirm your date of birth above before starting identity verification.
+                    </Text>
+                  ) : !legalAccepted ? (
                     <Text className="mt-2 text-xs text-[#5c574f]">
                       Accept the terms above before starting identity verification.
                     </Text>
