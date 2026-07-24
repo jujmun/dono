@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
+import { internal } from "./_generated/api";
 import { getProfileByUserId, requireSocietyLeader } from "./lib/authz";
 import {
   assertNotRateLimited,
@@ -159,8 +160,9 @@ export const create = mutation({
       createdAt: Date.now(),
     });
 
-    // TODO(prompt 3): schedule the opt-in email job here, e.g.
-    // await ctx.scheduler.runAfter(0, internal.campaignUpdateEmails.send, { campaignId: campaign._id, updateId });
+    await ctx.scheduler.runAfter(0, internal.campaignUpdateEmails.sendForUpdate, {
+      updateId,
+    });
 
     return { updateId };
   },

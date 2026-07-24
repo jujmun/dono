@@ -307,11 +307,25 @@ export default defineSchema({
     userId: v.optional(v.id("users")),
     donorEmail: v.optional(v.string()),
     createdAt: v.number(),
+    unsubscribedAt: v.optional(v.number()),
   })
     .index("by_campaign", ["campaignId"])
     .index("by_user", ["userId"])
     .index("by_user_campaign", ["userId", "campaignId"])
     .index("by_donorEmail_campaign", ["donorEmail", "campaignId"]),
+  /** One row per send attempt — doubles as an idempotency guard (skip
+   * optIns already logged "sent" for a given update) and a transparency
+   * record ("this update notified N donors"). */
+  campaignUpdateEmailLog: defineTable({
+    updateId: v.id("campaignUpdates"),
+    optInId: v.id("campaignUpdateOptIns"),
+    recipientEmail: v.string(),
+    status: v.union(v.literal("sent"), v.literal("failed"), v.literal("skipped")),
+    error: v.optional(v.string()),
+    sentAt: v.number(),
+  })
+    .index("by_update", ["updateId"])
+    .index("by_update_optIn", ["updateId", "optInId"]),
   fundAllocations: defineTable({
     fundId: v.id("communityFunds"),
     donationId: v.id("donations"),
