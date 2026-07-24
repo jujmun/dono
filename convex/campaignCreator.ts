@@ -14,6 +14,7 @@ import {
 } from "./auth/rateLimit";
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
+import { isAllowedCampaignCategory } from "./lib/campaignCategories";
 import { isEditableByOwner } from "./lib/campaignVisibility";
 import {
   buildCampaignEditedMessage,
@@ -27,6 +28,8 @@ const MAX_UNIVERSITY_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 500;
 const MAX_STORY_LENGTH = 5000;
 const MAX_ADDITIONAL_NOTES_LENGTH = 2000;
+const MAX_OWNERSHIP_STATEMENT = 2000;
+const MAX_UPDATE_SCHEDULE = 2000;
 const MAX_UPDATE_TITLE = 120;
 const MAX_UPDATE_CONTENT = 5000;
 const MIN_GOAL = 1;
@@ -110,6 +113,10 @@ export const update = mutation({
     template: v.optional(v.string()),
     /** Empty string clears the notes. */
     additionalNotes: v.optional(v.string()),
+    expectedExpenditureDate: v.optional(v.string()),
+    plannedUpdateSchedule: v.optional(v.string()),
+    ownershipStatement: v.optional(v.string()),
+    responsibleIndividualUserId: v.optional(v.id("users")),
     /** True only from app/create.tsx's edit mode (?editSlug=..., reached from
      * an admin-changes-requested notification) — logs a campaign_edited
      * event so admins see it in the review thread. Left unset by the same
@@ -147,6 +154,12 @@ export const update = mutation({
       const category = args.category.trim();
       if (!category || category.length > MAX_CATEGORY_LENGTH) {
         throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid category." });
+      }
+      if (!isAllowedCampaignCategory(category)) {
+        throw new ConvexError({
+          code: "PROHIBITED_CATEGORY",
+          message: "This campaign category is not permitted under the Terms.",
+        });
       }
       patch.category = category;
     }
@@ -189,6 +202,49 @@ export const update = mutation({
         throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid additional notes." });
       }
       patch.additionalNotes = additionalNotes || undefined;
+    }
+    if (args.expectedExpenditureDate !== undefined) {
+      const expectedExpenditureDate = args.expectedExpenditureDate.trim();
+      if (
+        expectedExpenditureDate &&
+        !/^\d{4}-\d{2}-\d{2}$/.test(expectedExpenditureDate)
+      ) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "expectedExpenditureDate must be YYYY-MM-DD.",
+        });
+      }
+      patch.expectedExpenditureDate = expectedExpenditureDate || undefined;
+    }
+    if (args.plannedUpdateSchedule !== undefined) {
+      const plannedUpdateSchedule = args.plannedUpdateSchedule.trim();
+      if (plannedUpdateSchedule.length > MAX_UPDATE_SCHEDULE) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "Invalid planned update schedule.",
+        });
+      }
+      patch.plannedUpdateSchedule = plannedUpdateSchedule || undefined;
+    }
+    if (args.ownershipStatement !== undefined) {
+      const ownershipStatement = args.ownershipStatement.trim();
+      if (ownershipStatement.length > MAX_OWNERSHIP_STATEMENT) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "Invalid ownership statement.",
+        });
+      }
+      patch.ownershipStatement = ownershipStatement || undefined;
+    }
+    if (args.responsibleIndividualUserId !== undefined) {
+      const responsibleUser = await ctx.db.get(args.responsibleIndividualUserId);
+      if (!responsibleUser) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "Responsible individual user was not found.",
+        });
+      }
+      patch.responsibleIndividualUserId = args.responsibleIndividualUserId;
     }
 
     if (Object.keys(patch).length > 0) {

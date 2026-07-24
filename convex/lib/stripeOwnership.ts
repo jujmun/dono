@@ -3,6 +3,7 @@ import type { Id } from "../_generated/dataModel";
 type RecurringDonationLike = {
   _id: Id<"recurringDonations">;
   userId: Id<"users">;
+  campaignId: Id<"campaigns">;
   status: string;
   stripeSubscriptionId: string;
 };

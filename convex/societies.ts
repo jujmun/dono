@@ -13,6 +13,8 @@ import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
+import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
+import { assertAdultOrThrow } from "./lib/ageGate";
 
 const MAX_NAME_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -209,9 +211,19 @@ export const create = mutation({
     coverImageStorageId: v.optional(v.id("_storage")),
     supportingDocumentStorageIds: v.array(v.id("_storage")),
     idDocumentStorageId: v.id("_storage"),
+    responsibleIndividualUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
+    await assertLegalAcceptedForContext(ctx, {
+      userId,
+      context: "create_society",
+    });
+    const profile = await getProfileByUserId(ctx, userId);
+    assertAdultOrThrow(
+      profile?.dateOfBirth,
+      "You must be at least 18 years old to create a society.",
+    );
     const name = args.name.trim();
     const description = args.description.trim();
     const story = args.story.trim();
@@ -253,6 +265,18 @@ export const create = mutation({
         code: "INVALID_INPUT",
         message: `Provide at most ${MAX_DOCUMENTS} supporting documents.`,
       });
+    }
+
+    const responsibleIndividualUserId =
+      args.responsibleIndividualUserId ?? userId;
+    if (responsibleIndividualUserId !== userId) {
+      const responsibleUser = await ctx.db.get(responsibleIndividualUserId);
+      if (!responsibleUser) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "Responsible individual user was not found.",
+        });
+      }
     }
 
     if (args.coverImageStorageId) {
@@ -297,6 +321,7 @@ export const create = mutation({
       supportingDocumentStorageIds: args.supportingDocumentStorageIds,
       idDocumentStorageId: args.idDocumentStorageId,
       creatorId: userId,
+      responsibleIndividualUserId,
       status: "pending",
       createdAt: Date.now(),
     });
@@ -316,6 +341,7 @@ export const updateVerificationMaterials = mutation({
     websiteUrl: v.string(),
     secondaryLink: v.optional(v.string()),
     supportingDocumentStorageIds: v.array(v.id("_storage")),
+    responsibleIndividualUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -361,11 +387,153 @@ export const updateVerificationMaterials = mutation({
       await claimStorageId(ctx, userId, storageId);
     }
 
-    await ctx.db.patch(society._id, {
+    const patch: {
+      websiteUrl: string;
+      secondaryLink: string | undefined;
+      supportingDocumentStorageIds: Id<"_storage">[];
+      responsibleIndividualUserId?: Id<"users">;
+    } = {
       websiteUrl,
       secondaryLink: secondaryLink || undefined,
       supportingDocumentStorageIds: args.supportingDocumentStorageIds,
+    };
+    if (args.responsibleIndividualUserId !== undefined) {
+      const responsibleUser = await ctx.db.get(args.responsibleIndividualUserId);
+      if (!responsibleUser) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "Responsible individual user was not found.",
+        });
+      }
+      patch.responsibleIndividualUserId = args.responsibleIndividualUserId;
+    }
+
+    await ctx.db.patch(society._id, patch);
+  },
+});
+
+/** Set / replace the named Responsible Individual (Society Campaign Terms). */
+export const setResponsibleIndividual = mutation({
+  args: {
+    slug: v.string(),
+    responsibleIndividualUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Society not found.",
+      });
+    }
+
+    const isCreator = society.creatorId === userId;
+    const isCurrentRi =
+      (society.responsibleIndividualUserId ?? society.creatorId) === userId;
+    const membership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", society.slug).eq("userId", userId),
+      )
+      .unique();
+    const isLeader =
+      membership?.status === "approved" && membership.role === "leader";
+
+    if (!isCreator && !isCurrentRi && !isLeader) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission for this action.",
+      });
+    }
+
+    const targetMembership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q
+          .eq("communitySlug", society.slug)
+          .eq("userId", args.responsibleIndividualUserId),
+      )
+      .unique();
+    if (
+      args.responsibleIndividualUserId !== society.creatorId &&
+      (!targetMembership || targetMembership.status !== "approved")
+    ) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Responsible individual must be an approved society member.",
+      });
+    }
+
+    await ctx.db.patch(society._id, {
+      responsibleIndividualUserId: args.responsibleIndividualUserId,
     });
+    return null;
+  },
+});
+
+/** Succession: transfer Responsible Individual to another approved member. */
+export const transferResponsibleIndividual = mutation({
+  args: {
+    slug: v.string(),
+    newResponsibleIndividualUserId: v.id("users"),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Society not found.",
+      });
+    }
+
+    const currentRi =
+      society.responsibleIndividualUserId ?? society.creatorId;
+    const membership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", society.slug).eq("userId", userId),
+      )
+      .unique();
+    const isLeader =
+      membership?.status === "approved" && membership.role === "leader";
+    if (userId !== currentRi && society.creatorId !== userId && !isLeader) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission for this action.",
+      });
+    }
+
+    if (args.newResponsibleIndividualUserId === currentRi) {
+      return null;
+    }
+
+    const targetMembership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q
+          .eq("communitySlug", society.slug)
+          .eq("userId", args.newResponsibleIndividualUserId),
+      )
+      .unique();
+    if (!targetMembership || targetMembership.status !== "approved") {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Successor must be an approved society member.",
+      });
+    }
+
+    await ctx.db.patch(society._id, {
+      responsibleIndividualUserId: args.newResponsibleIndividualUserId,
+    });
+    return null;
   },
 });
 

@@ -33,6 +33,7 @@ import {
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
 import { categoryLabels, formatCurrency } from "@/lib/constants";
+import { ALLOWED_CAMPAIGN_CATEGORIES } from "@/lib/campaign-categories";
 import {
   MAX_CAMPAIGN_IMAGES,
   MIN_CAMPAIGN_IMAGES,
@@ -44,6 +45,7 @@ import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verific
 import { parseCampaignVideoUrl } from "@/lib/video-url";
 import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign-templates";
 import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
+import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import { api } from "@convex/_generated/api";
 
@@ -171,6 +173,7 @@ export default function CreateCampaignPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
   const updateCampaign = useMutation(api.campaignCreator.update);
+  const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
@@ -200,6 +203,10 @@ export default function CreateCampaignPage() {
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
+  const [expectedExpenditureDate, setExpectedExpenditureDate] = useState("");
+  const [plannedUpdateSchedule, setPlannedUpdateSchedule] = useState("");
+  const [ownershipStatement, setOwnershipStatement] = useState("");
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -228,6 +235,9 @@ export default function CreateCampaignPage() {
       setTemplate(editCampaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID);
       setVideoUrl(editCampaign.videoUrl ?? "");
       setAdditionalNotes(editCampaign.additionalNotes ?? "");
+      setExpectedExpenditureDate(editCampaign.expectedExpenditureDate ?? "");
+      setPlannedUpdateSchedule(editCampaign.plannedUpdateSchedule ?? "");
+      setOwnershipStatement(editCampaign.ownershipStatement ?? "");
       const decodedLines = (editCampaign.impactItems ?? []).map((item) => {
         const parsed = parseImpactItem(item);
         return {
@@ -371,6 +381,10 @@ export default function CreateCampaignPage() {
    * campaignCreator.update when the user presses Complete.
    */
   const ensureCampaignCreated = async (): Promise<string> => {
+    if (!legalAccepted) {
+      throw new Error("Please accept the campaign terms to continue.");
+    }
+    await acceptDocuments({ context: "create_campaign" });
     if (campaignSlug) return campaignSlug;
     const result = await createCampaign({
       title: form.title,
@@ -380,6 +394,9 @@ export default function CreateCampaignPage() {
       story: form.story,
       goal: Number(form.goal),
       template,
+      expectedExpenditureDate: expectedExpenditureDate.trim(),
+      plannedUpdateSchedule: plannedUpdateSchedule.trim(),
+      ownershipStatement: ownershipStatement.trim(),
     });
     setCampaignSlug(result.slug);
     return result.slug;
@@ -387,6 +404,10 @@ export default function CreateCampaignPage() {
 
   const handleVerifyIdentity = async () => {
     setError(null);
+    if (!legalAccepted) {
+      setError("Please accept the campaign terms before verifying your identity.");
+      return;
+    }
     setVerifying(true);
     try {
       const slug = await ensureCampaignCreated();
@@ -444,6 +465,11 @@ export default function CreateCampaignPage() {
   const photosIncomplete =
     pickedImages.length > 0 && pickedImages.length < MIN_CAMPAIGN_IMAGES;
 
+  const transparencyFieldsComplete =
+    expectedExpenditureDate.trim().length > 0 &&
+    plannedUpdateSchedule.trim().length > 0 &&
+    ownershipStatement.trim().length > 0;
+
   const canProceed = () => {
     switch (step) {
       case 0:
@@ -455,17 +481,15 @@ export default function CreateCampaignPage() {
       case 1:
         return form.description && form.story;
       case 2:
-        return form.goal && Number(form.goal) > 0 && fundLinesComplete;
+        return (
+          Boolean(form.goal) &&
+          Number(form.goal) > 0 &&
+          fundLinesComplete &&
+          transparencyFieldsComplete
+        );
       case 3:
-        // Edit mode already has a campaign record, so campaignSlug is never
-        // the useful signal there — require the identity check to have been
-        // started (at any point) or already verified instead.
-        if (isEditMode) {
-          return stripeVerified || stripeStatus !== null;
-        }
-        // The identity check must at least be started (which also creates the
-        // campaign record). Verification itself can finish in the background.
-        return campaignSlug !== null;
+        // Identity must be verified before continuing to submit.
+        return stripeVerified && legalAccepted;
       default:
         return true;
     }
@@ -691,27 +715,30 @@ export default function CreateCampaignPage() {
                 <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">Category</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                   <View className="flex-row gap-2">
-                    {Object.entries(categoryLabels).map(([key, label]) => (
-                      <Pressable
-                        key={key}
-                        onPress={() => update("category", key)}
-                        className={`rounded-lg border-2 px-3 py-2.5 ${
-                          form.category === key
-                            ? "border-retro-ink bg-retro-mint/10"
-                            : "border-retro-ink"
-                        }`}
-                      >
-                        <Text
-                          className={`font-retro-bold text-xs ${
+                    {ALLOWED_CAMPAIGN_CATEGORIES.map((key) => {
+                      const label = categoryLabels[key] ?? key;
+                      return (
+                        <Pressable
+                          key={key}
+                          onPress={() => update("category", key)}
+                          className={`rounded-lg border-2 px-3 py-2.5 ${
                             form.category === key
-                              ? "text-retro-mint"
-                              : "text-[#5c574f]"
+                              ? "border-retro-ink bg-retro-mint/10"
+                              : "border-retro-ink"
                           }`}
                         >
-                          {label}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <Text
+                            className={`font-retro-bold text-xs ${
+                              form.category === key
+                                ? "text-retro-mint"
+                                : "text-[#5c574f]"
+                            }`}
+                          >
+                            {label}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
                   </View>
                 </ScrollView>
               </View>
@@ -913,6 +940,55 @@ export default function CreateCampaignPage() {
                 </ReceiptLedger>
               </View>
 
+              <View>
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                  Expected expenditure date
+                </Text>
+                <TextInput
+                  value={expectedExpenditureDate}
+                  onChangeText={setExpectedExpenditureDate}
+                  placeholder="YYYY-MM-DD"
+                  placeholderTextColor="#56615A"
+                  autoCapitalize="none"
+                  className={inputClass}
+                />
+                <Text className="mt-1.5 text-xs text-[#5c574f]">
+                  When you expect purchases or spending to happen.
+                </Text>
+              </View>
+
+              <View>
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                  Planned update schedule
+                </Text>
+                <TextInput
+                  value={plannedUpdateSchedule}
+                  onChangeText={setPlannedUpdateSchedule}
+                  placeholder="e.g. Monthly progress posts until funds are spent"
+                  placeholderTextColor="#56615A"
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  className={`${inputClass} min-h-[80px]`}
+                />
+              </View>
+
+              <View>
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                  Ownership statement
+                </Text>
+                <TextInput
+                  value={ownershipStatement}
+                  onChangeText={setOwnershipStatement}
+                  placeholder="Who will own funded property or outputs?"
+                  placeholderTextColor="#56615A"
+                  multiline
+                  numberOfLines={3}
+                  textAlignVertical="top"
+                  className={`${inputClass} min-h-[80px]`}
+                />
+              </View>
+
               <View className="rounded-xl border border-green-200 bg-green-50 p-4">
                 <Text className="text-sm text-green-800">
                   Students never pay to create campaigns. Dono takes a small transaction
@@ -1066,7 +1142,15 @@ export default function CreateCampaignPage() {
                 </View>
               </View>
 
-              {isEditMode && stripeVerified ? null : (
+              {isEditMode && stripeVerified ? (
+                <View className="rounded-xl border border-retro-ink bg-white p-4">
+                  <LegalAcceptanceCheckbox
+                    context="create_campaign"
+                    accepted={legalAccepted}
+                    onAcceptedChange={setLegalAccepted}
+                  />
+                </View>
+              ) : (
                 <View className="rounded-xl border border-retro-ink bg-white p-4">
                   <View className="mb-1.5 flex-row items-center gap-2">
                     <ShieldCheck size={16} color="#17211B" />
@@ -1079,13 +1163,20 @@ export default function CreateCampaignPage() {
                     confirm it's really you — it only takes a minute.
                   </Text>
 
+                  <LegalAcceptanceCheckbox
+                    context="create_campaign"
+                    accepted={legalAccepted}
+                    onAcceptedChange={setLegalAccepted}
+                    className="mb-3"
+                  />
+
                   {renderVerificationStatus()}
 
                   <Pressable
                     onPress={() => void handleVerifyIdentity()}
-                    disabled={verifying || stripeVerified}
+                    disabled={verifying || stripeVerified || !legalAccepted}
                     className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
-                      verifying || stripeVerified ? "opacity-50" : ""
+                      verifying || stripeVerified || !legalAccepted ? "opacity-50" : ""
                     }`}
                   >
                     {verifying ? (
@@ -1096,13 +1187,17 @@ export default function CreateCampaignPage() {
                       </Text>
                     )}
                   </Pressable>
-                  {stripeFailed ? (
+                  {!legalAccepted ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      Accept the terms above before starting identity verification.
+                    </Text>
+                  ) : stripeFailed ? (
                     <Text className="mt-2 text-xs text-rose-700">
                       That didn't go through — please try again.
                     </Text>
-                  ) : !campaignSlug || (isEditMode && stripeStatus === null) ? (
+                  ) : !stripeVerified ? (
                     <Text className="mt-2 text-xs text-[#5c574f]">
-                      You'll be able to continue once you've started this check.
+                      You'll be able to continue once your identity is verified.
                     </Text>
                   ) : null}
                 </View>
@@ -1151,10 +1246,26 @@ export default function CreateCampaignPage() {
               </Pressable>
             ) : step === 3 ? (
               <Pressable
-                onPress={() => setStep(4)}
-                disabled={!canProceed()}
+                onPress={() => {
+                  if (!legalAccepted) {
+                    setError("Please accept the campaign terms to continue.");
+                    return;
+                  }
+                  setError(null);
+                  setSubmitting(true);
+                  void acceptDocuments({ context: "create_campaign" })
+                    .then(() => setStep(4))
+                    .catch((err: Error) => {
+                      setError(
+                        getFriendlyAuthError(err) ||
+                          "Could not record legal acceptance.",
+                      );
+                    })
+                    .finally(() => setSubmitting(false));
+                }}
+                disabled={!canProceed() || submitting}
                 className={`${stripeVerified ? primaryBtnClass : accentBtnClass} ${
-                  !canProceed() ? "opacity-50" : ""
+                  !canProceed() || submitting ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
@@ -1179,6 +1290,9 @@ export default function CreateCampaignPage() {
                     goal: Number(form.goal),
                     template,
                     additionalNotes,
+                    expectedExpenditureDate: expectedExpenditureDate.trim(),
+                    plannedUpdateSchedule: plannedUpdateSchedule.trim(),
+                    ownershipStatement: ownershipStatement.trim(),
                     ...(isEditMode ? { logEdit: true } : {}),
                   })
                     .then(async () => {
@@ -1252,6 +1366,10 @@ export default function CreateCampaignPage() {
                       setPickedImages([]);
                       setVideoUrl("");
                       setAdditionalNotes("");
+                      setExpectedExpenditureDate("");
+                      setPlannedUpdateSchedule("");
+                      setOwnershipStatement("");
+                      setLegalAccepted(false);
                       setFundLines(initialFundLines());
                       setCampaignSlug(null);
                       setStep(0);

@@ -17,7 +17,6 @@ interface RetroDonateSidebarProps {
   campaign: Campaign;
   selectedAmount: number;
   customAmount: string;
-  donateAnonymously: boolean;
   liked: boolean;
   following: boolean;
   likeLoading: boolean;
@@ -26,7 +25,6 @@ interface RetroDonateSidebarProps {
   donationsDisabledReason?: string;
   onSelectPreset: (amount: number) => void;
   onCustomAmountChange: (value: string) => void;
-  onAnonymousChange: (value: boolean) => void;
   onDonate: () => void;
   onToggleLike: () => void;
   onToggleFollow: () => void;
@@ -37,7 +35,6 @@ export function RetroDonateSidebar({
   campaign,
   selectedAmount,
   customAmount,
-  donateAnonymously,
   liked,
   following,
   likeLoading,
@@ -46,7 +43,6 @@ export function RetroDonateSidebar({
   donationsDisabledReason,
   onSelectPreset,
   onCustomAmountChange,
-  onAnonymousChange,
   onDonate,
   onToggleLike,
   onToggleFollow,
@@ -131,25 +127,6 @@ export function RetroDonateSidebar({
               {donationsDisabledReason}
             </Text>
           ) : null}
-
-          <Pressable
-            onPress={() => onAnonymousChange(!donateAnonymously)}
-            className="mb-4 flex-row items-center gap-2.5"
-          >
-            <View
-              className={cn(
-                "h-[18px] w-[18px] items-center justify-center rounded-full border-2 border-retro-ink",
-                donateAnonymously ? "bg-retro-mint" : "bg-white",
-              )}
-            >
-              {donateAnonymously ? (
-                <Text className="text-[10px] font-bold text-white">✓</Text>
-              ) : null}
-            </View>
-            <Text className="font-retro-mono text-[12px] text-retro-ink">
-              donate anonymously
-            </Text>
-          </Pressable>
         </>
       ) : (
         <View className="mb-4 rounded-lg border-2 border-dashed border-retro-ink bg-retro-cream px-3 py-3">

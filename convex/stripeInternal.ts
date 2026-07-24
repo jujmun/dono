@@ -178,6 +178,25 @@ export const resolveCampaignMerchantAccount = internalQuery({
   },
 });
 
+/** Soft lookup of Connect account for an existing campaign (e.g. cancel subscription). */
+export const getConnectAccountIdForCampaign = internalQuery({
+  args: { campaignId: v.id("campaigns") },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db.get(args.campaignId);
+    if (!campaign) return null;
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) =>
+        q.eq("communitySlug", campaign.creator.communityId),
+      )
+      .first();
+    if (!connectAccount || connectAccount.accountVersion !== "v2") {
+      return null;
+    }
+    return { stripeAccountId: connectAccount.stripeAccountId };
+  },
+});
+
 export const getStripeCustomerByUserId = internalQuery({
   args: { userId: v.id("users") },
   handler: async (ctx, args) => {
@@ -224,6 +243,11 @@ export const createPendingDonation = internalMutation({
     stripeConnectedAccountId: v.string(),
     grossAmountMinor: v.number(),
     applicationFeeAmountMinor: v.number(),
+    coverFees: v.optional(v.boolean()),
+    intendedCampaignAmountMinor: v.optional(v.number()),
+    estimatedStripeFeeMinor: v.optional(v.number()),
+    ageAttested: v.optional(v.boolean()),
+    legalAcceptedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const amountValidation = validateDonationAmount(args.amount);
@@ -249,6 +273,11 @@ export const createPendingDonation = internalMutation({
       applicationFeeAmountMinor: args.applicationFeeAmountMinor,
       applicationFeeRefundedMinor: 0,
       refundedAmountMinor: 0,
+      coverFees: args.coverFees,
+      intendedCampaignAmountMinor: args.intendedCampaignAmountMinor,
+      estimatedStripeFeeMinor: args.estimatedStripeFeeMinor,
+      ageAttested: args.ageAttested,
+      legalAcceptedAt: args.legalAcceptedAt,
       createdAt: Date.now(),
     });
   },

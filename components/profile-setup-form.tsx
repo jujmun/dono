@@ -21,6 +21,7 @@ export type ProfileSetupValues = {
   college: string;
   degree: string;
   yearInCollege: YearInCollege;
+  dateOfBirth: string;
   avatarPreview: string | null;
   avatarStorageId?: string;
 };
@@ -50,6 +51,7 @@ export function ProfileSetupForm({
   const [yearInCollege, setYearInCollege] = useState<YearInCollege | "">(
     initialValues?.yearInCollege ?? "",
   );
+  const [dateOfBirth, setDateOfBirth] = useState(initialValues?.dateOfBirth ?? "");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(
     initialValues?.avatarPreview ?? null,
   );
@@ -98,6 +100,7 @@ export function ProfileSetupForm({
       college,
       degree,
       yearInCollege,
+      dateOfBirth,
     });
 
     if (!parsed.success) {
@@ -188,6 +191,23 @@ export function ProfileSetupForm({
           placeholderTextColor="#56615A"
           className={inputClassName}
         />
+      </View>
+
+      <View>
+        <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
+          Date of birth
+        </Text>
+        <TextInput
+          value={dateOfBirth}
+          onChangeText={setDateOfBirth}
+          placeholder="YYYY-MM-DD"
+          placeholderTextColor="#56615A"
+          autoCapitalize="none"
+          className={inputClassName}
+        />
+        <Text className="mt-1 text-xs text-dono-muted">
+          You must be at least 18 to use Dono.
+        </Text>
       </View>
 
       <View>

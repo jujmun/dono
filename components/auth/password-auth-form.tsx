@@ -2,10 +2,13 @@ import { useState } from "react";
 import { View, Text, TextInput, Pressable } from "react-native";
 import { type Href, useRouter } from "expo-router";
 import { useAuthActions } from "@convex-dev/auth/react";
+import { useMutation } from "convex/react";
 import { usePostHog } from "posthog-react-native";
+import { api } from "@convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
 import { RetroPanel } from "@/components/retro";
 import { SetPasswordFields } from "@/components/auth/set-password-fields";
+import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import {
   getAuthProviderId,
   isAdminLoginEmail,
@@ -54,12 +57,14 @@ function PasswordAuthFormInner({
   const { signIn } = useAuthActions();
   const router = useRouter();
   const posthog = usePostHog();
+  const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const [step, setStep] = useState<"credentials" | "verify">("credentials");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -102,6 +107,10 @@ function PasswordAuthFormInner({
         setError(parsed.error.issues[0]?.message ?? "Please check your input.");
         return;
       }
+      if (!acceptedLegal) {
+        setError("Please accept the Terms, Privacy Policy and Community Guidelines.");
+        return;
+      }
     } else {
       const parsed = signInWithPasswordSchema.safeParse({
         email: normalizedEmail,
@@ -137,6 +146,13 @@ function PasswordAuthFormInner({
         );
         if (result.signingIn) {
           posthog?.capture(mode === "signUp" ? "user_signed_up" : "user_signed_in");
+          if (mode === "signUp" && acceptedLegal) {
+            try {
+              await acceptDocuments({ context: "signup" });
+            } catch {
+              // Acceptance can be re-completed from gated flows if this fails.
+            }
+          }
           redirectAfterAuth();
           return;
         }
@@ -182,6 +198,13 @@ function PasswordAuthFormInner({
           return;
         }
         posthog?.capture(mode === "signUp" ? "user_signed_up" : "user_signed_in");
+        if (mode === "signUp" && acceptedLegal) {
+          try {
+            await acceptDocuments({ context: "signup" });
+          } catch {
+            // Acceptance can be re-completed from gated flows if this fails.
+          }
+        }
         redirectAfterAuth();
       } catch (err) {
         setError(getFriendlyAuthError(err));
@@ -246,6 +269,14 @@ function PasswordAuthFormInner({
                 </View>
               )}
 
+              {mode === "signUp" ? (
+                <LegalAcceptanceCheckbox
+                  context="signup"
+                  accepted={acceptedLegal}
+                  onAcceptedChange={setAcceptedLegal}
+                />
+              ) : null}
+
               {error ? (
                 <View className="rounded-xl bg-rose-50 px-4 py-3">
                   <Text className="text-sm text-rose-700">{error}</Text>
@@ -254,9 +285,17 @@ function PasswordAuthFormInner({
 
               <Pressable
                 onPress={handleCredentialsSubmit}
-                disabled={loading || normalizedEmail.length === 0}
+                disabled={
+                  loading ||
+                  normalizedEmail.length === 0 ||
+                  (mode === "signUp" && !acceptedLegal)
+                }
                 className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
-                  loading || normalizedEmail.length === 0 ? "opacity-50" : ""
+                  loading ||
+                  normalizedEmail.length === 0 ||
+                  (mode === "signUp" && !acceptedLegal)
+                    ? "opacity-50"
+                    : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">

@@ -82,12 +82,14 @@ export default function AccountPage() {
     isAuthenticated ? {} : "skip",
   );
   const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
+  const requestAccountDeletion = useMutation(api.users.requestAccountDeletion);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [college, setCollege] = useState("");
   const [degree, setDegree] = useState("");
   const [yearInCollege, setYearInCollege] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [profileError, setProfileError] = useState<string | null>(null);
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
@@ -97,6 +99,9 @@ export default function AccountPage() {
     null,
   );
   const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
+  const [deletingAccount, setDeletingAccount] = useState(false);
+  const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -105,6 +110,7 @@ export default function AccountPage() {
     setCollege(profile.college ?? "");
     setDegree(profile.degree ?? "");
     setYearInCollege(profile.yearInCollege ?? "");
+    setDateOfBirth(profile.dateOfBirth ?? "");
     setAvatarPreview(profile.avatarUrl ?? null);
   }, [profile]);
 
@@ -115,6 +121,7 @@ export default function AccountPage() {
       college,
       degree,
       yearInCollege,
+      dateOfBirth,
     });
     if (!parsed.success) {
       setProfileError(parsed.error.issues[0]?.message ?? "Invalid profile.");
@@ -129,6 +136,7 @@ export default function AccountPage() {
       college: parsed.data.college,
       degree: parsed.data.degree,
       yearInCollege: parsed.data.yearInCollege,
+      dateOfBirth: parsed.data.dateOfBirth,
     })
       .then(() => setProfileSuccess("Profile updated."))
       .catch((err) => setProfileError(getFriendlyAuthError(err)))
@@ -178,6 +186,7 @@ export default function AccountPage() {
         college: college || profile?.college || undefined,
         degree: degree || profile?.degree || undefined,
         yearInCollege: yearInCollege || profile?.yearInCollege || undefined,
+        dateOfBirth: dateOfBirth || profile?.dateOfBirth || undefined,
         avatarStorageId: storageId,
       });
 
@@ -202,6 +211,25 @@ export default function AccountPage() {
     void cancelRecurringDonation({ recurringDonationId })
       .catch((err) => setRecurringError(getFriendlyPaymentError(err)))
       .finally(() => setCancelingId(null));
+  };
+
+  const handleDeleteAccount = () => {
+    if (!confirmDeleteAccount) {
+      setConfirmDeleteAccount(true);
+      setDeleteAccountError(null);
+      return;
+    }
+    setDeletingAccount(true);
+    setDeleteAccountError(null);
+    void requestAccountDeletion({})
+      .then(() => signOut())
+      .then(() => {
+        router.replace("/signin");
+      })
+      .catch((err) => {
+        setDeleteAccountError(getFriendlyAuthError(err));
+        setDeletingAccount(false);
+      });
   };
 
   if (isLoading) {
@@ -353,6 +381,20 @@ export default function AccountPage() {
             className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
           />
           <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
+            Date of birth
+          </Text>
+          <TextInput
+            value={dateOfBirth}
+            onChangeText={setDateOfBirth}
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor="#56615A"
+            autoCapitalize="none"
+            className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+          />
+          <Text className="mt-1 text-xs text-dono-muted">
+            You must be at least 18 to use Dono.
+          </Text>
+          <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
             Year in college
           </Text>
           <View className="mt-2 flex-row flex-wrap gap-2">
@@ -495,6 +537,38 @@ export default function AccountPage() {
             </View>
           )}
         </SectionCard>
+
+        <View className="border-t border-dono-border pt-6">
+          <View className="flex-row items-start justify-between gap-6">
+            <View className="flex-1">
+              <Text className="font-retro-bold text-dono-text">Delete account</Text>
+              <Text className="mt-1 text-sm text-dono-muted">
+                Anonymises your profile data. This cannot be undone.
+              </Text>
+              {confirmDeleteAccount ? (
+                <Text className="mt-2 text-sm text-rose-700">
+                  Tap confirm again to permanently delete your account.
+                </Text>
+              ) : null}
+              {deleteAccountError ? (
+                <Text className="mt-2 text-sm text-rose-700">{deleteAccountError}</Text>
+              ) : null}
+            </View>
+            <Pressable
+              onPress={handleDeleteAccount}
+              disabled={deletingAccount}
+              className="rounded-full border border-red-300 bg-white px-6 py-2.5"
+            >
+              <Text className="font-retro-bold text-sm text-red-600">
+                {deletingAccount
+                  ? "Deleting..."
+                  : confirmDeleteAccount
+                    ? "Confirm delete"
+                    : "Delete account"}
+              </Text>
+            </Pressable>
+          </View>
+        </View>
 
         <View className="border-t border-dono-border pt-6">
           <View className="flex-row items-center justify-between gap-6">

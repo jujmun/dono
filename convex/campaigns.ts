@@ -14,6 +14,10 @@ import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
 import { isPublicCampaign, isPublicStatus, isUnderReview } from "./lib/campaignVisibility";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
+import { isAllowedCampaignCategory } from "./lib/campaignCategories";
+import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
+import { assertAdultOrThrow } from "./lib/ageGate";
+import { buildCampaignVerifications } from "./lib/verificationBadges";
 import {
   buildCampaignActiveMessage,
   buildCampaignPendingMessage,
@@ -365,7 +369,62 @@ export const approve = mutation({
         message: "Society leader approval is required before admin approval.",
       });
     }
-    await ctx.db.patch(campaign._id, { status: "active" });
+    if (!isAllowedCampaignCategory(campaign.category)) {
+      throw new ConvexError({
+        code: "PROHIBITED_CATEGORY",
+        message: "This campaign category is not permitted under the Terms.",
+      });
+    }
+    if (!campaign.responsibleIndividualUserId) {
+      throw new ConvexError({
+        code: "RESPONSIBLE_INDIVIDUAL_REQUIRED",
+        message: "A named Responsible Individual must be set before approval.",
+      });
+    }
+    if (campaign.stripeVerificationStatus !== "verified") {
+      throw new ConvexError({
+        code: "IDENTITY_REQUIRED",
+        message: "Stripe Identity verification must be completed before approval.",
+      });
+    }
+    if (
+      !campaign.ownershipStatement?.trim() ||
+      !campaign.plannedUpdateSchedule?.trim() ||
+      !campaign.expectedExpenditureDate?.trim()
+    ) {
+      throw new ConvexError({
+        code: "CAMPAIGN_FIELDS_REQUIRED",
+        message:
+          "Ownership statement, planned update schedule, and expected expenditure date are required.",
+      });
+    }
+
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) =>
+        q.eq("communitySlug", campaign.creator.communityId),
+      )
+      .first();
+    const connectReady =
+      Boolean(connectAccount?.onboardingComplete) &&
+      (Boolean(connectAccount?.cardPaymentsActive) ||
+        Boolean(connectAccount?.chargesEnabled));
+    if (!connectReady) {
+      throw new ConvexError({
+        code: "CONNECT_REQUIRED",
+        message: "Society Stripe Connect onboarding must be complete before approval.",
+      });
+    }
+
+    const verifications = buildCampaignVerifications(campaign, {
+      studentStatusChecked:
+        campaign.stripeVerificationStatus === "verified" ||
+        Boolean(campaign.studentStatusCheckedAt),
+      stripeConnectOnboardingComplete: connectReady,
+      institutionallyEndorsed: campaign.institutionallyEndorsed === true,
+    });
+
+    await ctx.db.patch(campaign._id, { status: "active", verifications });
 
     await logAdminAction(ctx, {
       adminUserId,
@@ -510,12 +569,28 @@ export const create = mutation({
     story: v.string(),
     goal: v.number(),
     template: v.string(),
+    expectedExpenditureDate: v.optional(v.string()),
+    plannedUpdateSchedule: v.optional(v.string()),
+    ownershipStatement: v.optional(v.string()),
+    responsibleIndividualUserId: v.optional(v.id("users")),
   },
   handler: async (ctx, args) => {
     const communitySlug = args.communitySlug.trim();
     const { userId, community, membership } = await requireSocietyMember(
       ctx,
       communitySlug,
+    );
+    await assertLegalAcceptedForContext(ctx, {
+      userId,
+      context: "create_campaign",
+    });
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    assertAdultOrThrow(
+      profile?.dateOfBirth,
+      "You must be at least 18 years old to create a campaign.",
     );
     const title = args.title.trim();
     const category = args.category.trim();
@@ -542,6 +617,12 @@ export const create = mutation({
         message: "Category is required and must be at most 60 characters.",
       });
     }
+    if (!isAllowedCampaignCategory(category)) {
+      throw new ConvexError({
+        code: "PROHIBITED_CATEGORY",
+        message: "This campaign category is not permitted under the Terms.",
+      });
+    }
     if (!university || university.length > MAX_UNIVERSITY_LENGTH) {
       throw new ConvexError({
         code: "INVALID_INPUT",
@@ -564,6 +645,22 @@ export const create = mutation({
       throw new ConvexError({
         code: "INVALID_INPUT",
         message: "Goal must be between 1 and 1,000,000.",
+      });
+    }
+
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+      .unique();
+    const responsibleIndividualUserId =
+      args.responsibleIndividualUserId ??
+      society?.responsibleIndividualUserId ??
+      society?.creatorId ??
+      userId;
+    if (!responsibleIndividualUserId) {
+      throw new ConvexError({
+        code: "RESPONSIBLE_INDIVIDUAL_REQUIRED",
+        message: "A named Responsible Individual is required.",
       });
     }
 
@@ -593,6 +690,22 @@ export const create = mutation({
     const today = new Date();
     const deadline = new Date(today);
     deadline.setMonth(deadline.getMonth() + 2);
+    const maxDeadline = new Date(today);
+    maxDeadline.setFullYear(maxDeadline.getFullYear() + 1);
+    if (deadline > maxDeadline) {
+      deadline.setTime(maxDeadline.getTime());
+    }
+
+    const expectedExpenditureDate = args.expectedExpenditureDate?.trim();
+    const plannedUpdateSchedule = args.plannedUpdateSchedule?.trim();
+    const ownershipStatement = args.ownershipStatement?.trim();
+
+    const initialVerifications = buildCampaignVerifications({
+      stripeVerificationStatus: undefined,
+      societyApprovalStatus: isLeader ? "approved" : "pending",
+      verifications: [],
+      institutionallyEndorsed: false,
+    });
 
     const campaignId = await ctx.db.insert("campaigns", {
       slug,
@@ -612,7 +725,7 @@ export const create = mutation({
         avatar: initials || "SO",
         communityId: communitySlug,
       },
-      verifications: [{ type: "society", label: "Society Campaign" }],
+      verifications: initialVerifications,
       university,
       image: "default",
       template: args.template,
@@ -622,6 +735,10 @@ export const create = mutation({
       updates: [],
       impactItems: [],
       createdBy: userId,
+      responsibleIndividualUserId,
+      ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
+      ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
+      ...(ownershipStatement ? { ownershipStatement } : {}),
       societyApprovalStatus: isLeader ? ("approved" as const) : ("pending" as const),
       ...(isLeader
         ? { societyApprovedAt: now, societyApprovedBy: userId }

@@ -64,7 +64,8 @@ export default function CampaignDetailPage() {
   );
   const [customAmount, setCustomAmount] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
-  const [donateAnonymously, setDonateAnonymously] = useState(false);
+  const [coverFees, setCoverFees] = useState(true);
+  const [legalAccepted, setLegalAccepted] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -253,7 +254,6 @@ export default function CampaignDetailPage() {
       campaign={campaign}
       selectedAmount={selectedAmount}
       customAmount={customAmount}
-      donateAnonymously={donateAnonymously}
       liked={liked}
       following={following}
       likeLoading={likeLoading}
@@ -270,7 +270,6 @@ export default function CampaignDetailPage() {
         });
       }}
       onCustomAmountChange={setCustomAmount}
-      onAnonymousChange={setDonateAnonymously}
       onDonate={openDonateSheet}
       onToggleLike={() => void handleToggleLike()}
       onToggleFollow={() => void handleToggleFollow()}
@@ -434,13 +433,23 @@ export default function CampaignDetailPage() {
             {creatorInitial}
           </Text>
         </View>
-        <View>
+        <View className="flex-1">
           <Text className="font-retro-bold text-sm text-retro-ink">
             {campaign.creator.name}
           </Text>
           <Text className="font-retro-mono text-[11px] text-[#5c574f]">
             Deadline {deadlineLabel}
           </Text>
+          <Text className="mt-1 text-xs leading-relaxed text-[#5c574f]">
+            Donations are paid to this society&apos;s Stripe Connected Account. The
+            Connected Account holder is the Merchant of Record. Dono receives only its
+            platform fee.
+          </Text>
+          {campaign.ownershipStatement ? (
+            <Text className="mt-1 text-xs text-[#5c574f]">
+              Ownership: {campaign.ownershipStatement}
+            </Text>
+          ) : null}
         </View>
       </View>
 
@@ -505,8 +514,10 @@ export default function CampaignDetailPage() {
         isAuthenticated={isAuthenticated}
         donorEmail={donorEmail}
         onDonorEmailChange={setDonorEmail}
-        donateAnonymously={donateAnonymously}
-        onDonateAnonymouslyChange={setDonateAnonymously}
+        coverFees={coverFees}
+        onCoverFeesChange={setCoverFees}
+        legalAccepted={legalAccepted}
+        onLegalAcceptedChange={setLegalAccepted}
         onClose={() => setDonateSheetOpen(false)}
         onSuccess={(amount, options) => {
           setThankYou({

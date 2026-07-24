@@ -21,6 +21,9 @@ export default defineSchema({
     college: v.optional(v.string()),
     degree: v.optional(v.string()),
     yearInCollege: v.optional(v.string()),
+    /** ISO date YYYY-MM-DD — required for 18+ eligibility under the T&Cs. */
+    dateOfBirth: v.optional(v.string()),
+    ageAttestedAt: v.optional(v.number()),
     avatarUrl: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
     role: v.union(v.literal("user"), v.literal("admin")),
@@ -31,6 +34,22 @@ export default defineSchema({
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
     .index("by_role", ["role"]),
+  legalAcceptances: defineTable({
+    userId: v.optional(v.id("users")),
+    guestKey: v.optional(v.string()),
+    documentId: v.string(),
+    version: v.string(),
+    context: v.union(
+      v.literal("signup"),
+      v.literal("create_campaign"),
+      v.literal("create_society"),
+      v.literal("donate"),
+    ),
+    acceptedAt: v.number(),
+  })
+    .index("by_user_document", ["userId", "documentId"])
+    .index("by_guest_document", ["guestKey", "documentId"])
+    .index("by_user", ["userId"]),
   appRateLimits: defineTable({
     key: v.string(),
     attempts: v.number(),
@@ -88,10 +107,95 @@ export default defineSchema({
     userId: v.id("users"),
     body: v.string(),
     createdAt: v.number(),
+    editedAt: v.optional(v.number()),
     deletedAt: v.optional(v.number()),
+    /** Hidden from public display by campaign owner; body retained for audit. */
+    hiddenByOwnerAt: v.optional(v.number()),
+    hiddenByOwnerUserId: v.optional(v.id("users")),
+    restoredByAdminAt: v.optional(v.number()),
   })
     .index("by_campaign", ["campaignSlug"])
     .index("by_user", ["userId"]),
+  contentReports: defineTable({
+    reporterUserId: v.id("users"),
+    targetType: v.union(v.literal("comment"), v.literal("campaign")),
+    campaignSlug: v.optional(v.string()),
+    commentId: v.optional(v.id("campaignComments")),
+    reason: v.string(),
+    status: v.union(
+      v.literal("open"),
+      v.literal("resolved"),
+      v.literal("dismissed"),
+    ),
+    createdAt: v.number(),
+    resolvedAt: v.optional(v.number()),
+    resolvedBy: v.optional(v.id("users")),
+    resolutionNote: v.optional(v.string()),
+  })
+    .index("by_status", ["status"])
+    .index("by_reporter", ["reporterUserId"])
+    .index("by_campaign", ["campaignSlug"]),
+  refundRequests: defineTable({
+    donationId: v.id("donations"),
+    requesterUserId: v.optional(v.id("users")),
+    requesterEmail: v.optional(v.string()),
+    campaignId: v.id("campaigns"),
+    grounds: v.string(),
+    details: v.string(),
+    status: v.union(
+      v.literal("pending_owner"),
+      v.literal("pending_admin"),
+      v.literal("approved"),
+      v.literal("denied"),
+      v.literal("appealed"),
+      v.literal("refunded"),
+      v.literal("failed"),
+    ),
+    isFraudClaim: v.boolean(),
+    ownerResponse: v.optional(v.string()),
+    ownerRespondedAt: v.optional(v.number()),
+    adminDecisionNote: v.optional(v.string()),
+    adminDecidedAt: v.optional(v.number()),
+    adminDecidedBy: v.optional(v.id("users")),
+    appealNote: v.optional(v.string()),
+    appealedAt: v.optional(v.number()),
+    stripeRefundId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_donation", ["donationId"])
+    .index("by_campaign", ["campaignId"])
+    .index("by_status", ["status"])
+    .index("by_requester", ["requesterUserId"]),
+  campaignEvidence: defineTable({
+    campaignId: v.id("campaigns"),
+    uploadedBy: v.id("users"),
+    storageId: v.id("_storage"),
+    description: v.string(),
+    expenditureDate: v.string(),
+    dueAt: v.number(),
+    createdAt: v.number(),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_uploader", ["uploadedBy"]),
+  materialChangeRequests: defineTable({
+    campaignId: v.id("campaigns"),
+    requestedBy: v.id("users"),
+    explanation: v.string(),
+    evidenceNote: v.optional(v.string()),
+    proposedOwnershipStatement: v.optional(v.string()),
+    proposedUpdateSchedule: v.optional(v.string()),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_status", ["status"]),
   communityFunds: defineTable(fundFields).index("by_slug", ["slug"]),
   activityItems: defineTable(activityFields)
     .index("by_slug", ["slug"])
@@ -161,6 +265,11 @@ export default defineSchema({
     ),
     stripeInvoiceId: v.optional(v.string()),
     recurringDonationId: v.optional(v.id("recurringDonations")),
+    coverFees: v.optional(v.boolean()),
+    intendedCampaignAmountMinor: v.optional(v.number()),
+    estimatedStripeFeeMinor: v.optional(v.number()),
+    ageAttested: v.optional(v.boolean()),
+    legalAcceptedAt: v.optional(v.number()),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
