@@ -3,6 +3,7 @@ import Resend from "@auth/core/providers/resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
+import { isAllowedAuthEmail } from "./adminConfig";
 
 const OTP_ALPHABET = "0123456789";
 const OTP_LENGTH = 6;
@@ -45,11 +46,7 @@ function normalizeEmail(email: string) {
 }
 
 function assertAllowedDomain(email: string) {
-  const domain = email.split("@")[1]?.toLowerCase();
-  const isOxford =
-    domain === "ox.ac.uk" || Boolean(domain?.endsWith(".ox.ac.uk"));
-
-  if (!isOxford) {
+  if (!isAllowedAuthEmail(email)) {
     throw new ConvexError({
       code: "EMAIL_DOMAIN_NOT_ALLOWED",
       message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",

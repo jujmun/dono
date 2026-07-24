@@ -186,6 +186,7 @@ export default function ForgotPasswordPage() {
                   placeholder="you@st-annes.ox.ac.uk"
                   placeholderTextColor="#56615A"
                   className={inputClassName}
+                  {...({ "ph-no-capture": true } as object)}
                 />
 
                 {error ? (
@@ -221,6 +222,7 @@ export default function ForgotPasswordPage() {
                   placeholder="6-digit code"
                   placeholderTextColor="#56615A"
                   className={inputClassName}
+                  {...({ "ph-no-capture": true } as object)}
                 />
                 <SetPasswordFields
                   newPassword={newPassword}

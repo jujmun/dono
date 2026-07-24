@@ -168,8 +168,9 @@ export default function RootLayout() {
     return null;
   }
 
-  // Autocapture is off so auth inputs (email/OTP) are never captured as PII.
-  // Capture intentional product events only via posthog.capture(...).
+  // Touch autocapture feeds heatmaps / interaction insights. Screens are tracked
+  // manually via posthog.screen() above. Limit props to testID so input text
+  // (email/OTP/password) is not captured; auth fields also use ph-no-capture.
   return (
     <SafeAreaProvider>
       {posthogApiKey ? (
@@ -179,7 +180,12 @@ export default function RootLayout() {
             host: posthogHost,
             enableSessionReplay: false,
           }}
-          autocapture={false}
+          autocapture={{
+            captureScreens: false,
+            captureTouches: true,
+            propsToCapture: ["testID"],
+            maxElementsCaptured: 20,
+          }}
         >
           {tree}
         </PostHogProvider>

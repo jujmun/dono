@@ -1,5 +1,6 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation } from "./_generated/server";
+import { isAllowedAuthEmail } from "./auth/adminConfig";
 import {
   assertNotRateLimited,
   recordRateLimitAttempt,
@@ -37,9 +38,7 @@ export function normalizeAndValidateOxfordEmail(email: string) {
     });
   }
 
-  const domain = normalized.split("@")[1] ?? "";
-  const isOxford = domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
-  if (!isOxford) {
+  if (!isAllowedAuthEmail(normalized)) {
     throw new ConvexError({
       code: "EMAIL_DOMAIN_NOT_ALLOWED",
       message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",

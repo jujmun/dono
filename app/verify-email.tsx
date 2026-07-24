@@ -122,6 +122,7 @@ export default function VerifyEmailPage() {
               placeholder="you@st-annes.ox.ac.uk"
               placeholderTextColor="#56615A"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+              {...({ "ph-no-capture": true } as object)}
             />
             <TextInput
               value={code}
@@ -132,6 +133,7 @@ export default function VerifyEmailPage() {
               placeholder="6-digit code"
               placeholderTextColor="#56615A"
               className="w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+              {...({ "ph-no-capture": true } as object)}
             />
 
             {error ? (

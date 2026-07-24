@@ -87,7 +87,8 @@ before accept/deny works end-to-end. Do not confuse with the local OTP bypass.
 | Email | Purpose |
 |-------|---------|
 | `admin@ox.ac.uk` | Local/dev OTP bypass only (`AUTH_ADMIN_OTP_BYPASS`). Leaves `resend` + fixed code `000000` unchanged. Does **not** open `/admin`. |
-| `dono.outreach@gmail.com` | Real outreach admin. Signs in via `admin-email` provider → `/admin`. |
+| `dono.outreach@gmail.com` | Primary outreach admin (`ADMIN_EMAIL`). Signs in via `admin-email` provider → `/admin`. |
+| `juyeon27312@gmail.com` | Additional outreach admin. Oxford domain bypass for password signup/sign-in; OTP emailed to this address; same portal access via `role: "admin"`. |
 
 **Env (set on the Convex deployment + client)**
 
@@ -97,8 +98,8 @@ npx convex env set ADMIN_CODE_RECIPIENT dono.outreach@gmail.com
 ```
 
 In `.env.local` the client no longer needs `EXPO_PUBLIC_ADMIN_EMAIL` — it
-hardcodes `dono.outreach@gmail.com` in `lib/auth/admin.ts` as the sole
-non-Oxford sign-in exception.
+hardcodes the outreach admin allowlist in `lib/auth/admin.ts` as the
+non-Oxford sign-in exceptions.
 
 **Backend checklist**
 

@@ -32,6 +32,7 @@ export function SetPasswordFields({
           placeholder="Create a password"
           placeholderTextColor="#56615A"
           className={inputClassName}
+          {...({ "ph-no-capture": true } as object)}
         />
       </View>
       {newPassword.length > 0 ? (
@@ -50,6 +51,7 @@ export function SetPasswordFields({
           placeholder="Confirm password"
           placeholderTextColor="#56615A"
           className={inputClassName}
+          {...({ "ph-no-capture": true } as object)}
         />
       </View>
     </View>
