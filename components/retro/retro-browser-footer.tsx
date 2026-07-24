@@ -22,8 +22,33 @@ export function RetroBrowserFooter() {
           </Pressable>
         </Link>
         <Link href="/societies" asChild>
-          <Pressable>
+          <Pressable className="mb-1.5">
             <Text className="text-[12.5px] text-[#4a453c]">Societies</Text>
+          </Pressable>
+        </Link>
+      </View>
+      <View>
+        <Text className="mb-2 font-retro-bold text-[13px] text-retro-ink">
+          Legal
+        </Text>
+        <Link href="/legal/terms_of_service" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Terms</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/privacy" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Privacy</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/donor_terms" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Donor Terms</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/community_guidelines" asChild>
+          <Pressable>
+            <Text className="text-[12.5px] text-[#4a453c]">Guidelines</Text>
           </Pressable>
         </Link>
       </View>

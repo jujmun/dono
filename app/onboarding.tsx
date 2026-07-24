@@ -52,6 +52,7 @@ export default function OnboardingPage() {
         college: values.college,
         degree: values.degree,
         yearInCollege: values.yearInCollege,
+        dateOfBirth: values.dateOfBirth,
         ...(avatarStorageId ? { avatarStorageId } : {}),
       });
 

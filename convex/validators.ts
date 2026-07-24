@@ -101,6 +101,19 @@ export const campaignFields = {
    * set, and Convex schema validation requires every field present in real
    * data to be declared. Kept only so the schema matches existing data. */
   design: v.optional(v.string()),
+  /** ISO date — when purchases/expenditure are expected (T&C required field). */
+  expectedExpenditureDate: v.optional(v.string()),
+  /** Freeform planned update schedule shown to donors. */
+  plannedUpdateSchedule: v.optional(v.string()),
+  /** Who will own funded property/output (Society Campaigns: typically the Society). */
+  ownershipStatement: v.optional(v.string()),
+  /** Named Responsible Individual for Society Campaign Terms. */
+  responsibleIndividualUserId: v.optional(v.id("users")),
+  /** Admin/institution endorsement flag for ToS badge. */
+  institutionallyEndorsed: v.optional(v.boolean()),
+  /** Manual student-status check completed by Dono admin. */
+  studentStatusCheckedAt: v.optional(v.number()),
+  studentStatusCheckedBy: v.optional(v.id("users")),
 };
 
 export const verificationStatusValidator = v.union(
@@ -188,6 +201,8 @@ export const societyFields = {
   /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
   stripeVerificationLastErrorCode: v.optional(v.string()),
   stripeVerificationLastErrorReason: v.optional(v.string()),
+  /** Named Responsible Individual for the society (Society Campaign Terms). */
+  responsibleIndividualUserId: v.optional(v.id("users")),
 };
 
 export const fundFields = {

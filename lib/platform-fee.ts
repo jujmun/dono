@@ -1,19 +1,13 @@
-/** Dono platform fee: 5% of intended campaign amount (or of gross when not covering). */
-export const PLATFORM_FEE_RATE = 0.05;
-
 /**
- * Estimated Stripe UK card fee for checkout display and fee-cover math.
- * Actual Stripe fees vary by card; this is an estimate only (1.5% + £0.20).
+ * Client-side fee breakdown (mirrors convex/lib/platformFee.ts for donate UI).
+ * Keep in sync with the Convex module.
  */
+export const PLATFORM_FEE_RATE = 0.05;
 export const ESTIMATED_STRIPE_PERCENT = 0.015;
 export const ESTIMATED_STRIPE_FIXED_MINOR = 20;
 
 export function calculateApplicationFeeMinor(grossAmountMinor: number) {
   return Math.round(grossAmountMinor * PLATFORM_FEE_RATE);
-}
-
-export function calculateApplicationFeeRefundMinor(refundedGrossMinor: number) {
-  return calculateApplicationFeeMinor(refundedGrossMinor);
 }
 
 export function estimateStripeFeeMinor(chargeAmountMinor: number) {
@@ -24,26 +18,16 @@ export function estimateStripeFeeMinor(chargeAmountMinor: number) {
 }
 
 export type DonationFeeBreakdown = {
-  /** Amount the donor intends for the campaign (major units GBP). */
   intendedCampaignAmount: number;
   intendedCampaignAmountMinor: number;
   platformFeeMinor: number;
   estimatedStripeFeeMinor: number;
-  /** Total charged to the donor (minor units). */
   totalChargedMinor: number;
-  /** Expected amount reaching the campaign after fees (minor units). */
   amountToCampaignMinor: number;
-  /** Application fee taken by Dono on the PaymentIntent (minor units). */
   applicationFeeAmountMinor: number;
   coverFees: boolean;
 };
 
-/**
- * Fee-cover checkout math (Donor Terms §6).
- *
- * coverFees=false: donor pays intended amount; platform fee + Stripe reduce what the campaign receives.
- * coverFees=true: donor pays intended + platform fee + estimated Stripe so intended reaches the campaign.
- */
 export function calculateDonationFeeBreakdown(
   intendedCampaignAmount: number,
   coverFees: boolean,
@@ -52,10 +36,6 @@ export function calculateDonationFeeBreakdown(
   const platformFeeMinor = calculateApplicationFeeMinor(intendedCampaignAmountMinor);
 
   if (coverFees) {
-    // Solve charge C such that C - platformFee - stripe(C) ≈ intended.
-    // stripe(C) ≈ 0.015C + 20, platformFee fixed from intended.
-    // C - platformFee - 0.015C - 20 = intended
-    // 0.985C = intended + platformFee + 20
     const totalChargedMinor = Math.ceil(
       (intendedCampaignAmountMinor + platformFeeMinor + ESTIMATED_STRIPE_FIXED_MINOR) /
         (1 - ESTIMATED_STRIPE_PERCENT),
@@ -89,4 +69,11 @@ export function calculateDonationFeeBreakdown(
     applicationFeeAmountMinor: platformFeeMinor,
     coverFees: false,
   };
+}
+
+export function formatMinorGbp(minor: number): string {
+  return new Intl.NumberFormat("en-GB", {
+    style: "currency",
+    currency: "GBP",
+  }).format(minor / 100);
 }

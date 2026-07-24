@@ -5,6 +5,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
   optionalUserId,
+  requireAdmin,
   requireVerifiedUser,
 } from "./lib/authz";
 import { toCampaign } from "./lib/mappers";
@@ -12,6 +13,38 @@ import { clampLimit } from "./lib/pagination";
 import { toActivityItem } from "./lib/mappers";
 
 const MAX_COMMENT_LENGTH = 2000;
+
+function isCommentHiddenByOwner(comment: Doc<"campaignComments">) {
+  if (!comment.hiddenByOwnerAt) return false;
+  if (
+    comment.restoredByAdminAt &&
+    comment.restoredByAdminAt > comment.hiddenByOwnerAt
+  ) {
+    return false;
+  }
+  return true;
+}
+
+async function assertCanHideCampaignComment(
+  ctx: MutationCtx,
+  campaign: Doc<"campaigns">,
+  userId: Id<"users">,
+) {
+  if (campaign.createdBy === userId) return;
+  const membership = await ctx.db
+    .query("societyMembers")
+    .withIndex("by_community_user", (q) =>
+      q.eq("communitySlug", campaign.creator.communityId).eq("userId", userId),
+    )
+    .unique();
+  if (membership?.status === "approved" && membership.role === "leader") {
+    return;
+  }
+  throw new ConvexError({
+    code: "FORBIDDEN",
+    message: "You cannot hide comments on this campaign.",
+  });
+}
 
 async function getCampaignBySlug(ctx: QueryCtx | MutationCtx, slug: string) {
   return await ctx.db
@@ -274,6 +307,85 @@ export const deleteComment = mutation({
   },
 });
 
+export const editComment = mutation({
+  args: {
+    commentId: v.id("campaignComments"),
+    body: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment || comment.deletedAt) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Comment not found." });
+    }
+    if (comment.userId !== userId) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You can only edit your own comments.",
+      });
+    }
+
+    const body = args.body.trim();
+    if (!body || body.length > MAX_COMMENT_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Comment must be between 1 and 2000 characters.",
+      });
+    }
+
+    await ctx.db.patch(args.commentId, {
+      body,
+      editedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+export const hideCommentByOwner = mutation({
+  args: { commentId: v.id("campaignComments") },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment || comment.deletedAt) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Comment not found." });
+    }
+
+    const campaign = await getCampaignBySlug(ctx, comment.campaignSlug);
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await assertCanHideCampaignComment(ctx, campaign, userId);
+
+    await ctx.db.patch(args.commentId, {
+      hiddenByOwnerAt: Date.now(),
+      hiddenByOwnerUserId: userId,
+    });
+    return null;
+  },
+});
+
+export const restoreCommentByAdmin = mutation({
+  args: { commentId: v.id("campaignComments") },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    const comment = await ctx.db.get(args.commentId);
+    if (!comment || comment.deletedAt) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Comment not found." });
+    }
+    if (!comment.hiddenByOwnerAt) {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "Comment is not hidden by the campaign owner.",
+      });
+    }
+
+    await ctx.db.patch(args.commentId, {
+      restoredByAdminAt: Date.now(),
+    });
+    return null;
+  },
+});
+
 export const listComments = query({
   args: { campaignSlug: v.string(), limit: v.optional(v.number()) },
   handler: async (ctx, args) => {
@@ -284,7 +396,7 @@ export const listComments = query({
       .collect();
 
     const active = comments
-      .filter((c) => !c.deletedAt)
+      .filter((c) => !c.deletedAt && !isCommentHiddenByOwner(c))
       .sort((a, b) => b.createdAt - a.createdAt)
       .slice(0, limit);
 
@@ -295,6 +407,9 @@ export const listComments = query({
         id: comment._id,
         body: comment.body,
         createdAt: comment.createdAt,
+        editedAt: comment.editedAt ?? null,
+        edited: Boolean(comment.editedAt),
+        authorUserId: comment.userId,
         authorName: display.name,
         authorAvatar: display.avatar,
       });

@@ -25,6 +25,7 @@ import {
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
 import { createNotification, ONBOARDING_MESSAGE } from "./lib/notifications";
+import { assertAdultOrThrow } from "./lib/ageGate";
 
 function roleForEmail(email: string): "user" | "admin" {
   return isAdminIdentityEmail(email) ? "admin" : "user";
@@ -94,6 +95,7 @@ export const me = query({
       college: profile.college ?? null,
       degree: profile.degree ?? null,
       yearInCollege: profile.yearInCollege ?? null,
+      dateOfBirth: profile.dateOfBirth ?? null,
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
@@ -182,6 +184,7 @@ export const updateProfile = mutation({
     college: v.optional(v.string()),
     degree: v.optional(v.string()),
     yearInCollege: v.optional(v.string()),
+    dateOfBirth: v.optional(v.string()),
     avatarUrl: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
   },
@@ -193,6 +196,10 @@ export const updateProfile = mutation({
         code: "INVALID_NAME",
         message: "Name must be between 2 and 80 characters.",
       });
+    }
+
+    if (args.dateOfBirth) {
+      assertAdultOrThrow(args.dateOfBirth, "You must be at least 18 years old.");
     }
 
     const trimmedPhone = args.phone?.trim();
@@ -306,6 +313,12 @@ export const updateProfile = mutation({
         college: trimmedCollege,
         degree: trimmedDegree,
         yearInCollege,
+        ...(args.dateOfBirth
+          ? {
+              dateOfBirth: args.dateOfBirth.trim(),
+              ageAttestedAt: now,
+            }
+          : {}),
         avatarUrl: args.avatarUrl,
         avatarStorageId: args.avatarStorageId,
         role: roleForEmail(user.email),
@@ -328,6 +341,12 @@ export const updateProfile = mutation({
         ...(args.college !== undefined ? { college: trimmedCollege } : {}),
         ...(args.degree !== undefined ? { degree: trimmedDegree } : {}),
         ...(args.yearInCollege !== undefined ? { yearInCollege } : {}),
+        ...(args.dateOfBirth !== undefined
+          ? {
+              dateOfBirth: args.dateOfBirth.trim(),
+              ageAttestedAt: now,
+            }
+          : {}),
         ...(args.avatarUrl !== undefined ? { avatarUrl: args.avatarUrl } : {}),
         ...(args.avatarStorageId !== undefined
           ? { avatarStorageId: args.avatarStorageId, avatarUrl: undefined }

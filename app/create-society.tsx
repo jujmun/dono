@@ -27,6 +27,7 @@ import {
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
+import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -111,6 +112,7 @@ export default function CreateSocietyPage() {
   const params = useLocalSearchParams<{ connect?: string; slug?: string }>();
   const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
   const createSociety = useMutation(api.societies.create);
+  const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const updateVerificationMaterials = useMutation(
     api.societies.updateVerificationMaterials,
   );
@@ -140,6 +142,7 @@ export default function CreateSocietyPage() {
   const [connectLoading, setConnectLoading] = useState(false);
   const [docsPopupVisible, setDocsPopupVisible] = useState(false);
   const [syncingMaterials, setSyncingMaterials] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
   // Storage ids of docs already uploaded, keyed by local uri, so revisions
   // after the society exists don't re-upload unchanged files.
   const uploadedDocIds = useRef(new Map<string, Id<"_storage">>());
@@ -361,9 +364,14 @@ export default function CreateSocietyPage() {
   /** Creates the society (once) so Stripe Identity has a record to attach to. */
   const ensureSocietyCreated = async (): Promise<string> => {
     if (societySlug) return societySlug;
+    if (!legalAccepted) {
+      throw new Error("Please accept the society terms to continue.");
+    }
     if (!idDocument) {
       throw new Error("A student card is required.");
     }
+
+    await acceptDocuments({ context: "create_society" });
 
     const coverImageStorageId = coverImage
       ? await uploadPickedFile(coverImage)
@@ -396,6 +404,10 @@ export default function CreateSocietyPage() {
 
   const handleVerifyIdentity = async () => {
     setError(null);
+    if (!legalAccepted) {
+      setError("Please accept the society terms before verifying your identity.");
+      return;
+    }
     setVerifying(true);
     try {
       const slug = await ensureSocietyCreated();
@@ -915,13 +927,24 @@ export default function CreateSocietyPage() {
                   confirm it's really you — it only takes a minute.
                 </Text>
 
+                <LegalAcceptanceCheckbox
+                  context="create_society"
+                  accepted={legalAccepted}
+                  onAcceptedChange={setLegalAccepted}
+                  className="mb-3"
+                />
+
                 {renderVerificationStatus()}
 
                 <Pressable
                   onPress={() => void handleVerifyIdentity()}
-                  disabled={!manualFieldsValid || verifying || stripeVerified}
+                  disabled={
+                    !manualFieldsValid || verifying || stripeVerified || !legalAccepted
+                  }
                   className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
-                    !manualFieldsValid || verifying || stripeVerified ? "opacity-50" : ""
+                    !manualFieldsValid || verifying || stripeVerified || !legalAccepted
+                      ? "opacity-50"
+                      : ""
                   }`}
                 >
                   {verifying ? (
@@ -932,7 +955,11 @@ export default function CreateSocietyPage() {
                     </Text>
                   )}
                 </Pressable>
-                {!manualFieldsValid ? (
+                {!legalAccepted ? (
+                  <Text className="mt-2 text-xs text-[#5c574f]">
+                    Accept the terms above before starting identity verification.
+                  </Text>
+                ) : !manualFieldsValid ? (
                   <Text className="mt-2 text-xs text-[#5c574f]">
                     Add your student card above first.
                   </Text>

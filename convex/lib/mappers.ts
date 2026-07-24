@@ -40,6 +40,11 @@ export function toCampaign(campaign: CampaignDoc) {
     societyApprovalStatus: campaign.societyApprovalStatus,
     societyApprovedAt: campaign.societyApprovedAt,
     societyRejectionNote: campaign.societyRejectionNote,
+    expectedExpenditureDate: campaign.expectedExpenditureDate,
+    plannedUpdateSchedule: campaign.plannedUpdateSchedule,
+    ownershipStatement: campaign.ownershipStatement,
+    responsibleIndividualUserId: campaign.responsibleIndividualUserId,
+    institutionallyEndorsed: campaign.institutionallyEndorsed,
   };
 }
 

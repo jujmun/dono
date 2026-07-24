@@ -8,7 +8,7 @@ import {
 } from "react-native";
 import { Link } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
-import { Trash2 } from "lucide-react-native";
+import { Flag, Pencil, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -50,6 +50,9 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
     const comments = useQuery(api.engagement.listComments, { campaignSlug });
     const addComment = useMutation(api.engagement.addComment);
     const deleteComment = useMutation(api.engagement.deleteComment);
+    const editComment = useMutation(api.engagement.editComment);
+    const hideCommentByOwner = useMutation(api.engagement.hideCommentByOwner);
+    const createReport = useMutation(api.reports.createReport);
 
     const [body, setBody] = useState("");
     const [error, setError] = useState<string | null>(null);
@@ -57,6 +60,9 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
     const [deletingId, setDeletingId] = useState<Id<"campaignComments"> | null>(
       null,
     );
+    const [editingId, setEditingId] = useState<Id<"campaignComments"> | null>(null);
+    const [editBody, setEditBody] = useState("");
+    const [busyId, setBusyId] = useState<Id<"campaignComments"> | null>(null);
 
     const handlePost = async () => {
       const trimmed = body.trim();
@@ -90,6 +96,49 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
         setError(getFriendlyAuthError(err));
       } finally {
         setDeletingId(null);
+      }
+    };
+
+    const handleSaveEdit = async (commentId: Id<"campaignComments">) => {
+      setBusyId(commentId);
+      setError(null);
+      try {
+        await editComment({ commentId, body: editBody });
+        setEditingId(null);
+        setEditBody("");
+      } catch (err) {
+        setError(getFriendlyAuthError(err));
+      } finally {
+        setBusyId(null);
+      }
+    };
+
+    const handleReport = async (commentId: Id<"campaignComments">) => {
+      setBusyId(commentId);
+      setError(null);
+      try {
+        await createReport({
+          targetType: "comment",
+          commentId,
+          campaignSlug,
+          reason: "Reported via campaign comments",
+        });
+      } catch (err) {
+        setError(getFriendlyAuthError(err));
+      } finally {
+        setBusyId(null);
+      }
+    };
+
+    const handleHide = async (commentId: Id<"campaignComments">) => {
+      setBusyId(commentId);
+      setError(null);
+      try {
+        await hideCommentByOwner({ commentId });
+      } catch (err) {
+        setError(getFriendlyAuthError(err));
+      } finally {
+        setBusyId(null);
       }
     };
 
@@ -224,10 +273,11 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
         ) : (
           <View className="gap-4">
             {comments.map((comment, index) => {
-              const canDelete =
+              const isOwn =
                 isAuthenticated &&
-                profile?.name &&
-                comment.authorName === profile.name;
+                profile?.id != null &&
+                comment.authorUserId === profile.id;
+              const isAdmin = profile?.role === "admin";
 
               return (
                 <View
@@ -250,26 +300,92 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                         </Text>
                         <Text className="text-xs text-dono-muted">
                           {formatCommentTime(comment.createdAt)}
+                          {comment.edited ? " · Edited" : ""}
                         </Text>
                       </View>
-                      {canDelete ? (
-                        <Pressable
-                          onPress={() => void handleDelete(comment.id)}
-                          disabled={deletingId === comment.id}
-                          className="p-1"
-                          accessibilityLabel="Delete comment"
-                        >
-                          {deletingId === comment.id ? (
-                            <ActivityIndicator size="small" color="#56615A" />
-                          ) : (
-                            <Trash2 size={14} color="#56615A" />
-                          )}
-                        </Pressable>
-                      ) : null}
+                      <View className="flex-row items-center gap-1">
+                        {isOwn ? (
+                          <Pressable
+                            onPress={() => {
+                              setEditingId(comment.id);
+                              setEditBody(comment.body);
+                            }}
+                            className="p-1"
+                            accessibilityLabel="Edit comment"
+                          >
+                            <Pencil size={14} color="#56615A" />
+                          </Pressable>
+                        ) : null}
+                        {isAuthenticated && !isOwn ? (
+                          <Pressable
+                            onPress={() => void handleReport(comment.id)}
+                            disabled={busyId === comment.id}
+                            className="p-1"
+                            accessibilityLabel="Report comment"
+                          >
+                            <Flag size={14} color="#56615A" />
+                          </Pressable>
+                        ) : null}
+                        {isAuthenticated ? (
+                          <Pressable
+                            onPress={() => void handleHide(comment.id)}
+                            disabled={busyId === comment.id}
+                            className="p-1"
+                            accessibilityLabel="Hide comment"
+                          >
+                            <Text className="text-[10px] text-dono-muted">Hide</Text>
+                          </Pressable>
+                        ) : null}
+                        {isOwn || isAdmin ? (
+                          <Pressable
+                            onPress={() => void handleDelete(comment.id)}
+                            disabled={deletingId === comment.id}
+                            className="p-1"
+                            accessibilityLabel="Delete comment"
+                          >
+                            {deletingId === comment.id ? (
+                              <ActivityIndicator size="small" color="#56615A" />
+                            ) : (
+                              <Trash2 size={14} color="#56615A" />
+                            )}
+                          </Pressable>
+                        ) : null}
+                      </View>
                     </View>
-                    <Text className="mt-2 text-sm leading-relaxed text-dono-muted">
-                      {comment.body}
-                    </Text>
+                    {editingId === comment.id ? (
+                      <View className="mt-2 gap-2">
+                        <TextInput
+                          value={editBody}
+                          onChangeText={setEditBody}
+                          multiline
+                          className="min-h-[72px] rounded-xl border border-dono-border px-3 py-2 text-sm text-dono-text"
+                        />
+                        <View className="flex-row gap-2">
+                          <Pressable
+                            onPress={() => void handleSaveEdit(comment.id)}
+                            disabled={busyId === comment.id}
+                            className="rounded-full bg-dono-primary px-3 py-1.5"
+                          >
+                            <Text className="text-xs font-retro-bold text-white">
+                              Save
+                            </Text>
+                          </Pressable>
+                          <Pressable
+                            onPress={() => {
+                              setEditingId(null);
+                              setEditBody("");
+                            }}
+                            className="rounded-full border border-dono-border px-3 py-1.5"
+                          >
+                            <Text className="text-xs text-dono-muted">Cancel</Text>
+                          </Pressable>
+                        </View>
+                      </View>
+                    ) : (
+                      <Text className="mt-2 text-sm leading-relaxed text-dono-muted">
+                        {comment.body}
+                      </Text>
+                    )}
                   </View>
                 </View>
               );

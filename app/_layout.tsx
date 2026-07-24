@@ -57,7 +57,8 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       root === "signin" ||
       root === "signup" ||
       root === "forgot-password" ||
-      root === "verify-email";
+      root === "verify-email" ||
+      root === "legal";
     const inAdmin = root === "admin";
     const adminUser = isPortalAdmin(profile);
     const needsOnboarding =

@@ -16,11 +16,9 @@ export type CampaignCategory =
   | "textbooks"
   | "equipment"
   | "travel"
-  | "welfare"
   | "events"
   | "accessibility"
   | "sports"
-  | "memorial"
   | "outreach";
 
 export interface Verification {
@@ -72,6 +70,16 @@ export interface Campaign {
   societyApprovalStatus?: "pending" | "approved" | "rejected";
   societyApprovedAt?: number;
   societyRejectionNote?: string;
+  /** ISO date — when purchases/expenditure are expected. */
+  expectedExpenditureDate?: string;
+  /** Freeform planned update schedule shown to donors. */
+  plannedUpdateSchedule?: string;
+  /** Who will own funded property/output. */
+  ownershipStatement?: string;
+  /** Named Responsible Individual user id (Convex). */
+  responsibleIndividualUserId?: string;
+  /** Admin/institution endorsement flag. */
+  institutionallyEndorsed?: boolean;
 }
 
 export interface CampaignUpdate {

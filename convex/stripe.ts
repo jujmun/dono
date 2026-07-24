@@ -2,7 +2,7 @@
 
 import { ConvexError, v } from "convex/values";
 import Stripe from "stripe";
-import { action } from "./_generated/server";
+import { action, internalAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
@@ -12,7 +12,11 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import { calculateApplicationFeeMinor } from "./lib/platformFee";
+import {
+  calculateApplicationFeeMinor,
+  calculateDonationFeeBreakdown,
+  PLATFORM_FEE_RATE,
+} from "./lib/platformFee";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -128,7 +132,18 @@ async function requireSignedInDonationContext(
   ctx: ActionCtx,
   campaignSlug: string,
   amount: number,
-) {
+): Promise<{
+  userId: Id<"users">;
+  userContext: { userId: Id<"users">; email: string; name?: string };
+  campaign: {
+    campaignId: Id<"campaigns">;
+    campaignSlug: string;
+    title: string;
+    communitySlug: string;
+    stripeAccountId: string;
+  };
+  amount: number;
+}> {
   const userId = await getAuthUserId(ctx);
   if (!userId) {
     throw new ConvexError({
@@ -191,11 +206,15 @@ export const createPaymentIntent = action({
     amount: v.number(),
     donorEmail: v.optional(v.string()),
     anonymous: v.optional(v.boolean()),
+    coverFees: v.optional(v.boolean()),
+    ageAttested: v.optional(v.boolean()),
+    guestKey: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const amount = Number(args.amount);
     const donorEmail = normalizeDonorEmail(args.donorEmail);
     const anonymous = args.anonymous === true;
+    const coverFees = args.coverFees === true;
     const { campaign, amount: validAmount } = await validateCampaignAndAmount(
       ctx,
       args.campaignSlug,
@@ -204,6 +223,19 @@ export const createPaymentIntent = action({
 
     const stripe = getStripeClient();
     const userId = await getAuthUserId(ctx);
+
+    if (!args.ageAttested) {
+      throw new ConvexError({
+        code: "AGE_RESTRICTED",
+        message: "You must confirm you are at least 18 years old to donate.",
+      });
+    }
+
+    await ctx.runMutation(internal.legalInternal.assertDonateGates, {
+      userId: userId ?? undefined,
+      guestKey: args.guestKey,
+      ageAttested: true,
+    });
 
     const quotaKey = userId
       ? `stripePi:${userId}`
@@ -221,8 +253,9 @@ export const createPaymentIntent = action({
       receiptEmail = receiptEmail || userContext.email || undefined;
     }
 
-    const grossAmountMinor = donationAmountToStripeMinorUnits(validAmount);
-    const applicationFeeAmountMinor = calculateApplicationFeeMinor(grossAmountMinor);
+    const feeBreakdown = calculateDonationFeeBreakdown(validAmount, coverFees);
+    const grossAmountMinor = feeBreakdown.totalChargedMinor;
+    const applicationFeeAmountMinor = feeBreakdown.applicationFeeAmountMinor;
 
     const paymentIntent = await stripe.paymentIntents.create(
       {
@@ -235,14 +268,17 @@ export const createPaymentIntent = action({
           ...(userId ? { userId } : {}),
           ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
           ...(anonymous ? { anonymous: "true" } : {}),
+          coverFees: coverFees ? "true" : "false",
+          intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
           donationType: "one_time",
+          merchantOfRecord: "connected_account",
         },
       },
       {
         stripeAccount: campaign.stripeAccountId,
-        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
+        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:${coverFees}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
       },
     );
 
@@ -263,12 +299,25 @@ export const createPaymentIntent = action({
       stripeConnectedAccountId: campaign.stripeAccountId,
       grossAmountMinor,
       applicationFeeAmountMinor,
+      coverFees,
+      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
+      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+      ageAttested: true,
+      legalAcceptedAt: Date.now(),
     });
 
     return {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       stripeAccountId: campaign.stripeAccountId,
+      feeBreakdown: {
+        intendedCampaignAmount: feeBreakdown.intendedCampaignAmount,
+        platformFeeMinor: feeBreakdown.platformFeeMinor,
+        estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+        totalChargedMinor: feeBreakdown.totalChargedMinor,
+        amountToCampaignMinor: feeBreakdown.amountToCampaignMinor,
+        coverFees,
+      },
     };
   },
 });
@@ -317,6 +366,8 @@ export const createFundPaymentIntent = action({
       receiptEmail = receiptEmail || userContext.email || undefined;
     }
 
+    // Community funds are Merchant of Record on the platform account (not Connect).
+    // application_fee_amount only applies to Connect direct charges — document MoR in metadata.
     const paymentIntent = await stripe.paymentIntents.create({
       amount: donationAmountToStripeMinorUnits(amount),
       currency: "gbp",
@@ -330,6 +381,7 @@ export const createFundPaymentIntent = action({
         fundId: fund.fundId,
         fundSlug: fund.fundSlug,
         donationType: "fund_one_time",
+        merchantOfRecord: "platform",
       },
     });
 
@@ -372,36 +424,51 @@ export const createRecurringDonationSubscription = action({
     await enforceStripeCreateQuota(ctx, `stripeSub:${userId}`, userId);
 
     const stripe = getStripeClient();
-    const stripeCustomerId = await getOrCreateStripeCustomer(
-      ctx,
-      userId,
-      userContext,
+    const connectOpts = { stripeAccount: campaign.stripeAccountId };
+
+    // Direct charge on the campaign's connected account (society MoR) with
+    // Dono's 5% platform fee via application_fee_percent.
+    const customer = await stripe.customers.create(
+      {
+        email: userContext.email || undefined,
+        name: userContext.name || undefined,
+        metadata: { userId, platformUserId: userId },
+      },
+      connectOpts,
     );
 
-    const price = await stripe.prices.create({
-      currency: "gbp",
-      unit_amount: donationAmountToStripeMinorUnits(amount),
-      recurring: { interval: "month" },
-      product_data: {
-        name: `Monthly donation to ${campaign.title}`,
+    const price = await stripe.prices.create(
+      {
+        currency: "gbp",
+        unit_amount: donationAmountToStripeMinorUnits(amount),
+        recurring: { interval: "month" },
+        product_data: {
+          name: `Monthly donation to ${campaign.title}`,
+        },
       },
-    });
+      connectOpts,
+    );
 
-    const subscription = await stripe.subscriptions.create({
-      customer: stripeCustomerId,
-      items: [{ price: price.id }],
-      payment_behavior: "default_incomplete",
-      payment_settings: {
-        save_default_payment_method: "on_subscription",
+    const subscription = await stripe.subscriptions.create(
+      {
+        customer: customer.id,
+        items: [{ price: price.id }],
+        application_fee_percent: PLATFORM_FEE_RATE * 100,
+        payment_behavior: "default_incomplete",
+        payment_settings: {
+          save_default_payment_method: "on_subscription",
+        },
+        expand: ["latest_invoice.payment_intent"],
+        metadata: {
+          userId,
+          campaignId: campaign.campaignId,
+          campaignSlug: campaign.campaignSlug,
+          donationType: "recurring",
+          merchantOfRecord: "connected_account",
+        },
       },
-      expand: ["latest_invoice.payment_intent"],
-      metadata: {
-        userId,
-        campaignId: campaign.campaignId,
-        campaignSlug: campaign.campaignSlug,
-        donationType: "recurring",
-      },
-    });
+      connectOpts,
+    );
 
     const clientSecret = getSubscriptionPaymentIntentClientSecret(subscription);
     if (!clientSecret) {
@@ -422,6 +489,7 @@ export const createRecurringDonationSubscription = action({
     return {
       clientSecret,
       subscriptionId: subscription.id,
+      stripeAccountId: campaign.stripeAccountId,
     };
   },
 });
@@ -632,12 +700,87 @@ export const cancelRecurringDonation = action({
     }
 
     const stripe = getStripeClient();
-    await stripe.subscriptions.cancel(recurringDonation.stripeSubscriptionId);
+    const connect = await ctx.runQuery(
+      internal.stripeInternal.getConnectAccountIdForCampaign,
+      { campaignId: recurringDonation.campaignId },
+    );
+
+    // Prefer connected-account cancel when the subscription was created as a
+    // direct charge; fall back to platform cancel for legacy subscriptions.
+    try {
+      if (connect?.stripeAccountId) {
+        await stripe.subscriptions.cancel(
+          recurringDonation.stripeSubscriptionId,
+          {},
+          { stripeAccount: connect.stripeAccountId },
+        );
+      } else {
+        await stripe.subscriptions.cancel(recurringDonation.stripeSubscriptionId);
+      }
+    } catch {
+      await stripe.subscriptions.cancel(recurringDonation.stripeSubscriptionId);
+    }
 
     await ctx.runMutation(internal.stripeInternal.cancelRecurringDonationRecord, {
       stripeSubscriptionId: recurringDonation.stripeSubscriptionId,
     });
 
     return { canceled: true };
+  },
+});
+
+/** Called after admin approves a refund request — refunds on the connected account. */
+export const processApprovedRefund = internalAction({
+  args: { refundRequestId: v.id("refundRequests") },
+  handler: async (ctx, args) => {
+    const payload = await ctx.runQuery(internal.refunds.getRequestForStripe, {
+      refundRequestId: args.refundRequestId,
+    });
+    if (!payload || payload.status !== "approved") {
+      return { processed: false };
+    }
+    if (
+      !payload.stripeConnectedAccountId ||
+      (!payload.stripePaymentIntentId && !payload.stripeChargeId)
+    ) {
+      await ctx.runMutation(internal.refunds.markRefundProcessed, {
+        refundRequestId: args.refundRequestId,
+        failed: true,
+        failureNote: "Donation is missing Stripe payment identifiers for refund.",
+      });
+      return { processed: false };
+    }
+
+    const stripe = getStripeClient();
+    try {
+      const refund = await stripe.refunds.create(
+        {
+          ...(payload.stripePaymentIntentId
+            ? { payment_intent: payload.stripePaymentIntentId }
+            : { charge: payload.stripeChargeId! }),
+          reason: "requested_by_customer",
+          metadata: {
+            refundRequestId: String(args.refundRequestId),
+            donationId: String(payload.donationId),
+          },
+        },
+        { stripeAccount: payload.stripeConnectedAccountId },
+      );
+
+      await ctx.runMutation(internal.refunds.markRefundProcessed, {
+        refundRequestId: args.refundRequestId,
+        stripeRefundId: refund.id,
+      });
+      return { processed: true, stripeRefundId: refund.id };
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "Stripe refund failed.";
+      await ctx.runMutation(internal.refunds.markRefundProcessed, {
+        refundRequestId: args.refundRequestId,
+        failed: true,
+        failureNote: message,
+      });
+      return { processed: false };
+    }
   },
 });
