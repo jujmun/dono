@@ -39,7 +39,8 @@ export default function HomePage() {
             Give. See the receipt.
           </Text>
           <Text className="max-w-xl text-[15px] leading-6 text-retro-paper opacity-95">
-            Fund specific, tangible improvements to student life
+            Fund specific, tangible improvements to student life — and watch
+            exactly where the money goes, line by line.
           </Text>
         </View>
         <View className="rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2 shadow-[3px_3px_0_#211E1A]">
