@@ -91,6 +91,28 @@ export function getFriendlyAuthError(error: unknown) {
   if (convexPayload?.message) {
     return convexPayload.message;
   }
+  // #region agent log
+  fetch("http://127.0.0.1:7751/ingest/5beb672d-420c-42f5-80af-728dc75ed71f", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "X-Debug-Session-Id": "e2a54c",
+    },
+    body: JSON.stringify({
+      sessionId: "e2a54c",
+      runId: "signin-debug",
+      hypothesisId: "B",
+      location: "lib/auth/errors.ts:getFriendlyAuthError",
+      message: "unmapped auth error fell through to generic",
+      data: {
+        rawMessage: message.slice(0, 500),
+        hasConvexPayload: Boolean(convexPayload),
+        convexCode: convexPayload?.code ?? null,
+      },
+      timestamp: Date.now(),
+    }),
+  }).catch(() => {});
+  // #endregion
   return "Something went wrong. Please try again.";
 }
 
