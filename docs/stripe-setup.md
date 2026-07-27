@@ -1,7 +1,9 @@
 # Dono Stripe Setup Overview
 
+> **Switching Stripe accounts?** Follow [`stripe-account-switch-runbook.md`](stripe-account-switch-runbook.md) and run `./scripts/stripe-account-switch.sh dev|prod`. The sections below describe the **previous** sandbox account for architecture reference.
+
 **Generated:** 22 Jul 2026  
-**Scope:** Test mode account `acct_1TrduJJSrO8JVmT4` (“Dono sandbox”), CLI display name `Dono sandbox`. Live mode was **not** queried (CLI config only had a test key). Combined from Stripe Dashboard/API state and this repo’s Convex/frontend integration.
+**Scope:** Legacy test mode account `acct_1TrduJJSrO8JVmT4` (“Dono sandbox”) — **scheduled for decommission** after migrating to the new platform account. Live mode was **not** queried (CLI config only had a test key). Combined from Stripe Dashboard/API state and this repo’s Convex/frontend integration.
 
 ---
 
@@ -232,8 +234,9 @@ Secrets live on the **Convex deployment**, not only `.env.local`. Publishable ke
 **Convex**
 
 - `STRIPE_SECRET_KEY`
-- `STRIPE_WEBHOOK_SECRET` and/or `STRIPE_CONNECT_WEBHOOK_SECRET`
-- `STRIPE_IDENTITY_WEBHOOK_SECRET`
+- `STRIPE_WEBHOOK_SECRET` — `/stripe/webhook` signing secret
+- `STRIPE_IDENTITY_WEBHOOK_SECRET` — `/stripe/identity-webhook` signing secret
+- `STRIPE_CONNECT_WEBHOOK_SECRET` — optional; falls back to `STRIPE_WEBHOOK_SECRET`
 
 **Client / hosting**
 

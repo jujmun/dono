@@ -10,6 +10,7 @@
 
 import type * as activity from "../activity.js";
 import type * as adminAudit from "../adminAudit.js";
+import type * as adminStripeReset from "../adminStripeReset.js";
 import type * as auth from "../auth.js";
 import type * as auth_AdminEmailOTP from "../auth/AdminEmailOTP.js";
 import type * as auth_ResendEmailOTP from "../auth/ResendEmailOTP.js";
@@ -94,6 +95,7 @@ import type {
 declare const fullApi: ApiFromModules<{
   activity: typeof activity;
   adminAudit: typeof adminAudit;
+  adminStripeReset: typeof adminStripeReset;
   auth: typeof auth;
   "auth/AdminEmailOTP": typeof auth_AdminEmailOTP;
   "auth/ResendEmailOTP": typeof auth_ResendEmailOTP;
