@@ -10,6 +10,7 @@ function normalizeEmail(email: string) {
  */
 const ADDITIONAL_ADMIN_EMAILS = new Set([
   "juyeon27312@gmail.com",
+  "joindono.team@gmail.com",
 ]);
 
 export function getAdminEmail() {

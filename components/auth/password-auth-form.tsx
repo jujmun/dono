@@ -8,6 +8,7 @@ import { api } from "@convex/_generated/api";
 import { AppShell } from "@/components/app-shell";
 import { RetroPanel } from "@/components/retro";
 import { SetPasswordFields } from "@/components/auth/set-password-fields";
+import { PasswordInput } from "@/components/auth/password-input";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import {
   getAuthProviderId,
@@ -258,10 +259,9 @@ function PasswordAuthFormInner({
                   <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                     Password
                   </Text>
-                  <TextInput
+                  <PasswordInput
                     value={password}
                     onChangeText={setPassword}
-                    secureTextEntry
                     autoCapitalize="none"
                     autoComplete="current-password"
                     placeholder="Your password"

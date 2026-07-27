@@ -1,4 +1,5 @@
-import { View, Text, TextInput } from "react-native";
+import { View, Text } from "react-native";
+import { PasswordInput } from "@/components/auth/password-input";
 import { PasswordStrengthChecklist } from "@/components/auth/password-strength-checklist";
 
 type SetPasswordFieldsProps = {
@@ -23,10 +24,9 @@ export function SetPasswordFields({
         <Text className="mb-2 font-retro-mono text-xs uppercase tracking-wide text-[#5c574f]">
           Password
         </Text>
-        <TextInput
+        <PasswordInput
           value={newPassword}
           onChangeText={onNewPasswordChange}
-          secureTextEntry
           autoCapitalize="none"
           autoComplete="new-password"
           placeholder="Create a password"
@@ -42,10 +42,9 @@ export function SetPasswordFields({
         <Text className="mb-2 font-retro-mono text-xs uppercase tracking-wide text-[#5c574f]">
           Confirm password
         </Text>
-        <TextInput
+        <PasswordInput
           value={confirmPassword}
           onChangeText={onConfirmPasswordChange}
-          secureTextEntry
           autoCapitalize="none"
           autoComplete="new-password"
           placeholder="Confirm password"

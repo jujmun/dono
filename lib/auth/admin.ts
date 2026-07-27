@@ -4,6 +4,7 @@ export type AuthProviderId = "resend" | "admin-email";
 export const OUTREACH_ADMIN_EMAILS = [
   "dono.outreach@gmail.com",
   "juyeon27312@gmail.com",
+  "joindono.team@gmail.com",
 ] as const;
 
 /** Primary outreach admin email (public contact / docs + admin-email OTP). */

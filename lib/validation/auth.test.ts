@@ -48,6 +48,9 @@ describe("auth validation", () => {
     expect(
       requestOtpSchema.safeParse({ email: "juyeon27312@gmail.com" }).success,
     ).toBe(true);
+    expect(
+      requestOtpSchema.safeParse({ email: "joindono.team@gmail.com" }).success,
+    ).toBe(true);
   });
 
   it("rejects lookalike domains that merely contain ox.ac.uk", () => {

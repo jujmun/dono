@@ -22,6 +22,9 @@ describe("Oxford email normalization (auth abuse keying)", () => {
     expect(normalizeAndValidateOxfordEmail("juyeon27312@gmail.com")).toBe(
       "juyeon27312@gmail.com",
     );
+    expect(normalizeAndValidateOxfordEmail("joindono.team@gmail.com")).toBe(
+      "joindono.team@gmail.com",
+    );
   });
 
   it("rejects malformed emails", () => {
