@@ -91,7 +91,7 @@ export default function HomePage() {
             Trending Campaigns
           </Text>
           <Text className="mt-1 text-center text-dono-muted">
-            Tangible projects with clear, specific outcomes
+            Tangible projects with clear, specific outcomes so you can see exactly what your donation does
           </Text>
         </View>
         {loading ? (
