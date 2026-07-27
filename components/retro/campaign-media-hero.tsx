@@ -33,7 +33,6 @@ export function CampaignMediaHero({
   accent = "indigo",
 }: CampaignMediaHeroProps) {
   const parsedVideo = parseCampaignVideoUrl(campaign.videoUrl);
-  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
 
   const galleryImages = (() => {
     const images = getCampaignImages(campaign);
@@ -50,21 +49,6 @@ export function CampaignMediaHero({
     void Linking.openURL(parsedVideo.watchUrl);
   };
 
-  const startVideo = () => {
-    if (!parsedVideo) return;
-
-    if (Platform.OS === "web") {
-      setIsVideoPlaying(true);
-      return;
-    }
-
-    openExternalVideo();
-  };
-
-  const embedUrl = parsedVideo
-    ? `${parsedVideo.embedUrl}?autoplay=1&playsinline=1&rel=0`
-    : null;
-
   return (
     <View className={className}>
       <View
@@ -73,10 +57,10 @@ export function CampaignMediaHero({
           accentFrameClasses[accent],
         )}
       >
-        {parsedVideo && Platform.OS === "web" && isVideoPlaying ? (
+        {parsedVideo && Platform.OS === "web" ? (
           <View className="relative min-h-[280px] w-full md:min-h-[340px]">
             <iframe
-              src={embedUrl ?? undefined}
+              src={parsedVideo.embedUrl}
               title={`${campaign.title} video`}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
@@ -100,7 +84,7 @@ export function CampaignMediaHero({
         ) : (
           <CampaignImage image={activeImage} className="min-h-[280px] md:min-h-[340px]">
             <Pressable
-              onPress={parsedVideo ? startVideo : undefined}
+              onPress={parsedVideo ? openExternalVideo : undefined}
               disabled={!parsedVideo}
               className="absolute inset-0 items-center justify-center bg-black/15"
             >
