@@ -422,6 +422,13 @@ export const markDonationSucceeded = internalMutation({
       amount: donation.amount,
     });
 
+    await ctx.scheduler.runAfter(0, internal.campaignMatches.consumeMatchOnDonation, {
+      donationId: donation._id,
+      campaignId: campaign._id,
+      donationAmountPounds: donation.amount,
+      campaignTitle: campaign.title,
+    });
+
     const receiptEmail =
       donation.donorEmail ??
       (donation.userId
@@ -561,7 +568,7 @@ export const recordRecurringInvoicePayment = internalMutation({
       });
     }
 
-    await ctx.db.insert("donations", {
+    const donationId = await ctx.db.insert("donations", {
       userId: recurringDonation.userId,
       campaignId: recurringDonation.campaignId,
       amount: args.amount,
@@ -587,6 +594,13 @@ export const recordRecurringInvoicePayment = internalMutation({
       args.amount,
     );
     await ctx.db.patch(campaign._id, { raised, donors, status });
+
+    await ctx.scheduler.runAfter(0, internal.campaignMatches.consumeMatchOnDonation, {
+      donationId,
+      campaignId: campaign._id,
+      donationAmountPounds: args.amount,
+      campaignTitle: campaign.title,
+    });
 
     return { alreadyProcessed: false };
   },

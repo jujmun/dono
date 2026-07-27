@@ -24,15 +24,14 @@ export const sendForUpdate = internalAction({
 
     const siteUrl =
       process.env.EXPO_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-      process.env.SITE_URL?.replace(/\/$/, "");
-    const campaignUrl = siteUrl ? `${siteUrl}/campaigns/${context.campaign.slug}` : null;
+      process.env.SITE_URL?.replace(/\/$/, "") ??
+      "https://joindono.com";
+    const campaignUrl = `${siteUrl}/campaigns/${context.campaign.slug}`;
 
     for (const recipient of context.recipients) {
       try {
         const sig = await signUnsubscribeToken(recipient.optInId);
-        const unsubscribeUrl = siteUrl
-          ? `${siteUrl}/campaign-updates/unsubscribe?optInId=${recipient.optInId}&sig=${sig}`
-          : null;
+        const unsubscribeUrl = `${siteUrl}/campaign-updates/unsubscribe?optInId=${recipient.optInId}&sig=${sig}`;
 
         const { sent } = await sendTransactionalEmail({
           to: recipient.email,
@@ -42,15 +41,11 @@ export const sendForUpdate = internalAction({
             "",
             truncate(context.update.body, EXCERPT_LENGTH),
             "",
-            campaignUrl ? `View the update: ${campaignUrl}` : null,
+            `View the update: ${campaignUrl}`,
             "",
             "You're receiving this because you opted in to updates when you donated to this campaign.",
-            unsubscribeUrl
-              ? `Unsubscribe from updates for this campaign: ${unsubscribeUrl}`
-              : null,
-          ]
-            .filter((line): line is string => line !== null)
-            .join("\n"),
+            `Unsubscribe from updates for this campaign: ${unsubscribeUrl}`,
+          ].join("\n"),
         });
 
         await ctx.runMutation(internal.campaignUpdateEmailsInternal.recordLog, {

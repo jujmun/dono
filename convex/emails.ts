@@ -14,10 +14,9 @@ export const sendCampaignApproved = internalAction({
   handler: async (_ctx, args) => {
     const siteUrl =
       process.env.EXPO_PUBLIC_SITE_URL?.replace(/\/$/, "") ??
-      process.env.SITE_URL?.replace(/\/$/, "");
-    const campaignUrl = siteUrl
-      ? `${siteUrl}/campaigns/${args.campaignSlug}`
-      : null;
+      process.env.SITE_URL?.replace(/\/$/, "") ??
+      "https://joindono.com";
+    const campaignUrl = `${siteUrl}/campaigns/${args.campaignSlug}`;
 
     await sendTransactionalEmail({
       to: args.email,
@@ -27,9 +26,7 @@ export const sendCampaignApproved = internalAction({
         "",
         `Great news — your campaign "${args.campaignTitle}" has been approved and is now live on Dono.`,
         "",
-        campaignUrl
-          ? `View your campaign: ${campaignUrl}`
-          : "Sign in to Dono to share it with your community.",
+        `View your campaign: ${campaignUrl}`,
         "",
         "Thank you for using Dono.",
       ].join("\n"),

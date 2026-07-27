@@ -8,6 +8,8 @@ import {
   requireAdmin,
   requireSocietyMember,
   resolveCreatorContact,
+  optionalUserId,
+  getProfileByUserId,
 } from "./lib/authz";
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
@@ -144,6 +146,58 @@ export const listFeatured = query({
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
       .filter((c) => isPublicCampaign(c))
+      .slice(0, limit)
+      .map(toCampaign);
+  },
+});
+
+export const listNearGoal = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = clampLimit(args.limit, 6, 20);
+    const campaigns = await ctx.db.query("campaigns").collect();
+    return campaigns
+      .filter((c) => isPublicCampaign(c))
+      .filter((c) => c.status === "active" && c.goal > 0)
+      .filter((c) => {
+        const progress = c.raised / c.goal;
+        return progress >= 0.8 && c.raised < c.goal;
+      })
+      .sort((a, b) => b.raised / b.goal - a.raised / a.goal)
+      .slice(0, limit)
+      .map(toCampaign);
+  },
+});
+
+export const listForYou = query({
+  args: { limit: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const limit = clampLimit(args.limit, 6, 20);
+    const userId = await optionalUserId(ctx);
+    if (!userId) return [];
+
+    const profile = await getProfileByUserId(ctx, userId);
+    const college = profile?.college?.trim().toLowerCase();
+    if (!college) return [];
+
+    const campaigns = await ctx.db.query("campaigns").collect();
+    const matched = campaigns
+      .filter((c) => isPublicCampaign(c))
+      .filter((c) => (c.college ?? "").trim().toLowerCase() === college)
+      .sort((a, b) => b._creationTime - a._creationTime)
+      .slice(0, limit)
+      .map(toCampaign);
+
+    if (matched.length > 0) {
+      return matched;
+    }
+
+    // Soft fallback when campaigns lack college: prefer Oxford public campaigns
+    // ranked by engagement so the section is still useful.
+    return campaigns
+      .filter((c) => isPublicCampaign(c))
+      .filter((c) => c.university.toLowerCase().includes("oxford"))
+      .sort((a, b) => b.likes + b.donors - (a.likes + a.donors))
       .slice(0, limit)
       .map(toCampaign);
   },

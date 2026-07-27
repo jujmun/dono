@@ -143,6 +143,30 @@ export const recordCampaignUpdate = internalMutation({
   },
 });
 
+export const recordMatch = internalMutation({
+  args: {
+    sponsorLabel: v.string(),
+    campaignTitle: v.string(),
+    amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const initials = args.sponsorLabel
+      .split(" ")
+      .map((p) => p[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "MT";
+    await insertActivity(ctx, {
+      type: "match",
+      user: args.sponsorLabel,
+      avatar: initials,
+      action: "matched a gift on",
+      target: args.campaignTitle,
+      amount: args.amount,
+    });
+  },
+});
+
 export const removePlaceholderActivity = mutation({
   args: {},
   handler: async (ctx) => {

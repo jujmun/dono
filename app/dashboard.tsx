@@ -24,6 +24,10 @@ export default function DashboardPage() {
     api.donations.getDonorImpact,
     isAuthenticated ? {} : "skip",
   ) as DonorImpact | null | undefined;
+  const donoWrapped = useQuery(
+    api.donations.getDonoWrapped,
+    isAuthenticated ? {} : "skip",
+  );
   const followedCampaigns = useQuery(
     api.engagement.listFollowedCampaigns,
     isAuthenticated ? {} : "skip",
@@ -117,6 +121,28 @@ export default function DashboardPage() {
           </View>
         ))}
       </View>
+
+      {donoWrapped ? (
+        <View className="mb-8 rounded-[14px] border-[3px] border-retro-ink bg-retro-mint/15 p-5 shadow-[5px_5px_0_#211E1A]">
+          <Text className="font-retro-mono text-xs uppercase text-[#5c574f]">
+            Your {donoWrapped.year}
+          </Text>
+          <Text className="mt-1 font-retro-bold text-xl text-retro-ink">
+            {donoWrapped.rank}
+          </Text>
+          <Text className="mt-2 text-sm leading-relaxed text-dono-muted">
+            {formatCurrency(donoWrapped.totalDonated)} across{" "}
+            {donoWrapped.campaignsSupported} campaign
+            {donoWrapped.campaignsSupported === 1 ? "" : "s"}
+            {donoWrapped.topCommunity
+              ? ` · Top community: ${donoWrapped.topCommunity}`
+              : ""}
+          </Text>
+          <Text className="mt-2 text-sm text-dono-text">
+            {donoWrapped.impactStatement}
+          </Text>
+        </View>
+      ) : null}
 
         <View className="gap-8">
           <View>
