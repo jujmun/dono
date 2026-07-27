@@ -68,5 +68,5 @@ Always run the typecheck (and lint if files changed) before declaring a task don
 - For multi-file features, present a short plan before editing.
 - If you've attempted the same fix twice without success, stop and summarize
   what you've learned instead of trying a third variation.
-- Ask rather than assume when a requirement is ambiguous — especially anything
+- Ask rather than assume when a requirement is ambiguous - very especially anything
   touching auth flows, payments, or donation amounts.
