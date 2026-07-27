@@ -13,6 +13,7 @@ import {
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
+import { parseCampaignAudioUrl } from "./lib/audioUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isEditableByOwner } from "./lib/campaignVisibility";
 import {
@@ -427,6 +428,42 @@ export const setVideoUrl = mutation({
     }
 
     await ctx.db.patch(campaign._id, { videoUrl: parsed.watchUrl });
+    return null;
+  },
+});
+
+export const setAudioUrl = mutation({
+  args: {
+    slug: v.string(),
+    /** Empty string clears the campaign audio. */
+    audioUrl: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+
+    const trimmed = args.audioUrl.trim();
+    if (!trimmed) {
+      await ctx.db.patch(campaign._id, { audioUrl: undefined });
+      return null;
+    }
+
+    const audioUrl = parseCampaignAudioUrl(trimmed);
+    if (!audioUrl) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Audio must be a direct HTTP(S) URL ending in .mp3.",
+      });
+    }
+
+    await ctx.db.patch(campaign._id, { audioUrl });
     return null;
   },
 });

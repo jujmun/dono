@@ -28,6 +28,7 @@ export function toCampaign(campaign: CampaignDoc) {
     template: campaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID,
     additionalNotes: campaign.additionalNotes,
     videoUrl: campaign.videoUrl,
+    audioUrl: campaign.audioUrl,
     createdAt: campaign.createdAt,
     deadline: campaign.deadline,
     status: campaign.status,
