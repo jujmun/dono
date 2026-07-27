@@ -141,6 +141,71 @@ function campaignSlugToName(slug: string) {
     .join(" ");
 }
 
+function firstNameFromDisplay(name: string | undefined | null): string {
+  const trimmed = (name ?? "").trim();
+  if (!trimmed) return "A donor";
+  return trimmed.split(/\s+/)[0] ?? "A donor";
+}
+
+function relativeTimeLabel(createdAt: number): string {
+  const deltaMs = Date.now() - createdAt;
+  const minutes = Math.floor(deltaMs / 60_000);
+  if (minutes < 1) return "just now";
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 30) return `${days}d ago`;
+  return new Date(createdAt).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
+
+export const listRecentForCampaign = query({
+  args: {
+    campaignSlug: v.string(),
+    limit: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.campaignSlug))
+      .unique();
+    if (!campaign) return [];
+
+    const limit = Math.min(Math.max(args.limit ?? 8, 1), 20);
+    const donations = await ctx.db
+      .query("donations")
+      .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
+      .collect();
+
+    const succeeded = donations
+      .filter((d) => d.paymentStatus === "succeeded")
+      .filter((d) => !d.isAnonymous)
+      .sort((a, b) => b.createdAt - a.createdAt)
+      .slice(0, limit);
+
+    return Promise.all(
+      succeeded.map(async (donation) => {
+        const profile = donation.userId
+          ? await ctx.db
+              .query("profiles")
+              .withIndex("by_userId", (q) => q.eq("userId", donation.userId!))
+              .unique()
+          : null;
+        return {
+          amount: donation.amount,
+          matchedAmountPounds: donation.matchedAmountPounds ?? 0,
+          displayName: firstNameFromDisplay(profile?.name),
+          relativeTime: relativeTimeLabel(donation.createdAt),
+          createdAt: donation.createdAt,
+        };
+      }),
+    );
+  },
+});
+
 export const listMyRecurringDonations = query({
   args: {},
   handler: async (ctx) => {

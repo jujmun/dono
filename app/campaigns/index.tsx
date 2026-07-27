@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   View,
   Text,
@@ -21,25 +21,45 @@ import {
 import type { Campaign } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import { cn } from "@/lib/utils";
+import { isNearGoal } from "@/lib/donation-psychology";
+import { useCurrentProfile } from "@/lib/auth/hooks";
 
 const categories = ["all", ...Object.keys(categoryLabels)];
 
 type CampaignsTab = "discover" | "mine";
+type DiscoverSort = "all" | "trending" | "near_goal";
 
 const tabs: { id: CampaignsTab; label: string }[] = [
   { id: "discover", label: "Discover Campaigns" },
   { id: "mine", label: "My Campaigns" },
 ];
 
+const sortChips: { id: DiscoverSort; label: string }[] = [
+  { id: "all", label: "All" },
+  { id: "trending", label: "Trending" },
+  { id: "near_goal", label: "Near goal" },
+];
+
 export default function CampaignsPage() {
   const { width } = useWindowDimensions();
   const columns = width >= 1200 ? 3 : width >= 820 ? 2 : 1;
   const { isAuthenticated } = useConvexAuth();
+  const profile = useCurrentProfile();
 
   const [tab, setTab] = useState<CampaignsTab>("discover");
+  const [discoverSort, setDiscoverSort] = useState<DiscoverSort>("all");
   const campaigns = (useQuery(api.campaigns.list) ?? undefined) as
     | Campaign[]
     | undefined;
+  const trending = (useQuery(
+    api.campaigns.listTrending,
+    tab === "discover" && discoverSort === "trending" ? { limit: 30 } : "skip",
+  ) ?? undefined) as Campaign[] | undefined;
+  const nearGoal = (useQuery(
+    api.campaigns.listNearGoal,
+    tab === "discover" && discoverSort === "near_goal" ? { limit: 30 } : "skip",
+  ) ?? undefined) as Campaign[] | undefined;
+  const activeMatches = useQuery(api.campaignMatches.listActive) ?? [];
   const myCampaignsRaw = (useQuery(
     api.campaignCreator.listMine,
     isAuthenticated ? {} : "skip",
@@ -51,6 +71,16 @@ export default function CampaignsPage() {
   const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
+  const matchBySlug = useMemo(() => {
+    const map = new Map<string, { multiplier: number }>();
+    for (const match of activeMatches) {
+      map.set(match.campaignSlug, { multiplier: match.multiplier });
+    }
+    return map;
+  }, [activeMatches]);
+
+  const profileCollege = profile?.college?.trim().toLowerCase() ?? "";
+
   const toggleCategory = (cat: string) => {
     if (cat === "all") {
       setSelectedCategories([]);
@@ -61,7 +91,16 @@ export default function CampaignsPage() {
     );
   };
 
-  const scoped = tab === "mine" ? myCampaigns : campaigns;
+  const discoverSource =
+    tab === "discover"
+      ? discoverSort === "trending"
+        ? trending
+        : discoverSort === "near_goal"
+          ? nearGoal
+          : campaigns
+      : undefined;
+
+  const scoped = tab === "mine" ? myCampaigns : discoverSource;
   const showMineLoginGate = tab === "mine" && !isAuthenticated;
 
   const filtered = (scoped ?? []).filter((c) => {
@@ -118,6 +157,32 @@ export default function CampaignsPage() {
           </Pressable>
         ))}
       </View>
+
+      {tab === "discover" ? (
+        <View className="mb-4 flex-row flex-wrap gap-2">
+          {sortChips.map((chip) => (
+            <Pressable
+              key={chip.id}
+              onPress={() => setDiscoverSort(chip.id)}
+              className={cn(
+                "rounded-full border-2 border-retro-ink px-3 py-1",
+                discoverSort === chip.id
+                  ? "bg-retro-sky shadow-[2px_2px_0_#211E1A]"
+                  : "bg-retro-cream",
+              )}
+            >
+              <Text
+                className={cn(
+                  "font-retro-mono-bold text-[11px]",
+                  discoverSort === chip.id ? "text-retro-paper" : "text-retro-ink",
+                )}
+              >
+                {chip.label}
+              </Text>
+            </Pressable>
+          ))}
+        </View>
+      ) : null}
 
       <View className="mb-5 flex-row items-center gap-2">
         <Pressable
@@ -181,29 +246,40 @@ export default function CampaignsPage() {
         </View>
       ) : (
         <View className="flex-row flex-wrap gap-[22px]">
-          {filtered.map((campaign, index) => (
-            <View
-              key={campaign.id}
-              style={{
-                flexGrow: 1,
-                flexBasis:
-                  columns === 3 ? "30%" : columns === 2 ? "45%" : "100%",
-                maxWidth:
-                  columns === 3 ? "32%" : columns === 2 ? "48.5%" : "100%",
-              }}
-            >
-              <RetroCampaignCard
-                campaign={campaign}
-                accent={index % 2 === 0 ? "indigo" : "tan"}
-                owned={tab === "discover" && ownedIds.has(campaign.id)}
-                href={
-                  tab === "mine" && getCampaignApprovalStage(campaign)
-                    ? `/create?editSlug=${campaign.id}`
-                    : undefined
-                }
-              />
-            </View>
-          ))}
+          {filtered.map((campaign, index) => {
+            const match = matchBySlug.get(campaign.id);
+            return (
+              <View
+                key={campaign.id}
+                style={{
+                  flexGrow: 1,
+                  flexBasis:
+                    columns === 3 ? "30%" : columns === 2 ? "45%" : "100%",
+                  maxWidth:
+                    columns === 3 ? "32%" : columns === 2 ? "48.5%" : "100%",
+                }}
+              >
+                <RetroCampaignCard
+                  campaign={campaign}
+                  accent={index % 2 === 0 ? "indigo" : "tan"}
+                  owned={tab === "discover" && ownedIds.has(campaign.id)}
+                  nearGoal={isNearGoal(campaign)}
+                  matched={Boolean(match)}
+                  matchMultiplier={match?.multiplier}
+                  collegeMatch={
+                    Boolean(profileCollege) &&
+                    (campaign.college ?? "").trim().toLowerCase() ===
+                      profileCollege
+                  }
+                  href={
+                    tab === "mine" && getCampaignApprovalStage(campaign)
+                      ? `/create?editSlug=${campaign.id}`
+                      : undefined
+                  }
+                />
+              </View>
+            );
+          })}
         </View>
       )}
 

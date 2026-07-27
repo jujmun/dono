@@ -5,6 +5,7 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
+  Share,
   useWindowDimensions,
 } from "react-native";
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
@@ -13,12 +14,13 @@ import { usePostHog } from "posthog-react-native";
 import {
   CampaignMediaHero,
   CampaignPhotoGrid,
-  DETAIL_DONATION_PRESETS,
+  RECOMMENDED_DONATION_AMOUNT,
   RetroDonateSidebar,
   RetroPanel,
 } from "@/components/retro";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
+import { RecentDonorsList } from "@/components/recent-donors-list";
 import {
   ReceiptDivider,
   ReceiptLedger,
@@ -30,13 +32,16 @@ import { buildGoalLineItems } from "@/lib/receipt";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import type { Campaign } from "@/lib/types";
+import type { DonationFrequency } from "@/components/donate-sheet-types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
 import { CampaignUpdateDisplay } from "@/components/campaign-update-display";
+import { computeMatchCredit } from "@/lib/donation-psychology";
 
 type DonationThankYouState = {
   amount?: number;
+  matchedAmount?: number;
   pendingConfirmation?: boolean;
   paymentIntentId?: string;
 };
@@ -60,11 +65,20 @@ export default function CampaignDetailPage() {
     api.engagement.isFollowing,
     id ? { campaignSlug: id } : "skip",
   );
+  const activeMatch = useQuery(
+    api.campaignMatches.getActiveForCampaign,
+    id ? { campaignSlug: id } : "skip",
+  );
+  const recentDonors = useQuery(
+    api.donations.listRecentForCampaign,
+    id ? { campaignSlug: id, limit: 8 } : "skip",
+  );
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState<number>(
-    DETAIL_DONATION_PRESETS[2],
+    RECOMMENDED_DONATION_AMOUNT,
   );
   const [customAmount, setCustomAmount] = useState("");
+  const [frequency, setFrequency] = useState<DonationFrequency>("one_time");
   const [donorEmail, setDonorEmail] = useState("");
   const [coverFees, setCoverFees] = useState(true);
   const [legalAccepted, setLegalAccepted] = useState(false);
@@ -177,16 +191,12 @@ export default function CampaignDetailPage() {
   );
   const creatorInitial = (campaign.creator.name || "?").trim().charAt(0).toUpperCase();
   const goalLines = buildGoalLineItems(campaign);
-  // Only resolve the campaign's template while the feature is enabled — with
-  // it off, `accent` stays undefined (each component's own default applies:
-  // indigo for the media hero/photo grid, marigold for RetroPanel, matching
-  // the original hardcoded pre-template look) and `heroLayout` defaults to
-  // "media-first" so the section order below is unchanged too.
   const resolvedTemplate = ENABLE_CAMPAIGN_TEMPLATES
     ? getCampaignTemplate(campaign.template)
     : null;
   const accent = resolvedTemplate?.unlocks.accent;
   const heroLayout = resolvedTemplate?.unlocks.heroLayout ?? "media-first";
+  const showFrequencyToggle = Platform.OS === "web";
 
   const handleToggleLike = async () => {
     if (!id || likeLoading) return;
@@ -238,6 +248,32 @@ export default function CampaignDetailPage() {
     }
   };
 
+  const handleShare = async () => {
+    const url =
+      typeof window !== "undefined"
+        ? window.location.href
+        : `https://joindono.com/campaigns/${campaign.id}`;
+    const message = `Support ${campaign.title} on Dono`;
+
+    posthog?.capture("campaign_shared", {
+      campaign_id: campaign.id,
+      campaign_title: campaign.title,
+      campaign_category: campaign.category,
+    });
+
+    try {
+      await Share.share(
+        Platform.OS === "ios"
+          ? { url, message }
+          : { message: `${message}\n${url}` },
+      );
+    } catch {
+      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(url);
+      }
+    }
+  };
+
   const openDonateSheet = () => {
     posthog?.capture("donation_started", {
       campaign_id: campaign.id,
@@ -246,7 +282,7 @@ export default function CampaignDetailPage() {
       campaign_goal: campaign.goal,
       campaign_raised: campaign.raised,
       amount: resolvedAmount,
-      donation_type: "one_time",
+      donation_type: frequency === "monthly" ? "recurring" : "one_time",
     });
     setDonateSheetOpen(true);
   };
@@ -256,6 +292,10 @@ export default function CampaignDetailPage() {
       campaign={campaign}
       selectedAmount={selectedAmount}
       customAmount={customAmount}
+      frequency={frequency}
+      onFrequencyChange={setFrequency}
+      showFrequencyToggle={showFrequencyToggle}
+      activeMatch={activeMatch ?? null}
       liked={liked}
       following={following}
       likeLoading={likeLoading}
@@ -275,20 +315,10 @@ export default function CampaignDetailPage() {
       onDonate={openDonateSheet}
       onToggleLike={() => void handleToggleLike()}
       onToggleFollow={() => void handleToggleFollow()}
-      onShare={() =>
-        posthog?.capture("campaign_shared", {
-          campaign_id: campaign.id,
-          campaign_title: campaign.title,
-          campaign_category: campaign.category,
-        })
-      }
+      onShare={() => void handleShare()}
     />
   );
 
-  // Section pieces, composed below in an order driven by the campaign's
-  // chosen template (lib/campaign-templates.ts) — media-first keeps the
-  // original layout, gallery-grid promotes photos, text-first leads with
-  // the story.
   const heroSection = (
     <View
       key="hero"
@@ -414,11 +444,17 @@ export default function CampaignDetailPage() {
         </Pressable>
       </Link>
 
-      {/* Title + creator */}
       <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
         <Text className="font-retro-bold text-[28px] uppercase leading-tight text-retro-ink md:text-[34px]">
           {campaign.title}
         </Text>
+        {activeMatch ? (
+          <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2.5 py-0.5">
+            <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
+              MATCHED {activeMatch.multiplier}×
+            </Text>
+          </View>
+        ) : null}
         {campaign.verifications.length > 0 ? (
           <View
             className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint"
@@ -457,6 +493,12 @@ export default function CampaignDetailPage() {
 
       {pageSections}
 
+      <View className="mb-6">
+        <RetroPanel title="Recent donors" accent="mint">
+          <RecentDonorsList donors={recentDonors ?? []} />
+        </RetroPanel>
+      </View>
+
       {campaign.additionalNotes ? (
         <View className="mb-6">
           <RetroPanel title="Anything else?" accent={accent}>
@@ -467,7 +509,6 @@ export default function CampaignDetailPage() {
         </View>
       ) : null}
 
-      {/* Comments + updates */}
       <View nativeID="campaign-comments" className="mb-4">
         <RetroPanel title="Comments.log" accent="marigold">
           <CampaignCommentsSection
@@ -495,19 +536,23 @@ export default function CampaignDetailPage() {
         onLegalAcceptedChange={setLegalAccepted}
         onClose={() => setDonateSheetOpen(false)}
         onSuccess={(amount, options) => {
+          const matchedAmount = computeMatchCredit(amount, activeMatch ?? null);
           setThankYou({
             amount,
+            matchedAmount: matchedAmount > 0 ? matchedAmount : undefined,
             pendingConfirmation: options?.pendingConfirmation,
             paymentIntentId: options?.paymentIntentId,
           });
         }}
-        frequency="one_time"
+        frequency={showFrequencyToggle ? frequency : "one_time"}
       />
 
       <DonationThankYouModal
         visible={thankYou != null}
         amount={thankYou?.amount}
+        matchedAmount={thankYou?.matchedAmount}
         campaignTitle={campaign.title}
+        campaignSlug={campaign.id}
         pendingConfirmation={thankYou?.pendingConfirmation}
         paymentIntentId={thankYou?.paymentIntentId}
         onClose={() => setThankYou(null)}

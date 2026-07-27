@@ -6,7 +6,8 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
+import { useMemo } from "react";
 import { ArrowRight } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
@@ -15,18 +16,57 @@ import { ReceiptDivider, ReceiptLedger, ReceiptLineRow } from "@/components/ui/r
 import { api } from "@convex/_generated/api";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency } from "@/lib/constants";
+import { useCurrentProfile } from "@/lib/auth/hooks";
 
 export default function HomePage() {
   const { width } = useWindowDimensions();
   const isWide = width >= 768;
-  const featuredCampaigns = (useQuery(api.campaigns.listFeatured, {
+  const { isAuthenticated } = useConvexAuth();
+  const profile = useCurrentProfile();
+  const trendingCampaigns = (useQuery(api.campaigns.listTrending, {
     limit: 3,
   }) ?? undefined) as Campaign[] | undefined;
+  const nearGoalCampaigns = (useQuery(api.campaigns.listNearGoal, {
+    limit: 3,
+  }) ?? undefined) as Campaign[] | undefined;
+  const forYouCampaigns = (useQuery(
+    api.campaigns.listForYou,
+    isAuthenticated ? { limit: 3 } : "skip",
+  ) ?? undefined) as Campaign[] | undefined;
+  const activeMatches = useQuery(api.campaignMatches.listActive) ?? [];
   const allCampaigns = (useQuery(api.campaigns.list) ?? []) as Campaign[];
 
-  const loading = featuredCampaigns === undefined;
+  const matchBySlug = useMemo(() => {
+    const map = new Map<
+      string,
+      { multiplier: number }
+    >();
+    for (const match of activeMatches) {
+      map.set(match.campaignSlug, { multiplier: match.multiplier });
+    }
+    return map;
+  }, [activeMatches]);
+
+  const profileCollege = profile?.college?.trim().toLowerCase() ?? "";
+  const getBadges = (campaign: Campaign) => {
+    const match = matchBySlug.get(campaign.id);
+    return {
+      matched: Boolean(match),
+      matchMultiplier: match?.multiplier,
+      collegeMatch:
+        Boolean(profileCollege) &&
+        (campaign.college ?? "").trim().toLowerCase() === profileCollege,
+    };
+  };
+
+  const loading = trendingCampaigns === undefined;
   const totalRaised = allCampaigns.reduce((sum, c) => sum + c.raised, 0);
   const campaignCount = allCampaigns.length;
+  const showForYou =
+    isAuthenticated &&
+    Boolean(profileCollege) &&
+    forYouCampaigns &&
+    forYouCampaigns.length > 0;
 
   return (
     <AppShell>
@@ -42,17 +82,12 @@ export default function HomePage() {
             Fund specific, tangible improvements to student life
           </Text>
         </View>
-        <View className="rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2 shadow-[3px_3px_0_#211E1A]">
-          <Text className="font-retro-mono text-xs text-retro-ink">
-            SYSTEM: TRANSPARENCY OK
-          </Text>
-        </View>
       </View>
 
       <View className="mb-10">
         <View className="mb-6 items-center">
           <Text className="font-retro-bold text-2xl text-retro-ink">
-            Active Campaigns
+            Trending Campaigns
           </Text>
           <Text className="mt-1 text-center text-dono-muted">
             Tangible projects with clear, specific outcomes
@@ -61,9 +96,49 @@ export default function HomePage() {
         {loading ? (
           <ActivityIndicator color="#211E1A" />
         ) : (
-          <CampaignCardGrid campaigns={featuredCampaigns!} featured />
+          <CampaignCardGrid
+            campaigns={trendingCampaigns!}
+            featured
+            getBadges={getBadges}
+          />
         )}
       </View>
+
+      {nearGoalCampaigns && nearGoalCampaigns.length > 0 ? (
+        <View className="mb-10">
+          <View className="mb-6 items-center">
+            <Text className="font-retro-bold text-2xl text-retro-ink">
+              Almost there
+            </Text>
+            <Text className="mt-1 text-center text-dono-muted">
+              Campaigns close to their goal — your gift can tip them over
+            </Text>
+          </View>
+          <CampaignCardGrid
+            campaigns={nearGoalCampaigns}
+            featured
+            getBadges={getBadges}
+          />
+        </View>
+      ) : null}
+
+      {showForYou ? (
+        <View className="mb-10">
+          <View className="mb-6 items-center">
+            <Text className="font-retro-bold text-2xl text-retro-ink">
+              From your college
+            </Text>
+            <Text className="mt-1 text-center text-dono-muted">
+              Campaigns connected to {profile?.college}
+            </Text>
+          </View>
+          <CampaignCardGrid
+            campaigns={forYouCampaigns!}
+            featured
+            getBadges={getBadges}
+          />
+        </View>
+      ) : null}
 
       <RetroPanel title="WHY_DONO.txt" accent="marigold">
         <Text className="text-center font-retro-bold text-xl text-retro-ink">
@@ -117,17 +192,17 @@ export default function HomePage() {
               <Text className="font-retro-bold text-sm text-retro-paper">
                 Find a Campaign
               </Text>
-              <ArrowRight size={16} color="#FFF9EF" />
+              <ArrowRight size={16} color="#F7F3E8" />
             </Pressable>
           </Link>
           <Link href="/create" asChild>
             <Pressable
-              className={`items-center rounded-full border-2 border-retro-ink bg-retro-paper px-6 py-3 shadow-[3px_3px_0_#211E1A] ${
+              className={`flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-6 py-3 shadow-[3px_3px_0_#211E1A] ${
                 isWide ? "" : "w-full"
               }`}
             >
               <Text className="font-retro-bold text-sm text-retro-ink">
-                Create a Campaign
+                Start a Campaign
               </Text>
             </Pressable>
           </Link>

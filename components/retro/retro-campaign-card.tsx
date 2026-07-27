@@ -22,6 +22,10 @@ interface RetroCampaignCardProps {
   href?: Href;
   /** Highlights campaigns the current user owns (e.g. in the Discover tab). */
   owned?: boolean;
+  nearGoal?: boolean;
+  matched?: boolean;
+  matchMultiplier?: number;
+  collegeMatch?: boolean;
 }
 
 export function RetroCampaignCard({
@@ -29,6 +33,10 @@ export function RetroCampaignCard({
   accent = "indigo",
   href,
   owned = false,
+  nearGoal = false,
+  matched = false,
+  matchMultiplier,
+  collegeMatch = false,
 }: RetroCampaignCardProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const imageSource = getPrimaryCampaignImage(campaign);
@@ -74,6 +82,29 @@ export function RetroCampaignCard({
               <Text className="font-retro-bold text-xs text-retro-ink">
                 {categoryLabel}
               </Text>
+            </View>
+            <View className="absolute right-3.5 top-3.5 flex-row flex-wrap justify-end gap-1">
+              {matched ? (
+                <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                  <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
+                    {matchMultiplier ? `${matchMultiplier}× MATCH` : "MATCHED"}
+                  </Text>
+                </View>
+              ) : null}
+              {nearGoal ? (
+                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                  <Text className="font-retro-mono-bold text-[10px] text-retro-ink">
+                    NEAR GOAL
+                  </Text>
+                </View>
+              ) : null}
+              {collegeMatch ? (
+                <View className="rounded-full border-2 border-retro-ink bg-retro-sky px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                  <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
+                    YOUR COLLEGE
+                  </Text>
+                </View>
+              ) : null}
             </View>
             {approvalStage && (
               <View

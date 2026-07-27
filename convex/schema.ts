@@ -251,6 +251,22 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_subscription", ["stripeSubscriptionId"])
     .index("by_campaign", ["campaignId"]),
+  /** Admin-configured match windows. Match credit is a commitment tracker —
+   * it does not inflate campaigns.raised or move Stripe funds. */
+  campaignMatchWindows: defineTable({
+    campaignId: v.id("campaigns"),
+    multiplier: v.number(),
+    budgetPounds: v.number(),
+    consumedPounds: v.number(),
+    sponsorLabel: v.string(),
+    startsAt: v.number(),
+    endsAt: v.number(),
+    active: v.boolean(),
+    createdBy: v.id("users"),
+    createdAt: v.number(),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_active", ["active"]),
   donations: defineTable({
     userId: v.optional(v.id("users")),
     donorEmail: v.optional(v.string()),
@@ -286,6 +302,8 @@ export default defineSchema({
     coverFees: v.optional(v.boolean()),
     intendedCampaignAmountMinor: v.optional(v.number()),
     estimatedStripeFeeMinor: v.optional(v.number()),
+    matchedAmountPounds: v.optional(v.number()),
+    matchWindowId: v.optional(v.id("campaignMatchWindows")),
     ageAttested: v.optional(v.boolean()),
     legalAcceptedAt: v.optional(v.number()),
     emailUpdatesOptIn: v.optional(v.boolean()),

@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, Pressable, Text, View } from "react-native";
+import { Modal, Platform, Pressable, Share, Text, View } from "react-native";
 import Animated, {
   Easing,
   FadeIn,
@@ -12,11 +12,18 @@ import Animated, {
   withSpring,
   withTiming,
 } from "react-native-reanimated";
-import { CheckCircle2, Gift, Sparkles } from "lucide-react-native";
+import { CheckCircle2, Share2, Sparkles } from "lucide-react-native";
+import QRCode from "react-native-qrcode-svg";
 import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { formatCurrency } from "@/lib/constants";
 import { EmailUpdateOptInCheckbox } from "@/components/email-update-opt-in-checkbox";
+import {
+  buildInstagramStoryShareUrl,
+  getSiteOrigin,
+  isLoopbackOrigin,
+  resolveQrShareOrigin,
+} from "@/lib/instagram-story";
 
 const CONFETTI_COUNT = 14;
 const CONFETTI_COLORS = ["#2f6844", "#168456", "#047857", "#86efac", "#bbf7d0", "#fbbf24"];
@@ -24,7 +31,9 @@ const CONFETTI_COLORS = ["#2f6844", "#168456", "#047857", "#86efac", "#bbf7d0", 
 type DonationThankYouModalProps = {
   visible: boolean;
   amount?: number;
+  matchedAmount?: number;
   campaignTitle: string;
+  campaignSlug?: string;
   pendingConfirmation?: boolean;
   paymentIntentId?: string;
   onClose: () => void;
@@ -81,7 +90,9 @@ function ConfettiParticle({
 export function DonationThankYouModal({
   visible,
   amount,
+  matchedAmount,
   campaignTitle,
+  campaignSlug,
   pendingConfirmation = false,
   paymentIntentId,
   onClose,
@@ -90,11 +101,48 @@ export function DonationThankYouModal({
   const glowOpacity = useSharedValue(0);
   const ringScale = useSharedValue(0.6);
   const [emailUpdatesOptIn, setEmailUpdatesOptIn] = useState(false);
+  const [shareHint, setShareHint] = useState<string | null>(null);
+  const [storyShareUrl, setStoryShareUrl] = useState<string | null>(null);
   const setEmailUpdateOptIn = useMutation(api.donations.setEmailUpdateOptIn);
+
+  useEffect(() => {
+    if (!visible || !campaignSlug) {
+      setStoryShareUrl(null);
+      return;
+    }
+
+    // Show a QR immediately (may be localhost), then upgrade to LAN/public origin.
+    setStoryShareUrl(
+      buildInstagramStoryShareUrl({
+        siteOrigin: getSiteOrigin(),
+        campaignSlug,
+        amount,
+        matchedAmount,
+      }),
+    );
+
+    let cancelled = false;
+    void resolveQrShareOrigin().then((origin) => {
+      if (cancelled) return;
+      setStoryShareUrl(
+        buildInstagramStoryShareUrl({
+          siteOrigin: origin,
+          campaignSlug,
+          amount,
+          matchedAmount,
+        }),
+      );
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [visible, campaignSlug, amount, matchedAmount]);
 
   useEffect(() => {
     if (!visible) {
       setEmailUpdatesOptIn(false);
+      setShareHint(null);
     }
   }, [visible]);
 
@@ -105,6 +153,36 @@ export function DonationThankYouModal({
       // Best-effort — the donation itself already succeeded, so we don't
       // want a failed preference save to disrupt the thank-you screen.
     });
+  };
+
+  const handleShareImpact = async () => {
+    const total =
+      amount != null
+        ? amount + (matchedAmount && matchedAmount > 0 ? matchedAmount : 0)
+        : null;
+    const amountLabel = total != null ? formatCurrency(total) : "a gift";
+    const path = campaignSlug ? `/campaigns/${campaignSlug}` : "";
+    const url =
+      typeof window !== "undefined" && path
+        ? `${window.location.origin}${path}`
+        : path
+          ? `${getSiteOrigin()}${path}`
+          : getSiteOrigin();
+    const message = `I just gave ${amountLabel} to support ${campaignTitle} on Dono. Join me:`;
+
+    try {
+      await Share.share(
+        Platform.OS === "ios"
+          ? { url, message }
+          : { message: `${message}\n${url}` },
+      );
+      setShareHint(null);
+    } catch {
+      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
+        await navigator.clipboard.writeText(`${message}\n${url}`);
+        setShareHint("Link copied");
+      }
+    }
   };
 
   useEffect(() => {
@@ -145,6 +223,11 @@ export function DonationThankYouModal({
   const glowStyle = useAnimatedStyle(() => ({
     opacity: glowOpacity.value,
   }));
+
+  const matchedTotal =
+    amount != null && matchedAmount != null && matchedAmount > 0
+      ? amount + matchedAmount
+      : null;
 
   return (
     <Modal visible={visible} transparent animationType="fade" onRequestClose={onClose}>
@@ -195,6 +278,12 @@ export function DonationThankYouModal({
                   </Text>
                 ) : null}
 
+                {matchedTotal != null ? (
+                  <Text className="mt-1 font-retro-mono text-sm text-dono-muted">
+                    With match: {formatCurrency(matchedTotal)}
+                  </Text>
+                ) : null}
+
                 <Text className="mt-3 text-center text-base leading-relaxed text-dono-muted">
                   {pendingConfirmation
                     ? "Your payment was received. This campaign total may take a moment to update."
@@ -205,21 +294,6 @@ export function DonationThankYouModal({
                 <Text className="mt-1 text-center font-retro-bold text-base text-dono-text">
                   {campaignTitle}
                 </Text>
-              </Animated.View>
-
-              <Animated.View
-                entering={FadeInDown.delay(260).springify()}
-                className="mt-6 w-full rounded-2xl border border-dashed border-dono-border bg-white/80 px-4 py-4"
-              >
-                <View className="flex-row items-center gap-3">
-                  <View className="h-10 w-10 items-center justify-center rounded-full bg-dono-primary/10">
-                    <Gift size={18} color="#2f6844" />
-                  </View>
-                  <Text className="flex-1 text-sm leading-relaxed text-dono-muted">
-                    You&apos;re helping students turn ideas into real impact. Every
-                    donation moves this campaign closer to its goal.
-                  </Text>
-                </View>
               </Animated.View>
 
               {paymentIntentId ? (
@@ -235,7 +309,57 @@ export function DonationThankYouModal({
                 </Animated.View>
               ) : null}
 
-              <Animated.View entering={FadeInDown.delay(360).springify()} className="mt-8 w-full">
+              {campaignSlug ? (
+                <Animated.View
+                  entering={FadeInDown.delay(320).springify()}
+                  className="mt-5 w-full items-center"
+                >
+                  <View className="rounded-2xl border-2 border-dono-border bg-white p-3">
+                    {storyShareUrl ? (
+                      <QRCode
+                        value={storyShareUrl}
+                        size={148}
+                        backgroundColor="#FFFFFF"
+                        color="#17211B"
+                      />
+                    ) : (
+                      <View className="h-[148px] w-[148px] items-center justify-center">
+                        <Text className="font-retro-mono text-xs text-dono-muted">
+                          Preparing…
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                  <Text className="mt-3 text-center font-retro-mono text-xs text-dono-muted">
+                    Scan to share an Instagram Story
+                  </Text>
+                  {storyShareUrl && isLoopbackOrigin(storyShareUrl) ? (
+                    <Text className="mt-1 max-w-xs text-center font-retro-mono text-[10px] text-dono-muted">
+                      Using a local link — on joindono.com this QR opens for
+                      phones automatically.
+                    </Text>
+                  ) : null}
+                </Animated.View>
+              ) : null}
+
+              <Animated.View entering={FadeInDown.delay(340).springify()} className="mt-4 w-full">
+                <Pressable
+                  onPress={() => void handleShareImpact()}
+                  className="flex-row items-center justify-center gap-2 rounded-full border-2 border-dono-border bg-white py-3"
+                >
+                  <Share2 size={16} color="#17211B" />
+                  <Text className="font-retro-bold text-sm text-dono-text">
+                    Share your impact
+                  </Text>
+                </Pressable>
+                {shareHint ? (
+                  <Text className="mt-2 text-center font-retro-mono text-xs text-dono-muted">
+                    {shareHint}
+                  </Text>
+                ) : null}
+              </Animated.View>
+
+              <Animated.View entering={FadeInDown.delay(360).springify()} className="mt-4 w-full">
                 <Pressable
                   onPress={onClose}
                   className="items-center rounded-full bg-dono-primary py-3.5"
