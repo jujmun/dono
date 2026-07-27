@@ -1,7 +1,6 @@
 import { useState } from "react";
 import { View, Pressable, Text, Platform, Linking } from "react-native";
-import { Pause, Play, Volume2 } from "lucide-react-native";
-import { useAudioPlayer, useAudioPlayerStatus } from "expo-audio";
+import { Play } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import {
   getCampaignImages,
@@ -26,30 +25,6 @@ interface CampaignMediaHeroProps {
   className?: string;
   /** Campaign template accent — defaults to indigo (the original hardcoded look). */
   accent?: RetroPanelAccent;
-}
-
-function CampaignAudioControl({ audioUrl }: { audioUrl: string }) {
-  const player = useAudioPlayer({ uri: audioUrl });
-  const status = useAudioPlayerStatus(player);
-  const isPlaying = status.playing;
-
-  return (
-    <Pressable
-      onPress={() => (isPlaying ? player.pause() : player.play())}
-      className="mt-4 flex-row items-center justify-center gap-2 self-start rounded-full border-[3px] border-retro-ink bg-retro-marigold px-5 py-3 shadow-[3px_3px_0_#211E1A]"
-      accessibilityRole="button"
-      accessibilityLabel={isPlaying ? "Pause campaign audio" : "Enable campaign sound"}
-    >
-      {isPlaying ? (
-        <Pause size={18} color="#211E1A" fill="#211E1A" />
-      ) : (
-        <Volume2 size={18} color="#211E1A" />
-      )}
-      <Text className="font-retro-bold text-sm text-retro-ink">
-        {isPlaying ? "Pause sound" : "Enable sound"}
-      </Text>
-    </Pressable>
-  );
 }
 
 export function CampaignMediaHero({
@@ -143,8 +118,6 @@ export function CampaignMediaHero({
           </CampaignImage>
         )}
       </View>
-
-      {campaign.audioUrl ? <CampaignAudioControl audioUrl={campaign.audioUrl} /> : null}
 
       {!parsedVideo && galleryImages.length > 1 ? (
         <View className="mt-3 flex-row flex-wrap gap-2">

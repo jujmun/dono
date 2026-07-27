@@ -42,7 +42,6 @@ import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { encodeImpactItems, parseImpactItem } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { parseCampaignVideoUrl } from "@/lib/video-url";
-import { parseCampaignAudioUrl } from "@/lib/audio-url";
 import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign-templates";
 import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
@@ -177,7 +176,6 @@ export default function CreateCampaignPage() {
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
   const setCampaignVideoUrl = useMutation(api.campaignCreator.setVideoUrl);
-  const setCampaignAudioUrl = useMutation(api.campaignCreator.setAudioUrl);
   const setImpactItems = useMutation(api.campaignCreator.setImpactItems);
   const createVerificationSession = useAction(
     api.campaignIdentity.createVerificationSession,
@@ -201,7 +199,6 @@ export default function CreateCampaignPage() {
   const [template, setTemplate] = useState<string>(DEFAULT_CAMPAIGN_TEMPLATE_ID);
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
-  const [audioUrl, setAudioUrl] = useState("");
   const [additionalNotes, setAdditionalNotes] = useState("");
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
@@ -230,7 +227,6 @@ export default function CreateCampaignPage() {
       });
       setTemplate(editCampaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID);
       setVideoUrl(editCampaign.videoUrl ?? "");
-      setAudioUrl(editCampaign.audioUrl ?? "");
       setAdditionalNotes(editCampaign.additionalNotes ?? "");
       const decodedLines = (editCampaign.impactItems ?? []).map((item) => {
         const parsed = parseImpactItem(item);
@@ -445,8 +441,6 @@ export default function CreateCampaignPage() {
 
   const parsedVideoUrl = parseCampaignVideoUrl(videoUrl);
   const videoUrlInvalid = videoUrl.trim().length > 0 && !parsedVideoUrl;
-  const parsedAudioUrl = parseCampaignAudioUrl(audioUrl);
-  const audioUrlInvalid = audioUrl.trim().length > 0 && !parsedAudioUrl;
   const photosIncomplete =
     pickedImages.length > 0 && pickedImages.length < MIN_CAMPAIGN_IMAGES;
 
@@ -456,7 +450,6 @@ export default function CreateCampaignPage() {
         return (
           Boolean(form.title && form.category && form.communitySlug) &&
           !videoUrlInvalid &&
-          !audioUrlInvalid &&
           !photosIncomplete
         );
       case 1:
@@ -665,29 +658,6 @@ export default function CreateCampaignPage() {
                 {videoUrlInvalid ? (
                   <Text className="mt-1 text-xs text-red-600">
                     Enter a valid YouTube or Vimeo URL.
-                  </Text>
-                ) : null}
-              </View>
-
-              <View>
-                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
-                  Campaign Audio
-                </Text>
-                <TextInput
-                  value={audioUrl}
-                  onChangeText={setAudioUrl}
-                  placeholder="https://example.com/campaign-song.mp3"
-                  placeholderTextColor="#56615A"
-                  autoCapitalize="none"
-                  autoCorrect={false}
-                  className={inputClass}
-                />
-                <Text className="mt-1.5 text-xs text-[#5c574f]">
-                  Optional. Add a direct MP3 link. Visitors can play it on the campaign page.
-                </Text>
-                {audioUrlInvalid ? (
-                  <Text className="mt-1 text-xs text-red-600">
-                    Enter a direct HTTP(S) URL ending in .mp3.
                   </Text>
                 ) : null}
               </View>
@@ -1075,26 +1045,6 @@ export default function CreateCampaignPage() {
 
                   <View>
                     <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
-                      Audio (MP3)
-                    </Text>
-                    <TextInput
-                      value={audioUrl}
-                      onChangeText={setAudioUrl}
-                      placeholder="https://example.com/campaign-song.mp3"
-                      placeholderTextColor="#56615A"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      className={inputClass}
-                    />
-                    {audioUrlInvalid ? (
-                      <Text className="mt-1 text-xs text-red-600">
-                        Enter a direct HTTP(S) URL ending in .mp3.
-                      </Text>
-                    ) : null}
-                  </View>
-
-                  <View>
-                    <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
                       Additional notes
                     </Text>
                     <TextInput
@@ -1234,7 +1184,6 @@ export default function CreateCampaignPage() {
                     .then(async () => {
                       let imageUploadFailed = false;
                       let videoSaveFailed = false;
-                      let audioSaveFailed = false;
                       try {
                         await setImpactItems({
                           slug,
@@ -1256,18 +1205,6 @@ export default function CreateCampaignPage() {
                           });
                         } catch {
                           videoSaveFailed = true;
-                        }
-                      }
-                      // As with video, editing can clear audio; a new campaign
-                      // only needs this mutation when it has an MP3 to save.
-                      if (parsedAudioUrl || isEditMode) {
-                        try {
-                          await setCampaignAudioUrl({
-                            slug,
-                            audioUrl: parsedAudioUrl ?? "",
-                          });
-                        } catch {
-                          audioSaveFailed = true;
                         }
                       }
                       if (pickedImages.length > 0) {
@@ -1306,8 +1243,6 @@ export default function CreateCampaignPage() {
                           campaign_image_count: pickedImages.length,
                           campaign_has_video:
                             Boolean(parsedVideoUrl) && !videoSaveFailed,
-                          campaign_has_audio:
-                            Boolean(parsedAudioUrl) && !audioSaveFailed,
                           campaign_impact_items: impactItemLabels.length,
                           campaign_template: template,
                         },
@@ -1316,7 +1251,6 @@ export default function CreateCampaignPage() {
                       setTemplate(DEFAULT_CAMPAIGN_TEMPLATE_ID);
                       setPickedImages([]);
                       setVideoUrl("");
-                      setAudioUrl("");
                       setAdditionalNotes("");
                       setFundLines(initialFundLines());
                       setCampaignSlug(null);

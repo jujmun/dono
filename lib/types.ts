@@ -58,8 +58,6 @@ export interface Campaign {
   additionalNotes?: string;
   /** YouTube or Vimeo watch URL for the campaign media hero. */
   videoUrl?: string;
-  /** Direct MP3 URL played in the campaign page. */
-  audioUrl?: string;
   createdAt: string;
   deadline: string;
   status: "pending" | "rejected" | "active" | "funded" | "completed" | "changes_requested";
