@@ -67,6 +67,7 @@ everything.
   today):
   - [lmh-development-strategy.md](research/meetings/lmh-development-strategy.md) — LMH's two-tier (mass + major gift) fundraising approach.
   - [worcester-fundraising-model.md](research/meetings/worcester-fundraising-model.md) — Worcester's telethon, giving day, and regular giving program.
+  - [ben-wishlist-and-treasury-handover.md](research/meetings/ben-wishlist-and-treasury-handover.md) — Ben's feedback on the student "wish list" (item-level funding) concept, college treasury/disbursement/gift-aid logistics, and her September handover before leaving for RSPCA.
   - [david-parker-st-hughs-development-fund.md](research/meetings/david-parker-st-hughs-development-fund.md) — St Hugh's Development Fund; Oxford fundraising landscape overview (09 Jul 26).
   - [kate-gaffka-gtc-alumni-engagement.md](research/meetings/kate-gaffka-gtc-alumni-engagement.md) — GTC Alumni Engagement Team; international alumni and tax-effective giving (10 Jul 26).
   - [tilly-hertford-development-fund.md](research/meetings/tilly-hertford-development-fund.md) — Hertford Development Fund overview (10 Jul 26).

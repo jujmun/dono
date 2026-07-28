@@ -83,6 +83,8 @@ Source: [legal/legal-terms-context-handoff.md](legal/legal-terms-context-handoff
 - [ ] Sole-trader risk review: personal liability exposure, ownership of software/brand/Stripe account, insurance, incorporation timing
 
 **Outstanding launch blockers needing a decision (§35, non-exhaustive)**
+- [ ] Gift aid: confirm whether/how Dono should capture donor name + address (in addition to email) to support HMRC gift-aid eligibility checks for college treasury reconciliation — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
+- [ ] Item-level "wish list" asks: decide a vetting mechanism and an upper cap per student request to manage donor fatigue — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
 - [ ] UK geographical business address for legal notices
 - [ ] Exact Dono platform fee % and any fixed component
 - [ ] Stripe negative-balance / dispute-fee allocation, refund & application-fee mechanics
@@ -132,6 +134,10 @@ Source: [research/](research/)
 
 - [ ] Continue college development-office interviews to ground the society-approval and institution-endorsement model against real precedent
 - [ ] Talk to a college development-office contact about how they handle alumni data under GDPR, as a working precedent for the Dono data model (per [legal/ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md))
+- [ ] Prepare two-page proposal with platform screenshots for the development office and close alumni — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
+- [ ] Meet with Damian (treasury) on disbursement/audit-trail process for item-level "wish list" donations; ask how scholarships/grants are currently distributed and how 100+ student allocations could be streamlined — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
+- [ ] Send Ben the proposal and screenshots for her to circulate to close alumni and include in her September handover — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
+- [ ] Decide product/timing plan to avoid the wish-list launch competing with the October/November giving day (Rats and Tartar Building) — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
 
 ---
 
