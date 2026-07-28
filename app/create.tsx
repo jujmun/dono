@@ -1512,30 +1512,32 @@ export default function CreateCampaignPage() {
               </Pressable>
             ) : (
               <Pressable
-                disabled={submitting || !campaignSlug}
+                disabled={submitting}
                 onPress={() => {
-                  const slug = campaignSlug;
-                  if (!slug) return;
                   setError(null);
                   setSubmitting(true);
                   // The campaign was created when the identity check started
                   // (or already existed, in edit mode) — push any fields
                   // edited since, then attach the extras.
-                  void updateCampaign({
-                    slug,
-                    title: form.title,
-                    category: form.category,
-                    description: form.description,
-                    story: form.story,
-                    goal: Number(form.goal),
-                    template,
-                    additionalNotes,
-                    expectedExpenditureDate: expectedExpenditureDate.trim(),
-                    plannedUpdateSchedule: plannedUpdateSchedule.trim(),
-                    ownershipStatement: ownershipStatement.trim(),
-                    ...(isEditMode ? { logEdit: true } : {}),
-                  })
-                    .then(async () => {
+                  void (async () => {
+                    const slug = campaignSlug ?? (await ensureCampaignCreated());
+                    await updateCampaign({
+                      slug,
+                      title: form.title,
+                      category: form.category,
+                      description: form.description,
+                      story: form.story,
+                      goal: Number(form.goal),
+                      template,
+                      additionalNotes,
+                      expectedExpenditureDate: expectedExpenditureDate.trim(),
+                      plannedUpdateSchedule: plannedUpdateSchedule.trim(),
+                      ownershipStatement: ownershipStatement.trim(),
+                      ...(isEditMode ? { logEdit: true } : {}),
+                    });
+                    return slug;
+                  })()
+                    .then(async (slug) => {
                       let imageUploadFailed = false;
                       let videoSaveFailed = false;
                       try {
@@ -1638,7 +1640,7 @@ export default function CreateCampaignPage() {
                     });
                 }}
                 className={`${accentBtnClass} ${
-                  submitting || !campaignSlug ? "opacity-50" : ""
+                  submitting ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">

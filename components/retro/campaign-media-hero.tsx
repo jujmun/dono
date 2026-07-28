@@ -83,15 +83,16 @@ export function CampaignMediaHero({
           </View>
         ) : (
           <CampaignImage image={activeImage} className="min-h-[280px] md:min-h-[340px]">
-            <Pressable
-              onPress={parsedVideo ? openExternalVideo : undefined}
-              disabled={!parsedVideo}
-              className="absolute inset-0 items-center justify-center bg-black/15"
-            >
-              <View className="h-16 w-16 items-center justify-center rounded-full border-[3px] border-retro-ink bg-retro-paper/95 shadow-[3px_3px_0_#211E1A]">
-                <Play size={28} color="#211E1A" fill="#211E1A" />
-              </View>
-            </Pressable>
+            {parsedVideo ? (
+              <Pressable
+                onPress={openExternalVideo}
+                className="absolute inset-0 items-center justify-center bg-black/15"
+              >
+                <View className="h-16 w-16 items-center justify-center rounded-full border-[3px] border-retro-ink bg-retro-paper/95 shadow-[3px_3px_0_#211E1A]">
+                  <Play size={28} color="#211E1A" fill="#211E1A" />
+                </View>
+              </Pressable>
+            ) : null}
             {campaign.status === "funded" ? (
               <View className="absolute right-3.5 top-3.5 rounded-full border-2 border-retro-ink bg-retro-mint px-3 py-1">
                 <Text className="font-retro-bold text-[12px] text-retro-paper">
