@@ -457,11 +457,11 @@ export default function CreateSocietyPage() {
   };
 
   const continueFromVerification = async () => {
-    if (!societySlug) return;
     setError(null);
     setSyncingMaterials(true);
     try {
-      await syncVerificationMaterials(societySlug);
+      const slug = societySlug ?? (await ensureSocietyCreated());
+      await syncVerificationMaterials(slug);
       setStep(3);
     } catch (err) {
       setError(getFriendlyAuthError(err));
@@ -562,10 +562,14 @@ export default function CreateSocietyPage() {
       case 1:
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
-        // The manual ID document is already implied by societySlug existing
-        // (societies.create enforces it). When Identity is on, verification can
-        // finish in the background. Legal acceptance is always required here.
-        return societySlug !== null && legalAccepted;
+        // When Identity is enabled, keep requiring that the user has started
+        // the verification flow (which creates the society slug). When
+        // Identity is disabled, let Continue create the society on demand.
+        return (
+          legalAccepted &&
+          manualFieldsValid &&
+          (!identityEnabled || societySlug !== null)
+        );
       case 3:
         // Require at least that a Connect account was created / onboarding started.
         return connectStarted;

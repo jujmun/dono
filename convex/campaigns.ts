@@ -1,7 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import type { QueryCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
 import {
@@ -1068,6 +1068,131 @@ export const hardDelete = mutation({
 
     await ctx.db.delete(campaign._id);
     return null;
+  },
+});
+
+async function relinkCampaignImages(
+  ctx: MutationCtx,
+  slug: string,
+  storageIds: Id<"_storage">[],
+) {
+  if (storageIds.length === 0) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message: "At least one storage image is required.",
+    });
+  }
+
+  const campaign = await ctx.db
+    .query("campaigns")
+    .withIndex("by_slug", (q) => q.eq("slug", slug))
+    .unique();
+  if (!campaign) {
+    throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+  }
+
+  const urls: string[] = [];
+  for (const storageId of storageIds) {
+    const metadata = await ctx.db.system.get("_storage", storageId);
+    if (!metadata) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: `Image not found in storage: ${storageId}`,
+      });
+    }
+    if (metadata.contentType && !metadata.contentType.startsWith("image/")) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "All files must be images.",
+      });
+    }
+
+    const owner = await ctx.db
+      .query("storageOwners")
+      .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+      .unique();
+    if (!owner && campaign.createdBy) {
+      await ctx.db.insert("storageOwners", {
+        userId: campaign.createdBy,
+        storageId,
+        createdAt: Date.now(),
+      });
+    }
+
+    const url = await ctx.storage.getUrl(storageId);
+    if (!url) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Image URL could not be resolved from storage.",
+      });
+    }
+    urls.push(url);
+  }
+
+  await ctx.db.patch(campaign._id, {
+    imageStorageId: storageIds[0],
+    imageStorageIds: storageIds,
+    image: urls[0],
+    images: urls,
+  });
+
+  return {
+    slug: campaign.slug,
+    image: urls[0],
+    imageCount: urls.length,
+  };
+}
+
+/** CLI / one-shot recovery when client upload linked files but not campaigns. */
+export const recoverCampaignImages = internalMutation({
+  args: {
+    slug: v.string(),
+    storageIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    return await relinkCampaignImages(ctx, args.slug, args.storageIds);
+  },
+});
+
+export const adminRelinkImages = mutation({
+  args: {
+    slug: v.string(),
+    storageIds: v.array(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const result = await relinkCampaignImages(ctx, args.slug, args.storageIds);
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "campaign.adminRelinkImages",
+      targetType: "campaign",
+      targetId: args.slug,
+      metadata: JSON.stringify({ storageIds: args.storageIds }),
+    });
+    return result;
+  },
+});
+
+/** CLI helper to unlink campaign media without deleting storage blobs. */
+export const clearCampaignImages = internalMutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+
+    await ctx.db.patch(campaign._id, {
+      image: "default",
+      imageStorageId: undefined,
+      imageStorageIds: undefined,
+      images: undefined,
+    });
+
+    return { slug: campaign.slug, cleared: true };
   },
 });
 
