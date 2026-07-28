@@ -37,6 +37,7 @@ import {
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign, CampaignCategory } from "@/lib/types";
 
@@ -85,6 +86,7 @@ export default function AdminCampaignReviewPage() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const profile = useCurrentProfile();
   const adminUser = isPortalAdmin(profile);
+  const identityEnabled = isStripeIdentityEnabled();
   const detail = useQuery(
     api.campaigns.getForAdmin,
     adminUser && slug ? { slug } : "skip",
@@ -355,6 +357,7 @@ export default function AdminCampaignReviewPage() {
           )}
         </View>
 
+        {identityEnabled ? (
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
           <View className="flex-row flex-wrap items-center justify-between gap-2">
             <Text className="font-retro-bold text-base text-dono-text">
@@ -414,6 +417,7 @@ export default function AdminCampaignReviewPage() {
             </View>
           ) : null}
         </View>
+        ) : null}
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
           <Text className="font-retro-bold text-base text-dono-text">

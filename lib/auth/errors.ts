@@ -1,8 +1,14 @@
+type ConvexErrorPayload = {
+  code?: string;
+  message?: string;
+  details?: string[];
+};
+
 export function getFriendlyAuthError(error: unknown) {
   const rawMessage =
     error instanceof Error ? error.message : "Something went wrong. Please retry.";
 
-  const convexPayload = parseConvexErrorPayload(rawMessage);
+  const convexPayload = getConvexErrorPayload(error);
   if (convexPayload) {
     if (convexPayload.code === "PASSWORD_ALREADY_SET") {
       return "You already have a password. Use change password below.";
@@ -24,6 +30,9 @@ export function getFriendlyAuthError(error: unknown) {
 
   const message = rawMessage;
 
+  if (/STRIPE_IDENTITY_DISABLED/i.test(message)) {
+    return "Identity verification is temporarily unavailable.";
+  }
   if (/InvalidAccountId/i.test(message)) {
     return "No password is set for this email yet. We'll send a sign-in code so you can create one.";
   }
@@ -91,42 +100,37 @@ export function getFriendlyAuthError(error: unknown) {
   if (convexPayload?.message) {
     return convexPayload.message;
   }
-  // #region agent log
-  fetch("http://127.0.0.1:7751/ingest/5beb672d-420c-42f5-80af-728dc75ed71f", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "X-Debug-Session-Id": "e2a54c",
-    },
-    body: JSON.stringify({
-      sessionId: "e2a54c",
-      runId: "signin-debug",
-      hypothesisId: "B",
-      location: "lib/auth/errors.ts:getFriendlyAuthError",
-      message: "unmapped auth error fell through to generic",
-      data: {
-        rawMessage: message.slice(0, 500),
-        hasConvexPayload: Boolean(convexPayload),
-        convexCode: convexPayload?.code ?? null,
-      },
-      timestamp: Date.now(),
-    }),
-  }).catch(() => {});
-  // #endregion
   return "Something went wrong. Please try again.";
 }
 
-function parseConvexErrorPayload(message: string):
-  | { code?: string; message?: string; details?: string[] }
-  | null {
+/**
+ * Convex client errors carry structured `data` even when production redacts
+ * `message` to a generic "Server Error". Prefer `.data`, then parse JSON out
+ * of the message string for locally constructed ConvexErrors.
+ */
+function getConvexErrorPayload(error: unknown): ConvexErrorPayload | null {
+  if (error && typeof error === "object" && "data" in error) {
+    const data = (error as { data: unknown }).data;
+    if (data && typeof data === "object" && !Array.isArray(data)) {
+      return data as ConvexErrorPayload;
+    }
+    if (typeof data === "string") {
+      return parseConvexErrorPayload(data);
+    }
+  }
+
+  if (error instanceof Error) {
+    return parseConvexErrorPayload(error.message);
+  }
+
+  return null;
+}
+
+function parseConvexErrorPayload(message: string): ConvexErrorPayload | null {
   const jsonMatch = message.match(/\{.*\}/s);
   if (!jsonMatch) return null;
   try {
-    return JSON.parse(jsonMatch[0]) as {
-      code?: string;
-      message?: string;
-      details?: string[];
-    };
+    return JSON.parse(jsonMatch[0]) as ConvexErrorPayload;
   } catch {
     return null;
   }

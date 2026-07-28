@@ -6,6 +6,16 @@ import { action } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { formatDob, fullName } from "./lib/stripeIdentityOutputs";
+import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
+
+function assertIdentityEnabled() {
+  if (!isStripeIdentityEnabled()) {
+    throw new ConvexError({
+      code: "STRIPE_IDENTITY_DISABLED",
+      message: "Stripe Identity verification is temporarily disabled.",
+    });
+  }
+}
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -39,6 +49,7 @@ export const createVerificationSession = action({
     clientSecret: string | null;
     url: string | null;
   }> => {
+    assertIdentityEnabled();
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError({
@@ -145,6 +156,7 @@ const IDENTITY_REFRESH_LIMIT = {
 export const refreshVerificationStatus = action({
   args: { slug: v.string() },
   handler: async (ctx, args): Promise<{ status: string }> => {
+    assertIdentityEnabled();
     const userId = await getAuthUserId(ctx);
     if (!userId) {
       throw new ConvexError({
