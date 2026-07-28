@@ -7,7 +7,7 @@ import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminMessageThread } from "@/components/admin-message-thread";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 
 interface SearchResult {
   userId: Id<"users">;
@@ -28,7 +28,7 @@ function formatConversationTime(ms: number) {
 
 export default function AdminMessagesPage() {
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
 
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();

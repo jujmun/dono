@@ -19,11 +19,9 @@ import {
   X,
 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminHardDeleteDialog } from "@/components/admin-hard-delete-dialog";
 import { AdminMatchPanel } from "@/components/admin-match-panel";
-import { AdminMessageThread } from "@/components/admin-message-thread";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import {
   AdminStatusChip,
@@ -35,7 +33,7 @@ import {
   type StripeVerificationStatus,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
@@ -85,7 +83,7 @@ export default function AdminCampaignReviewPage() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const identityEnabled = isStripeIdentityEnabled();
   const detail = useQuery(
     api.campaigns.getForAdmin,
@@ -430,24 +428,6 @@ export default function AdminCampaignReviewPage() {
           <Text className="mt-3 text-sm leading-6 text-dono-text">
             {campaign.story}
           </Text>
-        </View>
-
-        <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
-          {student ? (
-            <AdminMessageThread
-              userId={student.userId as Id<"users">}
-              campaignContext={{ slug: campaign.id, title: campaign.title }}
-            />
-          ) : (
-            <>
-              <Text className="font-retro-bold text-base text-dono-text">
-                Messages
-              </Text>
-              <Text className="mt-1 text-sm text-dono-muted">
-                Messaging needs a linked student account.
-              </Text>
-            </>
-          )}
         </View>
 
         {error ? (

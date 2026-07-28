@@ -16,7 +16,7 @@ import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { ReviewTypeToggle, type ReviewType } from "@/components/review-type-toggle";
 import { AdminStatusChip } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import type { AdminSociety, Campaign } from "@/lib/types";
 
 function matchesCampaignSearch(campaign: Campaign, query: string) {
@@ -38,7 +38,7 @@ function matchesSocietySearch(society: AdminSociety, query: string) {
 export default function AdminDiscoverPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();

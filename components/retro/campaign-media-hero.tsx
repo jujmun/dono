@@ -20,17 +20,33 @@ const accentFrameClasses: Record<RetroPanelAccent, string> = {
   indigo: "bg-retro-indigo",
 };
 
+/** Keeps the hero from stretching into a wide, shallow banner on large screens. */
+const HERO_FRAME_STYLE = { aspectRatio: 4 / 3 } as const;
+const DETAIL_HERO_FRAME_STYLE = { aspectRatio: 16 / 9, maxHeight: 200 } as const;
+
 interface CampaignMediaHeroProps {
   campaign: Campaign;
   className?: string;
   /** Campaign template accent — defaults to indigo (the original hardcoded look). */
   accent?: RetroPanelAccent;
+  /** Pin main frame to this height (e.g. matched to donate sidebar via onLayout). */
+  matchHeight?: number;
+  /** When true, omits outer chrome so a parent card can wrap media + chat as one unit. */
+  embedded?: boolean;
+  /** When true, fills a flex parent instead of using the default 4:3 aspect ratio. */
+  compact?: boolean;
+  /** Smaller hero for campaign detail pages with updates below. */
+  size?: "default" | "detail";
 }
 
 export function CampaignMediaHero({
   campaign,
   className,
   accent = "indigo",
+  matchHeight,
+  embedded = false,
+  compact = false,
+  size = "default",
 }: CampaignMediaHeroProps) {
   const parsedVideo = parseCampaignVideoUrl(campaign.videoUrl);
 
@@ -49,16 +65,63 @@ export function CampaignMediaHero({
     void Linking.openURL(parsedVideo.watchUrl);
   };
 
-  return (
-    <View className={className}>
+  const matchedFrame = matchHeight != null || compact;
+  const frameStyle = matchedFrame
+    ? undefined
+    : size === "detail"
+      ? DETAIL_HERO_FRAME_STYLE
+      : HERO_FRAME_STYLE;
+  const frameClassName = matchedFrame ? "h-full w-full" : "w-full";
+
+  const thumbnailStrip =
+    !parsedVideo && galleryImages.length > 1 ? (
       <View
         className={cn(
-          "relative overflow-hidden rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
-          accentFrameClasses[accent],
+          "flex-row flex-wrap gap-2",
+          matchedFrame
+            ? "absolute bottom-3 left-3 right-3 justify-end"
+            : "mt-3",
         )}
       >
+        {galleryImages.map((uri, index) => (
+          <Pressable
+            key={`${uri}-${index}`}
+            onPress={() => setSelectedIndex(index)}
+            className={cn(
+              "h-14 w-20 overflow-hidden rounded-lg border-2",
+              index === activeIndex
+                ? "border-retro-ink"
+                : "border-retro-ink/40",
+              matchedFrame && "border-retro-paper shadow-[2px_2px_0_#211E1A]",
+            )}
+          >
+            <CampaignImage image={uri} className="h-full w-full" />
+          </Pressable>
+        ))}
+      </View>
+    ) : null;
+
+  return (
+    <View
+      className={cn(
+        compact && "h-full",
+        size === "detail" && "w-full max-w-sm",
+        className,
+      )}
+    >
+      <View
+        className={cn(
+          "relative overflow-hidden",
+          compact && "h-full",
+          embedded
+            ? accentFrameClasses[accent]
+            : "rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
+          !embedded && accentFrameClasses[accent],
+        )}
+        style={matchHeight ? { height: matchHeight, width: "100%" } : undefined}
+      >
         {parsedVideo && Platform.OS === "web" ? (
-          <View className="relative min-h-[280px] w-full md:min-h-[340px]">
+          <View className={cn("relative", frameClassName)} style={frameStyle}>
             <iframe
               src={parsedVideo.embedUrl}
               title={`${campaign.title} video`}
@@ -82,7 +145,11 @@ export function CampaignMediaHero({
             ) : null}
           </View>
         ) : (
-          <CampaignImage image={activeImage} className="min-h-[280px] md:min-h-[340px]">
+          <CampaignImage
+            image={activeImage}
+            className={frameClassName}
+            style={frameStyle}
+          >
             {parsedVideo ? (
               <Pressable
                 onPress={openExternalVideo}
@@ -102,25 +169,12 @@ export function CampaignMediaHero({
             ) : null}
           </CampaignImage>
         )}
+        {matchedFrame ? thumbnailStrip : null}
       </View>
 
-      {!parsedVideo && galleryImages.length > 1 ? (
-        <View className="mt-3 flex-row flex-wrap gap-2">
-          {galleryImages.map((uri, index) => (
-            <Pressable
-              key={`${uri}-${index}`}
-              onPress={() => setSelectedIndex(index)}
-              className={cn(
-                "h-14 w-20 overflow-hidden rounded-lg border-2",
-                index === activeIndex
-                  ? "border-retro-ink"
-                  : "border-retro-ink/40",
-              )}
-            >
-              <CampaignImage image={uri} className="h-full w-full" />
-            </Pressable>
-          ))}
-        </View>
+      {!matchedFrame && !embedded ? thumbnailStrip : null}
+      {embedded && !matchedFrame && !compact && thumbnailStrip ? (
+        <View className="px-3 pb-3">{thumbnailStrip}</View>
       ) : null}
     </View>
   );
@@ -132,7 +186,7 @@ interface CampaignPhotoGridProps {
   accent?: RetroPanelAccent;
 }
 
-/** Responsive wrap-grid of every uploaded photo (2 to MAX_CAMPAIGN_IMAGES — no fixed cell count). */
+/** Responsive wrap-grid of every uploaded photo (1 to MAX_CAMPAIGN_IMAGES — no fixed cell count). */
 export function CampaignPhotoGrid({ campaign, accent = "indigo" }: CampaignPhotoGridProps) {
   const images = getCampaignImages(campaign);
   if (images.length === 0) return null;

@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { cn } from "@/lib/utils";
 
@@ -306,7 +306,7 @@ function GroupDetail({ group, onBack }: { group: GroupOverviewRow; onBack: () =>
 
 export default function AdminGroupsPage() {
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
 
   const groups = useQuery(api.groups.listOverview, adminUser ? {} : "skip") as
     | GroupOverviewRow[]

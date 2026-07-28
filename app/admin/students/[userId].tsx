@@ -12,7 +12,7 @@ import {
   statusChipTone,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 
@@ -39,7 +39,7 @@ export default function AdminStudentProfilePage() {
   const router = useRouter();
   const { userId } = useLocalSearchParams<{ userId: string }>();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const student = useQuery(
     api.users.getStudentForAdmin,
     adminUser && userId ? { userId: userId as Id<"users"> } : "skip",

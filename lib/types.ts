@@ -88,6 +88,7 @@ export interface CampaignUpdate {
   title: string;
   content: string;
   image?: string;
+  createdAt?: number;
 }
 
 export interface Community {
