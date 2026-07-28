@@ -125,6 +125,7 @@ Source: [engineering/product-legal-alignment-roadmap.md](engineering/product-leg
 - [ ] Design refund-request flow for donors and the evidence-submission flow for campaign owners
 - [ ] Design legal-document routes (ToS, Privacy, Cookies, Donor Terms, Student Campaign Terms, Community Guidelines) and footer placement
 - [ ] Review all campaign/trust copy against the "statements to avoid" list in [legal/legal-terms-context-handoff.md](legal/legal-terms-context-handoff.md) §33 (no "verified," "guaranteed," "affiliated," etc. without qualification)
+- [ ] Design/decide college-side controls addressing content-approval, competition-with-college-funds, and donor-data-access concerns raised by Brasenose — [source](research/meetings/brasenose-college.md)
 
 ---
 
@@ -138,6 +139,8 @@ Source: [research/](research/)
 - [ ] Meet with Damian (treasury) on disbursement/audit-trail process for item-level "wish list" donations; ask how scholarships/grants are currently distributed and how 100+ student allocations could be streamlined — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
 - [ ] Send Ben the proposal and screenshots for her to circulate to close alumni and include in her September handover — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
 - [ ] Decide product/timing plan to avoid the wish-list launch competing with the October/November giving day (Rats and Tartar Building) — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
+- [ ] Secure a demo case college (e.g. Somerville) to unlock follow-on colleges like Brasenose, who are waiting to see it working elsewhere first — [source](research/meetings/brasenose-college.md)
+- [ ] When pitching to colleges, lead with concerns (content control, competition with college funds, donor data access) and the college-side value proposition before the student-facing pitch — [source](research/meetings/brasenose-college.md)
 
 ---
 

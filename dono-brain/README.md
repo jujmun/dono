@@ -77,6 +77,7 @@ everything.
   - [milos-martinez-st-cross-development-office.md](research/meetings/milos-martinez-st-cross-development-office.md) — St Cross Development Office fundraising overview (22 Jul 26).
   - [sean-rainey-magdalen-development-fund.md](research/meetings/sean-rainey-magdalen-development-fund.md) — Magdalen's contrarian, major-gifts-only view: skeptical of small-donor pipelines and student-led platforms.
   - [will-gregory-advisor-call.md](research/meetings/will-gregory-advisor-call.md) — Advisor call on UK vs US philanthropy culture, the difficulty of working with universities, and for-profit vs. fiscal-sponsorship structuring.
+  - [brasenose-college.md](research/meetings/brasenose-college.md) — Brasenose College pitch meeting: college concerns (content control, competition with college funds, donor data access), adoption dynamics across colleges, and comparison to Hubbub.
 
 ---
 
