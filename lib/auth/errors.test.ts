@@ -39,4 +39,18 @@ describe("getFriendlyAuthError", () => {
       "Password must be at least 10 characters.",
     );
   });
+
+  it("reads structured ConvexError.data when message is redacted", () => {
+    const err = new Error("[CONVEX M(campaigns:approve)] Server Error") as Error & {
+      data: { code: string; message: string };
+    };
+    err.data = {
+      code: "CAMPAIGN_FIELDS_REQUIRED",
+      message:
+        "Ownership statement, planned update schedule, and expected expenditure date are required.",
+    };
+    expect(getFriendlyAuthError(err)).toBe(
+      "Ownership statement, planned update schedule, and expected expenditure date are required.",
+    );
+  });
 });

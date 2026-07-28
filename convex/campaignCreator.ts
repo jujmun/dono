@@ -8,6 +8,7 @@ import {
   requireVerifiedUser,
 } from "./lib/authz";
 import { toCampaign } from "./lib/mappers";
+import { enrichCampaignWithMedia, enrichCampaignsWithMedia } from "./lib/campaignMedia";
 import {
   assertNotRateLimited,
   recordRateLimitAttempt,
@@ -15,7 +16,7 @@ import {
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
-import { isEditableByOwner } from "./lib/campaignVisibility";
+import { isEditableByOwner, isPublicStatus } from "./lib/campaignVisibility";
 import {
   buildCampaignEditedMessage,
   buildCampaignResubmittedMessage,
@@ -50,9 +51,10 @@ export const listMine = query({
       .query("campaigns")
       .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
       .collect();
-    return campaigns
-      .sort((a, b) => b._creationTime - a._creationTime)
-      .map(toCampaign);
+    return await enrichCampaignsWithMedia(
+      ctx,
+      campaigns.sort((a, b) => b._creationTime - a._creationTime),
+    );
   },
 });
 
@@ -95,8 +97,9 @@ export const getMineForEdit = query({
       return null;
     }
     return {
-      ...toCampaign(campaign),
+      ...(await enrichCampaignWithMedia(ctx, campaign)),
       editable: isEditableByOwner(campaign.status),
+      canUploadPhotos: isPublicStatus(campaign.status),
     };
   },
 });

@@ -33,6 +33,7 @@ import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
+import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -524,7 +525,9 @@ export default function CreateSocietyPage() {
   };
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
-  const stripeVerified = stripeStatus === "verified";
+  const identityEnabled = isStripeIdentityEnabled();
+  const stripeVerified =
+    !identityEnabled || stripeStatus === "verified";
   // requires_input is Stripe's status both for "awaiting your first
   // submission" (its normal initial state) and "a check ran and failed" —
   // only the presence of a real last_error means an actual attempt failed.
@@ -560,10 +563,9 @@ export default function CreateSocietyPage() {
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
         // The manual ID document is already implied by societySlug existing
-        // (societies.create enforces it). Identity verification itself can
-        // finish in the background — don't block moving on while it's still
-        // processing; the final step shows a waiting state until it's done.
-        return societySlug !== null;
+        // (societies.create enforces it). When Identity is on, verification can
+        // finish in the background. Legal acceptance is always required here.
+        return societySlug !== null && legalAccepted;
       case 3:
         // Require at least that a Connect account was created / onboarding started.
         return connectStarted;
@@ -916,62 +918,72 @@ export default function CreateSocietyPage() {
               </View>
 
               <View className="rounded-xl border border-retro-ink bg-white p-4">
-                <View className="mb-1.5 flex-row items-center gap-2">
-                  <ShieldCheck size={16} color="#17211B" />
-                  <Text className="font-retro-bold text-sm text-retro-ink">
-                    Identity Check
-                  </Text>
-                </View>
-                <Text className="mb-3 text-xs text-[#5c574f]">
-                  You'll be asked for a quick photo of your ID and a selfie so we can
-                  confirm it's really you — it only takes a minute.
-                </Text>
-
-                <LegalAcceptanceCheckbox
-                  context="create_society"
-                  accepted={legalAccepted}
-                  onAcceptedChange={setLegalAccepted}
-                  className="mb-3"
-                />
-
-                {renderVerificationStatus()}
-
-                <Pressable
-                  onPress={() => void handleVerifyIdentity()}
-                  disabled={
-                    !manualFieldsValid || verifying || stripeVerified || !legalAccepted
-                  }
-                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
-                    !manualFieldsValid || verifying || stripeVerified || !legalAccepted
-                      ? "opacity-50"
-                      : ""
-                  }`}
-                >
-                  {verifying ? (
-                    <ActivityIndicator color="#fff" />
-                  ) : (
-                    <Text className="font-retro-bold text-sm text-retro-paper">
-                      Verify your identity
+                {identityEnabled ? (
+                  <>
+                    <View className="mb-1.5 flex-row items-center gap-2">
+                      <ShieldCheck size={16} color="#17211B" />
+                      <Text className="font-retro-bold text-sm text-retro-ink">
+                        Identity Check
+                      </Text>
+                    </View>
+                    <Text className="mb-3 text-xs text-[#5c574f]">
+                      You'll be asked for a quick photo of your ID and a selfie so we can
+                      confirm it's really you — it only takes a minute.
                     </Text>
-                  )}
-                </Pressable>
-                {!legalAccepted ? (
-                  <Text className="mt-2 text-xs text-[#5c574f]">
-                    Accept the terms above before starting identity verification.
-                  </Text>
-                ) : !manualFieldsValid ? (
-                  <Text className="mt-2 text-xs text-[#5c574f]">
-                    Add your student card above first.
-                  </Text>
-                ) : stripeFailed ? (
-                  <Text className="mt-2 text-xs text-rose-700">
-                    That didn't go through — please try again.
-                  </Text>
-                ) : !societySlug ? (
-                  <Text className="mt-2 text-xs text-[#5c574f]">
-                    You'll be able to continue once you've started this check.
-                  </Text>
-                ) : null}
+
+                    <LegalAcceptanceCheckbox
+                      context="create_society"
+                      accepted={legalAccepted}
+                      onAcceptedChange={setLegalAccepted}
+                      className="mb-3"
+                    />
+
+                    {renderVerificationStatus()}
+
+                    <Pressable
+                      onPress={() => void handleVerifyIdentity()}
+                      disabled={
+                        !manualFieldsValid || verifying || stripeVerified || !legalAccepted
+                      }
+                      className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
+                        !manualFieldsValid || verifying || stripeVerified || !legalAccepted
+                          ? "opacity-50"
+                          : ""
+                      }`}
+                    >
+                      {verifying ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text className="font-retro-bold text-sm text-retro-paper">
+                          Verify your identity
+                        </Text>
+                      )}
+                    </Pressable>
+                    {!legalAccepted ? (
+                      <Text className="mt-2 text-xs text-[#5c574f]">
+                        Accept the terms above before starting identity verification.
+                      </Text>
+                    ) : !manualFieldsValid ? (
+                      <Text className="mt-2 text-xs text-[#5c574f]">
+                        Add your student card above first.
+                      </Text>
+                    ) : stripeFailed ? (
+                      <Text className="mt-2 text-xs text-rose-700">
+                        That didn't go through — please try again.
+                      </Text>
+                    ) : !societySlug ? (
+                      <Text className="mt-2 text-xs text-[#5c574f]">
+                        You'll be able to continue once you've started this check.
+                      </Text>
+                    ) : null}
+                  </>
+                ) : (
+                  <LegalAcceptanceCheckbox
+                    context="create_society"
+                    accepted={legalAccepted}
+                    onAcceptedChange={setLegalAccepted}
+                  />
+                )}
               </View>
             </View>
           )}
@@ -1120,7 +1132,8 @@ export default function CreateSocietyPage() {
                   </Text>
                   <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
                     Thanks — we&apos;ve received your society, its verification
-                    documents, your Stripe identity check
+                    documents
+                    {identityEnabled ? ", your Stripe identity check" : ""}
                     {connectStarted ? ", and payout account setup" : ""}. We&apos;ll
                     review it and let you know once a decision is made.
                   </Text>

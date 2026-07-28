@@ -43,7 +43,7 @@ export async function uploadCampaignImages({
     storageIds.push(storageId);
   }
 
-  if (setImages) {
+  if (setImages && storageIds.length >= 2) {
     await setImages({ slug, storageIds });
     return true;
   }

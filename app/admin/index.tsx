@@ -33,6 +33,7 @@ import {
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import type { AdminSociety, Campaign } from "@/lib/types";
@@ -49,6 +50,7 @@ export default function AdminPortalPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
   const adminUser = isPortalAdmin(profile);
+  const identityEnabled = isStripeIdentityEnabled();
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();
@@ -219,10 +221,12 @@ export default function AdminPortalPage() {
                     <View className="flex-1">
                       <View className="mb-2 flex-row flex-wrap gap-2">
                         <AdminStatusChip label="Pending" tone="pending" />
+                        {identityEnabled ? (
                         <AdminStatusChip
                           label={`ID: ${stripeStatusChip(campaign.stripeVerificationStatus).label}`}
                           tone={stripeStatusChip(campaign.stripeVerificationStatus).tone}
                         />
+                        ) : null}
                       </View>
                       <Text className="font-retro-bold text-lg text-dono-text">
                         {campaign.title}
@@ -382,6 +386,8 @@ export default function AdminPortalPage() {
                             </Text>
                           )}
                           <View className="flex-row items-center gap-2">
+                            {identityEnabled ? (
+                              <>
                             <AdminStatusChip
                               label={stripeStatusChip(society.stripeVerificationStatus).label}
                               tone={stripeStatusChip(society.stripeVerificationStatus).tone}
@@ -401,17 +407,21 @@ export default function AdminPortalPage() {
                                 <RefreshCw size={12} color="#56615A" />
                               )}
                             </Pressable>
+                              </>
+                            ) : null}
                           </View>
                         </View>
 
+                        {identityEnabled ? (
                         <View className="mt-2 flex-row flex-wrap gap-2">
                           <AdminStatusChip
                             label={selfieMatchChip(society).label}
                             tone={selfieMatchChip(society).tone}
                           />
                         </View>
+                        ) : null}
 
-                        {society.verifiedName || society.verifiedDob ? (
+                        {identityEnabled && (society.verifiedName || society.verifiedDob) ? (
                           <View className="mt-2 rounded-lg border border-dono-border bg-white px-3 py-2">
                             <Text className="text-xs font-retro-bold text-dono-muted">
                               Auto-extracted from ID (Stripe) — reference only, not

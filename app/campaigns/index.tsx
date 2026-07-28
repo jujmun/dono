@@ -1,3 +1,4 @@
+import { type Href } from "expo-router";
 import { useMemo, useState } from "react";
 import {
   View,
@@ -272,8 +273,13 @@ export default function CampaignsPage() {
                       profileCollege
                   }
                   href={
-                    tab === "mine" && getCampaignApprovalStage(campaign)
-                      ? `/create?editSlug=${campaign.id}`
+                    tab === "mine"
+                      ? getCampaignApprovalStage(campaign)
+                        ? (`/create?editSlug=${campaign.id}` as Href)
+                        : campaign.status === "active" ||
+                            campaign.status === "funded"
+                          ? (`/create?editSlug=${campaign.id}&photosOnly=1` as Href)
+                          : undefined
                       : undefined
                   }
                 />

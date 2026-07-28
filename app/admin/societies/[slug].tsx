@@ -19,6 +19,7 @@ import {
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import type { AdminSociety } from "@/lib/types";
 
 type AdminSocietyDetail = {
@@ -49,6 +50,7 @@ export default function AdminSocietyReviewPage() {
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const profile = useCurrentProfile();
   const adminUser = isPortalAdmin(profile);
+  const identityEnabled = isStripeIdentityEnabled();
   const detail = useQuery(
     api.societies.getForAdmin,
     adminUser && slug ? { slug } : "skip",
@@ -273,17 +275,21 @@ export default function AdminSocietyReviewPage() {
             ) : (
               <Text className="text-sm text-dono-muted">ID document unavailable.</Text>
             )}
+            {identityEnabled ? (
             <AdminStatusChip
               label={stripeStatusChip(society.stripeVerificationStatus).label}
               tone={stripeStatusChip(society.stripeVerificationStatus).tone}
             />
+            ) : null}
           </View>
+          {identityEnabled ? (
           <View className="mt-2 flex-row flex-wrap gap-2">
             <AdminStatusChip
               label={selfieMatchChip(society).label}
               tone={selfieMatchChip(society).tone}
             />
           </View>
+          ) : null}
         </View>
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">

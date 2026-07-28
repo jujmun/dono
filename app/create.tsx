@@ -35,6 +35,7 @@ import {
 import { categoryLabels, formatCurrency } from "@/lib/constants";
 import { ALLOWED_CAMPAIGN_CATEGORIES } from "@/lib/campaign-categories";
 import {
+  getCampaignImages,
   MAX_CAMPAIGN_IMAGES,
   MIN_CAMPAIGN_IMAGES,
 } from "@/lib/campaign-images";
@@ -42,6 +43,7 @@ import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { encodeImpactItems, parseImpactItem } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
+import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { parseCampaignVideoUrl } from "@/lib/video-url";
 import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign-templates";
 import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
@@ -169,7 +171,11 @@ function PhotoThumbnailPicker({
 export default function CreateCampaignPage() {
   const router = useRouter();
   const posthog = usePostHog();
-  const { editSlug } = useLocalSearchParams<{ editSlug?: string }>();
+  const { editSlug, photosOnly: photosOnlyParam } = useLocalSearchParams<{
+    editSlug?: string;
+    photosOnly?: string;
+  }>();
+  const photosOnly = photosOnlyParam === "1" || photosOnlyParam === "true";
   const isEditMode = Boolean(editSlug);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
@@ -466,7 +472,9 @@ export default function CreateCampaignPage() {
   const hasDateOfBirth = Boolean(myProfile?.dateOfBirth);
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
-  const stripeVerified = stripeStatus === "verified";
+  const identityEnabled = isStripeIdentityEnabled();
+  const stripeVerified =
+    !identityEnabled || stripeStatus === "verified";
   // requires_input is Stripe's status both for "awaiting your first
   // submission" (its normal initial state) and "a check ran and failed" —
   // only the presence of a real last_error means an actual attempt failed.
@@ -526,8 +534,8 @@ export default function CreateCampaignPage() {
           transparencyFieldsComplete
         );
       case 3:
-        // Identity must be verified before continuing to submit.
-        return stripeVerified && legalAccepted;
+        // When Identity is on: must be verified. When off: still require DOB + legal.
+        return stripeVerified && legalAccepted && hasDateOfBirth;
       default:
         return true;
     }
@@ -582,7 +590,113 @@ export default function CreateCampaignPage() {
     );
   }
 
-  if (isEditMode && editCampaign && !editCampaign.editable) {
+  if (isEditMode && photosOnly && editCampaign && editCampaign.canUploadPhotos) {
+    const existingImages = getCampaignImages(editCampaign);
+    return (
+      <AppShell>
+        <View className="mx-auto w-full max-w-2xl px-4 py-8">
+          <Text className="font-retro-bold text-2xl text-retro-ink">
+            Add campaign photos
+          </Text>
+          <Text className="mt-1 text-sm text-[#5c574f]">
+            {editCampaign.title} — photos appear on the campaign card and detail page.
+          </Text>
+
+          {existingImages.length > 0 ? (
+            <View className="mt-6">
+              <Text className="font-retro-bold text-sm text-retro-ink">
+                Current photos
+              </Text>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerClassName="mt-2 gap-2"
+              >
+                {existingImages.map((uri) => (
+                  <CampaignImage
+                    key={uri}
+                    image={uri}
+                    className="h-20 w-28 rounded-lg"
+                  />
+                ))}
+              </ScrollView>
+            </View>
+          ) : null}
+
+          <View className="mt-6">
+            <Text className="font-retro-bold text-sm text-retro-ink">
+              {existingImages.length > 0 ? "Replace photos" : "Upload photos"}
+            </Text>
+            <PhotoThumbnailPicker
+              pickedImages={pickedImages}
+              pickingImage={pickingImage}
+              onPick={() => void pickCampaignImages()}
+              onRemove={(index) =>
+                setPickedImages((current) => current.filter((_, i) => i !== index))
+              }
+              onRemoveAll={() => setPickedImages([])}
+              photosIncomplete={photosIncomplete}
+            />
+          </View>
+
+          <View className="mt-8 flex-row gap-3">
+            <Pressable
+              onPress={() => router.push(`/campaigns/${editCampaign.id}`)}
+              className="rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-3"
+            >
+              <Text className="font-retro-bold text-sm text-retro-ink">Cancel</Text>
+            </Pressable>
+            <Pressable
+              disabled={submitting || pickedImages.length === 0}
+              onPress={() => {
+                const slug = editSlug;
+                if (!slug) return;
+                if (pickedImages.length < MIN_CAMPAIGN_IMAGES) {
+                  setError(
+                    `Add at least ${MIN_CAMPAIGN_IMAGES} photos (JPG or PNG).`,
+                  );
+                  return;
+                }
+                setError(null);
+                setSubmitting(true);
+                void uploadCampaignImages({
+                  slug,
+                  images: pickedImages,
+                  generateUploadUrl: generateImageUploadUrl,
+                  setImage: setCampaignImage,
+                  setImages: setCampaignImages,
+                })
+                  .then((saved) => {
+                    if (!saved) {
+                      setError("Photos could not be saved. Try again.");
+                      return;
+                    }
+                    router.push(`/campaigns/${editCampaign.id}`);
+                  })
+                  .catch((err: Error) => setError(getFriendlyAuthError(err)))
+                  .finally(() => setSubmitting(false));
+              }}
+              className={`rounded-full border-2 border-retro-ink bg-retro-indigo px-5 py-3 shadow-[3px_3px_0_#211E1A] ${
+                submitting || pickedImages.length === 0 ? "opacity-50" : ""
+              }`}
+            >
+              <Text className="font-retro-bold text-sm text-retro-paper">
+                {submitting ? "Uploading..." : "Save photos"}
+              </Text>
+            </Pressable>
+          </View>
+
+          {error ? (
+            <View className="mt-4 rounded-xl bg-rose-50 px-4 py-3">
+              <Text className="text-sm text-rose-700">{error}</Text>
+            </View>
+          ) : null}
+        </View>
+      </AppShell>
+    );
+  }
+
+  if (isEditMode && editCampaign && !editCampaign.editable && !photosOnly) {
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-2xl px-4 py-16">
@@ -1188,6 +1302,50 @@ export default function CreateCampaignPage() {
                     onAcceptedChange={setLegalAccepted}
                   />
                 </View>
+              ) : !identityEnabled ? (
+                <View className="rounded-xl border border-retro-ink bg-white p-4">
+                  {!dobLoading && !hasDateOfBirth ? (
+                    <View className="mb-3 rounded-lg border border-dono-border bg-dono-surface-muted p-3">
+                      <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                        Confirm your date of birth
+                      </Text>
+                      <Text className="mb-2 text-xs text-[#5c574f]">
+                        You must be at least 18 to create a campaign.
+                      </Text>
+                      <TextInput
+                        value={dobInput}
+                        onChangeText={setDobInput}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#56615A"
+                        autoCapitalize="none"
+                        className={inputClass}
+                      />
+                      {dobError ? (
+                        <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
+                      ) : null}
+                      <Pressable
+                        onPress={() => void handleSaveDateOfBirth()}
+                        disabled={dobSaving || !dobInput.trim()}
+                        className={`mt-2 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
+                          dobSaving || !dobInput.trim() ? "opacity-50" : ""
+                        }`}
+                      >
+                        {dobSaving ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text className="font-retro-bold text-sm text-retro-paper">
+                            Save date of birth
+                          </Text>
+                        )}
+                      </Pressable>
+                    </View>
+                  ) : null}
+                  <LegalAcceptanceCheckbox
+                    context="create_campaign"
+                    accepted={legalAccepted}
+                    onAcceptedChange={setLegalAccepted}
+                  />
+                </View>
               ) : (
                 <View className="rounded-xl border border-retro-ink bg-white p-4">
                   <View className="mb-1.5 flex-row items-center gap-2">
@@ -1420,6 +1578,15 @@ export default function CreateCampaignPage() {
                             imageUploadFailed = true;
                           }
                         }
+                      }
+
+                      if (imageUploadFailed && pickedImages.length > 0) {
+                        setError(
+                          pickedImages.length < MIN_CAMPAIGN_IMAGES
+                            ? `Add at least ${MIN_CAMPAIGN_IMAGES} photos, or remove them to finish without photos.`
+                            : "Campaign saved but photos could not be uploaded. Open the campaign from My Campaigns to add photos.",
+                        );
+                        return;
                       }
 
                       if (isEditMode) {

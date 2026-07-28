@@ -5,6 +5,10 @@ import type { QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
 import {
+  enrichCampaignWithMedia,
+  enrichCampaignsWithMedia,
+} from "./lib/campaignMedia";
+import {
   requireAdmin,
   requireSocietyMember,
   resolveCreatorContact,
@@ -20,6 +24,7 @@ import { isAllowedCampaignCategory } from "./lib/campaignCategories";
 import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
 import { assertAdultOrThrow } from "./lib/ageGate";
 import { buildCampaignVerifications } from "./lib/verificationBadges";
+import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
 import {
   buildCampaignActiveMessage,
   buildCampaignPendingMessage,
@@ -90,7 +95,8 @@ export const list = query({
   args: {},
   handler: async (ctx) => {
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns.filter((c) => isPublicCampaign(c)).map(toCampaign);
+    const publicCampaigns = campaigns.filter((c) => isPublicCampaign(c));
+    return await enrichCampaignsWithMedia(ctx, publicCampaigns);
   },
 });
 
@@ -119,8 +125,9 @@ export const listPaginated = query({
     }
 
     const page = filtered.slice(start, start + limit);
+    const items = await enrichCampaignsWithMedia(ctx, page);
     return {
-      items: page.map(toCampaign),
+      items,
       nextCursor: start + limit < filtered.length ? page[page.length - 1]?.slug : null,
     };
   },
@@ -131,11 +138,11 @@ export const listTrending = query({
   handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 10, 30);
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns
+    const trending = campaigns
       .filter((c) => isPublicCampaign(c))
       .sort((a, b) => b.likes + b.donors - (a.likes + a.donors))
-      .slice(0, limit)
-      .map(toCampaign);
+      .slice(0, limit);
+    return await enrichCampaignsWithMedia(ctx, trending);
   },
 });
 
@@ -144,10 +151,10 @@ export const listFeatured = query({
   handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 3);
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns
+    const featured = campaigns
       .filter((c) => isPublicCampaign(c))
-      .slice(0, limit)
-      .map(toCampaign);
+      .slice(0, limit);
+    return await enrichCampaignsWithMedia(ctx, featured);
   },
 });
 
@@ -156,7 +163,7 @@ export const listNearGoal = query({
   handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 6, 20);
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns
+    const nearGoal = campaigns
       .filter((c) => isPublicCampaign(c))
       .filter((c) => c.status === "active" && c.goal > 0)
       .filter((c) => {
@@ -164,8 +171,8 @@ export const listNearGoal = query({
         return progress >= 0.8 && c.raised < c.goal;
       })
       .sort((a, b) => b.raised / b.goal - a.raised / a.goal)
-      .slice(0, limit)
-      .map(toCampaign);
+      .slice(0, limit);
+    return await enrichCampaignsWithMedia(ctx, nearGoal);
   },
 });
 
@@ -185,21 +192,20 @@ export const listForYou = query({
       .filter((c) => isPublicCampaign(c))
       .filter((c) => (c.college ?? "").trim().toLowerCase() === college)
       .sort((a, b) => b._creationTime - a._creationTime)
-      .slice(0, limit)
-      .map(toCampaign);
+      .slice(0, limit);
 
     if (matched.length > 0) {
-      return matched;
+      return await enrichCampaignsWithMedia(ctx, matched);
     }
 
     // Soft fallback when campaigns lack college: prefer Oxford public campaigns
     // ranked by engagement so the section is still useful.
-    return campaigns
+    const fallback = campaigns
       .filter((c) => isPublicCampaign(c))
       .filter((c) => c.university.toLowerCase().includes("oxford"))
       .sort((a, b) => b.likes + b.donors - (a.likes + a.donors))
-      .slice(0, limit)
-      .map(toCampaign);
+      .slice(0, limit);
+    return await enrichCampaignsWithMedia(ctx, fallback);
   },
 });
 
@@ -213,7 +219,7 @@ export const getBySlug = query({
     if (!campaign || !isPublicCampaign(campaign)) {
       return null;
     }
-    return toCampaign(campaign);
+    return await enrichCampaignWithMedia(ctx, campaign);
   },
 });
 
@@ -226,7 +232,8 @@ export const listByCommunity = query({
         q.eq("creator.communityId", args.communityId),
       )
       .collect();
-    return campaigns.filter((c) => isPublicCampaign(c)).map(toCampaign);
+    const publicCampaigns = campaigns.filter((c) => isPublicCampaign(c));
+    return await enrichCampaignsWithMedia(ctx, publicCampaigns);
   },
 });
 
@@ -235,15 +242,15 @@ export const listRelated = query({
   handler: async (ctx, args) => {
     const limit = clampLimit(args.limit, 2);
     const campaigns = await ctx.db.query("campaigns").collect();
-    return campaigns
+    const related = campaigns
       .filter(
         (c) =>
           isPublicCampaign(c) &&
           c.slug !== args.slug &&
           c.category === args.category,
       )
-      .slice(0, limit)
-      .map(toCampaign);
+      .slice(0, limit);
+    return await enrichCampaignsWithMedia(ctx, related);
   },
 });
 
@@ -368,7 +375,7 @@ export const getForAdmin = query({
     ]);
 
     return {
-      campaign: toCampaign(campaign),
+      campaign: await enrichCampaignWithMedia(ctx, campaign),
       student,
       counts: {
         follows: follows.length,
@@ -429,13 +436,25 @@ export const approve = mutation({
         message: "This campaign category is not permitted under the Terms.",
       });
     }
-    if (!campaign.responsibleIndividualUserId) {
+    // Legacy campaigns may predate RI; fall back the same way create does.
+    let responsibleIndividualUserId = campaign.responsibleIndividualUserId;
+    if (!responsibleIndividualUserId) {
+      const society = await ctx.db
+        .query("societies")
+        .withIndex("by_slug", (q) => q.eq("slug", campaign.creator.communityId))
+        .unique();
+      responsibleIndividualUserId =
+        society?.responsibleIndividualUserId ??
+        society?.creatorId ??
+        campaign.createdBy;
+    }
+    if (!responsibleIndividualUserId) {
       throw new ConvexError({
         code: "RESPONSIBLE_INDIVIDUAL_REQUIRED",
         message: "A named Responsible Individual must be set before approval.",
       });
     }
-    if (campaign.stripeVerificationStatus !== "verified") {
+    if (isStripeIdentityEnabled() && campaign.stripeVerificationStatus !== "verified") {
       throw new ConvexError({
         code: "IDENTITY_REQUIRED",
         message: "Stripe Identity verification must be completed before approval.",
@@ -453,6 +472,8 @@ export const approve = mutation({
       });
     }
 
+    // Connect readiness is recorded on verification badges but does not block
+    // content approval — donations still fail later if Connect isn't ready.
     const connectAccount = await ctx.db
       .query("stripeConnectAccounts")
       .withIndex("by_community", (q) =>
@@ -463,22 +484,23 @@ export const approve = mutation({
       Boolean(connectAccount?.onboardingComplete) &&
       (Boolean(connectAccount?.cardPaymentsActive) ||
         Boolean(connectAccount?.chargesEnabled));
-    if (!connectReady) {
-      throw new ConvexError({
-        code: "CONNECT_REQUIRED",
-        message: "Society Stripe Connect onboarding must be complete before approval.",
-      });
-    }
 
     const verifications = buildCampaignVerifications(campaign, {
       studentStatusChecked:
+        !isStripeIdentityEnabled() ||
         campaign.stripeVerificationStatus === "verified" ||
         Boolean(campaign.studentStatusCheckedAt),
       stripeConnectOnboardingComplete: connectReady,
       institutionallyEndorsed: campaign.institutionallyEndorsed === true,
     });
 
-    await ctx.db.patch(campaign._id, { status: "active", verifications });
+    await ctx.db.patch(campaign._id, {
+      status: "active",
+      verifications,
+      ...(campaign.responsibleIndividualUserId
+        ? {}
+        : { responsibleIndividualUserId }),
+    });
 
     await logAdminAction(ctx, {
       adminUserId,
