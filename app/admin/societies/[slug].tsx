@@ -17,7 +17,7 @@ import {
   stripeStatusChip,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import type { AdminSociety } from "@/lib/types";
@@ -49,7 +49,7 @@ export default function AdminSocietyReviewPage() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const identityEnabled = isStripeIdentityEnabled();
   const detail = useQuery(
     api.societies.getForAdmin,

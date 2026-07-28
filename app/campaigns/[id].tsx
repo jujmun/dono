@@ -19,8 +19,9 @@ import {
   RetroPanel,
 } from "@/components/retro";
 import { AppShell } from "@/components/app-shell";
+import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
-import { RecentDonorsList } from "@/components/recent-donors-list";
+import { CampaignLiveStream } from "@/components/campaign-live-stream";
 import {
   ReceiptDivider,
   ReceiptLedger,
@@ -54,6 +55,13 @@ export default function CampaignDetailPage() {
   }>();
   const { width } = useWindowDimensions();
   const isWide = width >= 820;
+  const [donatePanelHeight, setDonatePanelHeight] = useState<number | undefined>();
+
+  useEffect(() => {
+    if (!isWide) {
+      setDonatePanelHeight(undefined);
+    }
+  }, [isWide]);
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
@@ -68,10 +76,6 @@ export default function CampaignDetailPage() {
   const activeMatch = useQuery(
     api.campaignMatches.getActiveForCampaign,
     id ? { campaignSlug: id } : "skip",
-  );
-  const recentDonors = useQuery(
-    api.donations.listRecentForCampaign,
-    id ? { campaignSlug: id, limit: 8 } : "skip",
   );
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState<number>(
@@ -94,6 +98,9 @@ export default function CampaignDetailPage() {
     api.stripeConnectInternal.getCampaignDonationReadiness,
     id ? { campaignSlug: id } : "skip",
   );
+  const stripePlatform = useQuery(api.stripePlatform.isConfigured, {});
+
+  const clientStripeConfigured = Boolean(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
   useEffect(() => {
     if (campaign) {
@@ -173,12 +180,25 @@ export default function CampaignDetailPage() {
   }
 
   const resolvedAmount = customAmount ? Number(customAmount) : selectedAmount;
+  const platformPaymentsReady =
+    stripePlatform?.configured === true && clientStripeConfigured;
   const donationsDisabled =
-    donationReadiness !== undefined && !donationReadiness.canAcceptDonations;
-  const donationsDisabledReason =
-    donationReadiness && !donationReadiness.canAcceptDonations
-      ? donationReadiness.reason
-      : undefined;
+    donationReadiness !== undefined &&
+    (!platformPaymentsReady || !donationReadiness.canAcceptDonations);
+  const donationsDisabledReason = (() => {
+    if (!platformPaymentsReady) {
+      if (stripePlatform?.configured === false) {
+        return "Payments are not configured on this deployment yet.";
+      }
+      if (!clientStripeConfigured) {
+        return "Payments are not configured for this site yet.";
+      }
+    }
+    if (donationReadiness && !donationReadiness.canAcceptDonations) {
+      return donationReadiness.reason;
+    }
+    return undefined;
+  })();
   const liked = engagement?.liked ?? false;
   const following = engagement?.followingCampaign ?? false;
   const deadlineLabel = new Date(campaign.deadline).toLocaleDateString(
@@ -288,7 +308,12 @@ export default function CampaignDetailPage() {
   };
 
   const donateSidebar = (
-    <RetroDonateSidebar
+    <View className="gap-4">
+      <SocietyPayoutSetupBanner
+        slug={campaign.creator.communityId}
+        returnPath={`/campaigns/${encodeURIComponent(campaign.id)}`}
+      />
+      <RetroDonateSidebar
       campaign={campaign}
       selectedAmount={selectedAmount}
       customAmount={customAmount}
@@ -316,36 +341,74 @@ export default function CampaignDetailPage() {
       onToggleLike={() => void handleToggleLike()}
       onToggleFollow={() => void handleToggleFollow()}
       onShare={() => void handleShare()}
-    />
+      />
+    </View>
   );
 
-  const heroSection = (
+  const heroColumnStyle = isWide
+    ? ({ flex: 1, flexBasis: 0, minWidth: 0 } as const)
+    : undefined;
+
+  const connectedMediaUpdatesStyle =
+    isWide && donatePanelHeight != null
+      ? { flex: 2, flexBasis: 0, minWidth: 0, height: donatePanelHeight }
+      : isWide
+        ? { flex: 2, flexBasis: 0, minWidth: 0 }
+        : undefined;
+
+  const heroSection = isWide ? (
     <View
       key="hero"
-      className="mb-6 flex-row flex-wrap gap-5"
+      className="mb-6 flex-row flex-nowrap gap-5"
       style={{ alignItems: "flex-start" }}
     >
       <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "58%" : "100%",
-          maxWidth: isWide ? "64%" : "100%",
-          minWidth: 0,
-        }}
+        style={connectedMediaUpdatesStyle}
+        className="flex-row overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream shadow-[5px_5px_0_#211E1A]"
       >
-        <CampaignMediaHero campaign={campaign} accent={accent} />
+        <View className="min-w-0 flex-1 border-r-[3px] border-retro-ink">
+          <CampaignMediaHero
+            campaign={campaign}
+            accent={accent}
+            embedded
+            matchHeight={donatePanelHeight}
+            compact={donatePanelHeight != null}
+            className="h-full w-full"
+          />
+        </View>
+        {id ? (
+          <View className="min-w-0 flex-1">
+            <CampaignLiveStream
+              campaignSlug={id}
+              matchHeight={donatePanelHeight}
+              connected
+            />
+          </View>
+        ) : null}
       </View>
+
       <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "30%" : "100%",
-          maxWidth: isWide ? "34%" : "100%",
-          minWidth: isWide ? 260 : undefined,
+        style={heroColumnStyle}
+        className="lg:sticky lg:top-4"
+        onLayout={(event) => {
+          const { height } = event.nativeEvent.layout;
+          setDonatePanelHeight((current) => (current === height ? current : height));
         }}
-        className={isWide ? "lg:sticky lg:top-4" : ""}
       >
         {donateSidebar}
       </View>
+    </View>
+  ) : (
+    <View key="hero" className="mb-6 gap-5">
+      <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream shadow-[5px_5px_0_#211E1A]">
+        <CampaignMediaHero campaign={campaign} accent={accent} embedded />
+        {id ? (
+          <View className="border-t-[3px] border-retro-ink">
+            <CampaignLiveStream campaignSlug={id} connected />
+          </View>
+        ) : null}
+      </View>
+      {donateSidebar}
     </View>
   );
 
@@ -492,12 +555,6 @@ export default function CampaignDetailPage() {
       </View>
 
       {pageSections}
-
-      <View className="mb-6">
-        <RetroPanel title="Recent donors" accent="mint">
-          <RecentDonorsList donors={recentDonors ?? []} />
-        </RetroPanel>
-      </View>
 
       {campaign.additionalNotes ? (
         <View className="mb-6">

@@ -12,6 +12,7 @@ import { ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx, MutationCtx, ActionCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
+import { isDemoOpenAdminEnabled } from "./demoOpenAdmin";
 
 type CtxWithDb = QueryCtx | MutationCtx;
 type AnyCtx = CtxWithDb | ActionCtx;
@@ -128,7 +129,47 @@ export async function requireRole(ctx: CtxWithDb, roles: readonly UserRole[]) {
 }
 
 export async function requireAdmin(ctx: CtxWithDb) {
-  return await requireRole(ctx, ["admin"]);
+  const userId = await getAuthUserId(ctx);
+  if (userId) {
+    return await requireRole(ctx, ["admin"]);
+  }
+
+  // Demo open-admin: unauthenticated admin reads/writes on non-prod only.
+  // Attribute actions to an existing admin profile when present.
+  if (!isDemoOpenAdminEnabled()) {
+    throw new ConvexError({
+      code: "UNAUTHENTICATED",
+      message: "You must be signed in to perform this action.",
+    });
+  }
+
+  const adminProfile = await ctx.db
+    .query("profiles")
+    .withIndex("by_role", (q) => q.eq("role", "admin"))
+    .first();
+  if (adminProfile) {
+    return {
+      userId: adminProfile.userId,
+      role: "admin" as const,
+      profile: adminProfile,
+    };
+  }
+
+  // Demo DB may not have a promoted admin yet — attribute to any profile.
+  const anyProfile = await ctx.db.query("profiles").first();
+  if (!anyProfile) {
+    throw new ConvexError({
+      code: "DEMO_OPEN_ADMIN_NO_ADMIN_USER",
+      message:
+        "Demo open admin requires at least one user profile on this Convex deployment.",
+    });
+  }
+
+  return {
+    userId: anyProfile.userId,
+    role: "admin" as const,
+    profile: anyProfile,
+  };
 }
 
 export async function requireVerifiedUser(ctx: CtxWithDb) {

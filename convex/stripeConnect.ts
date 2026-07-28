@@ -11,6 +11,11 @@ import {
   buildV2MerchantOnboardingLinkParams,
   parseV2ConnectAccountStatus,
 } from "./lib/stripeConnectMerchant";
+import {
+  assertHttpsConnectReturnUrls,
+  isStripeResourceMissing,
+  throwStripeConnectError,
+} from "./lib/stripeConnectErrors";
 
 type ConnectAccountRecord = {
   _id: Id<"stripeConnectAccounts">;
@@ -74,6 +79,82 @@ async function refreshV2AccountStatus(
   return parsed;
 }
 
+async function createV2MerchantAccount(
+  ctx: ActionCtx,
+  stripe: Stripe,
+  args: {
+    userId: Id<"users">;
+    communitySlug?: string;
+  },
+) {
+  const displayName = args.communitySlug
+    ? await getSocietyDisplayName(ctx, args.communitySlug)
+    : "Dono society";
+  const account = await stripe.v2.core.accounts.create(
+    buildV2MerchantAccountCreateParams({
+      displayName,
+      userId: args.userId,
+      communitySlug: args.communitySlug,
+    }),
+  );
+  await ctx.runMutation(internal.stripeConnectInternal.saveAccount, {
+    userId: args.userId,
+    communitySlug: args.communitySlug,
+    stripeAccountId: account.id,
+    accountVersion: "v2",
+    onboardingComplete: false,
+    cardPaymentsActive: false,
+    cardPaymentsStatus: "unrequested",
+    chargesEnabled: false,
+    payoutsEnabled: false,
+  });
+  return account.id;
+}
+
+async function resolveV2MerchantAccountId(
+  ctx: ActionCtx,
+  stripe: Stripe,
+  args: {
+    userId: Id<"users">;
+    communitySlug?: string;
+    existing: ConnectAccountRecord | null;
+  },
+): Promise<string> {
+  let existing = args.existing;
+
+  if (existing && existing.accountVersion !== "v2") {
+    await ctx.runMutation(internal.stripeConnectInternal.deleteAccount, {
+      connectAccountId: existing._id,
+    });
+    existing = null;
+  }
+
+  if (!existing) {
+    return await createV2MerchantAccount(ctx, stripe, {
+      userId: args.userId,
+      communitySlug: args.communitySlug,
+    });
+  }
+
+  try {
+    await stripe.v2.core.accounts.retrieve(existing.stripeAccountId, {
+      include: ["configuration.merchant", "requirements"],
+    });
+    return existing.stripeAccountId;
+  } catch (error) {
+    if (!isStripeResourceMissing(error)) {
+      throwStripeConnectError(error);
+    }
+    await ctx.runMutation(internal.stripeConnectInternal.deleteAccount, {
+      connectAccountId: existing._id,
+    });
+    return await createV2MerchantAccount(ctx, stripe, {
+      userId: args.userId,
+      communitySlug: args.communitySlug,
+    });
+  }
+}
+
 export const createConnectOnboardingLink = action({
   args: {
     communitySlug: v.optional(v.string()),
@@ -91,9 +172,9 @@ export const createConnectOnboardingLink = action({
 
     await assertSocietyConnectAccess(ctx, userId, args.communitySlug);
 
+    assertHttpsConnectReturnUrls(args.returnUrl, args.refreshUrl);
+
     const stripe = getStripeClient();
-    // Society Connect accounts are community-scoped so any authorized leader
-    // can resume the same merchant account.
     let existing = (args.communitySlug
       ? await ctx.runQuery(internal.stripeConnectInternal.getByCommunitySlug, {
           communitySlug: args.communitySlug,
@@ -103,50 +184,25 @@ export const createConnectOnboardingLink = action({
           communitySlug: args.communitySlug,
         })) as ConnectAccountRecord | null;
 
-    if (existing && existing.accountVersion !== "v2") {
-      await ctx.runMutation(internal.stripeConnectInternal.deleteAccount, {
-        connectAccountId: existing._id,
-      });
-      existing = null;
-    }
-
-    let stripeAccountId: string;
-    if (existing) {
-      stripeAccountId = existing.stripeAccountId;
-    } else {
-      const displayName = args.communitySlug
-        ? await getSocietyDisplayName(ctx, args.communitySlug)
-        : "Dono society";
-      const account = await stripe.v2.core.accounts.create(
-        buildV2MerchantAccountCreateParams({
-          displayName,
-          userId,
-          communitySlug: args.communitySlug,
-        }),
-      );
-      stripeAccountId = account.id;
-      await ctx.runMutation(internal.stripeConnectInternal.saveAccount, {
+    try {
+      const stripeAccountId = await resolveV2MerchantAccountId(ctx, stripe, {
         userId,
         communitySlug: args.communitySlug,
-        stripeAccountId,
-        accountVersion: "v2",
-        onboardingComplete: false,
-        cardPaymentsActive: false,
-        cardPaymentsStatus: "unrequested",
-        chargesEnabled: false,
-        payoutsEnabled: false,
+        existing,
       });
+
+      const link = await stripe.v2.core.accountLinks.create(
+        buildV2MerchantOnboardingLinkParams({
+          stripeAccountId,
+          returnUrl: args.returnUrl,
+          refreshUrl: args.refreshUrl,
+        }),
+      );
+
+      return { url: link.url, stripeAccountId };
+    } catch (error) {
+      throwStripeConnectError(error);
     }
-
-    const link = await stripe.v2.core.accountLinks.create(
-      buildV2MerchantOnboardingLinkParams({
-        stripeAccountId,
-        returnUrl: args.returnUrl,
-        refreshUrl: args.refreshUrl,
-      }),
-    );
-
-    return { url: link.url, stripeAccountId };
   },
 });
 
@@ -198,18 +254,37 @@ export const refreshConnectAccountStatus = action({
     }
 
     const stripe = getStripeClient();
-    const parsed = await refreshV2AccountStatus(ctx, stripe, record.stripeAccountId);
+    try {
+      const parsed = await refreshV2AccountStatus(ctx, stripe, record.stripeAccountId);
 
-    return {
-      exists: true as const,
-      onboardingComplete: parsed.onboardingComplete,
-      chargesEnabled: parsed.cardPaymentsActive,
-      cardPaymentsActive: parsed.cardPaymentsActive,
-      cardPaymentsStatus: parsed.cardPaymentsStatus,
-      payoutsEnabled: parsed.payoutsEnabled,
-      accountVersion: "v2" as const,
-      requiresMerchantReonboarding: false,
-    };
+      return {
+        exists: true as const,
+        onboardingComplete: parsed.onboardingComplete,
+        chargesEnabled: parsed.cardPaymentsActive,
+        cardPaymentsActive: parsed.cardPaymentsActive,
+        cardPaymentsStatus: parsed.cardPaymentsStatus,
+        payoutsEnabled: parsed.payoutsEnabled,
+        accountVersion: "v2" as const,
+        requiresMerchantReonboarding: false,
+      };
+    } catch (error) {
+      if (isStripeResourceMissing(error)) {
+        await ctx.runMutation(internal.stripeConnectInternal.deleteAccount, {
+          connectAccountId: record._id,
+        });
+        return {
+          exists: false as const,
+          onboardingComplete: false,
+          chargesEnabled: false,
+          cardPaymentsActive: false,
+          cardPaymentsStatus: "unrequested" as const,
+          payoutsEnabled: false,
+          accountVersion: null,
+          requiresMerchantReonboarding: false,
+        };
+      }
+      throwStripeConnectError(error);
+    }
   },
 });
 

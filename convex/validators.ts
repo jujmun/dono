@@ -12,6 +12,7 @@ export const campaignUpdateValidator = v.object({
   title: v.string(),
   content: v.string(),
   image: v.optional(v.string()),
+  createdAt: v.optional(v.number()),
 });
 
 export const creatorValidator = v.object({

@@ -31,7 +31,7 @@ import {
   type StripeVerificationStatus,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
@@ -49,7 +49,7 @@ function formatSubmittedAt(ms: number) {
 export default function AdminPortalPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const identityEnabled = isStripeIdentityEnabled();
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
@@ -149,7 +149,7 @@ export default function AdminPortalPage() {
     );
   }
 
-  if (!adminUser || profile === null) {
+  if (!adminUser) {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">

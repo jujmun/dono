@@ -19,7 +19,7 @@ import {
   statusChipTone,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { formatCurrency } from "@/lib/constants";
 import type { AdminSociety, Campaign } from "@/lib/types";
 
@@ -52,7 +52,7 @@ function matchesSocietySearch(society: AdminSociety, query: string) {
 export default function AdminArchivePage() {
   const router = useRouter();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();
@@ -83,7 +83,7 @@ export default function AdminArchivePage() {
     );
   }
 
-  if (!adminUser || profile === null) {
+  if (!adminUser) {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">

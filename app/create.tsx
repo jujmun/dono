@@ -37,7 +37,6 @@ import { ALLOWED_CAMPAIGN_CATEGORIES } from "@/lib/campaign-categories";
 import {
   getCampaignImages,
   MAX_CAMPAIGN_IMAGES,
-  MIN_CAMPAIGN_IMAGES,
 } from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
@@ -99,14 +98,12 @@ function PhotoThumbnailPicker({
   onPick,
   onRemove,
   onRemoveAll,
-  photosIncomplete,
 }: {
   pickedImages: PickedImage[];
   pickingImage: boolean;
   onPick: () => void;
   onRemove: (index: number) => void;
   onRemoveAll: () => void;
-  photosIncomplete: boolean;
 }) {
   return (
     <View>
@@ -156,14 +153,8 @@ function PhotoThumbnailPicker({
         ) : null}
       </View>
       <Text className="mt-1.5 text-xs text-[#5c574f]">
-        Optional. If you add photos, include {MIN_CAMPAIGN_IMAGES}–{MAX_CAMPAIGN_IMAGES} (JPG or
-        PNG, 5MB each).
+        Optional. Up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each).
       </Text>
-      {photosIncomplete ? (
-        <Text className="mt-1 text-xs text-red-600">
-          Add at least {MIN_CAMPAIGN_IMAGES} photos, or remove all.
-        </Text>
-      ) : null}
     </View>
   );
 }
@@ -508,8 +499,6 @@ export default function CreateCampaignPage() {
 
   const parsedVideoUrl = parseCampaignVideoUrl(videoUrl);
   const videoUrlInvalid = videoUrl.trim().length > 0 && !parsedVideoUrl;
-  const photosIncomplete =
-    pickedImages.length > 0 && pickedImages.length < MIN_CAMPAIGN_IMAGES;
 
   const transparencyFieldsComplete =
     expectedExpenditureDate.trim().length > 0 &&
@@ -521,8 +510,7 @@ export default function CreateCampaignPage() {
       case 0:
         return (
           Boolean(form.title && form.category && form.communitySlug) &&
-          !videoUrlInvalid &&
-          !photosIncomplete
+          !videoUrlInvalid
         );
       case 1:
         return form.description && form.story;
@@ -635,7 +623,6 @@ export default function CreateCampaignPage() {
                 setPickedImages((current) => current.filter((_, i) => i !== index))
               }
               onRemoveAll={() => setPickedImages([])}
-              photosIncomplete={photosIncomplete}
             />
           </View>
 
@@ -651,12 +638,6 @@ export default function CreateCampaignPage() {
               onPress={() => {
                 const slug = editSlug;
                 if (!slug) return;
-                if (pickedImages.length < MIN_CAMPAIGN_IMAGES) {
-                  setError(
-                    `Add at least ${MIN_CAMPAIGN_IMAGES} photos (JPG or PNG).`,
-                  );
-                  return;
-                }
                 setError(null);
                 setSubmitting(true);
                 void uploadCampaignImages({
@@ -858,7 +839,6 @@ export default function CreateCampaignPage() {
                     onPick={() => void pickCampaignImages()}
                     onRemove={removeCampaignImage}
                     onRemoveAll={() => setPickedImages([])}
-                    photosIncomplete={photosIncomplete}
                   />
                 </View>
               </View>
@@ -1247,7 +1227,6 @@ export default function CreateCampaignPage() {
                       onPick={() => void pickCampaignImages()}
                       onRemove={removeCampaignImage}
                       onRemoveAll={() => setPickedImages([])}
-                      photosIncomplete={photosIncomplete}
                     />
                   </View>
 
@@ -1564,29 +1543,23 @@ export default function CreateCampaignPage() {
                         }
                       }
                       if (pickedImages.length > 0) {
-                        if (pickedImages.length < MIN_CAMPAIGN_IMAGES) {
+                        try {
+                          const allUploaded = await uploadCampaignImages({
+                            slug,
+                            images: pickedImages,
+                            generateUploadUrl: generateImageUploadUrl,
+                            setImage: setCampaignImage,
+                            setImages: setCampaignImages,
+                          });
+                          imageUploadFailed = !allUploaded;
+                        } catch {
                           imageUploadFailed = true;
-                        } else {
-                          try {
-                            const allUploaded = await uploadCampaignImages({
-                              slug,
-                              images: pickedImages,
-                              generateUploadUrl: generateImageUploadUrl,
-                              setImage: setCampaignImage,
-                              setImages: setCampaignImages,
-                            });
-                            imageUploadFailed = !allUploaded;
-                          } catch {
-                            imageUploadFailed = true;
-                          }
                         }
                       }
 
                       if (imageUploadFailed && pickedImages.length > 0) {
                         setError(
-                          pickedImages.length < MIN_CAMPAIGN_IMAGES
-                            ? `Add at least ${MIN_CAMPAIGN_IMAGES} photos, or remove them to finish without photos.`
-                            : "Campaign saved but photos could not be uploaded. Open the campaign from My Campaigns to add photos.",
+                          "Campaign saved but photos could not be uploaded. Open the campaign from My Campaigns to add photos.",
                         );
                         return;
                       }

@@ -323,17 +323,41 @@ export const resubmit = mutation({
 export const publishUpdate = mutation({
   args: {
     slug: v.string(),
-    title: v.string(),
+    title: v.optional(v.string()),
     content: v.string(),
+    imageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const { userId, profile } = await requireVerifiedUser(ctx);
-    const title = args.title.trim();
     const content = args.content.trim();
+    const rawTitle = args.title?.trim() ?? "";
+    let image: string | undefined;
+    if (args.imageStorageId) {
+      const imageUrl = await ctx.storage.getUrl(args.imageStorageId);
+      if (!imageUrl) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid update image." });
+      }
+      image = imageUrl;
+    }
+
+    if (!content && !image) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Add a message or photo before posting.",
+      });
+    }
+
+    const title =
+      rawTitle ||
+      (content
+        ? content.length > 80
+          ? `${content.slice(0, 77)}...`
+          : content
+        : "Campaign update");
     if (!title || title.length > MAX_UPDATE_TITLE) {
       throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid update title." });
     }
-    if (!content || content.length > MAX_UPDATE_CONTENT) {
+    if (content.length > MAX_UPDATE_CONTENT) {
       throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid update content." });
     }
 
@@ -352,11 +376,14 @@ export const publishUpdate = mutation({
       });
     }
 
+    const now = Date.now();
     const update = {
-      id: `u-${Date.now()}`,
-      date: new Date().toISOString().slice(0, 10),
+      id: `u-${now}`,
+      date: new Date(now).toISOString().slice(0, 10),
       title,
       content,
+      createdAt: now,
+      ...(image ? { image } : {}),
     };
 
     await ctx.db.patch(campaign._id, {
@@ -451,7 +478,7 @@ export const setImage = mutation({
   },
 });
 
-const MIN_CAMPAIGN_IMAGES = 2;
+const MIN_CAMPAIGN_IMAGES = 1;
 const MAX_CAMPAIGN_IMAGES = 10;
 
 export const setVideoUrl = mutation({

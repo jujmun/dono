@@ -17,7 +17,8 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { useWelcomeTourStatus } from "@/lib/hooks/use-welcome-tour";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal, isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { isDemoOpenAdminEnabled } from "@/lib/demo-open-admin";
 import { authStorage } from "@/lib/auth-storage";
 import { StripeAppProvider } from "@/lib/stripe/provider";
 import { api } from "@convex/_generated/api";
@@ -61,6 +62,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       root === "legal";
     const inAdmin = root === "admin";
     const adminUser = isPortalAdmin(profile);
+    const canOpenAdmin = canAccessAdminPortal(profile);
     const needsOnboarding =
       isAuthenticated &&
       profile !== undefined &&
@@ -75,7 +77,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       welcomeTourComplete === false &&
       welcomeTourPending === true;
 
-    if ((inProtected || inOnboarding || inWelcome || inAdmin) && !isAuthenticated) {
+    // Demo open-admin: allow /admin without a session (Preview + Convex dev only).
+    const blockUnauthenticated =
+      (inProtected || inOnboarding || inWelcome) ||
+      (inAdmin && !isDemoOpenAdminEnabled());
+    if (blockUnauthenticated && !isAuthenticated) {
       router.replace("/signin");
       return;
     }
@@ -105,7 +111,12 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (inAdmin && isAuthenticated && profile !== undefined && !adminUser) {
+    if (
+      inAdmin &&
+      isAuthenticated &&
+      profile !== undefined &&
+      !canOpenAdmin
+    ) {
       router.replace("/dashboard");
       return;
     }
