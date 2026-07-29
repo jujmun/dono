@@ -180,6 +180,35 @@ export const sendSocietyCampaignPending = internalAction({
   },
 });
 
+export const sendSocietySubscriptionCanceledNoCampaigns = internalAction({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    societyName: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    charged: v.boolean(),
+  },
+  handler: async (_ctx, args) => {
+    const chargeLine = args.charged
+      ? `You were charged ${args.currency.toUpperCase()} ${args.amount.toFixed(2)} for this cycle, and we've refunded it in full — it may take a few days to appear back on your statement.`
+      : "You were not charged for this cycle.";
+    await sendTransactionalEmail({
+      to: args.email,
+      subject: `Your subscription to ${args.societyName} has been canceled`,
+      text: [
+        `Hi ${args.name},`,
+        "",
+        `"${args.societyName}" doesn't have any active campaigns right now, so we've canceled your monthly subscription to them.`,
+        "",
+        chargeLine,
+        "",
+        "You're welcome to subscribe again once they have an active campaign, or support one of their campaigns directly in the meantime.",
+      ].join("\n"),
+    });
+  },
+});
+
 export const sendCampaignFunded = internalAction({
   args: {
     email: v.string(),

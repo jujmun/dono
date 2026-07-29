@@ -236,6 +236,10 @@ export default defineSchema({
     type: v.string(),
     processedAt: v.number(),
   }).index("by_stripeEventId", ["stripeEventId"]),
+  /** Legacy campaign-level recurring donations — creation removed, kept for
+   * historical reporting and so the cancellation migration/webhooks still
+   * resolve existing rows. See convex/societySubscriptions.ts for the
+   * society-level replacement. */
   recurringDonations: defineTable({
     userId: v.id("users"),
     campaignId: v.id("campaigns"),
@@ -254,6 +258,47 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_subscription", ["stripeSubscriptionId"])
     .index("by_campaign", ["campaignId"]),
+  /** Society-level recurring subscriptions. Each successful invoice is split
+   * across the society's currently-active campaigns at charge time — see
+   * societySubscriptionPayments for the per-invoice split record. */
+  societySubscriptions: defineTable({
+    userId: v.id("users"),
+    communitySlug: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    stripeSubscriptionId: v.string(),
+    stripePriceId: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled"),
+    ),
+    /** Set when Dono canceled this on the donor's behalf rather than the
+     * donor requesting it themselves — surfaced in the cancellation email. */
+    canceledReason: v.optional(
+      v.union(v.literal("user_requested"), v.literal("no_active_campaigns")),
+    ),
+    createdAt: v.number(),
+    canceledAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_subscription", ["stripeSubscriptionId"])
+    .index("by_community", ["communitySlug"]),
+  /** One row per successfully split invoice — doubles as the idempotency
+   * guard for webhook retries and the audit record of how a society
+   * subscription payment was divided across campaigns (or refunded, if the
+   * society had no active campaigns at charge time). */
+  societySubscriptionPayments: defineTable({
+    societySubscriptionId: v.id("societySubscriptions"),
+    stripeInvoiceId: v.string(),
+    totalAmountMinor: v.number(),
+    campaignCount: v.number(),
+    refunded: v.optional(v.boolean()),
+    stripeRefundId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_invoice", ["stripeInvoiceId"])
+    .index("by_societySubscription", ["societySubscriptionId"]),
   /** Admin-configured match windows. Match credit is a commitment tracker —
    * it does not inflate campaigns.raised or move Stripe funds. */
   campaignMatchWindows: defineTable({
@@ -302,6 +347,10 @@ export default defineSchema({
     ),
     stripeInvoiceId: v.optional(v.string()),
     recurringDonationId: v.optional(v.id("recurringDonations")),
+    /** Set on rows created by the society-subscription fan-out — the
+     * campaign's share of one invoice.paid split. */
+    societySubscriptionId: v.optional(v.id("societySubscriptions")),
+    societySubscriptionPaymentId: v.optional(v.id("societySubscriptionPayments")),
     coverFees: v.optional(v.boolean()),
     intendedCampaignAmountMinor: v.optional(v.number()),
     estimatedStripeFeeMinor: v.optional(v.number()),

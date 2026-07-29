@@ -7,7 +7,6 @@ import {
 } from "react-native";
 import { Gift, Heart, Share2, UserPlus } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
-import type { DonationFrequency } from "@/components/donate-sheet-types";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import {
@@ -27,10 +26,6 @@ interface RetroDonateSidebarProps {
   campaign: Campaign;
   selectedAmount: number;
   customAmount: string;
-  frequency: DonationFrequency;
-  onFrequencyChange?: (frequency: DonationFrequency) => void;
-  /** Show monthly toggle (web only). */
-  showFrequencyToggle?: boolean;
   activeMatch?: ActiveMatchSummary | null;
   liked: boolean;
   following: boolean;
@@ -50,9 +45,6 @@ export function RetroDonateSidebar({
   campaign,
   selectedAmount,
   customAmount,
-  frequency,
-  onFrequencyChange,
-  showFrequencyToggle = false,
   activeMatch = null,
   liked,
   following,
@@ -122,38 +114,6 @@ export function RetroDonateSidebar({
 
       {!isFunded ? (
         <>
-          {showFrequencyToggle && onFrequencyChange ? (
-            <View className="mb-3 flex-row gap-2">
-              {(
-                [
-                  { id: "one_time" as const, label: "One-time" },
-                  { id: "monthly" as const, label: "Monthly" },
-                ] as const
-              ).map((option) => {
-                const on = frequency === option.id;
-                return (
-                  <Pressable
-                    key={option.id}
-                    onPress={() => onFrequencyChange(option.id)}
-                    className={cn(
-                      "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
-                      on ? "bg-retro-sky" : "bg-retro-cream",
-                    )}
-                  >
-                    <Text
-                      className={cn(
-                        "font-retro-mono-bold text-[11px]",
-                        on ? "text-retro-paper" : "text-retro-ink",
-                      )}
-                    >
-                      {option.label}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-          ) : null}
-
           <View className="mb-3 flex-row gap-2">
             {DETAIL_DONATION_PRESETS.map((amount) => {
               const on = !customAmount && selectedAmount === amount;
@@ -233,9 +193,7 @@ export function RetroDonateSidebar({
             }`}
           >
             <Gift size={18} color="#211E1A" />
-            <Text className="font-retro-bold text-[15px] text-retro-ink">
-              {frequency === "monthly" ? "Donate monthly" : "Donate"}
-            </Text>
+            <Text className="font-retro-bold text-[15px] text-retro-ink">Donate</Text>
           </Pressable>
 
           {donationsDisabled && donationsDisabledReason ? (

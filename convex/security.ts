@@ -89,3 +89,23 @@ export const consumeQuota = internalMutation({
     await recordRateLimitAttempt(ctx, opts, false);
   },
 });
+
+/** Server-only: clear a keyed quota's attempt count after the action it was
+ * guarding actually succeeded — so retrying a failed Stripe call doesn't
+ * eventually lock out a donor who succeeds on a later attempt. */
+export const resetQuota = internalMutation({
+  args: { key: v.string() },
+  handler: async (ctx, args) => {
+    if (args.key.length > 200) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Invalid rate limit key.",
+      });
+    }
+    await recordRateLimitAttempt(
+      ctx,
+      { key: args.key, maxAttempts: 0, windowMs: 0, lockoutMs: 0 },
+      true,
+    );
+  },
+});

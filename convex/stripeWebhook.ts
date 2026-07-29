@@ -27,6 +27,77 @@ function getPaymentIntentIdFromCharge(charge: Stripe.Charge) {
     : charge.payment_intent?.id;
 }
 
+type InvoiceWithSubscription = Stripe.Invoice & {
+  subscription?: string | Stripe.Subscription | null;
+  payment_intent?: string | Stripe.PaymentIntent | null;
+};
+
+function getSubscriptionIdFromInvoice(invoice: InvoiceWithSubscription) {
+  return typeof invoice.subscription === "string"
+    ? invoice.subscription
+    : invoice.subscription?.id;
+}
+
+function getPaymentIntentIdFromInvoice(invoice: InvoiceWithSubscription) {
+  return typeof invoice.payment_intent === "string"
+    ? invoice.payment_intent
+    : invoice.payment_intent?.id;
+}
+
+/** Cancels a society subscription right before Stripe would otherwise charge
+ * it — the primary defense against billing a donor for a society with no
+ * active campaigns. See stripe.refundAndCancelSocietySubscriptionForNoCampaigns
+ * for the invoice.paid safety net behind this. */
+async function preemptSocietySubscriptionIfNoActiveCampaigns(
+  ctx: ActionCtx,
+  stripe: Stripe,
+  subscriptionId: string,
+) {
+  const societySubscription = await ctx.runQuery(
+    internal.stripeInternal.getSocietySubscriptionBySubscriptionId,
+    { stripeSubscriptionId: subscriptionId },
+  );
+  if (!societySubscription || societySubscription.status === "canceled") {
+    return;
+  }
+
+  const activeCampaigns = await ctx.runQuery(
+    internal.stripeInternal.getActiveCampaignsForCommunity,
+    { communitySlug: societySubscription.communitySlug },
+  );
+  if (activeCampaigns.length > 0) {
+    return;
+  }
+
+  const connect = await ctx.runQuery(
+    internal.stripeInternal.getConnectAccountIdForCommunity,
+    { communitySlug: societySubscription.communitySlug },
+  );
+  try {
+    if (connect?.stripeAccountId) {
+      await stripe.subscriptions.cancel(
+        subscriptionId,
+        {},
+        { stripeAccount: connect.stripeAccountId },
+      );
+    } else {
+      await stripe.subscriptions.cancel(subscriptionId);
+    }
+  } catch {
+    // Already canceled/missing on Stripe's side — still reconcile our record below.
+  }
+
+  await ctx.runMutation(internal.stripeInternal.cancelSocietySubscriptionRecord, {
+    stripeSubscriptionId: subscriptionId,
+    reason: "no_active_campaigns",
+  });
+  await ctx.runMutation(internal.stripeInternal.notifySocietySubscriptionCanceled, {
+    societySubscriptionId: societySubscription._id,
+    charged: false,
+    amount: societySubscription.amount,
+  });
+}
+
 async function refundApplicationFeeDelta(
   stripe: Stripe,
   charge: Stripe.Charge,
@@ -247,45 +318,67 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
       }
       break;
     }
+    case "invoice.upcoming": {
+      const invoice = event.data.object as InvoiceWithSubscription;
+      const subscriptionId = getSubscriptionIdFromInvoice(invoice);
+      if (subscriptionId) {
+        await preemptSocietySubscriptionIfNoActiveCampaigns(ctx, stripe, subscriptionId);
+      }
+      break;
+    }
     case "invoice.paid": {
-      const invoice = event.data.object as Stripe.Invoice & {
-        subscription?: string | Stripe.Subscription | null;
-      };
-      const subscriptionId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription?.id;
+      const invoice = event.data.object as InvoiceWithSubscription;
+      const subscriptionId = getSubscriptionIdFromInvoice(invoice);
 
       if (subscriptionId && invoice.id) {
-        await ctx.runMutation(internal.stripeInternal.recordRecurringInvoicePayment, {
-          stripeInvoiceId: invoice.id,
-          stripeSubscriptionId: subscriptionId,
-          amount: (invoice.amount_paid ?? 0) / 100,
-        });
+        const societyResult: { applicable: boolean } = await ctx.runMutation(
+          internal.stripeInternal.processSuccessfulSocietyInvoice,
+          {
+            stripeInvoiceId: invoice.id,
+            stripeSubscriptionId: subscriptionId,
+            totalAmountMinor: invoice.amount_paid ?? 0,
+            stripePaymentIntentId: getPaymentIntentIdFromInvoice(invoice),
+          },
+        );
+
+        if (!societyResult.applicable) {
+          await ctx.runMutation(internal.stripeInternal.recordRecurringInvoicePayment, {
+            stripeInvoiceId: invoice.id,
+            stripeSubscriptionId: subscriptionId,
+            amount: (invoice.amount_paid ?? 0) / 100,
+          });
+        }
       }
       break;
     }
     case "invoice.payment_failed": {
-      const invoice = event.data.object as Stripe.Invoice & {
-        subscription?: string | Stripe.Subscription | null;
-      };
-      const subscriptionId =
-        typeof invoice.subscription === "string"
-          ? invoice.subscription
-          : invoice.subscription?.id;
+      const invoice = event.data.object as InvoiceWithSubscription;
+      const subscriptionId = getSubscriptionIdFromInvoice(invoice);
 
       if (subscriptionId) {
-        await ctx.runMutation(internal.stripeInternal.markRecurringDonationPastDue, {
-          stripeSubscriptionId: subscriptionId,
-        });
+        const societyResult: { updated: boolean } = await ctx.runMutation(
+          internal.stripeInternal.markSocietySubscriptionPastDue,
+          { stripeSubscriptionId: subscriptionId },
+        );
+        if (!societyResult.updated) {
+          await ctx.runMutation(internal.stripeInternal.markRecurringDonationPastDue, {
+            stripeSubscriptionId: subscriptionId,
+          });
+        }
       }
       break;
     }
     case "customer.subscription.deleted": {
       const subscription = event.data.object as Stripe.Subscription;
-      await ctx.runMutation(internal.stripeInternal.cancelRecurringDonationRecord, {
-        stripeSubscriptionId: subscription.id,
-      });
+      const societyResult: { updated: boolean } = await ctx.runMutation(
+        internal.stripeInternal.cancelSocietySubscriptionRecord,
+        { stripeSubscriptionId: subscription.id },
+      );
+      if (!societyResult.updated) {
+        await ctx.runMutation(internal.stripeInternal.cancelRecurringDonationRecord, {
+          stripeSubscriptionId: subscription.id,
+        });
+      }
       break;
     }
     default:

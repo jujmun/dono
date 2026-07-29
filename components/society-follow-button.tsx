@@ -10,9 +10,16 @@ interface SocietyFollowButtonProps {
   slug: string;
   name: string;
   university?: string;
+  /** Icon-only circular button, for use alongside other compact header actions. */
+  compact?: boolean;
 }
 
-export function SocietyFollowButton({ slug, name, university }: SocietyFollowButtonProps) {
+export function SocietyFollowButton({
+  slug,
+  name,
+  university,
+  compact = false,
+}: SocietyFollowButtonProps) {
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const posthog = usePostHog();
@@ -47,6 +54,28 @@ export function SocietyFollowButton({ slug, name, university }: SocietyFollowBut
       setFollowLoading(false);
     }
   };
+
+  if (compact) {
+    return (
+      <Pressable
+        onPress={() => void handleToggleFollow()}
+        disabled={followLoading}
+        accessibilityRole="button"
+        accessibilityLabel={following ? "Following — tap to unfollow" : "Follow"}
+        className={`h-9 w-9 items-center justify-center rounded-full border ${
+          following
+            ? "border-dono-primary bg-dono-primary/5"
+            : "border-dono-border bg-white"
+        }`}
+      >
+        {followLoading ? (
+          <ActivityIndicator size="small" color="#17211B" />
+        ) : (
+          <UserPlus size={16} color={following ? "#17211B" : "#56615A"} />
+        )}
+      </Pressable>
+    );
+  }
 
   return (
     <Pressable
