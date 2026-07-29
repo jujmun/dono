@@ -133,6 +133,8 @@ Source: [engineering/product-legal-alignment-roadmap.md](engineering/product-leg
 
 Source: [research/](research/)
 
+- [ ] Demo with India Society for its Ram-Leela play; speak with Cathy before officially launching the demo
+- [ ] Address Step's concerns about the proposed Somerville demo before proceeding
 - [ ] Continue college development-office interviews to ground the society-approval and institution-endorsement model against real precedent
 - [ ] Talk to a college development-office contact about how they handle alumni data under GDPR, as a working precedent for the Dono data model (per [legal/ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md))
 - [ ] Prepare two-page proposal with platform screenshots for the development office and close alumni — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
@@ -144,4 +146,4 @@ Source: [research/](research/)
 
 ---
 
-*Last reviewed: 23 July 2026, from the [engineering/product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md) brief.*
+*Last reviewed: 29 July 2026.*

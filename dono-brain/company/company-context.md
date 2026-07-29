@@ -2,6 +2,12 @@
 
 > **Version 2.0 -- Foundational Company Context**
 
+## Current demo context
+
+- Demo partner: India Society, for its Ram-Leela play.
+- Before the demo is officially launched, speak with Cathy.
+- Step is nervous about the proposed Somerville demo; resolve those concerns before proceeding.
+
 ## Vision
 
 Dono is the community infrastructure for transparent university giving.
