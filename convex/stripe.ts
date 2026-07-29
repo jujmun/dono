@@ -257,14 +257,32 @@ export const createPaymentIntent = action({
     const grossAmountMinor = feeBreakdown.totalChargedMinor;
     const applicationFeeAmountMinor = feeBreakdown.applicationFeeAmountMinor;
 
+    const donationId = await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
+      userId: userId ?? undefined,
+      donorEmail: receiptEmail,
+      isAnonymous: anonymous,
+      campaignId: campaign.campaignId,
+      amount: validAmount,
+      stripeConnectedAccountId: campaign.stripeAccountId,
+      grossAmountMinor,
+      applicationFeeAmountMinor,
+      coverFees,
+      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
+      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+      ageAttested: true,
+      legalAcceptedAt: Date.now(),
+    });
+
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: grossAmountMinor,
         currency: "gbp",
         application_fee_amount: applicationFeeAmountMinor,
+        description: `Dono: ${campaign.title}`.slice(0, 1000),
         ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         automatic_payment_methods: { enabled: true },
         metadata: {
+          donationId,
           ...(userId ? { userId } : {}),
           ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
           ...(anonymous ? { anonymous: "true" } : {}),
@@ -272,6 +290,8 @@ export const createPaymentIntent = action({
           intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
+          campaignTitle: campaign.title.slice(0, 500),
+          communitySlug: campaign.communitySlug,
           donationType: "one_time",
           merchantOfRecord: "connected_account",
         },
@@ -289,21 +309,9 @@ export const createPaymentIntent = action({
       });
     }
 
-    await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
-      userId: userId ?? undefined,
-      donorEmail: receiptEmail,
-      isAnonymous: anonymous,
-      campaignId: campaign.campaignId,
-      amount: validAmount,
+    await ctx.runMutation(internal.stripeInternal.attachPaymentIntentToDonation, {
+      donationId,
       stripePaymentIntentId: paymentIntent.id,
-      stripeConnectedAccountId: campaign.stripeAccountId,
-      grossAmountMinor,
-      applicationFeeAmountMinor,
-      coverFees,
-      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
-      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
-      ageAttested: true,
-      legalAcceptedAt: Date.now(),
     });
 
     return {
@@ -463,6 +471,8 @@ export const createRecurringDonationSubscription = action({
           userId,
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
+          campaignTitle: campaign.title.slice(0, 500),
+          communitySlug: campaign.communitySlug,
           donationType: "recurring",
           merchantOfRecord: "connected_account",
         },
