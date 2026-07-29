@@ -191,19 +191,19 @@ export const unlikeCampaign = mutation({
   },
 });
 
-export const followCommunity = mutation({
-  args: { communitySlug: v.string() },
+export const followSociety = mutation({
+  args: { societySlug: v.string() },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
-    const community = await getCommunityBySlug(ctx, args.communitySlug);
+    const community = await getCommunityBySlug(ctx, args.societySlug);
     if (!community) {
-      throw new ConvexError({ code: "NOT_FOUND", message: "Community not found." });
+      throw new ConvexError({ code: "NOT_FOUND", message: "Society not found." });
     }
 
     const existing = await ctx.db
       .query("communityFollows")
       .withIndex("by_community_user", (q) =>
-        q.eq("communitySlug", args.communitySlug).eq("userId", userId),
+        q.eq("communitySlug", args.societySlug).eq("userId", userId),
       )
       .unique();
 
@@ -211,7 +211,7 @@ export const followCommunity = mutation({
 
     await ctx.db.insert("communityFollows", {
       userId,
-      communitySlug: args.communitySlug,
+      communitySlug: args.societySlug,
       createdAt: Date.now(),
     });
     await ctx.db.patch(community._id, { followers: community.followers + 1 });
@@ -227,19 +227,19 @@ export const followCommunity = mutation({
   },
 });
 
-export const unfollowCommunity = mutation({
-  args: { communitySlug: v.string() },
+export const unfollowSociety = mutation({
+  args: { societySlug: v.string() },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
     const existing = await ctx.db
       .query("communityFollows")
       .withIndex("by_community_user", (q) =>
-        q.eq("communitySlug", args.communitySlug).eq("userId", userId),
+        q.eq("communitySlug", args.societySlug).eq("userId", userId),
       )
       .unique();
     if (!existing) return { following: false };
 
-    const community = await getCommunityBySlug(ctx, args.communitySlug);
+    const community = await getCommunityBySlug(ctx, args.societySlug);
     await ctx.db.delete(existing._id);
     if (community) {
       await ctx.db.patch(community._id, {
@@ -438,7 +438,7 @@ export const listFollowedCampaigns = query({
   },
 });
 
-export const listFollowedCommunities = query({
+export const listFollowedSocieties = query({
   args: {},
   handler: async (ctx) => {
     const userId = await optionalUserId(ctx);
@@ -453,7 +453,7 @@ export const listFollowedCommunities = query({
   },
 });
 
-export const countFollowedCommunities = query({
+export const countFollowedSocieties = query({
   args: {},
   handler: async (ctx) => {
     const userId = await optionalUserId(ctx);
@@ -469,16 +469,16 @@ export const countFollowedCommunities = query({
 export const isFollowing = query({
   args: {
     campaignSlug: v.optional(v.string()),
-    communitySlug: v.optional(v.string()),
+    societySlug: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await optionalUserId(ctx);
     if (!userId) {
-      return { followingCampaign: false, followingCommunity: false, liked: false };
+      return { followingCampaign: false, followingSociety: false, liked: false };
     }
 
     let followingCampaign = false;
-    let followingCommunity = false;
+    let followingSociety = false;
     let liked = false;
 
     if (args.campaignSlug) {
@@ -499,16 +499,16 @@ export const isFollowing = query({
       liked = Boolean(cl);
     }
 
-    if (args.communitySlug) {
+    if (args.societySlug) {
       const cm = await ctx.db
         .query("communityFollows")
         .withIndex("by_community_user", (q) =>
-          q.eq("communitySlug", args.communitySlug!).eq("userId", userId),
+          q.eq("communitySlug", args.societySlug!).eq("userId", userId),
         )
         .unique();
-      followingCommunity = Boolean(cm);
+      followingSociety = Boolean(cm);
     }
 
-    return { followingCampaign, followingCommunity, liked };
+    return { followingCampaign, followingSociety, liked };
   },
 });

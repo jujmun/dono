@@ -185,7 +185,7 @@ export interface ActivityItem {
 export interface DonorImpact {
   totalDonated: number;
   campaignsSupported: number;
-  communitiesFollowed: number;
+  societiesFollowed: number;
   impactHighlights: string[];
   recentDonations: {
     campaign: string;
@@ -198,7 +198,7 @@ export interface DonoWrapped {
   year: number;
   totalDonated: number;
   campaignsSupported: number;
-  topCommunity: string;
+  topSociety: string;
   rank: string;
   impactStatement: string;
 }

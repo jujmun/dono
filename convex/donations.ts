@@ -22,14 +22,14 @@ export const getDonorImpact = query({
     );
 
     if (donations.length === 0) {
-      const communityFollows = await ctx.db
+      const societyFollows = await ctx.db
         .query("communityFollows")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect();
       return {
         totalDonated: 0,
         campaignsSupported: 0,
-        communitiesFollowed: communityFollows.length,
+        societiesFollowed: societyFollows.length,
         impactHighlights: [],
         recentDonations: [],
       };
@@ -41,7 +41,7 @@ export const getDonorImpact = query({
     );
     const campaignMap = new Map(campaigns.map((c) => [c._id, c]));
 
-    const communityFollows = await ctx.db
+    const societyFollows = await ctx.db
       .query("communityFollows")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
@@ -70,7 +70,7 @@ export const getDonorImpact = query({
     return {
       totalDonated,
       campaignsSupported: campaignIds.length,
-      communitiesFollowed: communityFollows.length,
+      societiesFollowed: societyFollows.length,
       impactHighlights,
       recentDonations,
     };
@@ -95,23 +95,23 @@ export const getDonoWrapped = query({
     const campaignIds = [...new Set(donations.map((d) => d.campaignId))];
     const campaigns = await Promise.all(campaignIds.map((id) => ctx.db.get(id)));
 
-    const communityCounts = new Map<string, number>();
+    const societyCounts = new Map<string, number>();
     for (const campaign of campaigns) {
       if (!campaign) continue;
       const id = campaign.creator.communityId;
-      communityCounts.set(id, (communityCounts.get(id) ?? 0) + 1);
+      societyCounts.set(id, (societyCounts.get(id) ?? 0) + 1);
     }
 
-    let topCommunity = "Your communities";
+    let topSociety = "Your societies";
     let topCount = 0;
-    for (const [communityId, count] of communityCounts) {
+    for (const [societyId, count] of societyCounts) {
       if (count > topCount) {
         topCount = count;
         const community = await ctx.db
           .query("communities")
-          .withIndex("by_slug", (q) => q.eq("slug", communityId))
+          .withIndex("by_slug", (q) => q.eq("slug", societyId))
           .unique();
-        topCommunity = community?.name ?? campaignSlugToName(communityId);
+        topSociety = community?.name ?? campaignSlugToName(societyId);
       }
     }
 
@@ -119,7 +119,7 @@ export const getDonoWrapped = query({
       year: new Date().getFullYear(),
       totalDonated,
       campaignsSupported: campaignIds.length,
-      topCommunity,
+      topSociety,
       rank:
         totalDonated >= 100
           ? "Top 15% of donors"

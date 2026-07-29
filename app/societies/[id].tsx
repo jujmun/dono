@@ -21,8 +21,8 @@ import {
   Check,
   X,
 } from "lucide-react-native";
-import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
+import { SocietyFollowButton } from "@/components/society-follow-button";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { VerificationBadge } from "@/components/ui/verification-badge";
@@ -208,7 +208,9 @@ function SocietyDetail({
             </View>
           ) : null}
 
-          {canJoin ? <MembershipActions slug={slug} community={community!} /> : null}
+          {canJoin ? (
+            <MembershipActions slug={slug} community={community!} showFollow />
+          ) : null}
           <SocietyPayoutSetupBanner slug={slug} />
         </View>
 
@@ -273,7 +275,11 @@ function CommunityDetail({
           {isSociety ? (
             <MembershipActions slug={slug} community={community} showFollow />
           ) : (
-            <FollowOnlyButton community={community} slug={slug} />
+            <SocietyFollowButton
+              slug={slug}
+              name={community.name}
+              university={community.university}
+            />
           )}
           {isSociety ? <SocietyPayoutSetupBanner slug={slug} /> : null}
         </View>
@@ -302,72 +308,6 @@ function CommunityDetail({
         <SocietyCampaignsAndLeaderPanels slug={slug} />
       </View>
     </AppShell>
-  );
-}
-
-function FollowOnlyButton({
-  community,
-  slug,
-}: {
-  community: Community;
-  slug: string;
-}) {
-  const { isAuthenticated } = useConvexAuth();
-  const router = useRouter();
-  const posthog = usePostHog();
-  const followCommunity = useMutation(api.engagement.followCommunity);
-  const unfollowCommunity = useMutation(api.engagement.unfollowCommunity);
-  const engagement = useQuery(
-    api.engagement.isFollowing,
-    slug ? { communitySlug: slug } : "skip",
-  );
-  const [followLoading, setFollowLoading] = useState(false);
-  const following = engagement?.followingCommunity ?? false;
-
-  const handleToggleFollow = async () => {
-    if (!slug || followLoading) return;
-    if (!isAuthenticated) {
-      router.push("/signin");
-      return;
-    }
-    setFollowLoading(true);
-    try {
-      if (following) {
-        await unfollowCommunity({ communitySlug: slug });
-      } else {
-        await followCommunity({ communitySlug: slug });
-        posthog?.capture("community_followed", {
-          community_id: community.id,
-          community_name: community.name,
-          community_university: community.university,
-        });
-      }
-    } finally {
-      setFollowLoading(false);
-    }
-  };
-
-  return (
-    <Pressable
-      onPress={() => void handleToggleFollow()}
-      disabled={followLoading}
-      className={`flex-row items-center justify-center gap-2 rounded-full px-5 py-2.5 ${
-        following ? "border border-dono-primary bg-dono-primary/5" : "bg-dono-primary"
-      }`}
-    >
-      {followLoading ? (
-        <ActivityIndicator size="small" color={following ? "#17211B" : "#fff"} />
-      ) : (
-        <UserPlus size={16} color={following ? "#17211B" : "#fff"} />
-      )}
-      <Text
-        className={`font-retro-bold text-sm ${
-          following ? "text-dono-primary" : "text-white"
-        }`}
-      >
-        {following ? "Following" : "Follow"}
-      </Text>
-    </Pressable>
   );
 }
 
@@ -471,7 +411,13 @@ function MembershipActions({
             {status === "approved" ? "Leave society" : joinLabel}
           </Text>
         </Pressable>
-        {showFollow ? <FollowOnlyButton community={community} slug={slug} /> : null}
+        {showFollow ? (
+          <SocietyFollowButton
+            slug={slug}
+            name={community.name}
+            university={community.university}
+          />
+        ) : null}
       </View>
       {status === "approved" && role === "leader" ? (
         <Text className="text-xs text-dono-muted">
