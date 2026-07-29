@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text } from "react-native";
+import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
@@ -23,8 +23,10 @@ export default function OnboardingPage() {
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
+  const skipOnboarding = useMutation(api.users.skipOnboarding);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [skipping, setSkipping] = useState(false);
 
   const initialYear = YEAR_IN_COLLEGE_OPTIONS.includes(
     profile?.yearInCollege as YearInCollege,
@@ -68,6 +70,18 @@ export default function OnboardingPage() {
     }
   };
 
+  const handleSkip = async () => {
+    setSkipping(true);
+    setError(null);
+    try {
+      await skipOnboarding({});
+      router.replace("/dashboard");
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+      setSkipping(false);
+    }
+  };
+
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-lg px-4 py-12">
@@ -91,11 +105,21 @@ export default function OnboardingPage() {
                 avatarPreview: profile?.avatarUrl ?? null,
               }}
               submitLabel={loading ? "Saving..." : "Complete setup"}
-              loading={loading}
+              loading={loading || skipping}
               error={error}
               onSubmit={completeOnboarding}
             />
           </View>
+
+          <Pressable
+            onPress={() => void handleSkip()}
+            disabled={loading || skipping}
+            className="mt-4 items-center"
+          >
+            <Text className="text-sm text-dono-muted underline">
+              {skipping ? "Skipping..." : "Skip for now"}
+            </Text>
+          </Pressable>
         </View>
       </View>
     </AppShell>

@@ -95,6 +95,7 @@ export const ResendEmailOTP = Resend({
     });
 
     if (error) {
+      console.error("Resend OTP send failed", error);
       throw new ConvexError({
         code: "OTP_SEND_FAILED",
         message: "Unable to send OTP email. Please try again.",

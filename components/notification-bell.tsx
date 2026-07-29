@@ -145,6 +145,11 @@ export function NotificationBell() {
     if (!notification.read) {
       void markRead({ notificationId: notification.id as Id<"notifications"> });
     }
+    if (notification.type === "onboarding") {
+      setOpen(false);
+      router.push("/onboarding");
+      return;
+    }
     if (!notification.relatedEntityId || notification.relatedEntityType !== "campaign") {
       return;
     }

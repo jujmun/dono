@@ -24,6 +24,9 @@ export default defineSchema({
     /** ISO date YYYY-MM-DD — required for 18+ eligibility under the T&Cs. */
     dateOfBirth: v.optional(v.string()),
     ageAttestedAt: v.optional(v.number()),
+    /** Set when the user explicitly skips profile setup — bypasses the
+     * forced /onboarding redirect in app/_layout.tsx until they revisit it. */
+    onboardingSkippedAt: v.optional(v.number()),
     avatarUrl: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
     role: v.union(v.literal("user"), v.literal("admin")),

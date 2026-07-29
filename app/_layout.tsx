@@ -67,6 +67,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       isAuthenticated &&
       profile !== undefined &&
       !profile?.name &&
+      !profile?.onboardingSkippedAt &&
       !adminUser;
     const needsWelcomeTour =
       isAuthenticated &&

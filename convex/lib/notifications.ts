@@ -27,9 +27,9 @@ export function buildCampaignResubmittedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was resubmitted and needs re-review.`;
 }
 
-// TODO: replace with real onboarding flow — this is a placeholder notification
-// only, per the initial in-app notifications pass. relatedEntityId is
-// intentionally omitted so the bell just shows the message with no link.
+/** Sent once when a user skips profile setup (see users.skipOnboarding).
+ * No relatedEntityId — notification-bell.tsx routes "onboarding"-type
+ * notifications to /onboarding by type, not by relatedEntityId. */
 export const ONBOARDING_MESSAGE = "Click here for onboarding.";
 
 export function validateAdminMessageBody(body: string) {
