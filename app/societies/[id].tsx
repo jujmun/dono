@@ -24,6 +24,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { SocietyFollowButton } from "@/components/society-follow-button";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
+import { LeaderDonationLedger } from "@/components/leader-donation-ledger";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { VerificationBadge } from "@/components/ui/verification-badge";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
@@ -431,12 +432,17 @@ function MembershipActions({
 
 function SocietyCampaignsAndLeaderPanels({ slug }: { slug: string }) {
   const { isAuthenticated } = useConvexAuth();
+  const mine = useQuery(
+    api.societies.getMine,
+    isAuthenticated && slug ? { slug } : "skip",
+  );
   const membership = useQuery(
     api.societyMembers.getMyMembership,
     isAuthenticated && slug ? { communitySlug: slug } : "skip",
   );
   const isLeader =
     membership?.status === "approved" && membership.role === "leader";
+  const canManage = Boolean(mine) || isLeader;
 
   const communityCampaigns = useQuery(
     api.campaigns.listByCommunity,
@@ -448,6 +454,7 @@ function SocietyCampaignsAndLeaderPanels({ slug }: { slug: string }) {
       {isLeader ? <LeaderJoinRequests slug={slug} /> : null}
       {isLeader ? <LeaderPendingCampaigns slug={slug} /> : null}
       {isLeader ? <LeaderCampaignUpdates slug={slug} /> : null}
+      {canManage ? <LeaderDonationLedger slug={slug} /> : null}
 
       <View>
         <View className="mb-4 flex-row items-center gap-2">

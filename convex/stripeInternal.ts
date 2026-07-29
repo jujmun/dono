@@ -239,7 +239,7 @@ export const createPendingDonation = internalMutation({
     isAnonymous: v.optional(v.boolean()),
     campaignId: v.id("campaigns"),
     amount: v.number(),
-    stripePaymentIntentId: v.string(),
+    stripePaymentIntentId: v.optional(v.string()),
     stripeConnectedAccountId: v.string(),
     grossAmountMinor: v.number(),
     applicationFeeAmountMinor: v.number(),
@@ -267,7 +267,9 @@ export const createPendingDonation = internalMutation({
       currency: DONATION_CURRENCY,
       type: "one_time",
       paymentStatus: "pending",
-      stripePaymentIntentId: args.stripePaymentIntentId,
+      ...(args.stripePaymentIntentId
+        ? { stripePaymentIntentId: args.stripePaymentIntentId }
+        : {}),
       stripeConnectedAccountId: args.stripeConnectedAccountId,
       grossAmountMinor: args.grossAmountMinor,
       applicationFeeAmountMinor: args.applicationFeeAmountMinor,
@@ -280,6 +282,19 @@ export const createPendingDonation = internalMutation({
       legalAcceptedAt: args.legalAcceptedAt,
       createdAt: Date.now(),
     });
+  },
+});
+
+export const attachPaymentIntentToDonation = internalMutation({
+  args: {
+    donationId: v.id("donations"),
+    stripePaymentIntentId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    await ctx.db.patch(args.donationId, {
+      stripePaymentIntentId: args.stripePaymentIntentId,
+    });
+    return { ok: true as const };
   },
 });
 

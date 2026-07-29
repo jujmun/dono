@@ -236,3 +236,31 @@ export async function requireSocietyLeader(ctx: CtxWithDb, communitySlug: string
   }
   return { userId, community, membership };
 }
+
+/** Society submission creator or approved leader — matches Connect payout access. */
+export async function canManageSociety(
+  ctx: CtxWithDb,
+  userId: Id<"users">,
+  communitySlug: string,
+) {
+  const society = await ctx.db
+    .query("societies")
+    .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+    .unique();
+  if (society?.creatorId === userId) {
+    return true;
+  }
+
+  const membership = await getApprovedMembership(ctx, communitySlug, userId);
+  return Boolean(
+    membership && membership.status === "approved" && membership.role === "leader",
+  );
+}
+
+export async function requireCanManageSociety(ctx: CtxWithDb, communitySlug: string) {
+  const { userId } = await requireVerifiedUser(ctx);
+  if (!(await canManageSociety(ctx, userId, communitySlug))) {
+    accessDenied();
+  }
+  return { userId };
+}

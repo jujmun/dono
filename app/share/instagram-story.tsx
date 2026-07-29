@@ -14,11 +14,11 @@ import { Download, Instagram, Copy, Share2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency } from "@/lib/constants";
+import { downloadBlob } from "@/lib/download-blob";
 import {
   buildCampaignUrl,
   buildInstagramStoryCaption,
   canShareStoryImageFile,
-  downloadBlob,
   getSiteOrigin,
   openInstagramStoryCamera,
   renderInstagramStoryPngBlob,
