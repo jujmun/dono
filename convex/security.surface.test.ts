@@ -11,7 +11,13 @@ import * as usersModule from "./users";
 describe("Convex public API security surface", () => {
   it("security module only exports internalMutation wrappers", () => {
     expect(Object.keys(securityModule).sort()).toEqual(
-      ["FLOW_LIMITS", "consumeOtpSend", "consumeQuota", "normalizeAndValidateOxfordEmail"].sort(),
+      [
+        "FLOW_LIMITS",
+        "consumeOtpSend",
+        "consumeQuota",
+        "resetQuota",
+        "normalizeAndValidateOxfordEmail",
+      ].sort(),
     );
     // Public `mutation` exports like record/assertAllowed must not exist.
     expect("record" in securityModule).toBe(false);

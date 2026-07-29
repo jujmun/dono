@@ -27,6 +27,12 @@ export function buildCampaignResubmittedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was resubmitted and needs re-review.`;
 }
 
+/** Sent to a donor when Dono cancels their society subscription because the
+ * society has no active campaigns — see stripeWebhook.ts. */
+export function buildSocietySubscriptionCanceledMessage(societyName: string) {
+  return `Your subscription to '${societyName}' was canceled because it has no active campaigns right now.`;
+}
+
 /** Sent once when a user skips profile setup (see users.skipOnboarding).
  * No relatedEntityId — notification-bell.tsx routes "onboarding"-type
  * notifications to /onboarding by type, not by relatedEntityId. */
@@ -55,7 +61,8 @@ interface CreateNotificationArgs {
     | "admin_message"
     | "onboarding"
     | "campaign_edited"
-    | "campaign_resubmitted";
+    | "campaign_resubmitted"
+    | "society_subscription_canceled";
   message: string;
   relatedEntityType?: "campaign";
   relatedEntityId?: string;

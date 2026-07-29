@@ -251,6 +251,9 @@ export const notificationFields = {
     /** Sent to every admin when an owner resubmits a changes-requested/
      * rejected campaign for re-review — see campaignCreator.resubmit. */
     v.literal("campaign_resubmitted"),
+    /** Sent to a donor when Dono cancels their society subscription because
+     * the society has no active campaigns — see stripeWebhook.ts. */
+    v.literal("society_subscription_canceled"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more

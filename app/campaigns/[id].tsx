@@ -21,6 +21,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
+import { CampaignRecentDonations } from "@/components/campaign-recent-donations";
 import { CampaignLiveStream } from "@/components/campaign-live-stream";
 import {
   ReceiptDivider,
@@ -33,7 +34,6 @@ import { buildGoalLineItems } from "@/lib/receipt";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import type { Campaign } from "@/lib/types";
-import type { DonationFrequency } from "@/components/donate-sheet-types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
@@ -82,7 +82,6 @@ export default function CampaignDetailPage() {
     RECOMMENDED_DONATION_AMOUNT,
   );
   const [customAmount, setCustomAmount] = useState("");
-  const [frequency, setFrequency] = useState<DonationFrequency>("one_time");
   const [donorEmail, setDonorEmail] = useState("");
   const [coverFees, setCoverFees] = useState(true);
   const [legalAccepted, setLegalAccepted] = useState(false);
@@ -216,7 +215,6 @@ export default function CampaignDetailPage() {
     : null;
   const accent = resolvedTemplate?.unlocks.accent;
   const heroLayout = resolvedTemplate?.unlocks.heroLayout ?? "media-first";
-  const showFrequencyToggle = Platform.OS === "web";
 
   const handleToggleLike = async () => {
     if (!id || likeLoading) return;
@@ -302,7 +300,7 @@ export default function CampaignDetailPage() {
       campaign_goal: campaign.goal,
       campaign_raised: campaign.raised,
       amount: resolvedAmount,
-      donation_type: frequency === "monthly" ? "recurring" : "one_time",
+      donation_type: "one_time",
     });
     setDonateSheetOpen(true);
   };
@@ -317,9 +315,6 @@ export default function CampaignDetailPage() {
       campaign={campaign}
       selectedAmount={selectedAmount}
       customAmount={customAmount}
-      frequency={frequency}
-      onFrequencyChange={setFrequency}
-      showFrequencyToggle={showFrequencyToggle}
       activeMatch={activeMatch ?? null}
       liked={liked}
       following={following}
@@ -566,6 +561,12 @@ export default function CampaignDetailPage() {
         </View>
       ) : null}
 
+      <View className="mb-6">
+        <RetroPanel title="Donations.log" accent="mint">
+          <CampaignRecentDonations campaignSlug={campaign.id} />
+        </RetroPanel>
+      </View>
+
       <View nativeID="campaign-comments" className="mb-4">
         <RetroPanel title="Comments.log" accent="marigold">
           <CampaignCommentsSection
@@ -601,7 +602,6 @@ export default function CampaignDetailPage() {
             paymentIntentId: options?.paymentIntentId,
           });
         }}
-        frequency={showFrequencyToggle ? frequency : "one_time"}
       />
 
       <DonationThankYouModal

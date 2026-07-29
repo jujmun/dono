@@ -8,7 +8,6 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Link } from "expo-router";
 import { useAction, useMutation } from "convex/react";
 import {
   Elements,
@@ -43,7 +42,6 @@ function PaymentForm({
   campaignId,
   campaignTitle,
   selectedAmount,
-  frequency,
   paymentIntentId,
   coverFees,
   feeTotalLabel,
@@ -54,7 +52,6 @@ function PaymentForm({
   campaignId: string;
   campaignTitle: string;
   selectedAmount: number;
-  frequency: DonateSheetProps["frequency"];
   paymentIntentId: string;
   coverFees: boolean;
   feeTotalLabel: string;
@@ -68,7 +65,6 @@ function PaymentForm({
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const donationType = frequency === "monthly" ? "recurring" : "one_time";
 
   const handleDonate = async () => {
     if (!stripe || !elements) return;
@@ -81,7 +77,7 @@ function PaymentForm({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: donationType,
+        donation_type: "one_time",
         cover_fees: coverFees,
       });
 
@@ -101,16 +97,14 @@ function PaymentForm({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: donationType,
+        donation_type: "one_time",
       });
 
       let pendingConfirmation = false;
-      if (frequency === "one_time") {
-        try {
-          await confirmOneTimeDonation({ paymentIntentId });
-        } catch {
-          pendingConfirmation = true;
-        }
+      try {
+        await confirmOneTimeDonation({ paymentIntentId });
+      } catch {
+        pendingConfirmation = true;
       }
 
       onPaymentCompleted();
@@ -145,9 +139,7 @@ function PaymentForm({
             <ActivityIndicator color="#fff" />
           ) : (
             <Text className="font-retro-bold text-sm text-white">
-              {frequency === "monthly"
-                ? `Subscribe ${feeTotalLabel}/month`
-                : `Pay ${feeTotalLabel}`}
+              Pay {feeTotalLabel}
             </Text>
           )}
         </Pressable>
@@ -161,7 +153,6 @@ export function DonateSheet({
   campaignId,
   campaignTitle,
   selectedAmount,
-  frequency,
   isAuthenticated,
   donorEmail,
   onDonorEmailChange,
@@ -173,9 +164,6 @@ export function DonateSheet({
   onSuccess,
 }: DonateSheetProps) {
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
-  const createRecurringDonationSubscription = useAction(
-    api.stripe.createRecurringDonationSubscription,
-  );
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
@@ -190,16 +178,13 @@ export function DonateSheet({
 
   donorEmailRef.current = donorEmail;
 
-  const frequencyLabel =
-    frequency === "monthly" ? "Monthly donation" : "One-time donation";
-  const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
   const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount, coverFees);
   const feeTotalLabel = formatMinorGbp(feeBreakdown.totalChargedMinor);
   const stripeConfigured = Boolean(publishableKey);
 
   const abandonActivePaymentIntent = () => {
     const piId = activePaymentIntentIdRef.current;
-    if (!piId || paymentCompletedRef.current || frequency !== "one_time") {
+    if (!piId || paymentCompletedRef.current) {
       return;
     }
 
@@ -222,12 +207,12 @@ export function DonateSheet({
       return;
     }
 
-    if (monthlyBlockedForGuest || !legalAccepted || !stripeConfigured) {
+    if (!legalAccepted || !stripeConfigured) {
       setClientSecret(null);
       setPaymentIntentId(null);
       setStripeAccountId(null);
       setLoading(false);
-      if (!legalAccepted && !monthlyBlockedForGuest) {
+      if (!legalAccepted) {
         setError(null);
       }
       return;
@@ -243,12 +228,6 @@ export function DonateSheet({
         context: "donate",
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
       });
-      if (frequency === "monthly") {
-        return createRecurringDonationSubscription({
-          campaignSlug: campaignId,
-          amount: selectedAmount,
-        });
-      }
       return createPaymentIntent({
         campaignSlug: campaignId,
         amount: selectedAmount,
@@ -262,15 +241,10 @@ export function DonateSheet({
 
     void createPayment()
       .then((result) => {
-        const piId =
-          "paymentIntentId" in result && result.paymentIntentId
-            ? result.paymentIntentId
-            : null;
-
         if (cancelled) {
-          if (piId && frequency === "one_time") {
+          if (result.paymentIntentId) {
             void abandonPaymentIntent({
-              paymentIntentId: piId,
+              paymentIntentId: result.paymentIntentId,
               donorEmail: donorEmailRef.current.trim() || undefined,
             });
           }
@@ -278,13 +252,9 @@ export function DonateSheet({
         }
 
         setClientSecret(result.clientSecret);
-        if (piId) {
-          setPaymentIntentId(piId);
-          activePaymentIntentIdRef.current = piId;
-        }
-        if ("stripeAccountId" in result && result.stripeAccountId) {
-          setStripeAccountId(result.stripeAccountId);
-        }
+        setPaymentIntentId(result.paymentIntentId);
+        activePaymentIntentIdRef.current = result.paymentIntentId;
+        setStripeAccountId(result.stripeAccountId);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -309,21 +279,16 @@ export function DonateSheet({
     visible,
     campaignId,
     selectedAmount,
-    frequency,
-    monthlyBlockedForGuest,
     coverFees,
     legalAccepted,
     stripeConfigured,
     isAuthenticated,
     createPaymentIntent,
-    createRecurringDonationSubscription,
     abandonPaymentIntent,
     acceptDocuments,
   ]);
 
-  const paymentReady =
-    Boolean(clientSecret) &&
-    (frequency === "monthly" || Boolean(paymentIntentId && stripeAccountId));
+  const paymentReady = Boolean(clientSecret && paymentIntentId && stripeAccountId);
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -341,13 +306,10 @@ export function DonateSheet({
 
             <Text className="mt-5 font-retro-mono-bold text-3xl text-dono-primary">
               {feeTotalLabel}
-              {frequency === "monthly" ? (
-                <Text className="text-base text-dono-muted">/month</Text>
-              ) : null}
             </Text>
-            <Text className="mt-1 text-sm text-dono-muted">{frequencyLabel}</Text>
+            <Text className="mt-1 text-sm text-dono-muted">One-time donation</Text>
 
-            {!isAuthenticated && frequency === "one_time" ? (
+            {!isAuthenticated ? (
               <TextInput
                 value={donorEmail}
                 onChangeText={onDonorEmailChange}
@@ -395,20 +357,7 @@ export function DonateSheet({
               Not Gift Aid. Dono does not issue charitable tax receipts.
             </Text>
 
-            {monthlyBlockedForGuest ? (
-              <View className="mt-6">
-                <Text className="text-sm text-dono-muted">
-                  Monthly donations need an account so you can manage your subscription.
-                </Text>
-                <Link href="/signin" asChild>
-                  <Pressable className="mt-4 items-center rounded-full bg-dono-primary py-3">
-                    <Text className="font-retro-bold text-sm text-white">
-                      Sign in to continue
-                    </Text>
-                  </Pressable>
-                </Link>
-              </View>
-            ) : !stripeConfigured ? (
+            {!stripeConfigured ? (
               <Text className="mt-6 text-sm text-red-600">
                 Stripe is not configured for this environment. Set
                 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY and restart the app.
@@ -435,7 +384,6 @@ export function DonateSheet({
                     campaignId={campaignId}
                     campaignTitle={campaignTitle}
                     selectedAmount={selectedAmount}
-                    frequency={frequency}
                     paymentIntentId={paymentIntentId}
                     coverFees={coverFees}
                     feeTotalLabel={feeTotalLabel}

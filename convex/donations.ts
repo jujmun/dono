@@ -200,39 +200,80 @@ export const listRecentForCampaign = query({
           displayName: firstNameFromDisplay(profile?.name),
           relativeTime: relativeTimeLabel(donation.createdAt),
           createdAt: donation.createdAt,
+          viaSocietySubscription: Boolean(donation.societySubscriptionId),
         };
       }),
     );
   },
 });
 
-export const listMyRecurringDonations = query({
+export const listMySocietySubscriptions = query({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
 
-    const recurringDonations = await ctx.db
-      .query("recurringDonations")
+    const societySubscriptions = await ctx.db
+      .query("societySubscriptions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     const results = await Promise.all(
-      recurringDonations.map(async (recurringDonation) => {
-        const campaign = await ctx.db.get(recurringDonation.campaignId);
+      societySubscriptions.map(async (societySubscription) => {
+        const [society, community] = await Promise.all([
+          ctx.db
+            .query("societies")
+            .withIndex("by_slug", (q) => q.eq("slug", societySubscription.communitySlug))
+            .unique(),
+          ctx.db
+            .query("communities")
+            .withIndex("by_slug", (q) => q.eq("slug", societySubscription.communitySlug))
+            .unique(),
+        ]);
         return {
-          id: recurringDonation._id,
-          amount: recurringDonation.amount,
-          currency: recurringDonation.currency,
-          status: recurringDonation.status,
-          createdAt: recurringDonation.createdAt,
-          canceledAt: recurringDonation.canceledAt,
-          campaignTitle: campaign?.title ?? "Unknown campaign",
-          campaignSlug: campaign?.slug ?? "",
+          id: societySubscription._id,
+          amount: societySubscription.amount,
+          currency: societySubscription.currency,
+          status: societySubscription.status,
+          canceledReason: societySubscription.canceledReason ?? null,
+          createdAt: societySubscription.createdAt,
+          canceledAt: societySubscription.canceledAt,
+          societyName: society?.name ?? community?.name ?? "Unknown society",
+          communitySlug: societySubscription.communitySlug,
         };
       }),
     );
 
     return results.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+/** The current user's non-canceled subscription to one specific society, if
+ * any — powers the "you're subscribed £X/month" state on the society page
+ * header so it doesn't just live buried in account settings. */
+export const getMySocietySubscription = query({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+
+    const societySubscriptions = await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const active = societySubscriptions
+      .filter(
+        (s) => s.communitySlug === args.communitySlug && s.status !== "canceled",
+      )
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+
+    if (!active) return null;
+
+    return {
+      id: active._id,
+      amount: active.amount,
+      currency: active.currency,
+      status: active.status,
+    };
   },
 });
 
