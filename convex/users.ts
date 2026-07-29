@@ -99,6 +99,7 @@ export const me = query({
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
+      onboardingSkippedAt: profile.onboardingSkippedAt ?? null,
     };
   },
 });
@@ -433,8 +434,24 @@ export const ensureMyProfile = mutation({
       updatedAt: now,
     });
     await linkGuestDonationsForUser(ctx, userId, user.email);
-    // TODO: replace with real onboarding flow — placeholder notification
-    // only, no relatedEntityId (no onboarding route exists yet).
+  },
+});
+
+/** Called when the user explicitly skips profile setup from /onboarding.
+ * Marks the profile so the auth guard stops forcing them back there, and
+ * sends the one onboarding reminder notification (clicking it reopens
+ * /onboarding — see notification-bell.tsx). */
+export const skipOnboarding = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile || profile.onboardingSkippedAt) return;
+
+    await ctx.db.patch(profile._id, { onboardingSkippedAt: Date.now() });
     await createNotification(ctx, {
       userId,
       type: "onboarding",
