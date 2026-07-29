@@ -12,10 +12,10 @@ import {
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
-import { CommunityCard } from "@/components/community-card";
+import { SocietyCard } from "@/components/society-card";
 import { LoginGate } from "@/components/login-gate";
 import { formatCurrency } from "@/lib/constants";
-import type { Campaign, Community, DonorImpact } from "@/lib/types";
+import type { Campaign, DonorImpact, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
 export default function DashboardPage() {
@@ -32,20 +32,20 @@ export default function DashboardPage() {
     api.engagement.listFollowedCampaigns,
     isAuthenticated ? {} : "skip",
   ) as Campaign[] | undefined;
-  const followedCommunitySlugs = useQuery(
-    api.engagement.listFollowedCommunities,
+  const followedSocietySlugs = useQuery(
+    api.engagement.listFollowedSocieties,
     isAuthenticated ? {} : "skip",
   ) as string[] | undefined;
-  const communities = useQuery(
-    api.communities.list,
+  const societies = useQuery(
+    api.societies.listActive,
     isAuthenticated ? {} : "skip",
-  ) as Community[] | undefined;
-  const followedCommunities = useMemo(() => {
-    if (!followedCommunitySlugs || !communities) return undefined;
-    return followedCommunitySlugs
-      .map((slug) => communities.find((community) => community.id === slug))
-      .filter((community): community is Community => community != null);
-  }, [followedCommunitySlugs, communities]);
+  ) as Society[] | undefined;
+  const followedSocieties = useMemo(() => {
+    if (!followedSocietySlugs || !societies) return undefined;
+    return followedSocietySlugs
+      .map((slug) => societies.find((society) => society.slug === slug))
+      .filter((society): society is Society => society != null);
+  }, [followedSocietySlugs, societies]);
 
   if (isLoading) {
     return (
@@ -65,7 +65,7 @@ export default function DashboardPage() {
     );
   }
 
-  if (donorImpact === undefined || followedCampaigns === undefined || followedCommunities === undefined) {
+  if (donorImpact === undefined || followedCampaigns === undefined || followedSocieties === undefined) {
     return (
       <AppShell>
         <View className="items-center py-16">
@@ -79,7 +79,7 @@ export default function DashboardPage() {
   const impact = donorImpact ?? {
     totalDonated: 0,
     campaignsSupported: 0,
-    communitiesFollowed: 0,
+    societiesFollowed: 0,
     impactHighlights: [],
     recentDonations: [],
   };
@@ -107,8 +107,8 @@ export default function DashboardPage() {
           },
           {
             icon: Users,
-            label: "Communities",
-            value: impact.communitiesFollowed.toString(),
+            label: "Societies",
+            value: impact.societiesFollowed.toString(),
           },
         ].map((stat) => (
           <View
@@ -134,8 +134,8 @@ export default function DashboardPage() {
             {formatCurrency(donoWrapped.totalDonated)} across{" "}
             {donoWrapped.campaignsSupported} campaign
             {donoWrapped.campaignsSupported === 1 ? "" : "s"}
-            {donoWrapped.topCommunity
-              ? ` · Top community: ${donoWrapped.topCommunity}`
+            {donoWrapped.topSociety
+              ? ` · Top society: ${donoWrapped.topSociety}`
               : ""}
           </Text>
           <Text className="mt-2 text-sm text-dono-text">
@@ -241,7 +241,7 @@ export default function DashboardPage() {
         <View className="mt-8">
           <View className="mb-4 flex-row items-center justify-between">
             <Text className="text-lg font-retro-bold text-dono-text">
-              Communities You Follow
+              Societies You Follow
             </Text>
             <Link href="/societies" asChild>
               <Pressable className="flex-row items-center gap-1">
@@ -250,20 +250,27 @@ export default function DashboardPage() {
               </Pressable>
             </Link>
           </View>
-          {followedCommunities.length > 0 ? (
+          {followedSocieties.length > 0 ? (
             <View className="flex-row flex-wrap justify-between gap-y-6">
-              {followedCommunities.map((community) => (
-                <View key={community.id} className="w-[48%]">
-                  <CommunityCard community={community} />
+              {followedSocieties.map((society) => (
+                <View key={society.slug} className="w-[48%]">
+                  <SocietyCard society={society} />
                 </View>
               ))}
             </View>
           ) : (
             <View className="rounded-xl border border-dono-border bg-white p-4">
               <Text className="text-sm text-dono-muted">
-                You are not following any communities yet. Follow societies from their
-                profile pages to see them here.
+                You are not following any societies yet.
               </Text>
+              <Link href="/societies" asChild>
+                <Pressable className="mt-3 flex-row items-center gap-1 self-start">
+                  <Text className="font-retro-bold text-sm text-dono-primary">
+                    Browse societies to follow
+                  </Text>
+                  <ArrowRight size={16} color="#17211B" />
+                </Pressable>
+              </Link>
             </View>
           )}
         </View>
