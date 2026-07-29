@@ -8,7 +8,7 @@ maintenance rule.
 
 Tasks are grouped by the team most responsible. A task that spans teams is
 listed under each team it involves rather than being duplicated with different
-wording.
+wording. ----
 
 ---
 
