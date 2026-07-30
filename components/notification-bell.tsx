@@ -163,7 +163,7 @@ export function NotificationBell() {
     }
     if (notification.type === "onboarding") {
       setOpen(false);
-      router.push("/onboarding");
+      router.push("/welcome");
       return;
     }
     if (!notification.relatedEntityId || notification.relatedEntityType !== "campaign") {
@@ -201,7 +201,7 @@ export function NotificationBell() {
       void markRead({ notificationId: notification.id as Id<"notifications"> });
     }
     setOpen(false);
-    router.push("/onboarding");
+    router.push("/welcome");
   };
 
   const handleDeleteNotification = (notification: Notification) => {
