@@ -46,6 +46,27 @@ async function assertCanHideCampaignComment(
   });
 }
 
+async function assertCanComment(
+  ctx: MutationCtx,
+  campaign: Doc<"campaigns">,
+  userId: Id<"users">,
+) {
+  if (campaign.createdBy === userId) return;
+  const membership = await ctx.db
+    .query("societyMembers")
+    .withIndex("by_community_user", (q) =>
+      q.eq("communitySlug", campaign.creator.communityId).eq("userId", userId),
+    )
+    .unique();
+  if (membership?.status === "approved") {
+    return;
+  }
+  throw new ConvexError({
+    code: "FORBIDDEN",
+    message: "Only members of this society can comment on this campaign.",
+  });
+}
+
 async function getCampaignBySlug(ctx: QueryCtx | MutationCtx, slug: string) {
   return await ctx.db
     .query("campaigns")
@@ -266,6 +287,7 @@ export const addComment = mutation({
     if (!campaign) {
       throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
     }
+    await assertCanComment(ctx, campaign, userId);
 
     const commentId = await ctx.db.insert("campaignComments", {
       campaignSlug: args.campaignSlug,

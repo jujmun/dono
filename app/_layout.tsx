@@ -54,7 +54,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const root = String(segments[0] ?? "");
     const inOnboarding = root === "onboarding";
     const inWelcome = root === "welcome";
-    const inProtected = root === "funds";
     const inAuthPublic =
       root === "signin" ||
       root === "signup" ||
@@ -81,7 +80,7 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
 
     // Demo open-admin: allow /admin without a session (Preview + Convex dev only).
     const blockUnauthenticated =
-      (inProtected || inOnboarding || inWelcome) ||
+      (inOnboarding || inWelcome) ||
       (inAdmin && !isDemoOpenAdminEnabled());
     if (blockUnauthenticated && !isAuthenticated) {
       router.replace("/signin");
