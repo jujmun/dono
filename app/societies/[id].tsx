@@ -9,7 +9,7 @@ import {
   Platform,
   Image,
 } from "react-native";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useState } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -18,11 +18,13 @@ import {
   Target,
   Globe,
   ExternalLink,
+  Repeat,
   Check,
   X,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { SocietyFollowButton } from "@/components/society-follow-button";
+import { SocietySubscribeSheet } from "@/components/society-subscribe-sheet";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { LeaderDonationLedger } from "@/components/leader-donation-ledger";
 import { CampaignImage } from "@/components/ui/campaign-image";
@@ -30,6 +32,7 @@ import { VerificationBadge } from "@/components/ui/verification-badge";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency } from "@/lib/constants";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { initialsFor, normalizeExternalUrl } from "@/lib/utils";
 import {
   uploadCampaignUpdateMedia,
@@ -176,42 +179,13 @@ function SocietyDetail({
             </View>
           </View>
 
-          {society.websiteUrl || society.secondaryLink ? (
-            <View className="flex-row flex-wrap gap-3">
-              {society.websiteUrl ? (
-                <Pressable
-                  onPress={() =>
-                    void Linking.openURL(normalizeExternalUrl(society.websiteUrl))
-                  }
-                  className="flex-row items-center justify-center gap-2 rounded-full bg-dono-primary px-5 py-2.5"
-                >
-                  <Globe size={16} color="#fff" />
-                  <Text className="font-retro-bold text-sm text-white">
-                    Visit website
-                  </Text>
-                </Pressable>
-              ) : null}
-              {society.secondaryLink ? (
-                <Pressable
-                  onPress={() =>
-                    void Linking.openURL(
-                      normalizeExternalUrl(society.secondaryLink ?? ""),
-                    )
-                  }
-                  className="flex-row items-center justify-center gap-2 rounded-full border border-dono-border bg-white px-5 py-2.5"
-                >
-                  <ExternalLink size={16} color="#17211B" />
-                  <Text className="font-retro-bold text-sm text-dono-primary">
-                    More links
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-
-          {canJoin ? (
-            <MembershipActions slug={slug} community={community!} showFollow />
-          ) : null}
+          <SocietyActionHeader
+            slug={slug}
+            name={society.name}
+            websiteUrl={society.websiteUrl}
+            secondaryLink={society.secondaryLink}
+            canJoin={canJoin}
+          />
           <SocietyPayoutSetupBanner slug={slug} />
         </View>
 
@@ -274,7 +248,12 @@ function CommunityDetail({
           </View>
 
           {isSociety ? (
-            <MembershipActions slug={slug} community={community} showFollow />
+            <SocietyActionHeader
+              slug={slug}
+              name={community.name}
+              university={community.university}
+              canJoin
+            />
           ) : (
             <SocietyFollowButton
               slug={slug}
@@ -312,15 +291,7 @@ function CommunityDetail({
   );
 }
 
-function MembershipActions({
-  slug,
-  community,
-  showFollow = false,
-}: {
-  slug: string;
-  community: Community;
-  showFollow?: boolean;
-}) {
+function MembershipActions({ slug }: { slug: string }) {
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const requestJoin = useMutation(api.societyMembers.requestJoin);
@@ -381,44 +352,23 @@ function MembershipActions({
             }
           }}
           disabled={loading || status === "pending"}
-          className={`flex-row items-center justify-center gap-2 rounded-full px-5 py-2.5 ${
+          className={`flex-row items-center justify-center gap-2 rounded-full border px-4 py-2 ${
             status === "approved"
-              ? "border border-dono-primary bg-dono-primary/5"
+              ? "border-dono-primary bg-dono-primary/5"
               : status === "pending"
-                ? "border border-amber-300 bg-amber-50 opacity-80"
-                : "bg-dono-primary"
+                ? "border-amber-300 bg-amber-50 opacity-80"
+                : "border-dono-border bg-white"
           }`}
         >
           {loading ? (
-            <ActivityIndicator
-              size="small"
-              color={status === "approved" || status === "pending" ? "#17211B" : "#fff"}
-            />
+            <ActivityIndicator size="small" color="#17211B" />
           ) : (
-            <UserPlus
-              size={16}
-              color={
-                status === "approved" || status === "pending" ? "#17211B" : "#fff"
-              }
-            />
+            <UserPlus size={14} color="#17211B" />
           )}
-          <Text
-            className={`font-retro-bold text-sm ${
-              status === "approved" || status === "pending"
-                ? "text-dono-primary"
-                : "text-white"
-            }`}
-          >
+          <Text className="font-retro-bold text-sm text-dono-text">
             {status === "approved" ? "Leave society" : joinLabel}
           </Text>
         </Pressable>
-        {showFollow ? (
-          <SocietyFollowButton
-            slug={slug}
-            name={community.name}
-            university={community.university}
-          />
-        ) : null}
       </View>
       {status === "approved" && role === "leader" ? (
         <Text className="text-xs text-dono-muted">
@@ -426,6 +376,152 @@ function MembershipActions({
         </Text>
       ) : null}
       {error ? <Text className="text-xs text-rose-700">{error}</Text> : null}
+    </View>
+  );
+}
+
+/**
+ * Shared header actions for both society entity types (new `societies` table
+ * and the legacy `communities` catalog). Subscribe is the primary conversion
+ * goal, so it gets the large button; Join, Follow, and links are demoted to
+ * a row of compact secondary actions.
+ */
+function SocietyActionHeader({
+  slug,
+  name,
+  university,
+  websiteUrl,
+  secondaryLink,
+  canJoin,
+}: {
+  slug: string;
+  name: string;
+  university?: string;
+  websiteUrl?: string | null;
+  secondaryLink?: string | null;
+  /** True when the viewer can join/leave this society (bridged into the membership catalog). */
+  canJoin: boolean;
+}) {
+  const { isAuthenticated } = useConvexAuth();
+  const [subscribeOpen, setSubscribeOpen] = useState(false);
+  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [cancelingSubscription, setCancelingSubscription] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const communityCampaigns = useQuery(api.campaigns.listByCommunity, {
+    communityId: slug,
+  }) as Campaign[] | undefined;
+  const campaignsLoaded = communityCampaigns !== undefined;
+  const activeCampaignCount =
+    communityCampaigns?.filter((c) => c.status === "active").length ?? 0;
+  const canSubscribe = campaignsLoaded && activeCampaignCount > 0;
+
+  const mySubscription = useQuery(
+    api.donations.getMySocietySubscription,
+    isAuthenticated ? { communitySlug: slug } : "skip",
+  );
+  const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
+
+  const handleCancelSubscription = () => {
+    if (!mySubscription) return;
+    setCancelingSubscription(true);
+    setCancelError(null);
+    void cancelSocietySubscription({ societySubscriptionId: mySubscription.id })
+      .catch((err) => setCancelError(getFriendlyPaymentError(err)))
+      .finally(() => setCancelingSubscription(false));
+  };
+
+  return (
+    <View className="gap-3">
+      {mySubscription ? (
+        <View className="gap-2 rounded-2xl border-2 border-dono-primary bg-dono-primary/5 px-4 py-3.5">
+          <View className="flex-row flex-wrap items-center justify-between gap-2">
+            <View className="flex-row items-center gap-2">
+              <Check size={18} color="#17211B" />
+              <Text className="font-retro-bold text-base text-dono-text">
+                Subscribed · £{mySubscription.amount}/month
+              </Text>
+            </View>
+            <Pressable
+              onPress={handleCancelSubscription}
+              disabled={cancelingSubscription}
+              className="rounded-full border border-dono-border bg-white px-3 py-1.5"
+            >
+              <Text className="font-retro-bold text-xs text-dono-muted">
+                {cancelingSubscription ? "Canceling…" : "Cancel subscription"}
+              </Text>
+            </Pressable>
+          </View>
+          {mySubscription.status === "past_due" ? (
+            <Text className="text-xs text-rose-700">
+              Your last payment failed — update your payment method or it will be
+              canceled automatically.
+            </Text>
+          ) : null}
+          {cancelError ? <Text className="text-xs text-rose-700">{cancelError}</Text> : null}
+        </View>
+      ) : (
+        <>
+          <Pressable
+            onPress={() => {
+              if (canSubscribe) setSubscribeOpen(true);
+            }}
+            disabled={!canSubscribe}
+            className={`flex-row items-center justify-center gap-2 rounded-full px-6 py-3.5 ${
+              canSubscribe ? "bg-dono-primary" : "bg-dono-border"
+            }`}
+          >
+            <Repeat size={18} color={canSubscribe ? "#fff" : "#8a8478"} />
+            <Text
+              className={`font-retro-bold text-base ${
+                canSubscribe ? "text-white" : "text-dono-muted"
+              }`}
+            >
+              Subscribe monthly
+            </Text>
+          </Pressable>
+          {campaignsLoaded && !canSubscribe ? (
+            <Text className="text-center text-xs text-dono-muted">
+              No active campaigns to support right now.
+            </Text>
+          ) : null}
+        </>
+      )}
+
+      <View className="flex-row flex-wrap items-center gap-2">
+        {canJoin ? <MembershipActions slug={slug} /> : null}
+        <SocietyFollowButton slug={slug} name={name} university={university} compact />
+        {websiteUrl ? (
+          <Pressable
+            onPress={() => void Linking.openURL(normalizeExternalUrl(websiteUrl))}
+            accessibilityRole="button"
+            accessibilityLabel="Visit website"
+            className="h-9 w-9 items-center justify-center rounded-full border border-dono-border bg-white"
+          >
+            <Globe size={16} color="#56615A" />
+          </Pressable>
+        ) : null}
+        {secondaryLink ? (
+          <Pressable
+            onPress={() => void Linking.openURL(normalizeExternalUrl(secondaryLink))}
+            accessibilityRole="button"
+            accessibilityLabel="More links"
+            className="h-9 w-9 items-center justify-center rounded-full border border-dono-border bg-white"
+          >
+            <ExternalLink size={16} color="#56615A" />
+          </Pressable>
+        ) : null}
+      </View>
+
+      <SocietySubscribeSheet
+        visible={subscribeOpen}
+        communitySlug={slug}
+        societyName={name}
+        isAuthenticated={isAuthenticated}
+        legalAccepted={legalAccepted}
+        onLegalAcceptedChange={setLegalAccepted}
+        onClose={() => setSubscribeOpen(false)}
+        onSuccess={() => setSubscribeOpen(false)}
+      />
     </View>
   );
 }

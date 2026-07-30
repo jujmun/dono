@@ -73,15 +73,15 @@ export default function AccountPage() {
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
-  const recurringDonations = useQuery(
-    api.donations.listMyRecurringDonations,
+  const societySubscriptions = useQuery(
+    api.donations.listMySocietySubscriptions,
     isAuthenticated ? {} : "skip",
   );
   const reviewMessages = useQuery(
     api.reviewMessages.listMine,
     isAuthenticated ? {} : "skip",
   );
-  const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
+  const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
   const requestAccountDeletion = useMutation(api.users.requestAccountDeletion);
 
   const [name, setName] = useState("");
@@ -95,10 +95,10 @@ export default function AccountPage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [cancelingId, setCancelingId] = useState<Id<"recurringDonations"> | null>(
+  const [cancelingId, setCancelingId] = useState<Id<"societySubscriptions"> | null>(
     null,
   );
-  const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
@@ -205,11 +205,11 @@ export default function AccountPage() {
     });
   };
 
-  const handleCancelRecurring = (recurringDonationId: Id<"recurringDonations">) => {
-    setCancelingId(recurringDonationId);
-    setRecurringError(null);
-    void cancelRecurringDonation({ recurringDonationId })
-      .catch((err) => setRecurringError(getFriendlyPaymentError(err)))
+  const handleCancelSubscription = (societySubscriptionId: Id<"societySubscriptions">) => {
+    setCancelingId(societySubscriptionId);
+    setSubscriptionError(null);
+    void cancelSocietySubscription({ societySubscriptionId })
+      .catch((err) => setSubscriptionError(getFriendlyPaymentError(err)))
       .finally(() => setCancelingId(null));
   };
 
@@ -265,8 +265,8 @@ export default function AccountPage() {
     .charAt(0)
     .toUpperCase();
   const memberSince = formatMemberSince(profile?.emailVerifiedAt);
-  const activeRecurringDonations =
-    recurringDonations?.filter((donation) => donation.status !== "canceled") ?? [];
+  const activeSocietySubscriptions =
+    societySubscriptions?.filter((sub) => sub.status !== "canceled") ?? [];
 
   return (
     <AppShell>
@@ -482,51 +482,51 @@ export default function AccountPage() {
         </SectionCard>
 
         <SectionCard
-          title="Recurring donations"
-          subtitle="Manage your monthly campaign subscriptions."
+          title="Society subscriptions"
+          subtitle="Manage your monthly subscriptions to societies."
         >
-          {recurringError ? (
-            <Text className="mt-3 text-sm text-rose-700">{recurringError}</Text>
+          {subscriptionError ? (
+            <Text className="mt-3 text-sm text-rose-700">{subscriptionError}</Text>
           ) : null}
 
-          {recurringDonations === undefined ? (
+          {societySubscriptions === undefined ? (
             <View className="mt-4 items-center rounded-xl border border-dono-border bg-dono-bg py-8">
               <ActivityIndicator color="#17211B" />
             </View>
-          ) : activeRecurringDonations.length === 0 ? (
+          ) : activeSocietySubscriptions.length === 0 ? (
             <View className="mt-4 flex-row items-center justify-between gap-4 rounded-xl border border-dono-border bg-dono-bg px-4 py-5">
               <Text className="flex-1 text-sm text-dono-muted">
-                No active monthly donations.
+                No active society subscriptions.
               </Text>
-              <Link href="/campaigns" asChild>
+              <Link href="/societies" asChild>
                 <Pressable>
                   <Text className="font-retro-bold text-sm text-dono-primary">
-                    Browse campaigns →
+                    Browse societies →
                   </Text>
                 </Pressable>
               </Link>
             </View>
           ) : (
             <View className="mt-4 gap-3">
-              {activeRecurringDonations.map((donation) => (
+              {activeSocietySubscriptions.map((subscription) => (
                 <View
-                  key={donation.id}
+                  key={subscription.id}
                   className="rounded-xl border border-dono-border bg-dono-bg p-4"
                 >
                   <Text className="font-retro-bold text-dono-text">
-                    {donation.campaignTitle}
+                    {subscription.societyName}
                   </Text>
                   <Text className="mt-1 text-sm text-dono-muted">
-                    £{donation.amount}/month · {donation.status.replace("_", " ")}
+                    £{subscription.amount}/month · {subscription.status.replace("_", " ")}
                   </Text>
-                  {donation.status !== "canceled" ? (
+                  {subscription.status !== "canceled" ? (
                     <Pressable
-                      onPress={() => handleCancelRecurring(donation.id)}
-                      disabled={cancelingId === donation.id}
+                      onPress={() => handleCancelSubscription(subscription.id)}
+                      disabled={cancelingId === subscription.id}
                       className="mt-3 items-center self-start rounded-full border border-dono-border px-4 py-2"
                     >
                       <Text className="font-retro-bold text-sm text-dono-muted">
-                        {cancelingId === donation.id
+                        {cancelingId === subscription.id
                           ? "Canceling..."
                           : "Cancel subscription"}
                       </Text>

@@ -1,6 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { internal } from "./_generated/api";
+import type { Id } from "./_generated/dataModel";
 import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
 import {
   DONATION_CURRENCY,
@@ -11,8 +12,13 @@ import {
 import { calculateApplicationFeeRefundMinor } from "./lib/platformFee";
 import { getProfileByUserId } from "./lib/authz";
 import { isAdminIdentityEmail } from "./auth/adminConfig";
-import { getRecurringDonationForUserHandler } from "./lib/stripeOwnership";
+import { getSocietySubscriptionForUserHandler } from "./lib/stripeOwnership";
 import { incrementCommunityRaised } from "./lib/aggregates";
+import { splitAmountMinorAcrossCampaigns } from "./lib/societySubscriptionSplit";
+import {
+  buildSocietySubscriptionCanceledMessage,
+  createNotification,
+} from "./lib/notifications";
 
 export const assertNotAdminDonor = internalQuery({
   args: { userId: v.id("users") },
@@ -194,6 +200,101 @@ export const getConnectAccountIdForCampaign = internalQuery({
       return null;
     }
     return { stripeAccountId: connectAccount.stripeAccountId };
+  },
+});
+
+/** Soft lookup of Connect account for a society, keyed directly on its slug
+ * (e.g. cancel society subscription — no campaign in hand at that point). */
+export const getConnectAccountIdForCommunity = internalQuery({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) => q.eq("communitySlug", args.communitySlug))
+      .first();
+    if (!connectAccount || connectAccount.accountVersion !== "v2") {
+      return null;
+    }
+    return { stripeAccountId: connectAccount.stripeAccountId };
+  },
+});
+
+/** Campaigns currently accepting donations for a society — the same
+ * `status === "active"` gate resolveCampaignMerchantAccount uses. Sorted by
+ * _id so a given invoice always splits the same way. */
+export const getActiveCampaignsForCommunity = internalQuery({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_community", (q) => q.eq("creator.communityId", args.communitySlug))
+      .collect();
+    return campaigns
+      .filter((c) => c.status === "active")
+      .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0));
+  },
+});
+
+/** Validates a society can accept a new subscription: a working Connect
+ * payments account and at least one campaign currently accepting donations
+ * right now (mirrors resolveCampaignMerchantAccount's gates). */
+export const resolveSocietyMerchantAccount = internalQuery({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) => q.eq("communitySlug", args.communitySlug))
+      .first();
+
+    if (!connectAccount) {
+      throw new ConvexError({
+        code: "CONNECT_NOT_READY",
+        message: "This society has not set up Stripe payments yet.",
+      });
+    }
+    if (connectAccount.accountVersion !== "v2") {
+      throw new ConvexError({
+        code: "CONNECT_NOT_READY",
+        message: "This society must complete the new Stripe payment setup.",
+      });
+    }
+    if (!(connectAccount.cardPaymentsActive ?? connectAccount.chargesEnabled)) {
+      throw new ConvexError({
+        code: "CHARGES_DISABLED",
+        message: "This society is still completing Stripe payment setup.",
+      });
+    }
+
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_community", (q) => q.eq("creator.communityId", args.communitySlug))
+      .collect();
+    const activeCampaignCount = campaigns.filter((c) => c.status === "active").length;
+    if (activeCampaignCount === 0) {
+      throw new ConvexError({
+        code: "NO_ACTIVE_CAMPAIGNS",
+        message: "This society has no active campaigns to support right now.",
+      });
+    }
+
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.communitySlug))
+      .unique();
+    const community = society
+      ? null
+      : await ctx.db
+          .query("communities")
+          .withIndex("by_slug", (q) => q.eq("slug", args.communitySlug))
+          .unique();
+    const name = society?.name ?? community?.name ?? args.communitySlug;
+
+    return {
+      communitySlug: args.communitySlug,
+      name,
+      stripeAccountId: connectAccount.stripeAccountId,
+      activeCampaignCount,
+    };
   },
 });
 
@@ -666,17 +767,329 @@ export const cancelRecurringDonationRecord = internalMutation({
   },
 });
 
-export const getRecurringDonationForUser = internalQuery({
+/** No ownership check — used only by the admin-gated bulk-cancel migration. */
+export const getRecurringDonationById = internalQuery({
+  args: { recurringDonationId: v.id("recurringDonations") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.recurringDonationId);
+  },
+});
+
+/** Every non-canceled row — used only by the admin-gated bulk-cancel migration. */
+export const listActiveOrPastDueRecurringDonations = internalQuery({
+  args: {},
+  handler: async (ctx) => {
+    const rows = await ctx.db.query("recurringDonations").collect();
+    return rows.filter((row) => row.status !== "canceled");
+  },
+});
+
+export const createSocietySubscriptionRecord = internalMutation({
   args: {
-    recurringDonationId: v.id("recurringDonations"),
+    userId: v.id("users"),
+    communitySlug: v.string(),
+    amount: v.number(),
+    stripeSubscriptionId: v.string(),
+    stripePriceId: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const amountValidation = validateDonationAmount(args.amount);
+    if (!amountValidation.valid) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: amountValidation.message,
+      });
+    }
+
+    return await ctx.db.insert("societySubscriptions", {
+      userId: args.userId,
+      communitySlug: args.communitySlug,
+      amount: args.amount,
+      currency: DONATION_CURRENCY,
+      stripeSubscriptionId: args.stripeSubscriptionId,
+      stripePriceId: args.stripePriceId,
+      status: "active",
+      createdAt: Date.now(),
+    });
+  },
+});
+
+export const getSocietySubscriptionForUser = internalQuery({
+  args: {
+    societySubscriptionId: v.id("societySubscriptions"),
     userId: v.id("users"),
   },
   handler: async (ctx, args) => {
-    const recurringDonation = await ctx.db.get(args.recurringDonationId);
-    return getRecurringDonationForUserHandler({
-      recurringDonation,
+    const societySubscription = await ctx.db.get(args.societySubscriptionId);
+    return getSocietySubscriptionForUserHandler({
+      societySubscription,
       callerUserId: args.userId,
     });
+  },
+});
+
+export const getSocietySubscriptionById = internalQuery({
+  args: { societySubscriptionId: v.id("societySubscriptions") },
+  handler: async (ctx, args) => {
+    return await ctx.db.get(args.societySubscriptionId);
+  },
+});
+
+export const getSocietySubscriptionBySubscriptionId = internalQuery({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    return await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+  },
+});
+
+export const markSocietySubscriptionPastDue = internalMutation({
+  args: { stripeSubscriptionId: v.string() },
+  handler: async (ctx, args) => {
+    const societySubscription = await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+
+    if (!societySubscription || societySubscription.status === "canceled") {
+      return { updated: false };
+    }
+
+    await ctx.db.patch(societySubscription._id, { status: "past_due" });
+    return { updated: true };
+  },
+});
+
+export const cancelSocietySubscriptionRecord = internalMutation({
+  args: {
+    stripeSubscriptionId: v.string(),
+    reason: v.optional(
+      v.union(v.literal("user_requested"), v.literal("no_active_campaigns")),
+    ),
+  },
+  handler: async (ctx, args) => {
+    const societySubscription = await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+
+    if (!societySubscription || societySubscription.status === "canceled") {
+      return { updated: false, societySubscription: null };
+    }
+
+    await ctx.db.patch(societySubscription._id, {
+      status: "canceled",
+      canceledAt: Date.now(),
+      canceledReason: args.reason,
+    });
+    return { updated: true, societySubscription };
+  },
+});
+
+/**
+ * Fan-out core for a paid society subscription invoice. Splits the invoice
+ * across whichever campaigns are active for the society right now — not
+ * whichever were active at signup — so each billing cycle reflects the
+ * current campaign lineup. Idempotent per stripeInvoiceId.
+ *
+ * If the society has no active campaigns, nothing is attributed here: a
+ * zero-campaign placeholder payment row is recorded and a refund/cancel is
+ * scheduled (see stripe.refundAndCancelSocietySubscriptionForNoCampaigns) —
+ * this is the safety net behind the invoice.upcoming pre-emptive cancel in
+ * stripeWebhook.ts, for the rare case a campaign goes inactive in the final
+ * run-up to a charge.
+ */
+export const processSuccessfulSocietyInvoice = internalMutation({
+  args: {
+    stripeInvoiceId: v.string(),
+    stripeSubscriptionId: v.string(),
+    totalAmountMinor: v.number(),
+    stripePaymentIntentId: v.optional(v.string()),
+  },
+  handler: async (ctx, args): Promise<{ applicable: boolean }> => {
+    const societySubscription = await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_subscription", (q) =>
+        q.eq("stripeSubscriptionId", args.stripeSubscriptionId),
+      )
+      .unique();
+    if (!societySubscription) {
+      return { applicable: false };
+    }
+
+    const existingPayment = await ctx.db
+      .query("societySubscriptionPayments")
+      .withIndex("by_invoice", (q) => q.eq("stripeInvoiceId", args.stripeInvoiceId))
+      .unique();
+    if (existingPayment) {
+      return { applicable: true };
+    }
+
+    if (societySubscription.status !== "active") {
+      await ctx.db.patch(societySubscription._id, { status: "active" });
+    }
+
+    const campaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_community", (q) =>
+        q.eq("creator.communityId", societySubscription.communitySlug),
+      )
+      .collect();
+    const activeCampaigns = campaigns
+      .filter((c) => c.status === "active")
+      .sort((a, b) => (a._id < b._id ? -1 : a._id > b._id ? 1 : 0));
+
+    if (activeCampaigns.length === 0) {
+      await ctx.db.insert("societySubscriptionPayments", {
+        societySubscriptionId: societySubscription._id,
+        stripeInvoiceId: args.stripeInvoiceId,
+        totalAmountMinor: args.totalAmountMinor,
+        campaignCount: 0,
+        refunded: false,
+        createdAt: Date.now(),
+      });
+      await ctx.scheduler.runAfter(
+        0,
+        internal.stripe.refundAndCancelSocietySubscriptionForNoCampaigns,
+        {
+          societySubscriptionId: societySubscription._id,
+          stripeInvoiceId: args.stripeInvoiceId,
+          stripePaymentIntentId: args.stripePaymentIntentId,
+          totalAmountMinor: args.totalAmountMinor,
+        },
+      );
+      return { applicable: true };
+    }
+
+    const shares = splitAmountMinorAcrossCampaigns(
+      args.totalAmountMinor,
+      activeCampaigns.map((c) => c._id),
+    );
+
+    const paymentId = await ctx.db.insert("societySubscriptionPayments", {
+      societySubscriptionId: societySubscription._id,
+      stripeInvoiceId: args.stripeInvoiceId,
+      totalAmountMinor: args.totalAmountMinor,
+      campaignCount: activeCampaigns.length,
+      createdAt: Date.now(),
+    });
+
+    const campaignsById = new Map(activeCampaigns.map((c) => [c._id, c]));
+    for (const share of shares) {
+      if (share.amountMinor <= 0) continue;
+      const campaign = campaignsById.get(share.campaignId as Id<"campaigns">);
+      if (!campaign) continue;
+
+      const amountPounds = share.amountMinor / 100;
+      const donationId = await ctx.db.insert("donations", {
+        userId: societySubscription.userId,
+        campaignId: campaign._id,
+        amount: amountPounds,
+        currency: DONATION_CURRENCY,
+        type: "recurring",
+        paymentStatus: "succeeded",
+        societySubscriptionId: societySubscription._id,
+        societySubscriptionPaymentId: paymentId,
+        createdAt: Date.now(),
+      });
+
+      const { raised, donors, status } = computeCampaignAfterDonation(
+        {
+          raised: campaign.raised,
+          donors: campaign.donors,
+          goal: campaign.goal,
+          status: campaign.status,
+        },
+        amountPounds,
+      );
+      await ctx.db.patch(campaign._id, { raised, donors, status });
+      await incrementCommunityRaised(ctx, societySubscription.communitySlug, amountPounds);
+
+      await ctx.scheduler.runAfter(0, internal.campaignMatches.consumeMatchOnDonation, {
+        donationId,
+        campaignId: campaign._id,
+        donationAmountPounds: amountPounds,
+        campaignTitle: campaign.title,
+      });
+    }
+
+    return { applicable: true };
+  },
+});
+
+export const markSocietySubscriptionPaymentRefunded = internalMutation({
+  args: {
+    stripeInvoiceId: v.string(),
+    stripeRefundId: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const payment = await ctx.db
+      .query("societySubscriptionPayments")
+      .withIndex("by_invoice", (q) => q.eq("stripeInvoiceId", args.stripeInvoiceId))
+      .unique();
+    if (!payment) return { updated: false };
+    await ctx.db.patch(payment._id, {
+      refunded: true,
+      stripeRefundId: args.stripeRefundId,
+    });
+    return { updated: true };
+  },
+});
+
+/** In-app notification + email for a donor whose society subscription Dono
+ * canceled because the society has no active campaigns — used by both the
+ * pre-emptive invoice.upcoming cancel and the invoice.paid refund safety net. */
+export const notifySocietySubscriptionCanceled = internalMutation({
+  args: {
+    societySubscriptionId: v.id("societySubscriptions"),
+    charged: v.boolean(),
+    amount: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const societySubscription = await ctx.db.get(args.societySubscriptionId);
+    if (!societySubscription) return { notified: false };
+
+    const [society, community, profile] = await Promise.all([
+      ctx.db
+        .query("societies")
+        .withIndex("by_slug", (q) => q.eq("slug", societySubscription.communitySlug))
+        .unique(),
+      ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", societySubscription.communitySlug))
+        .unique(),
+      getProfileByUserId(ctx, societySubscription.userId),
+    ]);
+    const societyName = society?.name ?? community?.name ?? societySubscription.communitySlug;
+
+    await createNotification(ctx, {
+      userId: societySubscription.userId,
+      type: "society_subscription_canceled",
+      message: buildSocietySubscriptionCanceledMessage(societyName),
+    });
+
+    const user = await ctx.db.get(societySubscription.userId);
+    const email = profile?.email ?? user?.email;
+    if (email) {
+      await ctx.scheduler.runAfter(0, internal.emails.sendSocietySubscriptionCanceledNoCampaigns, {
+        email,
+        name: profile?.name ?? "there",
+        societyName,
+        amount: args.amount,
+        currency: DONATION_CURRENCY,
+        charged: args.charged,
+      });
+    }
+
+    return { notified: true };
   },
 });
 

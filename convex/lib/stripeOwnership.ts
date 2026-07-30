@@ -22,3 +22,26 @@ export function getRecurringDonationForUserHandler(args: {
   }
   return recurringDonation;
 }
+
+type SocietySubscriptionLike = {
+  _id: Id<"societySubscriptions">;
+  userId: Id<"users">;
+  communitySlug: string;
+  status: string;
+  stripeSubscriptionId: string;
+};
+
+/**
+ * Pure ownership check matching stripeInternal.getSocietySubscriptionForUser.
+ * Extracted for security regression tests (User A cannot cancel User B).
+ */
+export function getSocietySubscriptionForUserHandler(args: {
+  societySubscription: SocietySubscriptionLike | null;
+  callerUserId: Id<"users">;
+}): SocietySubscriptionLike | null {
+  const { societySubscription, callerUserId } = args;
+  if (!societySubscription || societySubscription.userId !== callerUserId) {
+    return null;
+  }
+  return societySubscription;
+}
