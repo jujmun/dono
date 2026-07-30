@@ -83,7 +83,8 @@ export default function CampaignDetailPage() {
   );
   const [customAmount, setCustomAmount] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
-  const [coverFees, setCoverFees] = useState(true);
+  const [coverFees, setCoverFees] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
@@ -590,6 +591,8 @@ export default function CampaignDetailPage() {
         onDonorEmailChange={setDonorEmail}
         coverFees={coverFees}
         onCoverFeesChange={setCoverFees}
+        isAnonymous={isAnonymous}
+        onAnonymousChange={setIsAnonymous}
         legalAccepted={legalAccepted}
         onLegalAcceptedChange={setLegalAccepted}
         onClose={() => setDonateSheetOpen(false)}

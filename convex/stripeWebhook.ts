@@ -158,6 +158,17 @@ async function handleChargeRefunded(
       result.applicationFeeRefundMinor,
     );
   }
+
+  // Closes the loop on an admin-approved refund request executed by the
+  // Campaign Owner from their own Stripe dashboard (Refund Policy §6.1) —
+  // this fires regardless of who/what triggered the underlying refund, so
+  // it works whether or not a refundRequests row exists for this donation.
+  if (donation) {
+    await ctx.runMutation(internal.refunds.markApprovedRequestRefundedByDonation, {
+      donationId: donation._id,
+      stripeRefundId: charge.refunds?.data?.[0]?.id,
+    });
+  }
 }
 
 export const stripeWebhook = httpAction(async (ctx, request) => {

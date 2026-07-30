@@ -8,6 +8,8 @@ export type DonateSheetProps = {
   onDonorEmailChange: (email: string) => void;
   coverFees: boolean;
   onCoverFeesChange: (value: boolean) => void;
+  isAnonymous: boolean;
+  onAnonymousChange: (value: boolean) => void;
   legalAccepted: boolean;
   onLegalAcceptedChange: (value: boolean) => void;
   onClose: () => void;

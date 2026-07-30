@@ -115,6 +115,11 @@ export const campaignFields = {
   /** Manual student-status check completed by Dono admin. */
   studentStatusCheckedAt: v.optional(v.number()),
   studentStatusCheckedBy: v.optional(v.id("users")),
+  /** Opt-in for Dono to use this campaign's content (photos/updates) in its
+   * own marketing. Separate from Terms acceptance; withdrawable at any time
+   * via campaignCreator.setPromotionalUseOptIn. */
+  promotionalUseOptIn: v.optional(v.boolean()),
+  promotionalUseOptInAt: v.optional(v.number()),
 };
 
 export const verificationStatusValidator = v.union(
@@ -253,6 +258,11 @@ export const notificationFields = {
     /** Sent to a donor when Dono cancels their society subscription because
      * the society has no active campaigns — see stripeWebhook.ts. */
     v.literal("society_subscription_canceled"),
+    /** Sent to the campaign owner when an admin approves a refund request —
+     * per Refund and Dispute Policy §6.1, Dono does not call Stripe's refund
+     * API itself; the owner must execute the refund from their own Stripe
+     * dashboard. See convex/refunds.ts adminDecide. */
+    v.literal("refund_owner_action_required"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more

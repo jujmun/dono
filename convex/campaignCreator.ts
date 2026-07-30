@@ -517,6 +517,32 @@ export const setVideoUrl = mutation({
   },
 });
 
+/** Withdrawable at any time, independent of campaign status — this is a
+ * standing marketing consent, not part of the editable-campaign form. */
+export const setPromotionalUseOptIn = mutation({
+  args: {
+    slug: v.string(),
+    optIn: v.boolean(),
+  },
+  handler: async (ctx, args) => {
+    await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+
+    await ctx.db.patch(campaign._id, {
+      promotionalUseOptIn: args.optIn,
+      promotionalUseOptInAt: Date.now(),
+    });
+    return null;
+  },
+});
+
 export const setImages = mutation({
   args: {
     slug: v.string(),
