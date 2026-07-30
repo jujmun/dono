@@ -32,7 +32,7 @@ export default function WelcomePage() {
     );
   }
 
-  if (!isAuthenticated || !profile) {
+  if (!isAuthenticated || !profile?.name) {
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-lg px-4 py-12">

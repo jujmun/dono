@@ -12,7 +12,7 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import { calculateDonationFeeBreakdown } from "./lib/platformFee";
+import { PLATFORM_FEE_RATE, calculateDonationFeeBreakdown } from "./lib/platformFee";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;

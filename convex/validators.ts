@@ -243,7 +243,6 @@ export const notificationFields = {
     v.literal("campaign_active"),
     v.literal("campaign_rejected"),
     v.literal("admin_message"),
-    v.literal("onboarding"),
     /** System event, not a real notification — the owner edited a campaign
      * via the edit flow. Created read:true (never bumps the recipient's own
      * unread badge); surfaced only in the admin thread. */
