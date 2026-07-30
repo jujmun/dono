@@ -21,6 +21,7 @@ import { canAccessAdminPortal, isPortalAdmin } from "@/lib/auth/is-portal-admin"
 import { isDemoOpenAdminEnabled } from "@/lib/demo-open-admin";
 import { authStorage } from "@/lib/auth-storage";
 import { StripeAppProvider } from "@/lib/stripe/provider";
+import { ErrorBoundary } from "@/components/error-boundary";
 import { api } from "@convex/_generated/api";
 
 const convex = new ConvexReactClient(
@@ -153,10 +154,12 @@ function AppTree() {
   }, [pathname, params, posthog]);
 
   return (
-    <AuthGuard>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </AuthGuard>
+    <ErrorBoundary>
+      <AuthGuard>
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }} />
+      </AuthGuard>
+    </ErrorBoundary>
   );
 }
 
