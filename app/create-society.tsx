@@ -1003,8 +1003,8 @@ export default function CreateSocietyPage() {
                 </View>
                 <Text className="mb-3 text-sm text-[#5c574f]">
                   Set up a Stripe merchant account so your society can accept
-                  campaign donations directly. Dono collects a 5% platform fee on
-                  each gift. This is separate from identity verification and only
+                  campaign donations directly. Dono collects a 5% + 20p fee on
+                  each gift (shared with Stripe processing). This is separate from identity verification and only
                   takes a few minutes.
                 </Text>
                 {connectReady ? (

@@ -6,8 +6,10 @@ import { internal } from "./_generated/api";
 import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
 import {
   DONATION_CURRENCY,
+  donationAmountToStripeMinorUnits,
   validateDonationAmount,
 } from "./lib/donationAmounts";
+import { calculateApplicationFeeMinor, calculateFeeEnvelopeMinor } from "./lib/platformFee";
 import { incrementCommunityRaised, incrementFundRaised } from "./lib/aggregates";
 import { isPublicCampaign } from "./lib/campaignVisibility";
 
@@ -43,6 +45,10 @@ export const createPendingFundDonation = internalMutation({
     fundId: v.id("communityFunds"),
     amount: v.number(),
     stripePaymentIntentId: v.string(),
+    grossAmountMinor: v.optional(v.number()),
+    applicationFeeAmountMinor: v.optional(v.number()),
+    estimatedStripeFeeMinor: v.optional(v.number()),
+    intendedCampaignAmountMinor: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const amountValidation = validateDonationAmount(args.amount);
@@ -52,6 +58,9 @@ export const createPendingFundDonation = internalMutation({
         message: amountValidation.message,
       });
     }
+
+    const grossAmountMinor =
+      args.grossAmountMinor ?? donationAmountToStripeMinorUnits(args.amount);
 
     return await ctx.db.insert("donations", {
       userId: args.userId,
@@ -63,6 +72,12 @@ export const createPendingFundDonation = internalMutation({
       type: "one_time",
       paymentStatus: "pending",
       stripePaymentIntentId: args.stripePaymentIntentId,
+      grossAmountMinor,
+      applicationFeeAmountMinor: args.applicationFeeAmountMinor,
+      applicationFeeRefundedMinor: 0,
+      refundedAmountMinor: 0,
+      estimatedStripeFeeMinor: args.estimatedStripeFeeMinor,
+      intendedCampaignAmountMinor: args.intendedCampaignAmountMinor,
       createdAt: Date.now(),
     });
   },
@@ -75,6 +90,8 @@ async function allocateFundDonation(
     donationId: Id<"donations">;
     amount: number;
     category: string;
+    /** Amount to distribute after retaining the 5% + 20p fee envelope (GBP major). */
+    distributableAmount: number;
   },
 ) {
   const campaigns = await ctx.db.query("campaigns").collect();
@@ -82,12 +99,15 @@ async function allocateFundDonation(
     (c: Doc<"campaigns">) => c.category === args.category && isPublicCampaign(c),
   );
 
+  const raisedForFund = args.amount;
+
   if (eligible.length === 0) {
-    await incrementFundRaised(ctx, args.fundId, args.amount, 0);
+    await incrementFundRaised(ctx, args.fundId, raisedForFund, 0);
     return 0;
   }
 
-  const share = args.amount / eligible.length;
+  const distributable = Math.max(0, args.distributableAmount);
+  const share = distributable / eligible.length;
 
   for (const campaign of eligible) {
     const { raised, donors, status } = computeCampaignAfterDonation(
@@ -110,7 +130,7 @@ async function allocateFundDonation(
     await incrementCommunityRaised(ctx, campaign.creator.communityId, share);
   }
 
-  await incrementFundRaised(ctx, args.fundId, args.amount, eligible.length);
+  await incrementFundRaised(ctx, args.fundId, raisedForFund, eligible.length);
   return eligible.length;
 }
 
@@ -137,12 +157,25 @@ export const markFundDonationSucceeded = internalMutation({
       throw new ConvexError({ code: "FUND_NOT_FOUND", message: "Fund not found." });
     }
 
-    await ctx.db.patch(donation._id, { paymentStatus: "succeeded" });
+    const grossAmountMinor =
+      donation.grossAmountMinor ?? donationAmountToStripeMinorUnits(donation.amount);
+    const feeEnvelopeMinor = calculateFeeEnvelopeMinor(grossAmountMinor);
+    const distributableMinor = Math.max(0, grossAmountMinor - feeEnvelopeMinor);
+    const distributableAmount = distributableMinor / 100;
+
+    await ctx.db.patch(donation._id, {
+      paymentStatus: "succeeded",
+      ...(donation.applicationFeeAmountMinor === undefined
+        ? { applicationFeeAmountMinor: calculateApplicationFeeMinor(grossAmountMinor) }
+        : {}),
+    });
+
     await allocateFundDonation(ctx, {
       fundId: donation.fundId,
       donationId: donation._id,
       amount: donation.amount,
       category: fund.category,
+      distributableAmount,
     });
 
     const donorEmail = donation.donorEmail;

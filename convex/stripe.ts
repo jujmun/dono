@@ -12,11 +12,7 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import {
-  calculateApplicationFeeMinor,
-  calculateDonationFeeBreakdown,
-  PLATFORM_FEE_RATE,
-} from "./lib/platformFee";
+import { calculateDonationFeeBreakdown } from "./lib/platformFee";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -357,9 +353,12 @@ export const createFundPaymentIntent = action({
     }
 
     // Community funds are Merchant of Record on the platform account (not Connect).
-    // application_fee_amount only applies to Connect direct charges — document MoR in metadata.
+    // Fee envelope (5% + 20p) is retained on allocation; Stripe fees hit the platform balance.
+    const feeBreakdown = calculateDonationFeeBreakdown(amount, false);
+    const grossAmountMinor = feeBreakdown.totalChargedMinor;
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: donationAmountToStripeMinorUnits(amount),
+      amount: grossAmountMinor,
       currency: "gbp",
       ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
       ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
@@ -372,6 +371,8 @@ export const createFundPaymentIntent = action({
         fundSlug: fund.fundSlug,
         donationType: "fund_one_time",
         merchantOfRecord: "platform",
+        feeEnvelopeMinor: String(feeBreakdown.feeEnvelopeMinor),
+        donoShareMinor: String(feeBreakdown.applicationFeeAmountMinor),
       },
     });
 
@@ -389,6 +390,10 @@ export const createFundPaymentIntent = action({
       fundId: fund.fundId,
       amount,
       stripePaymentIntentId: paymentIntent.id,
+      grossAmountMinor,
+      applicationFeeAmountMinor: feeBreakdown.applicationFeeAmountMinor,
+      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
     });
 
     await resetStripeCreateQuota(ctx, quotaKey);

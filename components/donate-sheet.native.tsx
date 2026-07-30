@@ -331,8 +331,8 @@ export function DonateSheet({
                 </View>
                 <Text className="min-w-0 flex-1 text-sm text-dono-text">
                   {coverFees
-                    ? `Cover fees so £${selectedAmount} reaches the campaign`
-                    : `Cover fees (£${selectedAmount} gift → ${formatMinorGbp(feeBreakdown.amountToCampaignMinor)} to campaign)`}
+                    ? `Cover fees (5% + 20p) so £${selectedAmount} reaches the campaign`
+                    : `Cover fees (£${selectedAmount} gift → ${formatMinorGbp(feeBreakdown.amountToCampaignMinor)} to campaign after 5% + 20p)`}
                 </Text>
               </Pressable>
 

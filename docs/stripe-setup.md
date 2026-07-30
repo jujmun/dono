@@ -44,33 +44,33 @@ flowchart TD
   Donor --> FundPI[Community fund PI]
   Donor --> Sub[Monthly subscription]
 
-  CampaignPI -->|direct charge + 5% app fee| Connected[Society Connect account GB]
-  FundPI -->|platform charge no Connect| Platform[Platform acct]
-  Sub -->|platform Billing| Platform
+  CampaignPI -->|"direct charge + 5% + 20p envelope"| Connected[Society Connect account GB]
+  FundPI -->|platform charge retains fee envelope| Platform[Platform acct]
+  Sub -->|"Connect Billing + Dono residual percent"| Connected
 
   Connected -->|Stripe pays out| SocietyBank[Society bank]
-  Platform -->|platform fee kept| Dono[Dono]
+  Platform -->|fee envelope retained| Dono[Dono]
 ```
 
 ### Campaign donations (primary path)
 
 - **Charge type:** Direct charges on the society’s connected account (`stripeAccount` on PaymentIntent create).
-- **Fee:** `application_fee_amount` = **5%** of gross (`PLATFORM_FEE_RATE = 0.05` in `convex/lib/platformFee.ts`).
+- **Fee:** Total cut **5% + 20p** (`calculateFeeEnvelopeMinor`). Estimated Stripe card fee is allocated from that envelope first; Dono’s Connect `application_fee_amount` is the **residual**. See `convex/lib/platformFee.ts`.
 - **Currency:** GBP only; amounts £1–£100,000 (`convex/lib/donationAmounts.ts`).
 - **Payment methods:** `automatic_payment_methods: { enabled: true }` (Dashboard payment method configuration drives what’s offered).
 - **UI:** Web = Payment Element; Native = Payment Sheet with `stripeAccountId` + Apple Pay merchant ID `merchant.com.dono.app`.
 
 ### Community fund donations
 
-- Charged on the **platform** account (no Connect / no application fee in code).
-- Allocated across matching-category public campaigns after success.
+- Charged on the **platform** account (no Connect application fee).
+- After success, **5% + 20p** is retained; the remainder is allocated across matching-category public campaigns.
 
 ### Recurring (monthly) campaign donations
 
-- Stripe **Customers + Prices + Subscriptions** on the **platform** (not Connect / no `application_fee` in create path).
+- Stripe **Customers + Prices + Subscriptions** on the **connected account** with `application_fee_percent` set to Dono’s residual share of the fee envelope.
 - Signed-in only; native monthly is not fully supported in the donate sheet.
 
-**Implication:** One-time campaign gifts go to societies via Connect; monthly and fund gifts settle on the platform first. That’s an intentional asymmetry in the current code.
+**Implication:** Campaign gifts (one-time and monthly) go to societies via Connect; fund gifts settle on the platform, which retains the same fee envelope before allocation.
 
 ---
 
@@ -219,7 +219,7 @@ Secrets live on the **Convex deployment**, not only `.env.local`. Publishable ke
 ## 10. Gaps & risks
 
 1. **No Dashboard webhook endpoints** on the linked test account — highest-priority config gap.
-2. **Charge pattern split:** campaign one-time = Connect direct + 5%; monthly/fund = platform — fee/payout story differs.
+2. **Charge pattern:** campaign one-time and monthly = Connect direct + fee envelope (5% + 20p, Stripe share then Dono residual); fund = platform MoR with same envelope retained before allocation.
 3. **Recent platform PaymentIntents** with campaign metadata showed `application_fee_amount: null` at scrape time — likely older/non-Connect tests; current campaign PIs should live on connected accounts with fees.
 4. **Apple Pay:** enabled in PMC, but **no registered domains**; confirm Apple Developer merchant ID alignment.
 5. **Google Pay off** in default PMC.
@@ -254,4 +254,4 @@ Secrets live on the **Convex deployment**, not only `.env.local`. Publishable ke
 
 ## 12. Summary
 
-Dono is a GB/GBP Connect platform (Accounts v2, full Dashboard, Stripe-liable) taking a 5% application fee on direct campaign charges, with separate platform Billing for monthly gifts, platform charges for community funds, Stripe Identity for creator KYC, and Payment Element / Payment Sheet frontends — but the linked test Dashboard currently showed zero registered webhook endpoints at scrape time, which is the main operational hole.
+Dono is a GB/GBP Connect platform (Accounts v2, full Dashboard, Stripe-liable) taking a **5% + 20p fee envelope** on donations (estimated Stripe processing taken from the envelope first; Dono residual via application fee / platform retention), with community funds charged on the platform, Stripe Identity for creator KYC, and Payment Element / Payment Sheet frontends — but the linked test Dashboard currently showed zero registered webhook endpoints at scrape time, which is the main operational hole.

@@ -9,7 +9,7 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import { calculateApplicationFeeMinor } from "./lib/platformFee";
+import { calculateApplicationFeeRefundMinor } from "./lib/platformFee";
 import { getProfileByUserId } from "./lib/authz";
 import { isAdminIdentityEmail } from "./auth/adminConfig";
 import { getSocietySubscriptionForUserHandler } from "./lib/stripeOwnership";
@@ -1126,7 +1126,12 @@ export const markDonationRefunded = internalMutation({
     }
 
     const previousFeeRefundedMinor = donation.applicationFeeRefundedMinor ?? 0;
-    const targetFeeRefundedMinor = calculateApplicationFeeMinor(nextRefundedMinor);
+    const originalApplicationFeeMinor = donation.applicationFeeAmountMinor ?? 0;
+    const targetFeeRefundedMinor = calculateApplicationFeeRefundMinor({
+      originalApplicationFeeMinor,
+      originalGrossMinor: grossAmountMinor,
+      refundedGrossMinor: nextRefundedMinor,
+    });
     const applicationFeeRefundMinor = Math.max(
       0,
       targetFeeRefundedMinor - previousFeeRefundedMinor,
@@ -1225,7 +1230,12 @@ export const markDonationDisputeClosed = internalMutation({
     }
 
     const previousFeeRefundedMinor = donation.applicationFeeRefundedMinor ?? 0;
-    const targetFeeRefundedMinor = calculateApplicationFeeMinor(nextRefundedMinor);
+    const originalApplicationFeeMinor = donation.applicationFeeAmountMinor ?? 0;
+    const targetFeeRefundedMinor = calculateApplicationFeeRefundMinor({
+      originalApplicationFeeMinor,
+      originalGrossMinor: grossAmountMinor,
+      refundedGrossMinor: nextRefundedMinor,
+    });
     const applicationFeeRefundMinor = Math.max(
       0,
       targetFeeRefundedMinor - previousFeeRefundedMinor,
