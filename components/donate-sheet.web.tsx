@@ -72,9 +72,8 @@ function PaymentForm({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
   const handleDonate = async () => {
-    if (!stripe || !elements || !paymentElementReady) return;
+    if (!stripe || !elements) return;
 
     setLoading(true);
     setError(null);
@@ -133,30 +132,19 @@ function PaymentForm({
     <View className="mt-4">
       <div className="min-h-[220px] w-full">
         <PaymentElement
-          onReady={() => setPaymentElementReady(true)}
           onLoadError={(event) => {
-            setPaymentElementReady(false);
             setError(event.error.message ?? "Could not load the payment form.");
           }}
         />
       </div>
-
-      {!paymentElementReady ? (
-        <View className="mt-3 items-center py-2">
-          <ActivityIndicator color="#17211B" />
-          <Text className="mt-2 text-sm text-dono-muted">Loading payment form…</Text>
-        </View>
-      ) : null}
 
       {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
 
       <View className="mt-4 border-t border-dono-border pt-4">
         <Pressable
           onPress={() => void handleDonate()}
-          disabled={loading || !stripe || !elements || !paymentElementReady}
-          className={`flex-row items-center justify-center rounded-full py-3 ${
-            loading || !paymentElementReady ? "bg-dono-accent/60" : "bg-dono-accent"
-          }`}
+          disabled={loading || !stripe || !elements}
+          className="flex-row items-center justify-center rounded-full bg-dono-accent py-3"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
