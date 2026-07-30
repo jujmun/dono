@@ -24,7 +24,6 @@ import {
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
-import { createNotification, ONBOARDING_MESSAGE } from "./lib/notifications";
 import { assertAdultOrThrow } from "./lib/ageGate";
 
 function roleForEmail(email: string): "user" | "admin" {
@@ -438,9 +437,7 @@ export const ensureMyProfile = mutation({
 });
 
 /** Called when the user explicitly skips profile setup from /onboarding.
- * Marks the profile so the auth guard stops forcing them back there, and
- * sends the one onboarding reminder notification (clicking it reopens
- * /onboarding — see notification-bell.tsx). */
+ * Marks the profile so the auth guard stops forcing them back there. */
 export const skipOnboarding = mutation({
   args: {},
   handler: async (ctx) => {
@@ -452,11 +449,6 @@ export const skipOnboarding = mutation({
     if (!profile || profile.onboardingSkippedAt) return;
 
     await ctx.db.patch(profile._id, { onboardingSkippedAt: Date.now() });
-    await createNotification(ctx, {
-      userId,
-      type: "onboarding",
-      message: ONBOARDING_MESSAGE,
-    });
   },
 });
 

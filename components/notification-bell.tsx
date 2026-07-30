@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Modal, Pressable, ScrollView, Text, View } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowRight, Bell, Megaphone, Pencil, Trash2 } from "lucide-react-native";
+import { Bell, Megaphone, Pencil, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { RetroPanel } from "@/components/retro";
@@ -25,13 +25,11 @@ function NotificationRow({
   notification,
   onPress,
   onEditCampaign,
-  onStartOnboarding,
   onDelete,
 }: {
   notification: Notification;
   onPress: (notification: Notification) => void;
   onEditCampaign: (notification: Notification) => void;
-  onStartOnboarding: (notification: Notification) => void;
   onDelete: (notification: Notification) => void;
 }) {
   return (
@@ -98,20 +96,6 @@ function NotificationRow({
             </Text>
           </Pressable>
         ) : null}
-        {notification.type === "onboarding" ? (
-          <Pressable
-            onPress={(event) => {
-              event.stopPropagation();
-              onStartOnboarding(notification);
-            }}
-            className="mt-2 flex-row items-center gap-1.5 self-start rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-1.5"
-          >
-            <Text className="font-retro-bold text-xs text-retro-ink">
-              Start Onboarding
-            </Text>
-            <ArrowRight size={12} color="#211E1A" />
-          </Pressable>
-        ) : null}
       </View>
       {notification.deletable ? (
         <Pressable
@@ -161,11 +145,6 @@ export function NotificationBell() {
     if (!notification.read) {
       void markRead({ notificationId: notification.id as Id<"notifications"> });
     }
-    if (notification.type === "onboarding") {
-      setOpen(false);
-      router.push("/welcome");
-      return;
-    }
     if (!notification.relatedEntityId || notification.relatedEntityType !== "campaign") {
       return;
     }
@@ -194,14 +173,6 @@ export function NotificationBell() {
       setOpen(false);
       router.push(`/create?editSlug=${encodeURIComponent(notification.relatedEntityId)}`);
     }
-  };
-
-  const handleStartOnboarding = (notification: Notification) => {
-    if (!notification.read) {
-      void markRead({ notificationId: notification.id as Id<"notifications"> });
-    }
-    setOpen(false);
-    router.push("/welcome");
   };
 
   const handleDeleteNotification = (notification: Notification) => {
@@ -258,7 +229,6 @@ export function NotificationBell() {
                         notification={notification}
                         onPress={handlePressNotification}
                         onEditCampaign={handleEditCampaign}
-                        onStartOnboarding={handleStartOnboarding}
                         onDelete={handleDeleteNotification}
                       />
                     ))

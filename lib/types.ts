@@ -208,7 +208,6 @@ export type NotificationType =
   | "campaign_active"
   | "campaign_rejected"
   | "admin_message"
-  | "onboarding"
   | "campaign_resubmitted";
 
 export interface Notification {

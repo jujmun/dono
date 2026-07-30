@@ -33,11 +33,6 @@ export function buildSocietySubscriptionCanceledMessage(societyName: string) {
   return `Your subscription to '${societyName}' was canceled because it has no active campaigns right now.`;
 }
 
-/** Sent once when a user skips profile setup (see users.skipOnboarding).
- * No relatedEntityId — notification-bell.tsx routes "onboarding"-type
- * notifications to /onboarding by type, not by relatedEntityId. */
-export const ONBOARDING_MESSAGE = "Click here for onboarding.";
-
 export function validateAdminMessageBody(body: string) {
   const trimmed = body.trim();
   if (!trimmed) {
@@ -59,7 +54,6 @@ interface CreateNotificationArgs {
     | "campaign_active"
     | "campaign_rejected"
     | "admin_message"
-    | "onboarding"
     | "campaign_edited"
     | "campaign_resubmitted"
     | "society_subscription_canceled";
