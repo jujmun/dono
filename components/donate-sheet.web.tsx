@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -32,11 +32,17 @@ import {
 
 const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
-function getStripePromise(stripeAccountId: string | null) {
-  if (!publishableKey || !stripeAccountId) {
-    return null;
+const stripePromiseCache = new Map<string, ReturnType<typeof loadStripe>>();
+
+function getStripePromise(stripeAccountId: string) {
+  const cached = stripePromiseCache.get(stripeAccountId);
+  if (cached) {
+    return cached;
   }
-  return loadStripe(publishableKey, { stripeAccount: stripeAccountId });
+
+  const promise = loadStripe(publishableKey, { stripeAccount: stripeAccountId });
+  stripePromiseCache.set(stripeAccountId, promise);
+  return promise;
 }
 
 function PaymentForm({
@@ -68,10 +74,11 @@ function PaymentForm({
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [paymentElementReady, setPaymentElementReady] = useState(false);
   const donationType = frequency === "monthly" ? "recurring" : "one_time";
 
   const handleDonate = async () => {
-    if (!stripe || !elements) return;
+    if (!stripe || !elements || !paymentElementReady) return;
 
     setLoading(true);
     setError(null);
@@ -84,6 +91,11 @@ function PaymentForm({
         donation_type: donationType,
         cover_fees: coverFees,
       });
+
+      const submitResult = await elements.submit();
+      if (submitResult.error) {
+        throw new Error(submitResult.error.message ?? "Payment details are incomplete.");
+      }
 
       const result = await stripe.confirmPayment({
         elements,
@@ -124,22 +136,33 @@ function PaymentForm({
   };
 
   return (
-    <View className="mt-4 flex-1">
-      <ScrollView
-        className="flex-1"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 16 }}
-        showsVerticalScrollIndicator
-      >
-        <PaymentElement />
-        {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
-      </ScrollView>
+    <View className="mt-4">
+      <div className="min-h-[220px] w-full">
+        <PaymentElement
+          onReady={() => setPaymentElementReady(true)}
+          onLoadError={(event) => {
+            setPaymentElementReady(false);
+            setError(event.error.message ?? "Could not load the payment form.");
+          }}
+        />
+      </div>
 
-      <View className="border-t border-dono-border pt-4">
+      {!paymentElementReady ? (
+        <View className="mt-3 items-center py-2">
+          <ActivityIndicator color="#17211B" />
+          <Text className="mt-2 text-sm text-dono-muted">Loading payment form…</Text>
+        </View>
+      ) : null}
+
+      {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
+
+      <View className="mt-4 border-t border-dono-border pt-4">
         <Pressable
           onPress={() => void handleDonate()}
-          disabled={loading || !stripe || !elements}
-          className="flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+          disabled={loading || !stripe || !elements || !paymentElementReady}
+          className={`flex-row items-center justify-center rounded-full py-3 ${
+            loading || !paymentElementReady ? "bg-dono-accent/60" : "bg-dono-accent"
+          }`}
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -325,6 +348,11 @@ export function DonateSheet({
     Boolean(clientSecret) &&
     (frequency === "monthly" || Boolean(paymentIntentId && stripeAccountId));
 
+  const stripePromise = useMemo(
+    () => (stripeAccountId ? getStripePromise(stripeAccountId) : null),
+    [stripeAccountId],
+  );
+
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/40">
@@ -379,8 +407,8 @@ export function DonateSheet({
                 </View>
                 <Text className="min-w-0 flex-1 text-sm text-dono-text">
                   {coverFees
-                    ? `Cover fees so £${selectedAmount} reaches the campaign`
-                    : `Cover fees (£${selectedAmount} gift → ${formatMinorGbp(feeBreakdown.amountToCampaignMinor)} to campaign)`}
+                    ? `Cover fees (5% + 20p) so £${selectedAmount} reaches the campaign`
+                    : `Cover fees (£${selectedAmount} gift → ${formatMinorGbp(feeBreakdown.amountToCampaignMinor)} to campaign after 5% + 20p)`}
                 </Text>
               </Pressable>
 
@@ -424,11 +452,15 @@ export function DonateSheet({
               </View>
             ) : error ? (
               <Text className="mt-6 text-sm text-red-600">{error}</Text>
-            ) : paymentReady && clientSecret && stripeAccountId && paymentIntentId ? (
+            ) : paymentReady &&
+              clientSecret &&
+              stripeAccountId &&
+              paymentIntentId &&
+              stripePromise ? (
               <View className="min-h-[280px]">
                 <Elements
                   key={`${stripeAccountId}:${paymentIntentId}`}
-                  stripe={getStripePromise(stripeAccountId)}
+                  stripe={stripePromise}
                   options={{ clientSecret }}
                 >
                   <PaymentForm

@@ -12,11 +12,7 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import {
-  calculateApplicationFeeMinor,
-  calculateDonationFeeBreakdown,
-  PLATFORM_FEE_RATE,
-} from "./lib/platformFee";
+import { calculateDonationFeeBreakdown } from "./lib/platformFee";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -375,9 +371,12 @@ export const createFundPaymentIntent = action({
     }
 
     // Community funds are Merchant of Record on the platform account (not Connect).
-    // application_fee_amount only applies to Connect direct charges — document MoR in metadata.
+    // Fee envelope (5% + 20p) is retained on allocation; Stripe fees hit the platform balance.
+    const feeBreakdown = calculateDonationFeeBreakdown(amount, false);
+    const grossAmountMinor = feeBreakdown.totalChargedMinor;
+
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: donationAmountToStripeMinorUnits(amount),
+      amount: grossAmountMinor,
       currency: "gbp",
       ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
       ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
@@ -390,6 +389,8 @@ export const createFundPaymentIntent = action({
         fundSlug: fund.fundSlug,
         donationType: "fund_one_time",
         merchantOfRecord: "platform",
+        feeEnvelopeMinor: String(feeBreakdown.feeEnvelopeMinor),
+        donoShareMinor: String(feeBreakdown.applicationFeeAmountMinor),
       },
     });
 
@@ -407,6 +408,10 @@ export const createFundPaymentIntent = action({
       fundId: fund.fundId,
       amount,
       stripePaymentIntentId: paymentIntent.id,
+      grossAmountMinor,
+      applicationFeeAmountMinor: feeBreakdown.applicationFeeAmountMinor,
+      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
     });
 
     return {
@@ -434,8 +439,15 @@ export const createRecurringDonationSubscription = action({
     const stripe = getStripeClient();
     const connectOpts = { stripeAccount: campaign.stripeAccountId };
 
-    // Direct charge on the campaign's connected account (society MoR) with
-    // Dono's 5% platform fee via application_fee_percent.
+    // Direct charge on the campaign's connected account (society MoR).
+    // application_fee_percent = Dono residual of the 5% + 20p fee envelope.
+    const amountMinor = donationAmountToStripeMinorUnits(amount);
+    const feeBreakdown = calculateDonationFeeBreakdown(amount, false);
+    const applicationFeePercent =
+      amountMinor > 0
+        ? (feeBreakdown.applicationFeeAmountMinor / amountMinor) * 100
+        : 0;
+
     const customer = await stripe.customers.create(
       {
         email: userContext.email || undefined,
@@ -448,7 +460,7 @@ export const createRecurringDonationSubscription = action({
     const price = await stripe.prices.create(
       {
         currency: "gbp",
-        unit_amount: donationAmountToStripeMinorUnits(amount),
+        unit_amount: amountMinor,
         recurring: { interval: "month" },
         product_data: {
           name: `Monthly donation to ${campaign.title}`,
@@ -461,7 +473,7 @@ export const createRecurringDonationSubscription = action({
       {
         customer: customer.id,
         items: [{ price: price.id }],
-        application_fee_percent: PLATFORM_FEE_RATE * 100,
+        application_fee_percent: applicationFeePercent,
         payment_behavior: "default_incomplete",
         payment_settings: {
           save_default_payment_method: "on_subscription",
@@ -475,6 +487,8 @@ export const createRecurringDonationSubscription = action({
           communitySlug: campaign.communitySlug,
           donationType: "recurring",
           merchantOfRecord: "connected_account",
+          feeEnvelopeMinor: String(feeBreakdown.feeEnvelopeMinor),
+          donoShareMinor: String(feeBreakdown.applicationFeeAmountMinor),
         },
       },
       connectOpts,
