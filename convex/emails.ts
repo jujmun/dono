@@ -209,6 +209,43 @@ export const sendSocietySubscriptionCanceledNoCampaigns = internalAction({
   },
 });
 
+/** Refund and Dispute Policy §6.1/6.3 — Dono decides a refund is owed, but
+ * the Campaign Owner must execute it themselves from their own Stripe
+ * dashboard. Dono never calls Stripe's refund API on their behalf. */
+export const sendRefundOwnerActionRequired = internalAction({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    campaignTitle: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    stripePaymentIntentId: v.optional(v.string()),
+    stripeChargeId: v.optional(v.string()),
+  },
+  handler: async (_ctx, args) => {
+    const reference = args.stripePaymentIntentId
+      ? `Payment Intent: ${args.stripePaymentIntentId}`
+      : args.stripeChargeId
+        ? `Charge: ${args.stripeChargeId}`
+        : null;
+
+    await sendTransactionalEmail({
+      to: args.email,
+      subject: `Action needed: refund approved for "${args.campaignTitle}"`,
+      text: [
+        `Hi ${args.name},`,
+        "",
+        `Dono has approved a refund of ${args.currency.toUpperCase()} ${args.amount.toFixed(2)} for a donation to "${args.campaignTitle}".`,
+        "",
+        "Under the Refund and Dispute Policy, Dono does not process this refund itself — you need to issue it from your own Stripe dashboard, on the connected account that received the donation.",
+        ...(reference ? ["", reference] : []),
+        "",
+        "Please action this promptly. We'll update the donor automatically once Stripe confirms the refund. If you're unable to do this, reply to this email or contact us — unresolved approved refunds can affect your account standing.",
+      ].join("\n"),
+    });
+  },
+});
+
 export const sendCampaignFunded = internalAction({
   args: {
     email: v.string(),
