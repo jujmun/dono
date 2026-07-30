@@ -115,6 +115,11 @@ export const campaignFields = {
   /** Manual student-status check completed by Dono admin. */
   studentStatusCheckedAt: v.optional(v.number()),
   studentStatusCheckedBy: v.optional(v.id("users")),
+  /** Opt-in for Dono to use this campaign's content (photos/updates) in its
+   * own marketing. Separate from Terms acceptance; withdrawable at any time
+   * via campaignCreator.setPromotionalUseOptIn. */
+  promotionalUseOptIn: v.optional(v.boolean()),
+  promotionalUseOptInAt: v.optional(v.number()),
 };
 
 export const verificationStatusValidator = v.union(

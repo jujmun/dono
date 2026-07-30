@@ -179,6 +179,9 @@ export default function CreateCampaignPage() {
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
   const setCampaignVideoUrl = useMutation(api.campaignCreator.setVideoUrl);
   const setImpactItems = useMutation(api.campaignCreator.setImpactItems);
+  const setPromotionalUseOptIn = useMutation(
+    api.campaignCreator.setPromotionalUseOptIn,
+  );
   const createVerificationSession = useAction(
     api.campaignIdentity.createVerificationSession,
   );
@@ -206,6 +209,8 @@ export default function CreateCampaignPage() {
   const [expectedExpenditureDate, setExpectedExpenditureDate] = useState("");
   const [plannedUpdateSchedule, setPlannedUpdateSchedule] = useState("");
   const [ownershipStatement, setOwnershipStatement] = useState("");
+  const [promotionalUseOptIn, setPromotionalUseOptInLocal] = useState(false);
+  const [promotionalUseSaving, setPromotionalUseSaving] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [dobInput, setDobInput] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
@@ -241,6 +246,7 @@ export default function CreateCampaignPage() {
       setExpectedExpenditureDate(editCampaign.expectedExpenditureDate ?? "");
       setPlannedUpdateSchedule(editCampaign.plannedUpdateSchedule ?? "");
       setOwnershipStatement(editCampaign.ownershipStatement ?? "");
+      setPromotionalUseOptInLocal(editCampaign.promotionalUseOptIn ?? false);
       const decodedLines = (editCampaign.impactItems ?? []).map((item) => {
         const parsed = parseImpactItem(item);
         return {
@@ -1270,6 +1276,47 @@ export default function CreateCampaignPage() {
                       Optional. {additionalNotes.length}/{MAX_ADDITIONAL_NOTES_LENGTH}
                     </Text>
                   </View>
+
+                  {campaignSlug ? (
+                    <View>
+                      <Pressable
+                        onPress={() => {
+                          const next = !promotionalUseOptIn;
+                          setPromotionalUseOptInLocal(next);
+                          setPromotionalUseSaving(true);
+                          void setPromotionalUseOptIn({
+                            slug: campaignSlug,
+                            optIn: next,
+                          }).finally(() => setPromotionalUseSaving(false));
+                        }}
+                        className="flex-row items-center gap-2 py-1"
+                        accessibilityRole="checkbox"
+                        accessibilityState={{ checked: promotionalUseOptIn }}
+                      >
+                        <View
+                          className={`h-4 w-4 items-center justify-center rounded border ${
+                            promotionalUseOptIn
+                              ? "border-dono-primary bg-dono-primary"
+                              : "border-dono-border bg-white"
+                          }`}
+                        >
+                          {promotionalUseOptIn ? (
+                            <Text className="text-[9px] font-bold leading-none text-white">
+                              ✓
+                            </Text>
+                          ) : null}
+                        </View>
+                        <Text className="min-w-0 flex-1 text-sm text-retro-ink">
+                          Dono may use this campaign&apos;s photos and updates in its
+                          own marketing
+                        </Text>
+                      </Pressable>
+                      <Text className="mt-1.5 text-xs text-[#5c574f]">
+                        Optional. You can withdraw this at any time.
+                        {promotionalUseSaving ? " Saving…" : ""}
+                      </Text>
+                    </View>
+                  ) : null}
                 </View>
               </View>
 

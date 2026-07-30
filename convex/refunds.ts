@@ -20,6 +20,10 @@ const FRAUD_WINDOW_DAYS = 365;
 const MAX_GROUNDS = 200;
 const MAX_DETAILS = 5000;
 const MAX_NOTE = 2000;
+/** Placeholder pending a legal decision — Refund and Dispute Policy §10.6
+ * currently states there is no minimum threshold, so surplus of any size is
+ * refunded. Raise this once a real de minimis value is confirmed. */
+const DE_MINIMIS_SURPLUS_THRESHOLD_MINOR = 0;
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -424,11 +428,11 @@ export const surplusRefundReverseChron = internalMutation({
   handler: async (ctx, args) => {
     if (
       !Number.isFinite(args.surplusAmountMinor) ||
-      args.surplusAmountMinor <= 0
+      args.surplusAmountMinor <= DE_MINIMIS_SURPLUS_THRESHOLD_MINOR
     ) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: "Surplus amount must be a positive minor-unit integer.",
+        message: "Surplus amount must exceed the de minimis threshold.",
       });
     }
 
