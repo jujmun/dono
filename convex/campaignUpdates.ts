@@ -164,6 +164,18 @@ export const create = mutation({
       updateId,
     });
 
+    // Underspend on the outcome update means surplus is owed back to donors
+    // (Student Campaign Terms §8) — queue reverse-chronological refund
+    // requests for admin review; Stripe processing happens via adminDecide.
+    if (args.amountSpent < amountRaised) {
+      const surplusAmountMinor = Math.round((amountRaised - args.amountSpent) * 100);
+      await ctx.scheduler.runAfter(0, internal.refunds.surplusRefundReverseChron, {
+        campaignId: campaign._id,
+        surplusAmountMinor,
+        grounds: `Campaign surplus from outcome update ${updateId}.`,
+      });
+    }
+
     return { updateId };
   },
 });

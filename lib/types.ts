@@ -80,6 +80,8 @@ export interface Campaign {
   responsibleIndividualUserId?: string;
   /** Admin/institution endorsement flag. */
   institutionallyEndorsed?: boolean;
+  /** Owner opt-in for Dono to use this campaign's content in its own marketing. */
+  promotionalUseOptIn?: boolean;
 }
 
 export interface CampaignUpdate {

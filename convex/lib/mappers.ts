@@ -45,6 +45,7 @@ export function toCampaign(campaign: CampaignDoc) {
     ownershipStatement: campaign.ownershipStatement,
     responsibleIndividualUserId: campaign.responsibleIndividualUserId,
     institutionallyEndorsed: campaign.institutionallyEndorsed,
+    promotionalUseOptIn: campaign.promotionalUseOptIn,
   };
 }
 

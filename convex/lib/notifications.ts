@@ -33,6 +33,12 @@ export function buildSocietySubscriptionCanceledMessage(societyName: string) {
   return `Your subscription to '${societyName}' was canceled because it has no active campaigns right now.`;
 }
 
+/** Sent to the campaign owner on refund approval (Refund Policy §6.1/6.3) —
+ * they must execute the refund themselves from their Stripe dashboard. */
+export function buildRefundOwnerActionRequiredMessage(campaignTitle: string) {
+  return `A refund was approved for '${campaignTitle}'. Please refund it from your Stripe dashboard — check your email for the payment reference.`;
+}
+
 export function validateAdminMessageBody(body: string) {
   const trimmed = body.trim();
   if (!trimmed) {
@@ -57,7 +63,7 @@ interface CreateNotificationArgs {
     | "campaign_edited"
     | "campaign_resubmitted"
     | "society_subscription_canceled"
-    | "onboarding";
+
   message: string;
   relatedEntityType?: "campaign";
   relatedEntityId?: string;

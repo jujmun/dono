@@ -23,6 +23,12 @@ import {
   formatMinorGbp,
 } from "@/lib/platform-fee";
 import {
+  ReceiptDivider,
+  ReceiptLedger,
+  ReceiptLineRow,
+  ReceiptTotalRow,
+} from "@/components/ui/receipt-lines";
+import {
   getOrCreateDonateGuestKey,
   type DonateSheetProps,
 } from "./donate-sheet-types";
@@ -156,6 +162,8 @@ export function DonateSheet({
   onDonorEmailChange,
   coverFees,
   onCoverFeesChange,
+  isAnonymous,
+  onAnonymousChange,
   legalAccepted,
   onLegalAcceptedChange,
   onClose,
@@ -238,7 +246,7 @@ export function DonateSheet({
         campaignSlug: campaignId,
         amount: selectedAmount,
         donorEmail: donorEmailRef.current.trim() || undefined,
-        anonymous: false,
+        anonymous: isAnonymous,
         coverFees,
         ageAttested: true,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
@@ -286,6 +294,7 @@ export function DonateSheet({
     campaignId,
     selectedAmount,
     coverFees,
+    isAnonymous,
     legalAccepted,
     stripeConfigured,
     isAuthenticated,
@@ -341,9 +350,30 @@ export function DonateSheet({
                   ) : null}
                 </View>
                 <Text className="min-w-0 flex-1 text-sm text-dono-text">
-                  {coverFees
-                    ? `Cover fees (5% + 20p) so £${selectedAmount} reaches the campaign`
-                    : `Cover fees (£${selectedAmount} gift → ${formatMinorGbp(feeBreakdown.amountToCampaignMinor)} to campaign after 5% + 20p)`}
+                  Cover fees so the full £{selectedAmount} reaches the campaign
+                </Text>
+              </Pressable>
+
+              <Pressable
+                onPress={() => onAnonymousChange(!isAnonymous)}
+                className="flex-row items-center gap-2 py-1"
+                accessibilityRole="checkbox"
+                accessibilityState={{ checked: isAnonymous }}
+              >
+                <View
+                  className={`h-4 w-4 items-center justify-center rounded border ${
+                    isAnonymous
+                      ? "border-dono-primary bg-dono-primary"
+                      : "border-dono-border bg-white"
+                  }`}
+                >
+                  {isAnonymous ? (
+                    <Text className="text-[9px] font-bold leading-none text-white">✓</Text>
+                  ) : null}
+                </View>
+                <Text className="min-w-0 flex-1 text-sm text-dono-text">
+                  Hide my name (your amount still shows publicly; your name is hidden
+                  from the public and from the campaign owner)
                 </Text>
               </Pressable>
 
@@ -363,6 +393,30 @@ export function DonateSheet({
                 />
               ) : null}
             </View>
+
+            <ReceiptLedger className="mt-4">
+              <ReceiptLineRow
+                label="Your donation"
+                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
+              />
+              <ReceiptLineRow
+                label="Dono platform fee"
+                amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+                muted
+              />
+              <ReceiptLineRow
+                label="Estimated payment processing fee"
+                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
+                muted
+              />
+              <ReceiptDivider />
+              <ReceiptTotalRow label="Total charged" amount={feeTotalLabel} />
+              <ReceiptLineRow
+                label="Amount reaching the campaign"
+                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
+                emphasis
+              />
+            </ReceiptLedger>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
               Not Gift Aid. Dono does not issue charitable tax receipts.
