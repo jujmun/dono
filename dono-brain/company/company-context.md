@@ -7,7 +7,7 @@
 - Demo partner: India Society, for its Ram-Leela play.
 - Before the demo is officially launched, speak with Cathy.
 - Step is nervous about the proposed Somerville demo; resolve those concerns before proceeding.
-- Banking: applied for a Starling Bank business account; awaiting approval (as of 2026-07-30), expected review time 2 days.
+- Banking: Starling Bank business account approved; grant money has been transferred into it (as of 2026-07-31).
 
 ## Vision
 
