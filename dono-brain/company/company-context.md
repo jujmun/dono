@@ -8,6 +8,7 @@
 - Before the demo is officially launched, speak with Cathy.
 - Step is nervous about the proposed Somerville demo; resolve those concerns before proceeding.
 - Banking: Starling Bank business account approved; grant money has been transferred into it (as of 2026-07-31).
+- Insurance: business insurance has been added (as of 2026-07-31).
 
 ## Vision
 
