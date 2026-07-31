@@ -91,9 +91,9 @@
 
 4.5.1 All Users must be at least 18.
 
-4.5.2 Date of birth is declared to Dono by the User. Dono does **not** rely on a student card as proof of age, and does not collect a separate government identity document for age purposes.
+4.5.2 Date of birth is declared to Dono by the User. Dono does **not** rely on a student card as proof of age, and does not collect a separate government identity document solely for age purposes.
 
-4.5.3 Dono intends to rely on Stripe's identity checks as the authoritative confirmation of age eligibility. Whether Stripe reliably returns a sufficient age or date-of-birth signal to the Platform for every onboarding flow is **[TO BE CONFIRMED BEFORE LAUNCH — see the age-verification investigation in the engineering roadmap]**. If it does not, an alternative must be adopted before launch, and this clause rewritten.
+4.5.3 Age eligibility on the Platform is enforced from the date of birth declared to Dono (required for signed-in create-campaign, create-society and donate flows). Where Stripe Identity is enabled for creators, a verified date of birth may be stored as corroboration when Stripe returns one; it is not guaranteed for every document or path and is not the sole age gate. Stripe Connect KYC remains separate and does not supply Dono with a reliable age signal for every user.
 
 ---
 

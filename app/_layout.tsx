@@ -1,7 +1,7 @@
 import "../global.css";
 import { Stack, useRouter, useSegments, usePathname, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import {
   useFonts,
   Fredoka_500Medium,
@@ -20,7 +20,13 @@ import { useWelcomeTourStatus } from "@/lib/hooks/use-welcome-tour";
 import { canAccessAdminPortal, isPortalAdmin } from "@/lib/auth/is-portal-admin";
 import { isDemoOpenAdminEnabled } from "@/lib/demo-open-admin";
 import { authStorage } from "@/lib/auth-storage";
+import {
+  getAnalyticsConsent,
+  setAnalyticsConsent,
+  type AnalyticsConsent,
+} from "@/lib/analytics-consent";
 import { StripeAppProvider } from "@/lib/stripe/provider";
+import { AnalyticsConsentBanner } from "@/components/analytics-consent-banner";
 import { ErrorBoundary } from "@/components/error-boundary";
 import { api } from "@convex/_generated/api";
 
@@ -169,6 +175,19 @@ export default function RootLayout() {
     SpaceMono_400Regular,
     SpaceMono_700Bold,
   });
+  const [analyticsConsent, setAnalyticsConsentState] = useState<
+    AnalyticsConsent | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    void getAnalyticsConsent().then(setAnalyticsConsentState);
+  }, []);
+
+  const handleConsent = (value: AnalyticsConsent) => {
+    void setAnalyticsConsent(value).then(() => {
+      setAnalyticsConsentState(value);
+    });
+  };
 
   const tree = (
     <ConvexAuthProvider client={convex} storage={authStorage}>
@@ -178,18 +197,22 @@ export default function RootLayout() {
     </ConvexAuthProvider>
   );
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || analyticsConsent === undefined) {
     return null;
   }
+
+  const showBanner = Boolean(posthogApiKey) && analyticsConsent === null;
+  const mountPostHog = Boolean(posthogApiKey) && analyticsConsent === "granted";
 
   // Touch autocapture feeds heatmaps / interaction insights. Screens are tracked
   // manually via posthog.screen() above. Limit props to testID so input text
   // (email/OTP/password) is not captured; auth fields also use ph-no-capture.
+  // PostHog mounts only after explicit analytics consent.
   return (
     <SafeAreaProvider>
-      {posthogApiKey ? (
+      {mountPostHog ? (
         <PostHogProvider
-          apiKey={posthogApiKey}
+          apiKey={posthogApiKey!}
           options={{
             host: posthogHost,
             enableSessionReplay: false,
@@ -206,6 +229,12 @@ export default function RootLayout() {
       ) : (
         tree
       )}
+      {showBanner ? (
+        <AnalyticsConsentBanner
+          onGrant={() => handleConsent("granted")}
+          onDeny={() => handleConsent("denied")}
+        />
+      ) : null}
     </SafeAreaProvider>
   );
 }

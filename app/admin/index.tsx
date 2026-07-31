@@ -77,6 +77,9 @@ export default function AdminPortalPage() {
 
   const approveSociety = useMutation(api.societies.approve);
   const rejectSociety = useMutation(api.societies.reject);
+  const getSocietyIdDocumentUrl = useMutation(
+    api.societies.getIdDocumentUrlForAdmin,
+  );
   const refreshVerificationStatus = useAction(
     api.societyIdentity.refreshVerificationStatus,
   );
@@ -368,11 +371,20 @@ export default function AdminPortalPage() {
                           </View>
                         )}
                         <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
-                          {society.idDocumentUrl ? (
+                          {society.hasIdDocument ? (
                             <Pressable
-                              onPress={() =>
-                                void Linking.openURL(society.idDocumentUrl!)
-                              }
+                              onPress={() => {
+                                void (async () => {
+                                  try {
+                                    const { url } = await getSocietyIdDocumentUrl({
+                                      slug: society.slug,
+                                    });
+                                    await Linking.openURL(url);
+                                  } catch (err) {
+                                    setSocietyError(getFriendlyAuthError(err));
+                                  }
+                                })();
+                              }}
                               className="flex-row items-center gap-2"
                             >
                               <IdCard size={14} color="#17211B" />

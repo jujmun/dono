@@ -115,6 +115,8 @@ export const campaignFields = {
   /** Manual student-status check completed by Dono admin. */
   studentStatusCheckedAt: v.optional(v.number()),
   studentStatusCheckedBy: v.optional(v.id("users")),
+  /** Bodleian / university student-card image for admin review. */
+  idDocumentStorageId: v.optional(v.id("_storage")),
 };
 
 export const verificationStatusValidator = v.union(
@@ -253,6 +255,9 @@ export const notificationFields = {
     /** Sent to a donor when Dono cancels their society subscription because
      * the society has no active campaigns — see stripeWebhook.ts. */
     v.literal("society_subscription_canceled"),
+    /** Legacy welcome / profile-setup ping. Kept in the union so existing
+     * rows validate; new code should not create this type. */
+    v.literal("onboarding"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more

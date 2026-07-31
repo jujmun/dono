@@ -1,7 +1,7 @@
 /**
- * Stripe Identity UI — off by default to match server STRIPE_IDENTITY_ENABLED.
- * Set EXPO_PUBLIC_STRIPE_IDENTITY_ENABLED=true (and server flag) to re-enable.
+ * Stripe Identity (document + selfie) for campaign and society creators.
+ * Always on — required during create flows and before admin approval.
  */
 export function isStripeIdentityEnabled() {
-  return process.env.EXPO_PUBLIC_STRIPE_IDENTITY_ENABLED === "true";
+  return true;
 }

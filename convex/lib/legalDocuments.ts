@@ -26,10 +26,10 @@ export const LEGAL_DOCUMENT_VERSIONS: Record<LegalDocumentId, string> = {
   student_campaign_terms: "2026-07-20-v0.1",
   donor_terms: "2026-07-20-v0.1",
   community_guidelines: "2026-07-20-v0.1",
-  privacy: "2026-07-20-v0.1-stub",
-  cookie: "2026-07-20-v0.1-stub",
+  privacy: "2026-07-31-v0.2-stub",
+  cookie: "2026-07-31-v0.2-stub",
   refund_dispute: "2026-07-20-v0.1-stub",
-  verification: "2026-07-20-v0.1-stub",
+  verification: "2026-07-31-v0.2-stub",
 };
 
 export const LEGAL_REQUIRED_BY_CONTEXT: Record<

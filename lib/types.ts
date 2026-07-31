@@ -146,7 +146,9 @@ export interface AdminSociety {
   moderationAction: "rejected" | "taken_down" | null;
   restoredAt: number | null;
   supportingDocumentUrls: string[];
-  idDocumentUrl: string | null;
+  /** @deprecated Prefer hasIdDocument + audited getIdDocumentUrlForAdmin */
+  idDocumentUrl?: string | null;
+  hasIdDocument: boolean;
   stripeVerificationStatus:
     | "created"
     | "requires_input"

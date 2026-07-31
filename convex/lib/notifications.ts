@@ -56,7 +56,8 @@ interface CreateNotificationArgs {
     | "admin_message"
     | "campaign_edited"
     | "campaign_resubmitted"
-    | "society_subscription_canceled";
+    | "society_subscription_canceled"
+    | "onboarding";
   message: string;
   relatedEntityType?: "campaign";
   relatedEntityId?: string;

@@ -104,7 +104,7 @@ Society Connect is **community-scoped** (`stripeConnectAccounts.communitySlug`) 
 
 ## 4. Stripe Identity
 
-Used for **society creators** and **campaign creators** (document + matching selfie):
+Used for **society creators** and **campaign creators** (document + matching selfie), **alongside** a manual Bodleian/university student-card photo upload reviewed by admins:
 
 - Sessions: `type: "document"`, `require_matching_selfie: true`
 - Web: `stripe.verifyIdentity(clientSecret)` (`lib/stripe/launch-identity-verification.web.ts`)
@@ -112,6 +112,7 @@ Used for **society creators** and **campaign creators** (document + matching sel
 - Webhook: `POST /stripe/identity-webhook` with `STRIPE_IDENTITY_WEBHOOK_SECRET`
 - Events: `verified`, `requires_input`, canceled/path cleanup
 - Fallback: client polls refresh actions if webhooks lag
+- **Always required** for campaign and society creators (UI + admin approve gates). Student-card upload + admin review still runs alongside Identity. Admin student-card views go through audited mutations (`societies.getIdDocumentUrlForAdmin` / `campaigns.getIdDocumentUrlForAdmin`).
 
 Test account has Identity activity (verification sessions present).
 

@@ -56,6 +56,38 @@ function requireModerationReason(reason: string) {
   return trimmed;
 }
 
+async function claimStorageId(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  storageId: Id<"_storage">,
+) {
+  const metadata = await ctx.db.system.get("_storage", storageId);
+  if (!metadata) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message: "Uploaded file was not found.",
+    });
+  }
+
+  const owner = await ctx.db
+    .query("storageOwners")
+    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+    .unique();
+  if (owner && owner.userId !== userId) {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "You do not have permission for this action.",
+    });
+  }
+  if (!owner) {
+    await ctx.db.insert("storageOwners", {
+      userId,
+      storageId,
+      createdAt: Date.now(),
+    });
+  }
+}
+
 function matchesSearch(
   campaign: {
     title: string;
@@ -393,6 +425,7 @@ export const getForAdmin = query({
           campaign.stripeVerificationLastErrorReason ?? null,
         verifiedName: campaign.verifiedName ?? null,
         verifiedDob: campaign.verifiedDob ?? null,
+        hasIdDocument: Boolean(campaign.idDocumentStorageId),
       },
       messages: messages
         .filter((m) => !m.deletedAt)
@@ -460,6 +493,12 @@ export const approve = mutation({
         message: "Stripe Identity verification must be completed before approval.",
       });
     }
+    if (!campaign.idDocumentStorageId) {
+      throw new ConvexError({
+        code: "STUDENT_CARD_REQUIRED",
+        message: "A student card must be on file before approval.",
+      });
+    }
     if (
       !campaign.ownershipStatement?.trim() ||
       !campaign.plannedUpdateSchedule?.trim() ||
@@ -485,11 +524,9 @@ export const approve = mutation({
       (Boolean(connectAccount?.cardPaymentsActive) ||
         Boolean(connectAccount?.chargesEnabled));
 
+    const now = Date.now();
     const verifications = buildCampaignVerifications(campaign, {
-      studentStatusChecked:
-        !isStripeIdentityEnabled() ||
-        campaign.stripeVerificationStatus === "verified" ||
-        Boolean(campaign.studentStatusCheckedAt),
+      studentStatusChecked: true,
       stripeConnectOnboardingComplete: connectReady,
       institutionallyEndorsed: campaign.institutionallyEndorsed === true,
     });
@@ -497,6 +534,8 @@ export const approve = mutation({
     await ctx.db.patch(campaign._id, {
       status: "active",
       verifications,
+      studentStatusCheckedAt: campaign.studentStatusCheckedAt ?? now,
+      studentStatusCheckedBy: campaign.studentStatusCheckedBy ?? adminUserId,
       ...(campaign.responsibleIndividualUserId
         ? {}
         : { responsibleIndividualUserId }),
@@ -536,6 +575,38 @@ export const approve = mutation({
     }
 
     return null;
+  },
+});
+
+/** Mint a short-lived student-card URL and audit the access. */
+export const getIdDocumentUrlForAdmin = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign?.idDocumentStorageId) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "No student card on file for this campaign.",
+      });
+    }
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "campaign.viewIdDocument",
+      targetType: "campaign",
+      targetId: args.slug,
+    });
+    const url = await ctx.storage.getUrl(campaign.idDocumentStorageId);
+    if (!url) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Student card file could not be loaded.",
+      });
+    }
+    return { url };
   },
 });
 
@@ -649,6 +720,7 @@ export const create = mutation({
     plannedUpdateSchedule: v.optional(v.string()),
     ownershipStatement: v.optional(v.string()),
     responsibleIndividualUserId: v.optional(v.id("users")),
+    idDocumentStorageId: v.id("_storage"),
   },
   handler: async (ctx, args) => {
     const communitySlug = args.communitySlug.trim();
@@ -668,6 +740,7 @@ export const create = mutation({
       profile?.dateOfBirth,
       "You must be at least 18 years old to create a campaign.",
     );
+    await claimStorageId(ctx, userId, args.idDocumentStorageId);
     const title = args.title.trim();
     const category = args.category.trim();
     const description = args.description.trim();
@@ -812,6 +885,7 @@ export const create = mutation({
       impactItems: [],
       createdBy: userId,
       responsibleIndividualUserId,
+      idDocumentStorageId: args.idDocumentStorageId,
       ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
       ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
       ...(ownershipStatement ? { ownershipStatement } : {}),

@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   TextInput,
   Image,
+  Linking,
 } from "react-native";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { type Href, Link, useLocalSearchParams, useRouter } from "expo-router";
@@ -13,6 +14,7 @@ import {
   ArrowLeft,
   Check,
   ChevronRight,
+  IdCard,
   RefreshCw,
   RotateCcw,
   Trash2,
@@ -60,6 +62,7 @@ type AdminReviewPayload = {
     stripeVerificationLastErrorReason: string | null;
     verifiedName: string | null;
     verifiedDob: string | null;
+    hasIdDocument: boolean;
   };
   messages: {
     id: string;
@@ -94,6 +97,7 @@ export default function AdminCampaignReviewPage() {
   const takeDown = useMutation(api.campaigns.takeDown);
   const restore = useMutation(api.campaigns.restore);
   const hardDelete = useMutation(api.campaigns.hardDelete);
+  const getIdDocumentUrl = useMutation(api.campaigns.getIdDocumentUrlForAdmin);
   const refreshIdentity = useAction(
     api.campaignIdentity.refreshVerificationStatus,
   );
@@ -351,6 +355,40 @@ export default function AdminCampaignReviewPage() {
           ) : (
             <Text className="mt-3 text-sm text-dono-muted">
               No linked student account. Shown as {campaign.creator.name}.
+            </Text>
+          )}
+        </View>
+
+        <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
+          <Text className="font-retro-bold text-base text-dono-text">
+            Student card
+          </Text>
+          <Text className="mt-1 text-sm text-dono-muted">
+            Bodleian / university student card uploaded by the campaign creator.
+            Access is logged.
+          </Text>
+          {identity.hasIdDocument ? (
+            <Pressable
+              onPress={() => {
+                void (async () => {
+                  try {
+                    const { url } = await getIdDocumentUrl({
+                      slug: campaign.id,
+                    });
+                    await Linking.openURL(url);
+                  } catch (err) {
+                    setError(getFriendlyAuthError(err));
+                  }
+                })();
+              }}
+              className="mt-3 flex-row items-center gap-2 self-start"
+            >
+              <IdCard size={14} color="#17211B" />
+              <Text className="text-sm text-dono-primary">View student card</Text>
+            </Pressable>
+          ) : (
+            <Text className="mt-3 text-sm text-dono-muted">
+              No student card on file.
             </Text>
           )}
         </View>

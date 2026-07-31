@@ -21,6 +21,10 @@ import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import {
+  DonateDobGateForm,
+  useDonateDobGate,
+} from "@/components/donate-dob-gate";
+import {
   calculateDonationFeeBreakdown,
   formatMinorGbp,
 } from "@/lib/platform-fee";
@@ -177,6 +181,15 @@ export function DonateSheet({
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
+  const {
+    needsDob,
+    dobReady,
+    dobInput,
+    setDobInput,
+    dobError,
+    dobSaving,
+    saveDob,
+  } = useDonateDobGate(isAuthenticated);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
@@ -218,7 +231,7 @@ export function DonateSheet({
       return;
     }
 
-    if (!legalAccepted || !stripeConfigured) {
+    if (!legalAccepted || !stripeConfigured || !dobReady) {
       setClientSecret(null);
       setPaymentIntentId(null);
       setStripeAccountId(null);
@@ -294,9 +307,7 @@ export function DonateSheet({
     legalAccepted,
     stripeConfigured,
     isAuthenticated,
-    createPaymentIntent,
-    abandonPaymentIntent,
-    acceptDocuments,
+    dobReady,
   ]);
 
   const paymentReady = Boolean(clientSecret && paymentIntentId && stripeAccountId);
@@ -367,6 +378,16 @@ export function DonateSheet({
                 accepted={legalAccepted}
                 onAcceptedChange={onLegalAcceptedChange}
               />
+
+              {needsDob ? (
+                <DonateDobGateForm
+                  dobInput={dobInput}
+                  onDobInputChange={setDobInput}
+                  dobError={dobError}
+                  dobSaving={dobSaving}
+                  onSave={() => void saveDob()}
+                />
+              ) : null}
             </View>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
@@ -377,6 +398,10 @@ export function DonateSheet({
               <Text className="mt-6 text-sm text-red-600">
                 Stripe is not configured for this environment. Set
                 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY and restart the app.
+              </Text>
+            ) : needsDob ? (
+              <Text className="mt-6 text-sm text-dono-muted">
+                Confirm your date of birth above to continue to payment.
               </Text>
             ) : !legalAccepted ? (
               <Text className="mt-6 text-sm text-dono-muted">

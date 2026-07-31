@@ -53,4 +53,16 @@ describe("getFriendlyAuthError", () => {
       "Ownership statement, planned update schedule, and expected expenditure date are required.",
     );
   });
+
+  it("surfaces client-thrown Error messages used outside auth", () => {
+    expect(getFriendlyAuthError(new Error("A student card is required."))).toBe(
+      "A student card is required.",
+    );
+  });
+
+  it("keeps a generic fallback for redacted Convex Server Error", () => {
+    expect(
+      getFriendlyAuthError(new Error("[CONVEX M(campaigns:create)] Server Error")),
+    ).toBe("Something went wrong. Please try again.");
+  });
 });
