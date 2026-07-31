@@ -3,7 +3,7 @@
 **Version:** Working draft v0.1 — 20 July 2026
 **Status:** DRAFT — NOT FOR PUBLICATION. This draft contains unresolved markers ([TO BE CONFIRMED BEFORE LAUNCH], [SUBJECT TO STRIPE CONFIGURATION], [COUNSEL REVIEW REQUIRED], [ACCOUNTANT REVIEW REQUIRED], [PRIVACY IMPLEMENTATION REQUIRED]). No document may be published while any marker remains. This draft is not legal advice and requires review by a UK solicitor before use.
 
---
+---
 
 ## Part 1 — Introduction
 
