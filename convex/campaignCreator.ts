@@ -633,12 +633,13 @@ export const setImpactItems = mutation({
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
     if (
-      args.impactItems.length < MIN_IMPACT_ITEMS ||
-      args.impactItems.length > MAX_IMPACT_ITEMS
+      args.impactItems.length !== 0 &&
+      (args.impactItems.length < MIN_IMPACT_ITEMS ||
+        args.impactItems.length > MAX_IMPACT_ITEMS)
     ) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: `Provide between ${MIN_IMPACT_ITEMS} and ${MAX_IMPACT_ITEMS} fund line items.`,
+        message: `Provide between ${MIN_IMPACT_ITEMS} and ${MAX_IMPACT_ITEMS} fund line items, or leave the breakdown empty.`,
       });
     }
 
@@ -650,6 +651,11 @@ export const setImpactItems = mutation({
       throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
     }
     await requireRecordOwner(ctx, campaign.createdBy);
+
+    if (args.impactItems.length === 0) {
+      await ctx.db.patch(campaign._id, { impactItems: [] });
+      return null;
+    }
 
     const parsed = args.impactItems.map(parseEncodedImpactItem);
     if (parsed.some((item) => !item.label || item.amount === null || item.amount <= 0)) {

@@ -26,6 +26,12 @@ export function getFriendlyAuthError(error: unknown) {
       }
       return convexPayload.message ?? "Password does not meet security requirements.";
     }
+    if (convexPayload.code === "RATE_LIMITED") {
+      return (
+        convexPayload.message ??
+        "Too many attempts. Please wait a little and try again."
+      );
+    }
   }
 
   const message = rawMessage;
@@ -99,6 +105,16 @@ export function getFriendlyAuthError(error: unknown) {
   // own message over the generic fallback below when we have one.
   if (convexPayload?.message) {
     return convexPayload.message;
+  }
+  // Client-thrown Error("…") and many Convex ArgumentValidationError strings
+  // are already human-readable — don't swallow them into the generic banner.
+  if (
+    error instanceof Error &&
+    message.trim().length > 0 &&
+    !/^\[CONVEX[^\]]*\]\s*Server Error$/i.test(message.trim()) &&
+    !/^Server Error$/i.test(message.trim())
+  ) {
+    return message;
   }
   return "Something went wrong. Please try again.";
 }

@@ -13,6 +13,7 @@ describe("Convex public API security surface", () => {
     expect(Object.keys(securityModule).sort()).toEqual(
       [
         "FLOW_LIMITS",
+        "consumeAuthFlow",
         "consumeOtpSend",
         "consumeQuota",
         "resetQuota",

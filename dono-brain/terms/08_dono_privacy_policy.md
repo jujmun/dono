@@ -123,7 +123,7 @@ UK business address: **[TO BE INSERTED BEFORE LAUNCH]**
 
 6.5 We do not retain barcodes, library identifiers, photographs of you beyond what is inherent in the card image before deletion, or other information on the card that we do not need. **[PRIVACY IMPLEMENTATION REQUIRED — confirm that the extraction process discards unneeded fields rather than storing the whole card record]**
 
-6.6 Access to student card images is restricted to administrators who need it for verification, and every access is logged.
+6.6 Access to student card images is restricted to administrators who need it for verification. Each time an administrator opens a student-card file through the admin portal, that access is recorded in an audit log.
 
 ---
 
@@ -251,11 +251,11 @@ UK business address: **[TO BE INSERTED BEFORE LAUNCH]**
 
 ## 13. Security
 
-13.1 We use encryption in transit and at rest, role-based access controls, logging of administrative access to identity documents, and defined deletion schedules.
+13.1 We use encryption in transit (HTTPS/WSS to our providers). Role-based access controls apply to admin functions. Administrative access to student-card images is logged when an admin opens a card via the admin portal. Encryption at rest depends on our hosting and payment providers. Automated retention/deletion schedules for student cards and other records are not yet product-enforced.
 
 13.2 Specific technical measures are **[PRIVACY IMPLEMENTATION REQUIRED]** and depend on the providers listed in clause 8.
 
-13.3 Our breach response procedure, including notification to the ICO within 72 hours where required, is **[PRIVACY IMPLEMENTATION REQUIRED — document the procedure and name the responsible person before launch]**.
+13.3 Our breach response procedure, including notification to the ICO within 72 hours where required, is **[PRIVACY IMPLEMENTATION REQUIRED — document the procedure and name the responsible person before launch]**. Process/manual only until that procedure is adopted; the product does not currently provide automated breach detection tooling.
 
 ---
 
@@ -263,7 +263,7 @@ UK business address: **[TO BE INSERTED BEFORE LAUNCH]**
 
 14.1 The Platform is for adults. You must be 18 or over to hold an account. We do not knowingly collect data from anyone under 18. If we learn that we have, we delete it.
 
-14.2 Age is declared by you and is intended to be confirmed through Stripe's identity checks. See clause 4.5 of the Verification Policy.
+14.2 Age is declared by you to Dono and enforced for signed-in create and donate flows. Stripe Identity may corroborate creator DOB when available; it is not the sole age check. See clause 4.5 of the Verification Policy.
 
 ---
 

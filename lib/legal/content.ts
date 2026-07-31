@@ -87,11 +87,11 @@ Privacy Policy (stub)
 
 Data controller: Amrit Kaur Rooprai trading as Dono. Contact: dono.outreach@gmail.com.
 
-We collect account data (email, name, optional profile fields, date of birth for age eligibility), student-card images for society verification, Stripe Identity outputs (name/DOB), donation and transaction metadata (not full card numbers), campaign content, comments, reports, and legal acceptance records.
+We collect account data (email, name, optional profile fields, date of birth for age eligibility), student-card images for society and campaign creator verification, Stripe Identity outputs (name/DOB when returned), donation and transaction metadata (not full card numbers), campaign content, comments, reports, and legal acceptance records (document id, version string, context, timestamp — not a full archive of wording).
 
 We use data to operate the Platform, verify students, process donations via Stripe, moderate content, handle refunds, and meet legal obligations. Stripe processes payment data under its own privacy policy.
 
-You may request account closure. Closure does not extinguish obligations relating to refunds, chargebacks, evidence and investigations. Donation and payment records may be retained as required for financial and fraud purposes.
+Account closure anonymises profile fields; it does not fully erase donation, payment, acceptance or investigation records where retention is required.
 
 This stub will be replaced after counsel review.`,
 
@@ -99,7 +99,13 @@ This stub will be replaced after counsel review.`,
 
 Cookie Policy (stub)
 
-We use essential cookies and similar technologies required to sign you in, secure the Platform, and remember preferences. Analytics (e.g. PostHog) may use non-essential technologies; where required we will seek consent. You can control non-essential cookies through your browser or in-product controls when available.
+Essential (always on): Convex Auth session tokens in sessionStorage (web) or SecureStore (app) — JWT (~1 hour) and refresh token (~30 days session). Welcome-tour and donate guest-key preferences. Society create wizard slug in sessionStorage.
+
+Analytics (optional): PostHog EU only loads after you Accept on the in-app consent banner. Reject stops collection (the SDK is not mounted). You can clear site data / reinstall to see the banner again.
+
+Payments: Stripe may set its own cookies or SDK storage during checkout and Identity verification. Those are necessary for donations and KYC.
+
+Auth rate limits may temporarily lock further sign-in attempts after too many failures (not fraud AI).
 
 This stub will be replaced after counsel review.`,
 
@@ -123,12 +129,17 @@ Verification Policy (stub)
 
 Labels have limited meanings:
 
-• "Student status checked by Dono" — limited manual review of university email, student-card image and current student status.
-• "Stripe onboarding completed" — Payment Provider identity/KYC for the Connected Account.
+• "Student status checked by Dono" — limited manual review of university email, Bodleian/student-card image and current student status (campaign and society creators upload a card).
+• "Stripe Identity" (when enabled) — document + matching selfie for creators; may return name/DOB when Stripe extracts them.
+• "Stripe onboarding completed" — Payment Provider Connect KYC for the Connected Account (separate from age gating).
 • "Society approved" — society page approved the Campaign as a society campaign (not institutional endorsement).
 • "Institutionally endorsed" — only where the Recognised Institution has expressly endorsed the Campaign.
 
-Dono does not use a generic "Verified" badge without explanation. Checks do not verify every campaign statement, cost accuracy, viability or successful completion.`,
+Age: declared date of birth to Dono is the eligibility gate for signed-in create/donate flows.
+
+Dono does not use a generic "Verified" badge without explanation. Checks do not verify every campaign statement, cost accuracy, viability or successful completion.
+
+Full draft: dono-brain/terms/06_dono_verification_policy.md`,
 };
 
 export function getLegalDocumentBody(docId: LegalDocumentId): string {

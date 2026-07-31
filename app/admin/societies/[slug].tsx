@@ -58,6 +58,7 @@ export default function AdminSocietyReviewPage() {
   const takeDown = useMutation(api.societies.takeDown);
   const restore = useMutation(api.societies.restore);
   const hardDelete = useMutation(api.societies.hardDelete);
+  const getIdDocumentUrl = useMutation(api.societies.getIdDocumentUrlForAdmin);
 
   const [reason, setReason] = useState("");
   const [reasonMode, setReasonMode] = useState(false);
@@ -264,9 +265,20 @@ export default function AdminSocietyReviewPage() {
             </View>
           )}
           <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
-            {society.idDocumentUrl ? (
+            {society.hasIdDocument ? (
               <Pressable
-                onPress={() => void Linking.openURL(society.idDocumentUrl!)}
+                onPress={() => {
+                  void (async () => {
+                    try {
+                      const { url } = await getIdDocumentUrl({
+                        slug: society.slug,
+                      });
+                      await Linking.openURL(url);
+                    } catch (err) {
+                      setError(getFriendlyAuthError(err));
+                    }
+                  })();
+                }}
                 className="flex-row items-center gap-2"
               >
                 <IdCard size={14} color="#17211B" />

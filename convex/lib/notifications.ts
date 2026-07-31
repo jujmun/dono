@@ -63,7 +63,7 @@ interface CreateNotificationArgs {
     | "campaign_edited"
     | "campaign_resubmitted"
     | "society_subscription_canceled"
-    | "refund_owner_action_required";
+
   message: string;
   relatedEntityType?: "campaign";
   relatedEntityId?: string;

@@ -39,7 +39,7 @@
 
 3.3 Your student status is reverified at the start of each academic year. Dono may request further information at any time; unless a different period is stated, you must respond within five working days **[TO BE CONFIRMED]**. Failure to respond may result in refusal, suspension or removal.
 
-3.4 You declare your date of birth to Dono. Your student card is not relied on as proof of age. The Payment Provider's KYC process is intended to confirm identity and age eligibility. **[TO BE CONFIRMED — reliability of the age-check signal in the final implementation]**
+3.4 You declare your date of birth to Dono. Your student card is not relied on as proof of age. Age eligibility is based on the date of birth you declare to Dono (enforced server-side for create/donate flows). Stripe Identity (when enabled) may return a verified date of birth for creators as corroboration, but it is not guaranteed for every document or path and is not the sole age gate.
 
 3.5 The label "**Student status checked by Dono**" means only that Dono has completed the limited checks in this clause 3. It does not verify every campaign statement, the authenticity of every document, the accuracy of every cost, the viability of your Project, your future conduct, institutional endorsement, or successful completion.
 

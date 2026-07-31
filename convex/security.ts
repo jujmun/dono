@@ -62,6 +62,36 @@ export const consumeOtpSend = internalMutation({
   },
 });
 
+const AUTH_FLOW_KEYS = [
+  "signIn",
+  "signUp",
+  "reset",
+  "reset-verification",
+  "email-verification",
+] as const;
+
+/**
+ * Server-only: rate-limit Password auth flows (sign-in, sign-up, reset, etc.).
+ * Called from Password `profile` so clients cannot skip the quota.
+ */
+export const consumeAuthFlow = internalMutation({
+  args: {
+    flow: v.string(),
+    email: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const email = normalizeAndValidateOxfordEmail(args.email);
+    const flow = args.flow as AuthFlow;
+    if (!(AUTH_FLOW_KEYS as readonly string[]).includes(flow)) {
+      return;
+    }
+    const limits = FLOW_LIMITS[flow];
+    const opts = { key: `${flow}:${email}`, ...limits };
+    await assertNotRateLimited(ctx, opts);
+    await recordRateLimitAttempt(ctx, opts, false);
+  },
+});
+
 /**
  * Server-only: consume a keyed quota (avatar uploads, Stripe creates, etc.).
  */

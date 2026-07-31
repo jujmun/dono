@@ -15,6 +15,7 @@ import {
 } from "./auth/rateLimit";
 import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
 import { assertAdultOrThrow } from "./lib/ageGate";
+import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
 
 const MAX_NAME_LENGTH = 120;
 const MAX_DESCRIPTION_LENGTH = 500;
@@ -164,7 +165,6 @@ async function toAdminSociety(ctx: QueryCtx, society: SocietyDoc) {
       society.supportingDocumentStorageIds.map((id) => ctx.storage.getUrl(id)),
     )
   ).filter((url): url is string => Boolean(url));
-  const idDocumentUrl = await ctx.storage.getUrl(society.idDocumentStorageId);
 
   return {
     slug: society.slug,
@@ -182,7 +182,7 @@ async function toAdminSociety(ctx: QueryCtx, society: SocietyDoc) {
     moderationAction: society.moderationAction ?? null,
     restoredAt: society.restoredAt ?? null,
     supportingDocumentUrls,
-    idDocumentUrl,
+    hasIdDocument: Boolean(society.idDocumentStorageId),
     stripeVerificationStatus: society.stripeVerificationStatus ?? null,
     stripeVerificationLastErrorCode: society.stripeVerificationLastErrorCode ?? null,
     verifiedName: society.verifiedName ?? null,
@@ -198,6 +198,38 @@ export const generateUploadUrl = mutation({
     await assertNotRateLimited(ctx, opts);
     await recordRateLimitAttempt(ctx, opts, false);
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/** Mint a short-lived student-card URL and audit the access. */
+export const getIdDocumentUrlForAdmin = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId: adminUserId } = await requireAdmin(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society?.idDocumentStorageId) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "No student card on file for this society.",
+      });
+    }
+    await logAdminAction(ctx, {
+      adminUserId,
+      action: "society.viewIdDocument",
+      targetType: "society",
+      targetId: args.slug,
+    });
+    const url = await ctx.storage.getUrl(society.idDocumentStorageId);
+    if (!url) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Student card file could not be loaded.",
+      });
+    }
+    return { url };
   },
 });
 
@@ -703,6 +735,21 @@ export const approve = mutation({
       throw new ConvexError({
         code: "NOT_FOUND",
         message: "Pending society not found.",
+      });
+    }
+    if (!society.idDocumentStorageId) {
+      throw new ConvexError({
+        code: "STUDENT_CARD_REQUIRED",
+        message: "A student card must be on file before approval.",
+      });
+    }
+    if (
+      isStripeIdentityEnabled() &&
+      society.stripeVerificationStatus !== "verified"
+    ) {
+      throw new ConvexError({
+        code: "IDENTITY_REQUIRED",
+        message: "Stripe Identity verification must be completed before approval.",
       });
     }
     await ctx.db.patch(society._id, { status: "active" });

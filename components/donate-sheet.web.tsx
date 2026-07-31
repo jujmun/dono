@@ -21,6 +21,10 @@ import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import {
+  DonateDobGateForm,
+  useDonateDobGate,
+} from "@/components/donate-dob-gate";
+import {
   calculateDonationFeeBreakdown,
   formatMinorGbp,
 } from "@/lib/platform-fee";
@@ -77,10 +81,10 @@ function PaymentForm({
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [paymentElementReady, setPaymentElementReady] = useState(false);
+
 
   const handleDonate = async () => {
-    if (!stripe || !elements || !paymentElementReady) return;
+    if (!stripe || !elements) return;
 
     setLoading(true);
     setError(null);
@@ -139,30 +143,19 @@ function PaymentForm({
     <View className="mt-4">
       <div className="min-h-[220px] w-full">
         <PaymentElement
-          onReady={() => setPaymentElementReady(true)}
           onLoadError={(event) => {
-            setPaymentElementReady(false);
             setError(event.error.message ?? "Could not load the payment form.");
           }}
         />
       </div>
-
-      {!paymentElementReady ? (
-        <View className="mt-3 items-center py-2">
-          <ActivityIndicator color="#17211B" />
-          <Text className="mt-2 text-sm text-dono-muted">Loading payment form…</Text>
-        </View>
-      ) : null}
 
       {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
 
       <View className="mt-4 border-t border-dono-border pt-4">
         <Pressable
           onPress={() => void handleDonate()}
-          disabled={loading || !stripe || !elements || !paymentElementReady}
-          className={`flex-row items-center justify-center rounded-full py-3 ${
-            loading || !paymentElementReady ? "bg-dono-accent/60" : "bg-dono-accent"
-          }`}
+          disabled={loading || !stripe || !elements}
+          className="flex-row items-center justify-center rounded-full bg-dono-accent py-3"
         >
           {loading ? (
             <ActivityIndicator color="#fff" />
@@ -197,6 +190,15 @@ export function DonateSheet({
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
+  const {
+    needsDob,
+    dobReady,
+    dobInput,
+    setDobInput,
+    dobError,
+    dobSaving,
+    saveDob,
+  } = useDonateDobGate(isAuthenticated);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
@@ -238,7 +240,7 @@ export function DonateSheet({
       return;
     }
 
-    if (!legalAccepted || !stripeConfigured) {
+    if (!legalAccepted || !stripeConfigured || !dobReady) {
       setClientSecret(null);
       setPaymentIntentId(null);
       setStripeAccountId(null);
@@ -315,9 +317,7 @@ export function DonateSheet({
     legalAccepted,
     stripeConfigured,
     isAuthenticated,
-    createPaymentIntent,
-    abandonPaymentIntent,
-    acceptDocuments,
+    dobReady,
   ]);
 
   const paymentReady = Boolean(clientSecret && paymentIntentId && stripeAccountId);
@@ -409,6 +409,16 @@ export function DonateSheet({
                 accepted={legalAccepted}
                 onAcceptedChange={onLegalAcceptedChange}
               />
+
+              {needsDob ? (
+                <DonateDobGateForm
+                  dobInput={dobInput}
+                  onDobInputChange={setDobInput}
+                  dobError={dobError}
+                  dobSaving={dobSaving}
+                  onSave={() => void saveDob()}
+                />
+              ) : null}
             </View>
 
             <ReceiptLedger className="mt-4">
@@ -443,6 +453,10 @@ export function DonateSheet({
               <Text className="mt-6 text-sm text-red-600">
                 Stripe is not configured for this environment. Set
                 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY and restart the app.
+              </Text>
+            ) : needsDob ? (
+              <Text className="mt-6 text-sm text-dono-muted">
+                Confirm your date of birth above to continue to payment.
               </Text>
             ) : !legalAccepted ? (
               <Text className="mt-6 text-sm text-dono-muted">

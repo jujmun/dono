@@ -31,6 +31,7 @@ import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox"
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
@@ -114,6 +115,11 @@ export default function CreateSocietyPage() {
   const generateUploadUrl = useMutation(api.societies.generateUploadUrl);
   const createSociety = useMutation(api.societies.create);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
+  const updateProfile = useMutation(api.users.updateProfile);
+  const myProfile = useQuery(
+    api.users.me,
+    isAuthenticated && !isLoading ? {} : "skip",
+  );
   const updateVerificationMaterials = useMutation(
     api.societies.updateVerificationMaterials,
   );
@@ -144,6 +150,9 @@ export default function CreateSocietyPage() {
   const [docsPopupVisible, setDocsPopupVisible] = useState(false);
   const [syncingMaterials, setSyncingMaterials] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [dobInput, setDobInput] = useState("");
+  const [dobError, setDobError] = useState<string | null>(null);
+  const [dobSaving, setDobSaving] = useState(false);
   // Storage ids of docs already uploaded, keyed by local uri, so revisions
   // after the society exists don't re-upload unchanged files.
   const uploadedDocIds = useRef(new Map<string, Id<"_storage">>());
@@ -213,7 +222,11 @@ export default function CreateSocietyPage() {
   // unverified, in case the webhook is delayed, misconfigured, or hasn't
   // reached this deployment. Stops as soon as the query reflects "verified".
   useEffect(() => {
-    if (!societySlug || verification?.stripeVerificationStatus === "verified") {
+    if (
+      !isStripeIdentityEnabled() ||
+      !societySlug ||
+      verification?.stripeVerificationStatus === "verified"
+    ) {
       return;
     }
     const interval = setInterval(() => {
@@ -403,8 +416,37 @@ export default function CreateSocietyPage() {
     return result.slug;
   };
 
+  const handleSaveDateOfBirth = async () => {
+    setDobError(null);
+    const trimmed = dobInput.trim();
+    if (!parseIsoDateOnly(trimmed)) {
+      setDobError("Enter your date of birth as YYYY-MM-DD.");
+      return;
+    }
+    if (!isAtLeastAge(trimmed)) {
+      setDobError("You must be at least 18 years old to create a society.");
+      return;
+    }
+    setDobSaving(true);
+    try {
+      await updateProfile({
+        name: myProfile?.name ?? "",
+        dateOfBirth: trimmed,
+      });
+      setDobInput("");
+    } catch (err) {
+      setDobError(getFriendlyAuthError(err));
+    } finally {
+      setDobSaving(false);
+    }
+  };
+
   const handleVerifyIdentity = async () => {
     setError(null);
+    if (!hasDateOfBirth) {
+      setError("Please confirm your date of birth before verifying your identity.");
+      return;
+    }
     if (!legalAccepted) {
       setError("Please accept the society terms before verifying your identity.");
       return;
@@ -525,9 +567,9 @@ export default function CreateSocietyPage() {
   };
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
-  const identityEnabled = isStripeIdentityEnabled();
-  const stripeVerified =
-    !identityEnabled || stripeStatus === "verified";
+  const stripeVerified = stripeStatus === "verified";
+  const dobLoading = isAuthenticated && myProfile === undefined;
+  const hasDateOfBirth = Boolean(myProfile?.dateOfBirth);
   // requires_input is Stripe's status both for "awaiting your first
   // submission" (its normal initial state) and "a check ran and failed" —
   // only the presence of a real last_error means an actual attempt failed.
@@ -562,13 +604,12 @@ export default function CreateSocietyPage() {
       case 1:
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
-        // When Identity is enabled, keep requiring that the user has started
-        // the verification flow (which creates the society slug). When
-        // Identity is disabled, let Continue create the society on demand.
+        // Student card + DOB + legal + Stripe Identity verified.
         return (
           legalAccepted &&
           manualFieldsValid &&
-          (!identityEnabled || societySlug !== null)
+          hasDateOfBirth &&
+          stripeVerified
         );
       case 3:
         // Require at least that a Connect account was created / onboarding started.
@@ -878,10 +919,48 @@ export default function CreateSocietyPage() {
                   </Text>
                 </View>
                 <Text className="mb-3 text-xs text-[#5c574f]">
-                  Upload a photo of your student card to confirm you're a current student
-                  setting up this society. Only student cards are accepted. This is used
-                  for verification only and is never shown publicly.
+                  Upload a photo of your Bodleian / university student card to confirm
+                  you're a current student setting up this society. Only student cards
+                  are accepted. This is used for verification only and is never shown
+                  publicly.
                 </Text>
+
+                {!dobLoading && !hasDateOfBirth ? (
+                  <View className="mb-3 rounded-lg border border-dono-border bg-white p-3">
+                    <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                      Confirm your date of birth
+                    </Text>
+                    <Text className="mb-2 text-xs text-[#5c574f]">
+                      You must be at least 18 to create a society.
+                    </Text>
+                    <TextInput
+                      value={dobInput}
+                      onChangeText={setDobInput}
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#56615A"
+                      autoCapitalize="none"
+                      className={inputClass}
+                    />
+                    {dobError ? (
+                      <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
+                    ) : null}
+                    <Pressable
+                      onPress={() => void handleSaveDateOfBirth()}
+                      disabled={dobSaving || !dobInput.trim()}
+                      className={`mt-2 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2 ${
+                        dobSaving || !dobInput.trim() ? "opacity-50" : ""
+                      }`}
+                    >
+                      {dobSaving ? (
+                        <ActivityIndicator color="#fff" />
+                      ) : (
+                        <Text className="font-retro-bold text-sm text-retro-paper">
+                          Save date of birth
+                        </Text>
+                      )}
+                    </Pressable>
+                  </View>
+                ) : null}
 
                 {idDocument ? (
                   <View className="mb-3 flex-row items-center gap-3 rounded-xl border border-retro-ink bg-white p-2">
@@ -922,72 +1001,75 @@ export default function CreateSocietyPage() {
               </View>
 
               <View className="rounded-xl border border-retro-ink bg-white p-4">
-                {identityEnabled ? (
-                  <>
-                    <View className="mb-1.5 flex-row items-center gap-2">
-                      <ShieldCheck size={16} color="#17211B" />
-                      <Text className="font-retro-bold text-sm text-retro-ink">
-                        Identity Check
-                      </Text>
-                    </View>
-                    <Text className="mb-3 text-xs text-[#5c574f]">
-                      You'll be asked for a quick photo of your ID and a selfie so we can
-                      confirm it's really you — it only takes a minute.
+                <View className="mb-1.5 flex-row items-center gap-2">
+                  <ShieldCheck size={16} color="#17211B" />
+                  <Text className="font-retro-bold text-sm text-retro-ink">
+                    Identity Check
+                  </Text>
+                </View>
+                <Text className="mb-3 text-xs text-[#5c574f]">
+                  You'll be asked for a quick photo of your ID and a selfie so we can
+                  confirm it's really you — it only takes a minute.
+                </Text>
+
+                <LegalAcceptanceCheckbox
+                  context="create_society"
+                  accepted={legalAccepted}
+                  onAcceptedChange={setLegalAccepted}
+                  className="mb-3"
+                />
+
+                {renderVerificationStatus()}
+
+                <Pressable
+                  onPress={() => void handleVerifyIdentity()}
+                  disabled={
+                    !manualFieldsValid ||
+                    verifying ||
+                    stripeVerified ||
+                    !legalAccepted ||
+                    !hasDateOfBirth
+                  }
+                  className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
+                    !manualFieldsValid ||
+                    verifying ||
+                    stripeVerified ||
+                    !legalAccepted ||
+                    !hasDateOfBirth
+                      ? "opacity-50"
+                      : ""
+                  }`}
+                >
+                  {verifying ? (
+                    <ActivityIndicator color="#fff" />
+                  ) : (
+                    <Text className="font-retro-bold text-sm text-retro-paper">
+                      Verify your identity
                     </Text>
-
-                    <LegalAcceptanceCheckbox
-                      context="create_society"
-                      accepted={legalAccepted}
-                      onAcceptedChange={setLegalAccepted}
-                      className="mb-3"
-                    />
-
-                    {renderVerificationStatus()}
-
-                    <Pressable
-                      onPress={() => void handleVerifyIdentity()}
-                      disabled={
-                        !manualFieldsValid || verifying || stripeVerified || !legalAccepted
-                      }
-                      className={`mt-3 flex-row items-center justify-center gap-2 self-start rounded-full bg-retro-mint px-4 py-2.5 ${
-                        !manualFieldsValid || verifying || stripeVerified || !legalAccepted
-                          ? "opacity-50"
-                          : ""
-                      }`}
-                    >
-                      {verifying ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text className="font-retro-bold text-sm text-retro-paper">
-                          Verify your identity
-                        </Text>
-                      )}
-                    </Pressable>
-                    {!legalAccepted ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        Accept the terms above before starting identity verification.
-                      </Text>
-                    ) : !manualFieldsValid ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        Add your student card above first.
-                      </Text>
-                    ) : stripeFailed ? (
-                      <Text className="mt-2 text-xs text-rose-700">
-                        That didn't go through — please try again.
-                      </Text>
-                    ) : !societySlug ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        You'll be able to continue once you've started this check.
-                      </Text>
-                    ) : null}
-                  </>
-                ) : (
-                  <LegalAcceptanceCheckbox
-                    context="create_society"
-                    accepted={legalAccepted}
-                    onAcceptedChange={setLegalAccepted}
-                  />
-                )}
+                  )}
+                </Pressable>
+                {!hasDateOfBirth ? (
+                  <Text className="mt-2 text-xs text-[#5c574f]">
+                    Confirm your date of birth above before starting identity
+                    verification.
+                  </Text>
+                ) : !legalAccepted ? (
+                  <Text className="mt-2 text-xs text-[#5c574f]">
+                    Accept the terms above before starting identity verification.
+                  </Text>
+                ) : !manualFieldsValid ? (
+                  <Text className="mt-2 text-xs text-[#5c574f]">
+                    Add your student card above first.
+                  </Text>
+                ) : stripeFailed ? (
+                  <Text className="mt-2 text-xs text-rose-700">
+                    That didn't go through — please try again.
+                  </Text>
+                ) : !stripeVerified ? (
+                  <Text className="mt-2 text-xs text-[#5c574f]">
+                    You'll be able to continue once your identity is verified.
+                  </Text>
+                ) : null}
               </View>
             </View>
           )}
@@ -1136,8 +1218,7 @@ export default function CreateSocietyPage() {
                   </Text>
                   <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
                     Thanks — we&apos;ve received your society, its verification
-                    documents
-                    {identityEnabled ? ", your Stripe identity check" : ""}
+                    documents, your Stripe identity check
                     {connectStarted ? ", and payout account setup" : ""}. We&apos;ll
                     review it and let you know once a decision is made.
                   </Text>

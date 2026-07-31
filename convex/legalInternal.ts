@@ -33,9 +33,10 @@ export const assertDonateGates = internalMutation({
         .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
         .unique();
-      if (profile?.dateOfBirth) {
-        assertAdultOrThrow(profile.dateOfBirth);
-      }
+      assertAdultOrThrow(
+        profile?.dateOfBirth,
+        "You must confirm you are at least 18 years old to donate. Add your date of birth in your account profile first.",
+      );
     }
     return null;
   },

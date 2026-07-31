@@ -2,6 +2,7 @@ import Resend from "@auth/core/providers/resend";
 import { Resend as ResendClient } from "resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
+import { internal } from "../_generated/api";
 import {
   getAdminOtpRecipient,
   isAdminIdentityEmail,
@@ -30,8 +31,10 @@ export const AdminEmailOTP = Resend({
   async generateVerificationToken() {
     return generateOtpToken();
   },
-  async sendVerificationRequest({ identifier, provider, token }) {
-    const email = normalizeEmail(identifier);
+  // Convex Auth passes `ctx` as a second argument (Auth.js types omit it).
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async sendVerificationRequest(params: any, ctx?: any) {
+    const email = normalizeEmail(String(params.identifier));
 
     if (!isAdminIdentityEmail(email)) {
       throw new ConvexError({
@@ -40,14 +43,18 @@ export const AdminEmailOTP = Resend({
       });
     }
 
+    if (ctx && typeof ctx.runMutation === "function") {
+      await ctx.runMutation(internal.security.consumeOtpSend, { email });
+    }
+
     const recipient = getAdminOtpRecipient(email);
-    const resend = new ResendClient(provider.apiKey);
+    const resend = new ResendClient(params.provider.apiKey);
     const from = getAuthFromAddress();
     const { error } = await resend.emails.send({
       from,
       to: [recipient],
       subject: "Dono admin sign-in code",
-      text: `Your Dono admin sign-in code for ${email} is ${token}. It expires in 10 minutes.`,
+      text: `Your Dono admin sign-in code for ${email} is ${params.token}. It expires in 10 minutes.`,
     });
 
     if (error) {
