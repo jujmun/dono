@@ -6,6 +6,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import {
   optionalUserId,
   requireAdmin,
+  requireSocietyMember,
   requireVerifiedUser,
 } from "./lib/authz";
 import { toCampaign } from "./lib/mappers";
@@ -46,25 +47,19 @@ async function assertCanHideCampaignComment(
   });
 }
 
-async function assertCanComment(
+/**
+ * Single shared gate for anyone creating/editing/deleting a comment: must be
+ * an approved member of the campaign's OWNING society (not just following it,
+ * not pending/rejected, not a member of some other society). Delegates to the
+ * canonical `requireSocietyMember` (also used by campaign creation) so this
+ * can't drift from that check — no campaign-owner bypass, since owners who
+ * are removed from the society should lose comment rights too.
+ */
+async function requireCampaignCommenter(
   ctx: MutationCtx,
   campaign: Doc<"campaigns">,
-  userId: Id<"users">,
 ) {
-  if (campaign.createdBy === userId) return;
-  const membership = await ctx.db
-    .query("societyMembers")
-    .withIndex("by_community_user", (q) =>
-      q.eq("communitySlug", campaign.creator.communityId).eq("userId", userId),
-    )
-    .unique();
-  if (membership?.status === "approved") {
-    return;
-  }
-  throw new ConvexError({
-    code: "FORBIDDEN",
-    message: "Only members of this society can comment on this campaign.",
-  });
+  return await requireSocietyMember(ctx, campaign.creator.communityId);
 }
 
 async function getCampaignBySlug(ctx: QueryCtx | MutationCtx, slug: string) {
@@ -274,7 +269,12 @@ export const unfollowSociety = mutation({
 export const addComment = mutation({
   args: { campaignSlug: v.string(), body: v.string() },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    const campaign = await getCampaignBySlug(ctx, args.campaignSlug);
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    const { userId } = await requireCampaignCommenter(ctx, campaign);
+
     const body = args.body.trim();
     if (!body || body.length > MAX_COMMENT_LENGTH) {
       throw new ConvexError({
@@ -282,12 +282,6 @@ export const addComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
-
-    const campaign = await getCampaignBySlug(ctx, args.campaignSlug);
-    if (!campaign) {
-      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
-    }
-    await assertCanComment(ctx, campaign, userId);
 
     const commentId = await ctx.db.insert("campaignComments", {
       campaignSlug: args.campaignSlug,
@@ -319,6 +313,13 @@ export const deleteComment = mutation({
     }
 
     const campaign = await getCampaignBySlug(ctx, comment.campaignSlug);
+    if (!isAdmin) {
+      if (!campaign) {
+        throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+      }
+      await requireCampaignCommenter(ctx, campaign);
+    }
+
     await ctx.db.patch(args.commentId, { deletedAt: Date.now() });
     if (campaign) {
       await ctx.db.patch(campaign._id, {
@@ -346,6 +347,12 @@ export const editComment = mutation({
         message: "You can only edit your own comments.",
       });
     }
+
+    const campaign = await getCampaignBySlug(ctx, comment.campaignSlug);
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireCampaignCommenter(ctx, campaign);
 
     const body = args.body.trim();
     if (!body || body.length > MAX_COMMENT_LENGTH) {
