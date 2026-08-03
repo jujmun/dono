@@ -115,6 +115,12 @@ export const campaignFields = {
   /** Manual student-status check completed by Dono admin. */
   studentStatusCheckedAt: v.optional(v.number()),
   studentStatusCheckedBy: v.optional(v.id("users")),
+  /** Government ID uploaded at create time (mirrors societies.idDocumentStorageId).
+   * Optional so older campaign rows without a document still validate. */
+  idDocumentStorageId: v.optional(v.id("_storage")),
+  /** Standing marketing/promotional-use consent — withdrawable at any status. */
+  promotionalUseOptIn: v.optional(v.boolean()),
+  promotionalUseOptInAt: v.optional(v.number()),
 };
 
 export const verificationStatusValidator = v.union(
@@ -258,6 +264,9 @@ export const notificationFields = {
      * API itself; the owner must execute the refund from their own Stripe
      * dashboard. See convex/refunds.ts adminDecide. */
     v.literal("refund_owner_action_required"),
+    /** Legacy welcome-notification type — no longer written, but existing
+     * rows remain in the DB and must pass schema validation. */
+    v.literal("onboarding"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more

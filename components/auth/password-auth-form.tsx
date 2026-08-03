@@ -29,6 +29,8 @@ import {
 const hasPostHog = Boolean(process.env.EXPO_PUBLIC_POSTHOG_API_KEY);
 const inputClassName =
   "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
+const emailInputClassName =
+  "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro text-sm text-retro-ink outline-none";
 
 export type PasswordAuthMode = "signUp" | "signIn";
 
@@ -269,7 +271,7 @@ function PasswordAuthFormInner({
                   autoComplete="email"
                   placeholder="you@st-annes.ox.ac.uk"
                   placeholderTextColor="#56615A"
-                  className={inputClassName}
+                  className={emailInputClassName}
                   {...({ "ph-no-capture": true } as object)}
                 />
                 <Text className="mt-1 text-xs text-dono-muted">

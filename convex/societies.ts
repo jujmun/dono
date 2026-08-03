@@ -110,6 +110,7 @@ async function toPublicSociety(ctx: QueryCtx, society: SocietyDoc) {
     secondaryLink: society.secondaryLink ?? null,
     status: society.status,
     createdAt: society.createdAt,
+    orgType: "society" as const,
   };
 }
 
@@ -132,6 +133,7 @@ async function toMineSociety(ctx: QueryCtx, society: SocietyDoc) {
     secondaryLink: society.secondaryLink ?? null,
     status: society.status,
     createdAt: society.createdAt,
+    orgType: "society" as const,
     moderationNote: society.moderationNote ?? null,
     moderatedAt: society.moderatedAt ?? null,
     supportingDocumentCount: society.supportingDocumentStorageIds.length,

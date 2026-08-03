@@ -23,7 +23,7 @@ export function RetroBrowserFooter() {
         </Link>
         <Link href="/societies" asChild>
           <Pressable className="mb-1.5">
-            <Text className="text-[12.5px] text-[#4a453c]">Societies</Text>
+            <Text className="text-[12.5px] text-[#4a453c]">Communities</Text>
           </Pressable>
         </Link>
       </View>

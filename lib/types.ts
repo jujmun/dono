@@ -108,6 +108,8 @@ export interface Community {
   verificationType?: VerificationType;
 }
 
+export type OrgType = "college" | "society";
+
 export interface Society {
   slug: string;
   name: string;
@@ -118,6 +120,7 @@ export interface Society {
   secondaryLink: string | null;
   status: "pending" | "active" | "rejected";
   createdAt: number;
+  orgType: OrgType;
 }
 
 export interface MySociety extends Society {
