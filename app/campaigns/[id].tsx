@@ -99,6 +99,14 @@ export default function CampaignDetailPage() {
     id ? { campaignSlug: id } : "skip",
   );
   const stripePlatform = useQuery(api.stripePlatform.isConfigured, {});
+  const commenterMembership = useQuery(
+    api.societyMembers.getMyMembership,
+    campaign ? { communitySlug: campaign.creator.communityId } : "skip",
+  );
+  const canComment =
+    commenterMembership === undefined
+      ? undefined
+      : commenterMembership?.status === "approved";
 
   const clientStripeConfigured = Boolean(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -574,6 +582,7 @@ export default function CampaignDetailPage() {
             ref={commentsSectionRef}
             campaignSlug={campaign.id}
             isAuthenticated={isAuthenticated}
+            canComment={canComment}
             embedded
           />
         </RetroPanel>

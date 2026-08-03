@@ -20,6 +20,12 @@ const MAX_COMMENT_LENGTH = 2000;
 type CampaignCommentsSectionProps = {
   campaignSlug: string;
   isAuthenticated: boolean;
+  /**
+   * Whether the signed-in user is an approved member of the campaign's owning
+   * society. `undefined` while that's still loading. Purely cosmetic — the
+   * real gate is enforced server-side in convex/engagement.ts.
+   */
+  canComment: boolean | undefined;
   className?: string;
   /** When true, omit outer card chrome and section heading (e.g. inside RetroPanel). */
   embedded?: boolean;
@@ -43,7 +49,7 @@ function formatCommentTime(timestamp: number) {
 
 export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionProps>(
   function CampaignCommentsSection(
-    { campaignSlug, isAuthenticated, className, embedded = false },
+    { campaignSlug, isAuthenticated, canComment, className, embedded = false },
     ref,
   ) {
     const profile = useCurrentProfile();
@@ -159,7 +165,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
           </Text>
         ) : null}
 
-        {isAuthenticated ? (
+        {isAuthenticated && canComment ? (
           <View className="mb-6">
             <TextInput
               value={body}
@@ -214,7 +220,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               </Pressable>
             </View>
           </View>
-        ) : (
+        ) : isAuthenticated && canComment === undefined ? null : (
           <View
             className={cn(
               "mb-6 px-4 py-4",
@@ -229,27 +235,31 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                 embedded ? "text-[13.5px] text-retro-ink" : "text-dono-muted",
               )}
             >
-              Sign in to join the conversation.
+              {isAuthenticated
+                ? "Only members of this society can comment on this campaign."
+                : "Sign in to join the conversation."}
             </Text>
-            <Link href="/signin" asChild>
-              <Pressable
-                className={cn(
-                  "mt-3 self-start px-4 py-2",
-                  embedded
-                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]"
-                    : "rounded-full bg-dono-primary",
-                )}
-              >
-                <Text
+            {isAuthenticated ? null : (
+              <Link href="/signin" asChild>
+                <Pressable
                   className={cn(
-                    "font-retro-bold text-sm",
-                    embedded ? "font-retro-bold text-retro-paper" : "text-white",
+                    "mt-3 self-start px-4 py-2",
+                    embedded
+                      ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                      : "rounded-full bg-dono-primary",
                   )}
                 >
-                  Sign in
-                </Text>
-              </Pressable>
-            </Link>
+                  <Text
+                    className={cn(
+                      "font-retro-bold text-sm",
+                      embedded ? "font-retro-bold text-retro-paper" : "text-white",
+                    )}
+                  >
+                    Sign in
+                  </Text>
+                </Pressable>
+              </Link>
+            )}
           </View>
         )}
 
