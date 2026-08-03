@@ -17,6 +17,7 @@ describe("Convex public API security surface", () => {
         "consumeOtpSend",
         "consumeQuota",
         "resetQuota",
+        "normalizeAndValidateEmail",
         "normalizeAndValidateOxfordEmail",
       ].sort(),
     );

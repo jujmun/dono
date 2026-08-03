@@ -17,14 +17,24 @@ import {
 } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { validatePasswordRequirements } from "./auth/passwordPolicy";
-import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
-import { isAdminIdentityEmail } from "./auth/adminConfig";
+import { getProfileByUserId, requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
+import { isAdminIdentityEmail, isAllowedAuthEmail } from "./auth/adminConfig";
 import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
 import { assertAdultOrThrow } from "./lib/ageGate";
+import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
+
+const userTypeValidator = v.union(v.literal("student"), v.literal("alumni"));
+const stripeVerificationStatusValidator = v.union(
+  v.literal("created"),
+  v.literal("requires_input"),
+  v.literal("processing"),
+  v.literal("verified"),
+  v.literal("canceled"),
+);
 
 function roleForEmail(email: string): "user" | "admin" {
   return isAdminIdentityEmail(email) ? "admin" : "user";
@@ -97,6 +107,14 @@ export const me = query({
       dateOfBirth: profile.dateOfBirth ?? null,
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
+      userType: profile.userType ?? null,
+      matriculationYear: profile.matriculationYear ?? null,
+      interestedSocietySlugs: profile.interestedSocietySlugs ?? [],
+      stripeVerificationStatus: profile.stripeVerificationStatus ?? null,
+      stripeVerificationLastErrorCode:
+        profile.stripeVerificationLastErrorCode ?? null,
+      stripeVerificationLastErrorReason:
+        profile.stripeVerificationLastErrorReason ?? null,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
       onboardingSkippedAt: profile.onboardingSkippedAt ?? null,
     };
@@ -449,6 +467,275 @@ export const skipOnboarding = mutation({
     if (!profile || profile.onboardingSkippedAt) return;
 
     await ctx.db.patch(profile._id, { onboardingSkippedAt: Date.now() });
+  },
+});
+
+/**
+ * Persist Student vs Alumni choice chosen on /signup.
+ * Server-only write — callers never get to set admin `role` via this path.
+ * Locked after first set so a client cannot flip audience later.
+ */
+export const setUserType = mutation({
+  args: { userType: userTypeValidator },
+  handler: async (ctx, args) => {
+    const { userId, user } = await requireVerifiedUser(ctx);
+
+    // Students must use Oxford (or allowlisted admin) email — blocks flipping
+    // alumni Gmail sign-up into a student account after the fact.
+    if (
+      args.userType === "student" &&
+      user.email &&
+      !isAllowedAuthEmail(user.email)
+    ) {
+      throw new ConvexError({
+        code: "EMAIL_DOMAIN_NOT_ALLOWED",
+        message: "Student accounts require an Oxford email address (ending in ox.ac.uk).",
+      });
+    }
+
+    let profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    // Race: auth may return before ensureMyProfile has inserted the row.
+    if (!profile) {
+      if (!user.email) {
+        throw new ConvexError({
+          code: "PROFILE_MISSING",
+          message: "User profile could not be found.",
+        });
+      }
+      const now = Date.now();
+      const profileId = await ctx.db.insert("profiles", {
+        userId,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.image,
+        role: roleForEmail(user.email),
+        userType: args.userType,
+        emailVerifiedAt: user.emailVerificationTime ?? undefined,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { userType: args.userType, profileId };
+    }
+
+    if (profile.userType && profile.userType !== args.userType) {
+      throw new ConvexError({
+        code: "USER_TYPE_LOCKED",
+        message: "Account type has already been set and cannot be changed.",
+      });
+    }
+    if (profile.userType === args.userType) {
+      return { userType: args.userType };
+    }
+    await ctx.db.patch(profile._id, {
+      userType: args.userType,
+      updatedAt: Date.now(),
+    });
+    return { userType: args.userType };
+  },
+});
+
+/**
+ * Completes alumni onboarding. Enforces userType === alumni server-side and,
+ * when Stripe Identity is enabled, requires a verified Identity session on
+ * the profile before accepting the rest of the fields.
+ */
+export const completeAlumniOnboarding = mutation({
+  args: {
+    name: v.string(),
+    college: v.string(),
+    matriculationYear: v.string(),
+    dateOfBirth: v.string(),
+    interestedSocietySlugs: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, profile } = await requireVerifiedUser(ctx);
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be found.",
+      });
+    }
+    if (profile.userType !== "alumni") {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "Alumni onboarding is only available for alumni accounts.",
+      });
+    }
+
+    if (
+      isStripeIdentityEnabled() &&
+      profile.stripeVerificationStatus !== "verified"
+    ) {
+      throw new ConvexError({
+        code: "IDENTITY_REQUIRED",
+        message: "Stripe Identity verification must be completed first.",
+      });
+    }
+
+    const trimmedName = args.name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 80) {
+      throw new ConvexError({
+        code: "INVALID_NAME",
+        message: "Name must be between 2 and 80 characters.",
+      });
+    }
+
+    const trimmedCollege = args.college.trim();
+    if (trimmedCollege.length < 2 || trimmedCollege.length > 80) {
+      throw new ConvexError({
+        code: "INVALID_COLLEGE",
+        message: "College must be between 2 and 80 characters.",
+      });
+    }
+
+    const year = args.matriculationYear.trim();
+    if (!/^\d{4}$/.test(year)) {
+      throw new ConvexError({
+        code: "INVALID_YEAR",
+        message: "Enter a four-digit matriculation or graduation year.",
+      });
+    }
+    const yearNum = Number(year);
+    const currentYear = new Date().getFullYear();
+    if (yearNum < 1950 || yearNum > currentYear) {
+      throw new ConvexError({
+        code: "INVALID_YEAR",
+        message: `Year must be between 1950 and ${currentYear}.`,
+      });
+    }
+
+    assertAdultOrThrow(
+      args.dateOfBirth.trim(),
+      "You must be at least 18 years old.",
+    );
+
+    if (args.interestedSocietySlugs.length > 40) {
+      throw new ConvexError({
+        code: "INVALID_SOCIETIES",
+        message: "Too many societies selected.",
+      });
+    }
+
+    const uniqueSlugs = [
+      ...new Set(
+        args.interestedSocietySlugs
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0 && s.length <= 80),
+      ),
+    ];
+
+    const now = Date.now();
+    await ctx.db.patch(profile._id, {
+      name: trimmedName,
+      college: trimmedCollege,
+      matriculationYear: year,
+      dateOfBirth: args.dateOfBirth.trim(),
+      ageAttestedAt: now,
+      interestedSocietySlugs: uniqueSlugs,
+      updatedAt: now,
+    });
+
+    // Best-effort follows for active societies that have a communities catalog row.
+    for (const slug of uniqueSlugs) {
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+      if (!community) continue;
+
+      const existing = await ctx.db
+        .query("communityFollows")
+        .withIndex("by_community_user", (q) =>
+          q.eq("communitySlug", slug).eq("userId", userId),
+        )
+        .unique();
+      if (existing) continue;
+
+      await ctx.db.insert("communityFollows", {
+        userId,
+        communitySlug: slug,
+        createdAt: now,
+      });
+      await ctx.db.patch(community._id, {
+        followers: community.followers + 1,
+      });
+    }
+
+    return null;
+  },
+});
+
+/** Internal — used by alumniIdentity actions (ActionCtx has no ctx.db). */
+export const getProfileForIdentity = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const profile = await getProfileByUserId(ctx, args.userId);
+    if (!profile) return null;
+    return {
+      userId: profile.userId,
+      userType: profile.userType ?? null,
+      stripeVerificationSessionId: profile.stripeVerificationSessionId ?? null,
+      stripeVerificationStatus: profile.stripeVerificationStatus ?? null,
+    };
+  },
+});
+
+export const recordVerificationSessionCreated = internalMutation({
+  args: {
+    userId: v.id("users"),
+    stripeVerificationSessionId: v.string(),
+    status: stripeVerificationStatusValidator,
+  },
+  handler: async (ctx, args) => {
+    const profile = await getProfileByUserId(ctx, args.userId);
+    if (!profile) return null;
+    await ctx.db.patch(profile._id, {
+      stripeVerificationSessionId: args.stripeVerificationSessionId,
+      stripeVerificationStatus: args.status,
+      updatedAt: Date.now(),
+    });
+    return null;
+  },
+});
+
+/** Webhook-driven update — matches purely by stripeVerificationSessionId. */
+export const updateVerificationFromWebhook = internalMutation({
+  args: {
+    stripeVerificationSessionId: v.string(),
+    status: stripeVerificationStatusValidator,
+    verifiedName: v.optional(v.string()),
+    verifiedDob: v.optional(v.string()),
+    lastErrorCode: v.optional(v.string()),
+    lastErrorReason: v.optional(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_stripeVerificationSessionId", (q) =>
+        q.eq("stripeVerificationSessionId", args.stripeVerificationSessionId),
+      )
+      .unique();
+    if (!profile) return { updated: false };
+
+    await ctx.db.patch(profile._id, {
+      stripeVerificationStatus: args.status,
+      ...(args.verifiedName !== undefined
+        ? { verifiedName: args.verifiedName }
+        : {}),
+      ...(args.verifiedDob !== undefined
+        ? { verifiedDob: args.verifiedDob }
+        : {}),
+      stripeVerificationLastErrorCode:
+        args.status === "requires_input" ? args.lastErrorCode : undefined,
+      stripeVerificationLastErrorReason:
+        args.status === "requires_input" ? args.lastErrorReason : undefined,
+      updatedAt: Date.now(),
+    });
+    return { updated: true };
   },
 });
 

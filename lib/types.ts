@@ -118,6 +118,7 @@ export interface Society {
   coverImageUrl: string | null;
   websiteUrl: string;
   secondaryLink: string | null;
+  socialUrl?: string | null;
   status: "pending" | "active" | "rejected";
   createdAt: number;
   orgType: OrgType;
@@ -143,9 +144,11 @@ export interface AdminSociety {
   coverImageUrl: string | null;
   websiteUrl: string;
   secondaryLink: string | null;
+  socialUrl?: string | null;
   status: "pending" | "active" | "rejected";
   createdAt: number;
   creatorId: string;
+  orgType: OrgType;
   moderationNote: string | null;
   moderatedAt: number | null;
   moderationAction: "rejected" | "taken_down" | null;

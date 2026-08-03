@@ -7,17 +7,29 @@ import {
 } from "./password-flow";
 
 describe("password flow helpers", () => {
-  it("builds sign-up form data with password field", () => {
+  it("builds sign-up form data with password field and userType", () => {
     const fields = getPasswordFlowFormFields({
       flow: "signUp",
       email: "user@ox.ac.uk",
       password: "StrongPass123!",
+      userType: "student",
     });
     expect(fields).toEqual({
       email: "user@ox.ac.uk",
       password: "StrongPass123!",
       flow: "signUp",
+      userType: "student",
     });
+  });
+
+  it("includes alumni userType on sign-up form data", () => {
+    const fields = getPasswordFlowFormFields({
+      flow: "signUp",
+      email: "alumni@gmail.com",
+      password: "StrongPass123!",
+      userType: "alumni",
+    });
+    expect(fields.userType).toBe("alumni");
   });
 
   it("builds sign-in form data with password field", () => {

@@ -1,5 +1,5 @@
 import { ConvexError, v } from "convex/values";
-import { internalMutation } from "./_generated/server";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import { isAllowedAuthEmail } from "./auth/adminConfig";
 import {
   assertNotRateLimited,
@@ -29,14 +29,23 @@ export const FLOW_LIMITS = {
 
 export type AuthFlow = keyof typeof FLOW_LIMITS;
 
-export function normalizeAndValidateOxfordEmail(email: string) {
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+/** Normalize and accept any syntactically valid email. */
+export function normalizeAndValidateEmail(email: string) {
   const normalized = email.trim().toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalized)) {
+  if (!EMAIL_SHAPE.test(normalized)) {
     throw new ConvexError({
       code: "INVALID_EMAIL",
       message: "Please use a valid email address.",
     });
   }
+  return normalized;
+}
+
+/** Oxford / college subdomain, or allowlisted admin portal identities. */
+export function normalizeAndValidateOxfordEmail(email: string) {
+  const normalized = normalizeAndValidateEmail(email);
 
   if (!isAllowedAuthEmail(normalized)) {
     throw new ConvexError({
@@ -49,13 +58,41 @@ export function normalizeAndValidateOxfordEmail(email: string) {
 }
 
 /**
+ * OTP sends: Oxford/admin always OK; non-Oxford only if the auth user already
+ * exists (alumni verification after password signUp, password reset).
+ */
+async function normalizeAndValidateOtpSendEmail(
+  ctx: MutationCtx,
+  email: string,
+) {
+  const normalized = normalizeAndValidateEmail(email);
+  if (isAllowedAuthEmail(normalized)) {
+    return normalized;
+  }
+
+  const existing = await ctx.db
+    .query("users")
+    .withIndex("email", (q) => q.eq("email", normalized))
+    .unique();
+
+  if (existing) {
+    return normalized;
+  }
+
+  throw new ConvexError({
+    code: "EMAIL_DOMAIN_NOT_ALLOWED",
+    message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",
+  });
+}
+
+/**
  * Server-only: check + consume one OTP send attempt for an email.
  * Call from sendVerificationRequest so clients cannot skip or reset quotas.
  */
 export const consumeOtpSend = internalMutation({
   args: { email: v.string() },
   handler: async (ctx, args) => {
-    const email = normalizeAndValidateOxfordEmail(args.email);
+    const email = await normalizeAndValidateOtpSendEmail(ctx, args.email);
     const opts = { key: `otpSend:${email}`, ...FLOW_LIMITS.otpSend };
     await assertNotRateLimited(ctx, opts);
     await recordRateLimitAttempt(ctx, opts, false);
@@ -73,14 +110,34 @@ const AUTH_FLOW_KEYS = [
 /**
  * Server-only: rate-limit Password auth flows (sign-in, sign-up, reset, etc.).
  * Called from Password `profile` so clients cannot skip the quota.
+ *
+ * Sign-up enforces Oxford email for students and any valid email for alumni.
+ * Other flows accept any valid email so existing alumni accounts can sign in
+ * and reset passwords.
  */
 export const consumeAuthFlow = internalMutation({
   args: {
     flow: v.string(),
     email: v.string(),
+    userType: v.optional(v.union(v.literal("student"), v.literal("alumni"))),
   },
   handler: async (ctx, args) => {
-    const email = normalizeAndValidateOxfordEmail(args.email);
+    let email: string;
+    if (args.flow === "signUp") {
+      if (args.userType === "alumni") {
+        email = normalizeAndValidateEmail(args.email);
+      } else if (args.userType === "student") {
+        email = normalizeAndValidateOxfordEmail(args.email);
+      } else {
+        throw new ConvexError({
+          code: "USER_TYPE_REQUIRED",
+          message: "Choose Student or Alumni before creating an account.",
+        });
+      }
+    } else {
+      email = normalizeAndValidateEmail(args.email);
+    }
+
     const flow = args.flow as AuthFlow;
     if (!(AUTH_FLOW_KEYS as readonly string[]).includes(flow)) {
       return;

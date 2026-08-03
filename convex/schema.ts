@@ -21,6 +21,15 @@ export default defineSchema({
     college: v.optional(v.string()),
     degree: v.optional(v.string()),
     yearInCollege: v.optional(v.string()),
+    /**
+     * Audience chosen at signup — orthogonal to admin `role`.
+     * Server-enforced; never trust client-only for permissions.
+     */
+    userType: v.optional(v.union(v.literal("student"), v.literal("alumni"))),
+    /** Alumni matriculation / graduation year (e.g. "2019"). */
+    matriculationYear: v.optional(v.string()),
+    /** Society slugs the alumni marked interest in during onboarding. */
+    interestedSocietySlugs: v.optional(v.array(v.string())),
     /** ISO date YYYY-MM-DD — required for 18+ eligibility under the T&Cs. */
     dateOfBirth: v.optional(v.string()),
     ageAttestedAt: v.optional(v.number()),
@@ -31,12 +40,28 @@ export default defineSchema({
     avatarStorageId: v.optional(v.id("_storage")),
     role: v.union(v.literal("user"), v.literal("admin")),
     emailVerifiedAt: v.optional(v.number()),
+    /** Stripe Identity — alumni onboarding (mirrors society/campaign fields). */
+    stripeVerificationSessionId: v.optional(v.string()),
+    stripeVerificationStatus: v.optional(
+      v.union(
+        v.literal("created"),
+        v.literal("requires_input"),
+        v.literal("processing"),
+        v.literal("verified"),
+        v.literal("canceled"),
+      ),
+    ),
+    verifiedName: v.optional(v.string()),
+    verifiedDob: v.optional(v.string()),
+    stripeVerificationLastErrorCode: v.optional(v.string()),
+    stripeVerificationLastErrorReason: v.optional(v.string()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
     .index("by_userId", ["userId"])
     .index("by_email", ["email"])
-    .index("by_role", ["role"]),
+    .index("by_role", ["role"])
+    .index("by_stripeVerificationSessionId", ["stripeVerificationSessionId"]),
   legalAcceptances: defineTable({
     userId: v.optional(v.id("users")),
     guestKey: v.optional(v.string()),

@@ -1,31 +1,37 @@
 import { z } from "zod";
-import { isAdminLoginEmail } from "@/lib/auth/admin";
+import { isAdminLoginEmail } from "../auth/admin";
 
 function isOxfordEmail(email: string) {
   const domain = email.split("@")[1] ?? "";
   return domain === "ox.ac.uk" || domain.endsWith(".ox.ac.uk");
 }
 
-function isAllowedSignInEmail(email: string) {
-  return isOxfordEmail(email) || isAdminLoginEmail(email);
-}
-
-export const emailSchema = z
+/** Any syntactically valid email (sign-in, reset, alumni signup). */
+export const anyEmailSchema = z
   .string()
   .trim()
   .email("Enter a valid email.")
-  .transform((value) => value.toLowerCase())
-  .refine(
-    isAllowedSignInEmail,
-    "Use your Oxford email address (ending in ox.ac.uk).",
-  );
+  .transform((value) => value.toLowerCase());
+
+/** Oxford / college subdomain, or allowlisted outreach admin emails. */
+export function isAllowedStudentEmail(email: string) {
+  return isOxfordEmail(email) || isAdminLoginEmail(email);
+}
+
+export const oxfordEmailSchema = anyEmailSchema.refine(
+  isAllowedStudentEmail,
+  "Use your Oxford email address (ending in ox.ac.uk).",
+);
+
+/** @deprecated Prefer anyEmailSchema or oxfordEmailSchema; kept as any-email for sign-in. */
+export const emailSchema = anyEmailSchema;
 
 export const requestOtpSchema = z.object({
-  email: emailSchema,
+  email: anyEmailSchema,
 });
 
 export const verifyOtpSchema = z.object({
-  email: emailSchema,
+  email: anyEmailSchema,
   code: z
     .string()
     .trim()
@@ -33,7 +39,7 @@ export const verifyOtpSchema = z.object({
 });
 
 export const verifyEmailSchema = z.object({
-  email: emailSchema,
+  email: anyEmailSchema,
   code: z
     .string()
     .trim()
@@ -57,19 +63,29 @@ export const passwordSchema = z
   .regex(/[^A-Za-z0-9]/, "Add a special character.");
 
 export const signInWithPasswordSchema = z.object({
-  email: emailSchema,
+  email: anyEmailSchema,
   password: z.string().min(1, "Enter your password."),
 });
 
 export const signUpWithPasswordSchema = z
   .object({
-    email: emailSchema,
+    email: anyEmailSchema,
+    userType: z.enum(["student", "alumni"]),
     newPassword: passwordSchema,
     confirmPassword: z.string().min(1, "Confirm your password."),
   })
   .refine((data) => data.newPassword === data.confirmPassword, {
     message: "Passwords do not match.",
     path: ["confirmPassword"],
+  })
+  .superRefine((data, ctx) => {
+    if (data.userType === "student" && !isAllowedStudentEmail(data.email)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "Use your Oxford email address (ending in ox.ac.uk).",
+        path: ["email"],
+      });
+    }
   });
 
 export const setPasswordSchema = z

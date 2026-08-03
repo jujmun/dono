@@ -34,14 +34,19 @@ describe("auth validation", () => {
     }
   });
 
-  it("rejects non-Oxford email domains", () => {
-    const result = requestOtpSchema.safeParse({
-      email: "test@example.com",
-    });
-    expect(result.success).toBe(false);
+  it("accepts any valid email for OTP / sign-in flows", () => {
+    expect(
+      requestOtpSchema.safeParse({ email: "alumni@gmail.com" }).success,
+    ).toBe(true);
+    expect(
+      signInWithPasswordSchema.safeParse({
+        email: "alumni@gmail.com",
+        password: "x",
+      }).success,
+    ).toBe(true);
   });
 
-  it("accepts allowlisted outreach admin emails (Oxford domain bypass)", () => {
+  it("accepts allowlisted outreach admin emails", () => {
     expect(
       requestOtpSchema.safeParse({ email: "dono.outreach@gmail.com" }).success,
     ).toBe(true);
@@ -53,9 +58,12 @@ describe("auth validation", () => {
     ).toBe(true);
   });
 
-  it("rejects lookalike domains that merely contain ox.ac.uk", () => {
-    const result = requestOtpSchema.safeParse({
+  it("rejects lookalike domains that merely contain ox.ac.uk for student signup", () => {
+    const result = signUpWithPasswordSchema.safeParse({
       email: "test@fakeox.ac.uk.evil.com",
+      userType: "student",
+      newPassword: "StrongPass123!",
+      confirmPassword: "StrongPass123!",
     });
     expect(result.success).toBe(false);
   });
@@ -84,9 +92,30 @@ describe("auth validation", () => {
     expect(result.success).toBe(true);
   });
 
-  it("accepts sign-up with email and matching passwords", () => {
+  it("accepts student sign-up with Oxford email and matching passwords", () => {
     const result = signUpWithPasswordSchema.safeParse({
       email: "student@st-annes.ox.ac.uk",
+      userType: "student",
+      newPassword: "StrongPass123!",
+      confirmPassword: "StrongPass123!",
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("rejects student sign-up with a non-Oxford email", () => {
+    const result = signUpWithPasswordSchema.safeParse({
+      email: "student@gmail.com",
+      userType: "student",
+      newPassword: "StrongPass123!",
+      confirmPassword: "StrongPass123!",
+    });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts alumni sign-up with a personal email", () => {
+    const result = signUpWithPasswordSchema.safeParse({
+      email: "alumni@gmail.com",
+      userType: "alumni",
       newPassword: "StrongPass123!",
       confirmPassword: "StrongPass123!",
     });

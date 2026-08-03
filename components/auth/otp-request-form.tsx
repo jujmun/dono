@@ -126,7 +126,8 @@ function OtpRequestFormInner({
                 {...({ "ph-no-capture": true } as object)}
               />
               <Text className="mt-1 text-xs text-dono-muted">
-                Use your Oxford email address (ending in ox.ac.uk).
+                Use your Oxford email for student accounts, or any email for
+                existing alumni accounts.
               </Text>
             </View>
 

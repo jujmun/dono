@@ -7,13 +7,17 @@ import {
   Heart,
   Users,
   ArrowRight,
-  TrendingUp,
   Calendar,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { SocietyCard } from "@/components/society-card";
 import { LoginGate } from "@/components/login-gate";
+import {
+  ReceiptDivider,
+  ReceiptLedger,
+  ReceiptLineRow,
+} from "@/components/ui/receipt-lines";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign, DonorImpact, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
@@ -144,74 +148,37 @@ export default function DashboardPage() {
         </View>
       ) : null}
 
-        <View className="gap-8">
-          <View>
-            <View className="mb-4 flex-row items-center gap-2">
-              <TrendingUp size={20} color="#17211B" />
-              <Text className="text-lg font-retro-bold text-dono-text">Your Impact</Text>
-            </View>
-            <View className="gap-3">
-              {impact.impactHighlights.length > 0 ? (
-                impact.impactHighlights.map((highlight, i) => (
-                  <View
-                    key={i}
-                    className="rounded-xl border border-dono-border bg-white p-4"
-                  >
-                    <Text className="text-sm leading-relaxed text-dono-text">
-                      {highlight}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                <View className="rounded-xl border border-dono-border bg-white p-4">
-                  <Text className="text-sm text-dono-muted">
-                    Your impact highlights will appear here after your first donation.
+        <View>
+          <View className="mb-4 flex-row items-center gap-2">
+            <Calendar size={20} color="#17211B" />
+            <Text className="text-lg font-retro-bold text-dono-text">
+              Recent Donations
+            </Text>
+          </View>
+          <ReceiptLedger>
+            {impact.recentDonations.length > 0 ? (
+              impact.recentDonations.map((donation, i) => (
+                <View key={i}>
+                  {i > 0 ? <ReceiptDivider /> : null}
+                  <ReceiptLineRow
+                    label={donation.campaign}
+                    amount={donation.amount}
+                  />
+                  <Text className="-mt-1.5 text-xs text-dono-muted">
+                    {new Date(donation.date).toLocaleDateString("en-GB", {
+                      day: "numeric",
+                      month: "short",
+                      year: "numeric",
+                    })}
                   </Text>
                 </View>
-              )}
-            </View>
-          </View>
-
-          <View>
-            <View className="mb-4 flex-row items-center gap-2">
-              <Calendar size={20} color="#17211B" />
-              <Text className="text-lg font-retro-bold text-dono-text">
-                Recent Donations
+              ))
+            ) : (
+              <Text className="text-sm text-dono-muted">
+                No donations yet. Explore campaigns to get started.
               </Text>
-            </View>
-            <View className="gap-3">
-              {impact.recentDonations.length > 0 ? (
-                impact.recentDonations.map((donation, i) => (
-                  <View
-                    key={i}
-                    className="flex-row items-center justify-between rounded-xl border border-dono-border bg-white p-4"
-                  >
-                    <View>
-                      <Text className="font-retro-bold text-sm text-dono-text">
-                        {donation.campaign}
-                      </Text>
-                      <Text className="text-xs text-dono-muted">
-                        {new Date(donation.date).toLocaleDateString("en-GB", {
-                          day: "numeric",
-                          month: "short",
-                          year: "numeric",
-                        })}
-                      </Text>
-                    </View>
-                    <Text className="font-retro-mono-bold text-sm text-dono-primary">
-                      {formatCurrency(donation.amount)}
-                    </Text>
-                  </View>
-                ))
-              ) : (
-                <View className="rounded-xl border border-dono-border bg-white p-4">
-                  <Text className="text-sm text-dono-muted">
-                    No donations yet. Explore campaigns to get started.
-                  </Text>
-                </View>
-              )}
-            </View>
-          </View>
+            )}
+          </ReceiptLedger>
         </View>
 
         <View className="mt-8">

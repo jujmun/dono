@@ -56,8 +56,6 @@ import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
-const dinoLogo = require("../assets/dino-hero.png");
-
 const steps = ["Details", "Story", "Goal", "Review", "Submit"];
 
 const DEFAULT_UNIVERSITY = "University of Oxford";
@@ -820,10 +818,9 @@ export default function CreateCampaignPage() {
                     }`}
                   >
                     {i < step ? (
-                      <Image
-                        source={dinoLogo}
-                        style={{ width: 18, height: 18, tintColor: "#fff" }}
-                        resizeMode="contain"
+                      <Check
+                        size={16}
+                        color="#fff"
                         accessibilityLabel="Step complete"
                       />
                     ) : (

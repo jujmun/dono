@@ -21,6 +21,7 @@ import {
   Repeat,
   Check,
   X,
+  Share2,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { SocietyFollowButton } from "@/components/society-follow-button";
@@ -182,10 +183,8 @@ function SocietyDetail({
                 {society.name}
               </Text>
               <Text className="mt-1 text-sm text-dono-muted">
-                Student society · On Dono since {joinedDate}
-              </Text>
-              <Text className="mt-2 leading-relaxed text-dono-muted">
-                {society.description}
+                {society.orgType === "college" ? "College" : "Student society"} ·
+                On Dono since {joinedDate}
               </Text>
             </View>
           </View>
@@ -195,6 +194,7 @@ function SocietyDetail({
             name={society.name}
             websiteUrl={society.websiteUrl}
             secondaryLink={society.secondaryLink}
+            socialUrl={society.socialUrl}
             canJoin={canJoin}
           />
           <SocietyPayoutSetupBanner slug={slug} />
@@ -202,9 +202,7 @@ function SocietyDetail({
 
         <View className="mb-8">
           <Text className="mb-3 text-lg font-retro-bold text-dono-text">About</Text>
-          <View className="rounded-2xl border border-dono-border bg-white p-6">
-            <Text className="leading-relaxed text-dono-text">{society.story}</Text>
-          </View>
+          <Text className="leading-relaxed text-dono-text">{society.story}</Text>
         </View>
 
         {canJoin ? <SocietyCampaignsAndLeaderPanels slug={slug} /> : null}
@@ -252,9 +250,6 @@ function CommunityDetail({
                 )}
               </View>
               <Text className="text-sm text-dono-muted">{community.university}</Text>
-              <Text className="mt-2 leading-relaxed text-dono-muted">
-                {community.description}
-              </Text>
             </View>
           </View>
 
@@ -262,7 +257,6 @@ function CommunityDetail({
             <SocietyActionHeader
               slug={slug}
               name={community.name}
-              university={community.university}
               canJoin
             />
           ) : (
@@ -394,22 +388,22 @@ function MembershipActions({ slug }: { slug: string }) {
 /**
  * Shared header actions for both society entity types (new `societies` table
  * and the legacy `communities` catalog). Subscribe is the primary conversion
- * goal, so it gets the large button; Join, Follow, and links are demoted to
- * a row of compact secondary actions.
+ * goal, so it gets the large button; Join and links are demoted to a row of
+ * compact secondary actions.
  */
 function SocietyActionHeader({
   slug,
   name,
-  university,
   websiteUrl,
   secondaryLink,
+  socialUrl,
   canJoin,
 }: {
   slug: string;
   name: string;
-  university?: string;
   websiteUrl?: string | null;
   secondaryLink?: string | null;
+  socialUrl?: string | null;
   /** True when the viewer can join/leave this society (bridged into the membership catalog). */
   canJoin: boolean;
 }) {
@@ -500,7 +494,6 @@ function SocietyActionHeader({
 
       <View className="flex-row flex-wrap items-center gap-2">
         {canJoin ? <MembershipActions slug={slug} /> : null}
-        <SocietyFollowButton slug={slug} name={name} university={university} compact />
         {websiteUrl ? (
           <Pressable
             onPress={() => void Linking.openURL(normalizeExternalUrl(websiteUrl))}
@@ -515,10 +508,20 @@ function SocietyActionHeader({
           <Pressable
             onPress={() => void Linking.openURL(normalizeExternalUrl(secondaryLink))}
             accessibilityRole="button"
-            accessibilityLabel="More links"
+            accessibilityLabel="Donation link"
             className="h-9 w-9 items-center justify-center rounded-full border border-dono-border bg-white"
           >
             <ExternalLink size={16} color="#56615A" />
+          </Pressable>
+        ) : null}
+        {socialUrl ? (
+          <Pressable
+            onPress={() => void Linking.openURL(normalizeExternalUrl(socialUrl))}
+            accessibilityRole="button"
+            accessibilityLabel="Social media"
+            className="h-9 w-9 items-center justify-center rounded-full border border-dono-border bg-white"
+          >
+            <Share2 size={16} color="#56615A" />
           </Pressable>
         ) : null}
       </View>

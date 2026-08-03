@@ -16,9 +16,10 @@ function getStripeClient() {
 /**
  * Separate from the payments webhook (/stripe/webhook): a distinct endpoint,
  * a distinct signing secret (STRIPE_IDENTITY_WEBHOOK_SECRET), and it never
- * touches donations — only the Stripe Identity fields on societies and
- * campaigns. Each event is matched by session id against societies first,
- * then campaigns (a session only ever belongs to one record).
+ * touches donations — only the Stripe Identity fields on societies,
+ * campaigns, and alumni profiles. Each event is matched by session id against
+ * societies first, then campaigns, then profiles (a session only ever belongs
+ * to one record).
  */
 export const identityWebhook = httpAction(async (ctx, request) => {
   const signature = request.headers.get("stripe-signature");
@@ -77,15 +78,21 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         verifiedName: fullName(expanded.verified_outputs),
         verifiedDob: formatDob(expanded.verified_outputs?.dob),
       };
-      const { updated } = await ctx.runMutation(
+      const societyResult = await ctx.runMutation(
         internal.societies.updateVerificationFromWebhook,
         update,
       );
-      if (!updated) {
-        await ctx.runMutation(
+      if (!societyResult.updated) {
+        const campaignResult = await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
         );
+        if (!campaignResult.updated) {
+          await ctx.runMutation(
+            internal.users.updateVerificationFromWebhook,
+            update,
+          );
+        }
       }
       break;
     }
@@ -97,15 +104,21 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         lastErrorCode: session.last_error?.code ?? undefined,
         lastErrorReason: session.last_error?.reason ?? undefined,
       };
-      const { updated } = await ctx.runMutation(
+      const societyResult = await ctx.runMutation(
         internal.societies.updateVerificationFromWebhook,
         update,
       );
-      if (!updated) {
-        await ctx.runMutation(
+      if (!societyResult.updated) {
+        const campaignResult = await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
         );
+        if (!campaignResult.updated) {
+          await ctx.runMutation(
+            internal.users.updateVerificationFromWebhook,
+            update,
+          );
+        }
       }
       break;
     }
@@ -116,15 +129,21 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         stripeVerificationSessionId: session.id,
         status: session.status,
       };
-      const { updated } = await ctx.runMutation(
+      const societyResult = await ctx.runMutation(
         internal.societies.updateVerificationFromWebhook,
         update,
       );
-      if (!updated) {
-        await ctx.runMutation(
+      if (!societyResult.updated) {
+        const campaignResult = await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
         );
+        if (!campaignResult.updated) {
+          await ctx.runMutation(
+            internal.users.updateVerificationFromWebhook,
+            update,
+          );
+        }
       }
       break;
     }
