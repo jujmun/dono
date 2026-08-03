@@ -1,0 +1,89 @@
+# Dono Complaints Policy
+
+**Version:** Working draft v2.2 — 31 July 2026
+**Status:** DRAFT — NOT FOR PUBLICATION. Referred to from clause 33.1 of the Terms of Service. Requires solicitor sign-off on the flagged items. This is a **public** document.
+
+> **What changed from v2.1:** the reference to the **revoked 2015 ADR Regulations is removed** and replaced with the regime actually in force — Chapter 4 of Part 4 of the Digital Markets, Competition and Consumers Act 2024, in force since 6 April 2026; the **complaints address is standardised** to `joindono.team@gmail.com`; the routing table now shows all three complaint processes and their different clocks, so a complainant is not left guessing; the appeal reviewer is aligned with the single framework in the Community Guidelines.
+
+---
+
+## 1. Purpose and scope
+
+1.1 This is the Complaints Policy referred to in clause 33.1 of the Terms of Service. It explains how to complain about anything Dono has done or failed to do, how we investigate and decide complaints, and what happens if you remain unhappy.
+
+1.2 **There is one address for every kind of complaint: `joindono.team@gmail.com`.** You do not need to work out which process applies — tell us what went wrong and we will route it, and tell you which route we have used and what the timescale is.
+
+1.3 **Three processes, three clocks.** They exist because different laws impose different obligations, not because we like paperwork.
+
+| If your complaint is about… | It is handled under… | We acknowledge within |
+|---|---|---|
+| Content, moderation, removal of your campaign or comment, suspension of your account, a report you made that we did not act on, or our online-safety duties | **Community Guidelines clause 8** | **5 Working Days** |
+| How we have used, held, shared or deleted your personal data; a data request we handled badly; a data breach | **Data Protection Complaints Workflow** | **30 days** |
+| Anything else — fees, delays, technical faults, verification, or the way a process was handled | **This policy** | **2 Working Days** |
+
+Where a complaint covers more than one, we use the shortest acknowledgement period and answer each element under its own process.
+
+1.4 This policy covers complaints about, among other things: account suspension or restriction (clause 22 of the Terms); campaign removal or an institution report (clause 23); student-status or campaign verification, including delays or outcomes (clauses 6 and 7.3); technical problems; fees (clause 16); and **how a refund request was handled** — for example an unreasonable delay. It is not limited to these examples.
+
+1.5 This policy does **not** cover:
+
+(a) **the substantive decision on whether a refund is due**, which is decided under the Refund and Dispute Policy and has its own appeal route. You can still complain here about the *service* you received during that process;
+(b) **a decision for which the Terms already give you a dedicated appeal right** — moderation, removal, suspension, or refusal or withdrawal of a student-status check. Those are all appealed under **clause 8 of the Community Guidelines**, which is the single framework for challenging a decision. You may still complain here about how that process was handled.
+
+1.6 Where a matter could go through both a dedicated appeal route and this policy, we will not run duplicate parallel processes on the same point. Tell us which you are using, or we will ask.
+
+## 2. How to complain
+
+2.1 Send your complaint to **joindono.team@gmail.com**, or use the reporting form if it concerns content.
+
+2.2 To help us deal with it promptly, please include: your account details, if you have an account; what happened and when; which Campaign or Donation it relates to, if any; the outcome you are looking for; and any supporting evidence.
+
+2.3 A complaint is "complete" once we have what we reasonably need to look into it (clause 2.4 of the Terms of Service). If something is missing we will tell you what — normally in a single request.
+
+2.4 **You do not need a Dono account to complain**, and you do not need to have used Dono.
+
+## 3. Complaint timescales
+
+3.1 The timescales below are operational targets, not contractual guarantees. They give you a sense of what to expect and give us flexibility where a complex fraud investigation or legal issue takes longer.
+
+3.2 **Acknowledgement.** Within **2 Working Days** of receipt.
+
+3.3 **Initial assessment.** Normally within **10 Working Days** of a complete complaint — including whether we need more information, or whether the matter involves a third party such as the Payment Provider or an Institution.
+
+3.4 **Substantive response.** We aim to respond within **14 Working Days** of a complete complaint. If it will take longer, we will tell you why and when to expect a response.
+
+3.5 **Internal review.** Normally completed within a further **10 Working Days**.
+
+3.6 **Urgent matters** — anything involving an immediate risk to a person, child safety, or suspected illegal content — are handled straight away and outside these timescales.
+
+## 4. Investigation and response
+
+4.1 We look at the relevant records, decisions, correspondence and any evidence you or others provide. Where the complaint concerns a decision made by a specific team member, we may ask that person for their account of events.
+
+4.2 If your complaint touches on a live safeguarding, fraud or law-enforcement matter, our response on that part may be limited or delayed to the extent that answering fully would compromise it. We will tell you this is happening wherever we lawfully can.
+
+4.3 Our substantive response explains what we found, what (if anything) we are doing about it, and how to ask for an internal review.
+
+## 5. Internal review
+
+5.1 If you are not satisfied with our substantive response, ask for an internal review within **14 days** of receiving it. We may accept a later request in exceptional circumstances.
+
+5.2 **Who reviews it.** The review is carried out by **a member of the Dono team who was not substantially involved in the original decision**, applying conflict-of-interest and recusal rules. Where the original decision was made by Amrit Kaur Rooprai, another team member conducts the review first. Where the size of our team genuinely prevents separation, the original decision-maker may reconsider — but only as a documented, genuine second look at the original evidence and any new information you provide, recorded as such. **We do not promise independence we cannot deliver.** For particularly complex or high-risk complaints we may take external legal or specialist advice. Amrit retains final decision-making authority as the operator. This mirrors clause 8.5 of the Community Guidelines; the process is deliberately the same wherever you read about it.
+
+5.3 **Possible outcomes.** The original decision may be **confirmed, varied or reversed**, including restoring content, campaign functionality or account access where appropriate.
+
+## 6. Final response
+
+6.1 The internal review produces Dono's final response to your complaint.
+
+6.2 **Alternative dispute resolution.** Where the law requires us to, our final response to a consumer complaint will give you the information about alternative dispute resolution that **Chapter 4 of Part 4 of the Digital Markets, Competition and Consumers Act 2024** requires — that regime came into force on 6 April 2026 and replaced the previous accreditation scheme. Unless applicable law, a regulatory requirement or a separate agreement requires otherwise, **Dono is not obliged to participate in alternative dispute resolution and does not presently commit to doing so.** **[SOLICITOR SIGN-OFF — confirm the exact information section 308 of the DMCC Act 2024 requires in a final response, whether any sector-specific or contractual participation duty applies to Dono as a UK sole trader supplying services to consumers, and if so identify an accredited competent provider. Once confirmed, this clause can be made unconditional if appropriate.]**
+
+6.3 Nothing in this policy affects your statutory rights, your right to bring a claim in the courts under clause 32 of the Terms of Service, your right to complain to the Information Commissioner's Office about a data matter, your right to complain to Ofcom about an online-safety matter, or any right you have against the Payment Provider directly.
+
+## 7. Records
+
+7.1 We record every complaint — the date received, the route used, the decision and any internal review — and retain it for six years from closure, so that we can demonstrate we handled it properly and can spot recurring problems. We review the complaints log monthly.
+
+## 8. Contact
+
+8.1 Amrit Kaur Rooprai trading as Dono, 37 St Giles', Oxford OX1 3LD. **Complaints: joindono.team@gmail.com.**
