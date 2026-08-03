@@ -3,6 +3,7 @@ import { View, Text, Pressable, ActivityIndicator, Linking, Platform } from "rea
 import { useAction } from "convex/react";
 import { useState } from "react";
 import * as ExpoLinking from "expo-linking";
+import { Building2, Users } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { initialsFor } from "@/lib/utils";
@@ -33,6 +34,9 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
     showConnectCta &&
     isMySociety(society) &&
     !society.connectCardPaymentsActive;
+
+  const isCollege = society.orgType === "college";
+  const TypeIcon = isCollege ? Building2 : Users;
 
   const handleCompletePayoutSetup = async () => {
     setConnectLoading(true);
@@ -71,13 +75,25 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
                 {initialsFor(society.name)}
               </Text>
             </View>
-            {society.status === "pending" ? (
-              <View className="absolute right-3 top-3 rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
+            <View className="absolute right-3 top-3 items-end gap-1.5">
+              <View
+                className={`flex-row items-center gap-1 rounded-full border-2 border-retro-ink px-2 py-0.5 ${
+                  isCollege ? "bg-indigo-100" : "bg-retro-mint"
+                }`}
+              >
+                <TypeIcon size={11} color="#211E1A" />
                 <Text className="font-retro-bold text-[10px] text-retro-ink">
-                  Pending review
+                  {isCollege ? "College" : "Society"}
                 </Text>
               </View>
-            ) : null}
+              {society.status === "pending" ? (
+                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
+                  <Text className="font-retro-bold text-[10px] text-retro-ink">
+                    Pending review
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </CampaignImage>
           <View className="p-4">
             <Text

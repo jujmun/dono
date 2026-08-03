@@ -46,12 +46,12 @@ const slides: WelcomeTourSlide[] = [
     navLabel: "Campaigns",
   },
   {
-    title: "Societies",
+    title: "Communities",
     description:
       "Explore colleges, departments, and student societies. Follow the communities you care about to stay close to their latest projects.",
     icon: Users,
     href: "/societies",
-    navLabel: "Societies",
+    navLabel: "Communities",
   },
   {
     title: "Impact",

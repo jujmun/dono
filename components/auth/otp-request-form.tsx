@@ -122,7 +122,7 @@ function OtpRequestFormInner({
                 autoComplete="email"
                 placeholder="you@st-annes.ox.ac.uk"
                 placeholderTextColor="#8a8478"
-                className="w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none"
+                className="w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro text-sm text-retro-ink outline-none"
                 {...({ "ph-no-capture": true } as object)}
               />
               <Text className="mt-1 text-xs text-dono-muted">

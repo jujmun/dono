@@ -18,7 +18,7 @@ import { useCurrentProfile } from "@/lib/auth/hooks";
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
-  { href: "/societies", label: "Societies", icon: Users },
+  { href: "/societies", label: "Communities", icon: Users },
   { href: "/dashboard", label: "Impact", icon: Sparkles },
   { href: "/account", label: "You", icon: User },
 ] as const;
@@ -254,7 +254,7 @@ export function Footer() {
             {(
               [
                 ["/campaigns", "Campaigns"],
-                ["/societies", "Societies"],
+                ["/societies", "Communities"],
               ] as const
             ).map(([href, label]) => (
               <Link key={href} href={href} asChild>

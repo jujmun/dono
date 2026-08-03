@@ -57,9 +57,18 @@ export default function SocietyOrCommunityPage() {
     api.societies.getPublicBySlug,
     id ? { slug: id } : "skip",
   ) as Society | null | undefined;
-  const community = useQuery(api.communities.getBySlug, {
+  const communityLookup = useQuery(api.communities.getBySlug, {
     slug: id ?? "",
-  }) as Community | null | undefined;
+  }) as
+    | { society: Community; membership: unknown }
+    | null
+    | undefined;
+  const community =
+    communityLookup === undefined
+      ? undefined
+      : communityLookup === null
+        ? null
+        : communityLookup.society;
 
   if (society === undefined || (society === null && community === undefined)) {
     return (
@@ -91,7 +100,9 @@ export default function SocietyOrCommunityPage() {
         <Text className="text-center text-dono-muted">Society not found.</Text>
         <Link href="/societies" asChild>
           <Pressable className="mt-4 items-center">
-            <Text className="font-retro-bold text-dono-primary">Back to societies</Text>
+            <Text className="font-retro-bold text-dono-primary">
+              Back to communities
+            </Text>
           </Pressable>
         </Link>
       </View>
@@ -141,7 +152,7 @@ function SocietyDetail({
         <Link href="/societies" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
             <ArrowLeft size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">Back to societies</Text>
+            <Text className="text-sm text-dono-muted">Back to communities</Text>
           </Pressable>
         </Link>
 
@@ -217,7 +228,7 @@ function CommunityDetail({
         <Link href="/societies" asChild>
           <Pressable className="mb-4 flex-row items-center gap-1">
             <ArrowLeft size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">Back to societies</Text>
+            <Text className="text-sm text-dono-muted">Back to communities</Text>
           </Pressable>
         </Link>
 

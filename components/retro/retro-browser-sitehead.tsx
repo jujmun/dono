@@ -15,7 +15,7 @@ import { NotificationBell } from "@/components/notification-bell";
 
 const baseNavItems = [
   { href: "/campaigns", label: "Campaigns" },
-  { href: "/societies", label: "Societies" },
+  { href: "/societies", label: "Communities" },
   { href: "/dashboard", label: "Impact" },
 ] as const;
 
