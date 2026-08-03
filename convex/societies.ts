@@ -49,6 +49,40 @@ function isValidUrl(value: string): boolean {
   }
 }
 
+function normalizeOptionalUrl(value: string | undefined): string | undefined {
+  const trimmed = value?.trim();
+  if (!trimmed) return undefined;
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+}
+
+async function allocateUniqueSlug(
+  ctx: MutationCtx,
+  name: string,
+  fallback: string,
+): Promise<string> {
+  let baseSlug = slugify(name);
+  if (!baseSlug) baseSlug = fallback;
+  let slug = baseSlug;
+  let suffix = 1;
+  // Societies share the /societies/[slug] URL namespace with the legacy
+  // communities catalog, so a slug must be unique across both tables.
+  while (true) {
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", slug))
+      .unique();
+    if (!society) {
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+      if (!community) return slug;
+    }
+    slug = `${baseSlug}-${suffix}`;
+    suffix += 1;
+  }
+}
+
 function requireModerationReason(reason: string) {
   const trimmed = reason.trim();
   if (!trimmed || trimmed.length > MAX_REASON_LENGTH) {
@@ -94,6 +128,12 @@ async function claimStorageId(
 }
 
 type SocietyDoc = Doc<"societies">;
+type OrgType = "college" | "society";
+
+/** Legacy rows omit orgType — treat as society. */
+function resolveOrgType(society: SocietyDoc): OrgType {
+  return society.orgType === "college" ? "college" : "society";
+}
 
 /** Public/"Discover" shape — never includes id document or supporting document fields. */
 async function toPublicSociety(ctx: QueryCtx, society: SocietyDoc) {
@@ -108,9 +148,10 @@ async function toPublicSociety(ctx: QueryCtx, society: SocietyDoc) {
     coverImageUrl,
     websiteUrl: society.websiteUrl,
     secondaryLink: society.secondaryLink ?? null,
+    socialUrl: society.socialUrl ?? null,
     status: society.status,
     createdAt: society.createdAt,
-    orgType: "society" as const,
+    orgType: resolveOrgType(society),
   };
 }
 
@@ -131,9 +172,10 @@ async function toMineSociety(ctx: QueryCtx, society: SocietyDoc) {
     coverImageUrl,
     websiteUrl: society.websiteUrl,
     secondaryLink: society.secondaryLink ?? null,
+    socialUrl: society.socialUrl ?? null,
     status: society.status,
     createdAt: society.createdAt,
-    orgType: "society" as const,
+    orgType: resolveOrgType(society),
     moderationNote: society.moderationNote ?? null,
     moderatedAt: society.moderatedAt ?? null,
     supportingDocumentCount: society.supportingDocumentStorageIds.length,
@@ -176,9 +218,11 @@ async function toAdminSociety(ctx: QueryCtx, society: SocietyDoc) {
     coverImageUrl,
     websiteUrl: society.websiteUrl,
     secondaryLink: society.secondaryLink ?? null,
+    socialUrl: society.socialUrl ?? null,
     status: society.status,
     createdAt: society.createdAt,
     creatorId: society.creatorId,
+    orgType: resolveOrgType(society),
     moderationNote: society.moderationNote ?? null,
     moderatedAt: society.moderatedAt ?? null,
     moderationAction: society.moderationAction ?? null,
@@ -246,6 +290,7 @@ export const create = mutation({
     supportingDocumentStorageIds: v.array(v.id("_storage")),
     idDocumentStorageId: v.id("_storage"),
     responsibleIndividualUserId: v.optional(v.id("users")),
+    orgType: v.optional(v.union(v.literal("college"), v.literal("society"))),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -253,10 +298,15 @@ export const create = mutation({
       userId,
       context: "create_society",
     });
+    // Societies always go through this path. Colleges use `createCollege`
+    // (no ID docs / Identity). Ignore `orgType: "college"` here so the
+    // legacy shared create args cannot skip society verification.
+    const orgType: OrgType = "society";
+    const entityLabel = "society";
     const profile = await getProfileByUserId(ctx, userId);
     assertAdultOrThrow(
       profile?.dateOfBirth,
-      "You must be at least 18 years old to create a society.",
+      `You must be at least 18 years old to create a ${entityLabel}.`,
     );
     const name = args.name.trim();
     const description = args.description.trim();
@@ -321,28 +371,7 @@ export const create = mutation({
     }
     await claimStorageId(ctx, userId, args.idDocumentStorageId);
 
-    let baseSlug = slugify(name);
-    if (!baseSlug) baseSlug = "society";
-    let slug = baseSlug;
-    let suffix = 1;
-    // Societies share the /societies/[slug] URL namespace with the legacy
-    // communities catalog, so a slug must be unique across both tables.
-    const slugTaken = async (candidate: string) => {
-      const society = await ctx.db
-        .query("societies")
-        .withIndex("by_slug", (q) => q.eq("slug", candidate))
-        .unique();
-      if (society) return true;
-      const community = await ctx.db
-        .query("communities")
-        .withIndex("by_slug", (q) => q.eq("slug", candidate))
-        .unique();
-      return Boolean(community);
-    };
-    while (await slugTaken(slug)) {
-      slug = `${baseSlug}-${suffix}`;
-      suffix += 1;
-    }
+    const slug = await allocateUniqueSlug(ctx, name, "society");
 
     const societyId = await ctx.db.insert("societies", {
       slug,
@@ -356,11 +385,174 @@ export const create = mutation({
       idDocumentStorageId: args.idDocumentStorageId,
       creatorId: userId,
       responsibleIndividualUserId,
+      orgType,
       status: "pending",
       createdAt: Date.now(),
     });
 
     return { slug, societyId };
+  },
+});
+
+/**
+ * College onboarding — no student card, supporting docs, or Stripe Identity.
+ * Starts as `pending` until Stripe Connect completes, then `finalizeCollege`
+ * auto-publishes (active + communities bridge).
+ */
+export const createCollege = mutation({
+  args: {
+    name: v.string(),
+    description: v.string(),
+    websiteUrl: v.optional(v.string()),
+    /** Donation / fundraising link. */
+    secondaryLink: v.optional(v.string()),
+    socialUrl: v.optional(v.string()),
+    coverImageStorageId: v.optional(v.id("_storage")),
+  },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    await assertLegalAcceptedForContext(ctx, {
+      userId,
+      context: "create_society",
+    });
+    const profile = await getProfileByUserId(ctx, userId);
+    assertAdultOrThrow(
+      profile?.dateOfBirth,
+      "You must be at least 18 years old to create a college.",
+    );
+
+    const name = args.name.trim();
+    const description = args.description.trim();
+    const websiteUrl = normalizeOptionalUrl(args.websiteUrl) ?? "";
+    const secondaryLink = normalizeOptionalUrl(args.secondaryLink);
+    const socialUrl = normalizeOptionalUrl(args.socialUrl);
+
+    if (!name || name.length > MAX_NAME_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "College name is required and must be at most 120 characters.",
+      });
+    }
+    if (!description || description.length > MAX_DESCRIPTION_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Description is required and must be at most 500 characters.",
+      });
+    }
+    for (const [label, value] of [
+      ["Website", websiteUrl],
+      ["Donation link", secondaryLink ?? ""],
+      ["Social media link", socialUrl ?? ""],
+    ] as const) {
+      if (value && (value.length > MAX_URL_LENGTH || !isValidUrl(value))) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: `${label} must be a valid URL.`,
+        });
+      }
+    }
+
+    if (args.coverImageStorageId) {
+      await claimStorageId(ctx, userId, args.coverImageStorageId);
+    }
+
+    const slug = await allocateUniqueSlug(ctx, name, "college");
+    // Reuse description as story — colleges have a short extract, not a long about essay.
+    const story = description;
+
+    const societyId = await ctx.db.insert("societies", {
+      slug,
+      name,
+      description,
+      story,
+      coverImageStorageId: args.coverImageStorageId,
+      websiteUrl,
+      secondaryLink,
+      socialUrl,
+      supportingDocumentStorageIds: [],
+      creatorId: userId,
+      responsibleIndividualUserId: userId,
+      orgType: "college",
+      status: "pending",
+      createdAt: Date.now(),
+    });
+
+    return { slug, societyId };
+  },
+});
+
+/**
+ * After Stripe Connect is ready, auto-publish the college (no admin gate).
+ * `reviewedBy` on membership is the creator — schema allows any user id.
+ */
+export const finalizeCollege = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society || society.creatorId !== userId) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission for this action.",
+      });
+    }
+    if (resolveOrgType(society) !== "college") {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Only colleges can be finalized through this flow.",
+      });
+    }
+    if (society.status === "active") {
+      return { slug: society.slug, alreadyActive: true as const };
+    }
+    if (society.status !== "pending") {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "This college can no longer be activated.",
+      });
+    }
+
+    const connectAccount = await ctx.db
+      .query("stripeConnectAccounts")
+      .withIndex("by_community", (q) => q.eq("communitySlug", society.slug))
+      .first();
+    const connectReady =
+      connectAccount?.accountVersion === "v2" &&
+      Boolean(
+        connectAccount.cardPaymentsActive || connectAccount.chargesEnabled,
+      );
+    if (!connectReady) {
+      throw new ConvexError({
+        code: "CONNECT_REQUIRED",
+        message: "Complete Stripe payout setup before publishing your college.",
+      });
+    }
+
+    await ctx.db.patch(society._id, { status: "active" });
+    const refreshed = await ctx.db.get(society._id);
+    if (!refreshed) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "College not found.",
+      });
+    }
+    await bridgeSocietyIntoCommunity(ctx, refreshed, userId);
+    return { slug: society.slug, alreadyActive: false as const };
+  },
+});
+
+/** Bind a cover image stored by the Wikipedia import action to the caller. */
+export const claimCoverStorage = internalMutation({
+  args: {
+    userId: v.id("users"),
+    storageId: v.id("_storage"),
+  },
+  handler: async (ctx, args) => {
+    await claimStorageId(ctx, args.userId, args.storageId);
+    return null;
   },
 });
 
@@ -578,7 +770,12 @@ export const listActive = query({
       .query("societies")
       .withIndex("by_status", (q) => q.eq("status", "active"))
       .collect();
-    return await Promise.all(societies.map((s) => toPublicSociety(ctx, s)));
+    // Colleges appear on Discover via communities.listPublicColleges after
+    // bridge — exclude them here to avoid duplicate cards for the same slug.
+    const societiesOnly = societies.filter(
+      (s) => resolveOrgType(s) === "society",
+    );
+    return await Promise.all(societiesOnly.map((s) => toPublicSociety(ctx, s)));
   },
 });
 
@@ -646,6 +843,10 @@ async function bridgeSocietyIntoCommunity(
   society: SocietyDoc,
   adminUserId: Id<"users">,
 ) {
+  const orgType = resolveOrgType(society);
+  const communityType = orgType === "college" ? "college" : "society";
+  const verificationType = orgType === "college" ? "college" : "society";
+
   const existingCommunity = await ctx.db
     .query("communities")
     .withIndex("by_slug", (q) => q.eq("slug", society.slug))
@@ -654,9 +855,9 @@ async function bridgeSocietyIntoCommunity(
     await ctx.db.patch(existingCommunity._id, {
       name: society.name,
       description: society.description,
-      type: "society",
+      type: communityType,
       verified: true,
-      verificationType: "society",
+      verificationType,
       verificationStatus: "verified",
       createdBy: society.creatorId,
     });
@@ -667,7 +868,7 @@ async function bridgeSocietyIntoCommunity(
     await ctx.db.insert("communities", {
       slug: society.slug,
       name: society.name,
-      type: "society",
+      type: communityType,
       description: society.description,
       avatar: initialsFromName(society.name),
       coverImage,
@@ -676,7 +877,7 @@ async function bridgeSocietyIntoCommunity(
       campaigns: 0,
       totalRaised: 0,
       verified: true,
-      verificationType: "society",
+      verificationType,
       verificationStatus: "verified",
       createdBy: society.creatorId,
     });
@@ -739,20 +940,22 @@ export const approve = mutation({
         message: "Pending society not found.",
       });
     }
-    if (!society.idDocumentStorageId) {
-      throw new ConvexError({
-        code: "STUDENT_CARD_REQUIRED",
-        message: "A student card must be on file before approval.",
-      });
-    }
-    if (
-      isStripeIdentityEnabled() &&
-      society.stripeVerificationStatus !== "verified"
-    ) {
-      throw new ConvexError({
-        code: "IDENTITY_REQUIRED",
-        message: "Stripe Identity verification must be completed before approval.",
-      });
+    if (resolveOrgType(society) === "society") {
+      if (!society.idDocumentStorageId) {
+        throw new ConvexError({
+          code: "STUDENT_CARD_REQUIRED",
+          message: "A student card must be on file before approval.",
+        });
+      }
+      if (
+        isStripeIdentityEnabled() &&
+        society.stripeVerificationStatus !== "verified"
+      ) {
+        throw new ConvexError({
+          code: "IDENTITY_REQUIRED",
+          message: "Stripe Identity verification must be completed before approval.",
+        });
+      }
     }
     await ctx.db.patch(society._id, { status: "active" });
     await bridgeSocietyIntoCommunity(ctx, society, adminUserId);

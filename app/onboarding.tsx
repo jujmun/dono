@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { View, Text, Pressable } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useRouter } from "expo-router";
 import { useMutation } from "convex/react";
 import { AppShell } from "@/components/app-shell";
@@ -7,6 +7,7 @@ import {
   ProfileSetupForm,
   type ProfileSetupValues,
 } from "@/components/profile-setup-form";
+import { AlumniOnboardingForm } from "@/components/alumni-onboarding-form";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
 import {
   YEAR_IN_COLLEGE_OPTIONS,
@@ -24,9 +25,12 @@ export default function OnboardingPage() {
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
   const skipOnboarding = useMutation(api.users.skipOnboarding);
+  const completeAlumniOnboarding = useMutation(api.users.completeAlumniOnboarding);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [skipping, setSkipping] = useState(false);
+
+  const isAlumni = profile?.userType === "alumni";
 
   const initialYear = YEAR_IN_COLLEGE_OPTIONS.includes(
     profile?.yearInCollege as YearInCollege,
@@ -34,7 +38,14 @@ export default function OnboardingPage() {
     ? (profile?.yearInCollege as YearInCollege)
     : undefined;
 
-  const completeOnboarding = async (values: ProfileSetupValues) => {
+  const afterOnboardingComplete = async () => {
+    if (profile?.id) {
+      await setWelcomeTourPending(profile.id);
+    }
+    router.replace("/welcome");
+  };
+
+  const completeStudentOnboarding = async (values: ProfileSetupValues) => {
     setLoading(true);
     setError(null);
 
@@ -58,13 +69,29 @@ export default function OnboardingPage() {
         ...(avatarStorageId ? { avatarStorageId } : {}),
       });
 
-      if (profile?.id) {
-        await setWelcomeTourPending(profile.id);
-      }
-
-      router.replace("/welcome");
+      await afterOnboardingComplete();
     } catch (err) {
       setError(getFriendlyAuthError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const completeAlumni = async (values: {
+    name: string;
+    college: string;
+    matriculationYear: string;
+    dateOfBirth: string;
+    interestedSocietySlugs: string[];
+  }) => {
+    setLoading(true);
+    setError(null);
+    try {
+      await completeAlumniOnboarding(values);
+      await afterOnboardingComplete();
+    } catch (err) {
+      setError(getFriendlyAuthError(err));
+      throw err;
     } finally {
       setLoading(false);
     }
@@ -82,33 +109,54 @@ export default function OnboardingPage() {
     }
   };
 
+  if (profile === undefined) {
+    return (
+      <AppShell>
+        <View className="mx-auto w-full max-w-lg items-center px-4 py-12">
+          <ActivityIndicator color="#17211B" />
+        </View>
+      </AppShell>
+    );
+  }
+
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-lg px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
           <Text className="font-retro-bold text-2xl text-dono-text">
-            Set up your profile
+            {isAlumni ? "Welcome, alumni" : "Set up your profile"}
           </Text>
           <Text className="mt-1 text-sm leading-relaxed text-dono-muted">
-            Welcome to Dono. Add a few details so donors and campaign creators know
-            who you are.
+            {isAlumni
+              ? "A few details help us connect you with colleges and societies you care about."
+              : "Welcome to Dono. Add a few details so donors and campaign creators know who you are."}
           </Text>
 
           <View className="mt-6">
-            <ProfileSetupForm
-              initialValues={{
-                name: profile?.name ?? "",
-                phone: profile?.phone ?? "",
-                college: profile?.college ?? "",
-                degree: profile?.degree ?? "",
-                yearInCollege: initialYear,
-                avatarPreview: profile?.avatarUrl ?? null,
-              }}
-              submitLabel={loading ? "Saving..." : "Complete setup"}
-              loading={loading || skipping}
-              error={error}
-              onSubmit={completeOnboarding}
-            />
+            {isAlumni ? (
+              <AlumniOnboardingForm
+                initialName={profile?.name ?? ""}
+                initialCollege={profile?.college ?? ""}
+                loading={loading || skipping}
+                error={error}
+                onComplete={completeAlumni}
+              />
+            ) : (
+              <ProfileSetupForm
+                initialValues={{
+                  name: profile?.name ?? "",
+                  phone: profile?.phone ?? "",
+                  college: profile?.college ?? "",
+                  degree: profile?.degree ?? "",
+                  yearInCollege: initialYear,
+                  avatarPreview: profile?.avatarUrl ?? null,
+                }}
+                submitLabel={loading ? "Saving..." : "Complete setup"}
+                loading={loading || skipping}
+                error={error}
+                onSubmit={completeStudentOnboarding}
+              />
+            )}
           </View>
 
           <Pressable

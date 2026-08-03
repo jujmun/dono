@@ -30,6 +30,17 @@ const orgTypeFilters: { id: OrgTypeFilter; label: string }[] = [
   { id: "society", label: "Societies" },
 ];
 
+function dedupeBySlug(items: Society[]): Society[] {
+  const seen = new Set<string>();
+  const result: Society[] = [];
+  for (const item of items) {
+    if (seen.has(item.slug)) continue;
+    seen.add(item.slug);
+    result.push(item);
+  }
+  return result;
+}
+
 export default function SocietiesPage() {
   const [tab, setTab] = useState<SocietiesTab>("discover");
   const [orgTypeFilter, setOrgTypeFilter] = useState<OrgTypeFilter>("all");
@@ -46,10 +57,11 @@ export default function SocietiesPage() {
     isAuthenticated ? {} : "skip",
   ) ?? undefined) as MySociety[] | undefined;
 
+  // Colleges first so a bridged college wins if slug ever overlaps listActive.
   const discoverItems =
     activeSocieties === undefined || publicColleges === undefined
       ? undefined
-      : [...publicColleges, ...activeSocieties].sort((a, b) =>
+      : dedupeBySlug([...publicColleges, ...activeSocieties]).sort((a, b) =>
           a.name.localeCompare(b.name),
         );
 
@@ -65,18 +77,10 @@ export default function SocietiesPage() {
 
   return (
     <AppShell>
-      <View className="mb-6 flex-row flex-wrap items-center justify-between gap-4">
+      <View className="mb-6">
         <Text className="font-retro-bold text-[32px] text-retro-ink">
           Communities
         </Text>
-        <Link href="/create-society" asChild>
-          <Pressable className="flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2 shadow-[3px_3px_0_#211E1A]">
-            <Plus size={16} color="#FFF9EF" />
-            <Text className="font-retro-bold text-sm text-retro-paper">
-              Create Society
-            </Text>
-          </Pressable>
-        </Link>
       </View>
 
       <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5 shadow-[3px_3px_0_#211E1A]">
@@ -90,7 +94,7 @@ export default function SocietiesPage() {
         />
       </View>
 
-      <View className="mb-4 flex-row flex-wrap gap-2">
+      <View className="mb-4 flex-row flex-wrap items-center gap-2">
         {tabs.map((t) => (
           <Pressable
             key={t.id}
@@ -115,23 +119,45 @@ export default function SocietiesPage() {
       </View>
 
       {tab === "discover" ? (
-        <View className="mb-6 flex-row flex-wrap gap-2">
-          {orgTypeFilters.map((f) => (
-            <Pressable
-              key={f.id}
-              onPress={() => setOrgTypeFilter(f.id)}
-              className={cn(
-                "rounded-full border-2 border-retro-ink px-3 py-1",
-                orgTypeFilter === f.id
-                  ? "bg-retro-marigold shadow-[2px_2px_0_#211E1A]"
-                  : "bg-retro-cream",
-              )}
-            >
-              <Text className="font-retro-bold text-[11.5px] text-retro-ink">
-                {f.label}
-              </Text>
-            </Pressable>
-          ))}
+        <View className="mb-6 flex-row flex-wrap items-center justify-between gap-2">
+          <View className="flex-row flex-wrap items-center gap-2">
+            {orgTypeFilters.map((f) => (
+              <Pressable
+                key={f.id}
+                onPress={() => setOrgTypeFilter(f.id)}
+                className={cn(
+                  "rounded-full border-2 border-retro-ink px-3 py-1",
+                  orgTypeFilter === f.id
+                    ? "bg-retro-marigold shadow-[2px_2px_0_#211E1A]"
+                    : "bg-retro-cream",
+                )}
+              >
+                <Text className="font-retro-bold text-[11.5px] text-retro-ink">
+                  {f.label}
+                </Text>
+              </Pressable>
+            ))}
+          </View>
+          {orgTypeFilter === "society" ? (
+            <Link href="/create-society" asChild>
+              <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5 shadow-[3px_3px_0_#211E1A]">
+                <Plus size={14} color="#FFF9EF" />
+                <Text className="font-retro-bold text-[11.5px] text-retro-paper">
+                  Create Society
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null}
+          {orgTypeFilter === "college" ? (
+            <Link href="/create-college" asChild>
+              <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5 shadow-[3px_3px_0_#211E1A]">
+                <Plus size={14} color="#FFF9EF" />
+                <Text className="font-retro-bold text-[11.5px] text-retro-paper">
+                  Create College
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null}
         </View>
       ) : null}
 

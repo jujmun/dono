@@ -11,6 +11,7 @@
 import type * as activity from "../activity.js";
 import type * as adminAudit from "../adminAudit.js";
 import type * as adminStripeReset from "../adminStripeReset.js";
+import type * as alumniIdentity from "../alumniIdentity.js";
 import type * as auth from "../auth.js";
 import type * as auth_AdminEmailOTP from "../auth/AdminEmailOTP.js";
 import type * as auth_ResendEmailOTP from "../auth/ResendEmailOTP.js";
@@ -29,6 +30,7 @@ import type * as campaignUpdateEmailsInternal from "../campaignUpdateEmailsInter
 import type * as campaignUpdateUnsubscribe from "../campaignUpdateUnsubscribe.js";
 import type * as campaignUpdates from "../campaignUpdates.js";
 import type * as campaigns from "../campaigns.js";
+import type * as collegeWikipedia from "../collegeWikipedia.js";
 import type * as communities from "../communities.js";
 import type * as crons from "../crons.js";
 import type * as donations from "../donations.js";
@@ -107,6 +109,7 @@ declare const fullApi: ApiFromModules<{
   activity: typeof activity;
   adminAudit: typeof adminAudit;
   adminStripeReset: typeof adminStripeReset;
+  alumniIdentity: typeof alumniIdentity;
   auth: typeof auth;
   "auth/AdminEmailOTP": typeof auth_AdminEmailOTP;
   "auth/ResendEmailOTP": typeof auth_ResendEmailOTP;
@@ -125,6 +128,7 @@ declare const fullApi: ApiFromModules<{
   campaignUpdateUnsubscribe: typeof campaignUpdateUnsubscribe;
   campaignUpdates: typeof campaignUpdates;
   campaigns: typeof campaigns;
+  collegeWikipedia: typeof collegeWikipedia;
   communities: typeof communities;
   crons: typeof crons;
   donations: typeof donations;

@@ -34,9 +34,15 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
         const email = String(params.email ?? "").trim().toLowerCase();
         const flow = String(params.flow ?? "");
         if (email && flow) {
+          const userTypeRaw = params.userType;
+          const userType =
+            userTypeRaw === "student" || userTypeRaw === "alumni"
+              ? userTypeRaw
+              : undefined;
           await ctx.runMutation(internal.security.consumeAuthFlow, {
             flow,
             email,
+            ...(flow === "signUp" ? { userType } : {}),
           });
         }
         return passwordAuthorize(params, ctx);

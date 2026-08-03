@@ -183,7 +183,7 @@ export default function ForgotPasswordPage() {
                   autoCapitalize="none"
                   keyboardType="email-address"
                   autoComplete="email"
-                  placeholder="you@st-annes.ox.ac.uk"
+                  placeholder="you@email.com"
                   placeholderTextColor="#56615A"
                   className={inputClassName}
                   {...({ "ph-no-capture": true } as object)}

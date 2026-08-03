@@ -77,10 +77,6 @@ export default function AccountPage() {
     api.donations.listMySocietySubscriptions,
     isAuthenticated ? {} : "skip",
   );
-  const reviewMessages = useQuery(
-    api.reviewMessages.listMine,
-    isAuthenticated ? {} : "skip",
-  );
   const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
   const requestAccountDeletion = useMutation(api.users.requestAccountDeletion);
 
@@ -285,7 +281,7 @@ export default function AccountPage() {
             Account settings
           </Text>
           <Text className="mt-1 text-dono-muted">
-            Manage your profile, subscriptions, and campaign feedback.
+            Manage your profile and subscriptions.
           </Text>
         </View>
 
@@ -439,47 +435,6 @@ export default function AccountPage() {
             </Text>
           </Pressable>
         </View>
-
-        <SectionCard
-          title="Review feedback"
-          subtitle="Comments from the Dono team about your campaigns."
-        >
-          {reviewMessages === undefined ? (
-            <View className="mt-4 items-center rounded-xl border border-dashed border-dono-border bg-dono-bg py-8">
-              <ActivityIndicator color="#17211B" />
-            </View>
-          ) : reviewMessages.length === 0 ? (
-            <View className="mt-4 rounded-xl border border-dashed border-dono-border bg-dono-bg px-4 py-5">
-              <Text className="text-sm text-dono-muted">
-                Nothing to review yet — feedback appears here once a campaign you run
-                is checked.
-              </Text>
-            </View>
-          ) : (
-            <View className="mt-4 gap-3">
-              {reviewMessages.map((message) => (
-                <View
-                  key={message.id}
-                  className="rounded-xl border border-dono-border bg-dono-bg p-4"
-                >
-                  <Text className="font-retro-bold text-dono-text">
-                    {message.campaignTitle}
-                  </Text>
-                  <Text className="mt-2 text-sm text-dono-text">{message.body}</Text>
-                  <Text className="mt-2 text-xs text-dono-muted">
-                    {new Date(message.createdAt).toLocaleString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </SectionCard>
 
         <SectionCard
           title="Society subscriptions"

@@ -170,9 +170,13 @@ export const societyFields = {
   story: v.string(),
   coverImageStorageId: v.optional(v.id("_storage")),
   websiteUrl: v.string(),
+  /** Donation / fundraising URL (colleges) or secondary link (societies). */
   secondaryLink: v.optional(v.string()),
+  /** Optional social profile URL (colleges). */
+  socialUrl: v.optional(v.string()),
   supportingDocumentStorageIds: v.array(v.id("_storage")),
-  idDocumentStorageId: v.id("_storage"),
+  /** Required for societies; colleges skip student-card upload. */
+  idDocumentStorageId: v.optional(v.id("_storage")),
   creatorId: v.id("users"),
   status: v.union(
     v.literal("pending"),
@@ -210,6 +214,12 @@ export const societyFields = {
   stripeVerificationLastErrorReason: v.optional(v.string()),
   /** Named Responsible Individual for the society (Society Campaign Terms). */
   responsibleIndividualUserId: v.optional(v.id("users")),
+  /**
+   * User-created college vs society submissions. Optional for legacy rows —
+   * treat missing as `"society"`. On approve/bridge, sets communities.type /
+   * verificationType accordingly.
+   */
+  orgType: v.optional(v.union(v.literal("college"), v.literal("society"))),
 };
 
 export const fundFields = {

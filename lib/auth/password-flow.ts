@@ -9,6 +9,7 @@ type SignUpParams = {
   flow: "signUp";
   email: string;
   password: string;
+  userType: "student" | "alumni";
 };
 
 type SignInParams = {
@@ -75,6 +76,13 @@ export function buildPasswordFlowFormData(params: PasswordFlowParams): FormData 
 
   switch (params.flow) {
     case "signUp":
+      appendFields(formData, {
+        email: params.email,
+        password: params.password,
+        flow: params.flow,
+        userType: params.userType,
+      });
+      break;
     case "signIn":
       appendFields(formData, {
         email: params.email,
@@ -128,6 +136,12 @@ export function getPasswordFlowFormFields(
 
   switch (params.flow) {
     case "signUp":
+      return {
+        email: params.email,
+        password: params.password,
+        flow: params.flow,
+        userType: params.userType,
+      };
     case "signIn":
       return {
         email: params.email,
