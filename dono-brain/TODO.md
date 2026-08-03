@@ -70,7 +70,7 @@ Source: [legal/legal-terms-context-handoff.md](legal/legal-terms-context-handoff
 - [ ] Draft main Terms of Service
 - [ ] Draft Privacy Policy
 - [ ] Draft Cookie Policy (after stack is known)
-- [ ] Full suite review by a UK solicitor
+- [ ] Full suite review by a UK solicitor — waiting on Cath to get back with details for a legal professional
 - [ ] Age verification: same investigation as above — confirm whether Stripe-verified DOB is legally sufficient as the 18+ gate, or whether an alternative is required — *(engineering + legal)*
 
 **Specialist review needed (§32)**
