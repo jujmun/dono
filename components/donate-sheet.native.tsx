@@ -160,8 +160,6 @@ export function DonateSheet({
   isAuthenticated,
   donorEmail,
   onDonorEmailChange,
-  coverFees,
-  onCoverFeesChange,
   isAnonymous,
   onAnonymousChange,
   legalAccepted,
@@ -193,7 +191,7 @@ export function DonateSheet({
 
   donorEmailRef.current = donorEmail;
 
-  const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount, coverFees);
+  const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount);
   const feeTotalLabel = formatMinorGbp(feeBreakdown.totalChargedMinor);
   const stripeConfigured = Boolean(publishableKey);
 
@@ -247,7 +245,7 @@ export function DonateSheet({
         amount: selectedAmount,
         donorEmail: donorEmailRef.current.trim() || undefined,
         anonymous: isAnonymous,
-        coverFees,
+        coverFees: true,
         ageAttested: true,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
       });
@@ -293,7 +291,6 @@ export function DonateSheet({
     visible,
     campaignId,
     selectedAmount,
-    coverFees,
     isAnonymous,
     legalAccepted,
     stripeConfigured,
@@ -332,51 +329,6 @@ export function DonateSheet({
             ) : null}
 
             <View className="mt-4 gap-2">
-              <Pressable
-                onPress={() => onCoverFeesChange(!coverFees)}
-                className="flex-row items-center gap-2 py-1"
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: coverFees }}
-              >
-                <View
-                  className={`h-4 w-4 items-center justify-center rounded border ${
-                    coverFees
-                      ? "border-dono-primary bg-dono-primary"
-                      : "border-dono-border bg-white"
-                  }`}
-                >
-                  {coverFees ? (
-                    <Text className="text-[9px] font-bold leading-none text-white">✓</Text>
-                  ) : null}
-                </View>
-                <Text className="min-w-0 flex-1 text-sm text-dono-text">
-                  Cover fees so the full £{selectedAmount} reaches the campaign
-                </Text>
-              </Pressable>
-
-              <Pressable
-                onPress={() => onAnonymousChange(!isAnonymous)}
-                className="flex-row items-center gap-2 py-1"
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: isAnonymous }}
-              >
-                <View
-                  className={`h-4 w-4 items-center justify-center rounded border ${
-                    isAnonymous
-                      ? "border-dono-primary bg-dono-primary"
-                      : "border-dono-border bg-white"
-                  }`}
-                >
-                  {isAnonymous ? (
-                    <Text className="text-[9px] font-bold leading-none text-white">✓</Text>
-                  ) : null}
-                </View>
-                <Text className="min-w-0 flex-1 text-sm text-dono-text">
-                  Hide my name (your amount still shows publicly; your name is hidden
-                  from the public and from the campaign owner)
-                </Text>
-              </Pressable>
-
               <LegalAcceptanceCheckbox
                 context="donate"
                 accepted={legalAccepted}
@@ -400,11 +352,6 @@ export function DonateSheet({
                 amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
               />
               <ReceiptLineRow
-                label="Dono platform fee"
-                amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
-                muted
-              />
-              <ReceiptLineRow
                 label="Estimated payment processing fee"
                 amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
                 muted
@@ -417,6 +364,28 @@ export function DonateSheet({
                 emphasis
               />
             </ReceiptLedger>
+
+            <Pressable
+              onPress={() => onAnonymousChange(!isAnonymous)}
+              className="mt-3 flex-row items-center gap-2 py-1"
+              accessibilityRole="checkbox"
+              accessibilityState={{ checked: isAnonymous }}
+            >
+              <View
+                className={`h-3 w-3 items-center justify-center rounded border ${
+                  isAnonymous
+                    ? "border-dono-primary bg-dono-primary"
+                    : "border-dono-border bg-white"
+                }`}
+              >
+                {isAnonymous ? (
+                  <Text className="text-[8px] font-bold leading-none text-white">✓</Text>
+                ) : null}
+              </View>
+              <Text className="min-w-0 flex-1 text-sm text-dono-text">
+                Anonymous donation
+              </Text>
+            </Pressable>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
               Not Gift Aid. Dono does not issue charitable tax receipts.

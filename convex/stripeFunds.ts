@@ -9,7 +9,7 @@ import {
   donationAmountToStripeMinorUnits,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import { calculateApplicationFeeMinor, calculateFeeEnvelopeMinor } from "./lib/platformFee";
+import { estimateStripeFeeMinor } from "./lib/platformFee";
 import { incrementCommunityRaised, incrementFundRaised } from "./lib/aggregates";
 import { isPublicCampaign } from "./lib/campaignVisibility";
 
@@ -90,7 +90,7 @@ async function allocateFundDonation(
     donationId: Id<"donations">;
     amount: number;
     category: string;
-    /** Amount to distribute after retaining the 5% + 20p fee envelope (GBP major). */
+    /** Amount to distribute after estimated Stripe processing (GBP major). */
     distributableAmount: number;
   },
 ) {
@@ -159,14 +159,22 @@ export const markFundDonationSucceeded = internalMutation({
 
     const grossAmountMinor =
       donation.grossAmountMinor ?? donationAmountToStripeMinorUnits(donation.amount);
-    const feeEnvelopeMinor = calculateFeeEnvelopeMinor(grossAmountMinor);
-    const distributableMinor = Math.max(0, grossAmountMinor - feeEnvelopeMinor);
+    // Prefer stored intended amount (donor pays Stripe estimate on top). Fall back
+    // for older rows that charged the gift alone without a separate intended field.
+    const distributableMinor =
+      donation.intendedCampaignAmountMinor ??
+      Math.max(
+        0,
+        grossAmountMinor -
+          (donation.estimatedStripeFeeMinor ??
+            estimateStripeFeeMinor(grossAmountMinor)),
+      );
     const distributableAmount = distributableMinor / 100;
 
     await ctx.db.patch(donation._id, {
       paymentStatus: "succeeded",
       ...(donation.applicationFeeAmountMinor === undefined
-        ? { applicationFeeAmountMinor: calculateApplicationFeeMinor(grossAmountMinor) }
+        ? { applicationFeeAmountMinor: 0 }
         : {}),
     });
 

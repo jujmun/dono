@@ -83,7 +83,6 @@ export default function CampaignDetailPage() {
   );
   const [customAmount, setCustomAmount] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
-  const [coverFees, setCoverFees] = useState(false);
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
@@ -547,8 +546,9 @@ export default function CampaignDetailPage() {
           </Text>
           <Text className="mt-1 text-xs leading-relaxed text-[#5c574f]">
             Donations are paid to this society&apos;s Stripe Connected Account. The
-            Connected Account holder is the Merchant of Record. Dono receives only its
-            platform fee.
+            Connected Account holder is the Merchant of Record. An estimated payment
+            processing fee is added at checkout so the intended amount reaches the
+            campaign.
           </Text>
           {campaign.ownershipStatement ? (
             <Text className="mt-1 text-xs text-[#5c574f]">
@@ -598,8 +598,6 @@ export default function CampaignDetailPage() {
         isAuthenticated={isAuthenticated}
         donorEmail={donorEmail}
         onDonorEmailChange={setDonorEmail}
-        coverFees={coverFees}
-        onCoverFeesChange={setCoverFees}
         isAnonymous={isAnonymous}
         onAnonymousChange={setIsAnonymous}
         legalAccepted={legalAccepted}

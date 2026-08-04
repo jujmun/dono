@@ -2,16 +2,16 @@
  * Client-side fee breakdown (mirrors convex/lib/platformFee.ts for donate UI).
  * Keep in sync with the Convex module.
  *
- * Fee envelope: 5% + 20p, split Stripe estimate first then Dono residual.
+ * Donor pays estimated Stripe processing only (1.5% + 20p). No Dono platform fee.
+ * Processing is always added on top of the intended gift.
  */
-export const PLATFORM_FEE_RATE = 0.05;
-export const PLATFORM_FEE_FIXED_MINOR = 20;
+
+/** @deprecated No Dono platform fee; kept at 0 for callers that still reference it. */
+export const PLATFORM_FEE_RATE = 0;
+/** @deprecated No Dono platform fee; kept at 0 for callers that still reference it. */
+export const PLATFORM_FEE_FIXED_MINOR = 0;
 export const ESTIMATED_STRIPE_PERCENT = 0.015;
 export const ESTIMATED_STRIPE_FIXED_MINOR = 20;
-
-export function calculateFeeEnvelopeMinor(amountMinor: number) {
-  return Math.round(amountMinor * PLATFORM_FEE_RATE) + PLATFORM_FEE_FIXED_MINOR;
-}
 
 export function estimateStripeFeeMinor(chargeAmountMinor: number) {
   return (
@@ -20,13 +20,12 @@ export function estimateStripeFeeMinor(chargeAmountMinor: number) {
   );
 }
 
-export function calculateApplicationFeeMinor(amountMinor: number) {
-  const feeEnvelopeMinor = calculateFeeEnvelopeMinor(amountMinor);
-  const stripeShareMinor = Math.min(
-    estimateStripeFeeMinor(amountMinor),
-    feeEnvelopeMinor,
-  );
-  return Math.max(0, feeEnvelopeMinor - stripeShareMinor);
+export function calculateFeeEnvelopeMinor(amountMinor: number) {
+  return estimateStripeFeeMinor(amountMinor);
+}
+
+export function calculateApplicationFeeMinor(_amountMinor: number) {
+  return 0;
 }
 
 export type DonationFeeBreakdown = {
@@ -43,31 +42,16 @@ export type DonationFeeBreakdown = {
 
 export function calculateDonationFeeBreakdown(
   intendedCampaignAmount: number,
-  coverFees: boolean,
 ): DonationFeeBreakdown {
   const intendedCampaignAmountMinor = Math.round(intendedCampaignAmount * 100);
-  const feeEnvelopeMinor = calculateFeeEnvelopeMinor(intendedCampaignAmountMinor);
-  const rawStripeEstimate = estimateStripeFeeMinor(intendedCampaignAmountMinor);
-  const estimatedStripeFeeMinor = Math.min(rawStripeEstimate, feeEnvelopeMinor);
-  const platformFeeMinor = Math.max(0, feeEnvelopeMinor - estimatedStripeFeeMinor);
+  const estimatedStripeFeeMinor = estimateStripeFeeMinor(
+    intendedCampaignAmountMinor,
+  );
+  const feeEnvelopeMinor = estimatedStripeFeeMinor;
+  const platformFeeMinor = 0;
+  const totalChargedMinor =
+    intendedCampaignAmountMinor + estimatedStripeFeeMinor;
 
-  if (coverFees) {
-    const totalChargedMinor = intendedCampaignAmountMinor + feeEnvelopeMinor;
-    return {
-      intendedCampaignAmount,
-      intendedCampaignAmountMinor,
-      feeEnvelopeMinor,
-      platformFeeMinor,
-      estimatedStripeFeeMinor,
-      totalChargedMinor,
-      amountToCampaignMinor: intendedCampaignAmountMinor,
-      applicationFeeAmountMinor: platformFeeMinor,
-      coverFees: true,
-    };
-  }
-
-  const totalChargedMinor = intendedCampaignAmountMinor;
-  const amountToCampaignMinor = Math.max(0, totalChargedMinor - feeEnvelopeMinor);
   return {
     intendedCampaignAmount,
     intendedCampaignAmountMinor,
@@ -75,9 +59,9 @@ export function calculateDonationFeeBreakdown(
     platformFeeMinor,
     estimatedStripeFeeMinor,
     totalChargedMinor,
-    amountToCampaignMinor,
-    applicationFeeAmountMinor: platformFeeMinor,
-    coverFees: false,
+    amountToCampaignMinor: intendedCampaignAmountMinor,
+    applicationFeeAmountMinor: 0,
+    coverFees: true,
   };
 }
 
