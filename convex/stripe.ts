@@ -12,7 +12,7 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import { PLATFORM_FEE_RATE, calculateDonationFeeBreakdown } from "./lib/platformFee";
+import { calculateDonationFeeBreakdown } from "./lib/platformFee";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -190,7 +190,8 @@ export const createPaymentIntent = action({
     const amount = Number(args.amount);
     const donorEmail = normalizeDonorEmail(args.donorEmail);
     const anonymous = args.anonymous === true;
-    const coverFees = args.coverFees === true;
+    // Processing (estimated Stripe) is always added on top; no Dono platform fee.
+    const coverFees = true;
     const { campaign, amount: validAmount } = await validateCampaignAndAmount(
       ctx,
       args.campaignSlug,
@@ -229,7 +230,7 @@ export const createPaymentIntent = action({
       receiptEmail = receiptEmail || userContext.email || undefined;
     }
 
-    const feeBreakdown = calculateDonationFeeBreakdown(validAmount, coverFees);
+    const feeBreakdown = calculateDonationFeeBreakdown(validAmount);
     const grossAmountMinor = feeBreakdown.totalChargedMinor;
     const applicationFeeAmountMinor = feeBreakdown.applicationFeeAmountMinor;
 
@@ -253,7 +254,7 @@ export const createPaymentIntent = action({
       {
         amount: grossAmountMinor,
         currency: "gbp",
-        application_fee_amount: applicationFeeAmountMinor,
+        // No Dono platform fee — omit application_fee_amount entirely.
         description: `Dono: ${campaign.title}`.slice(0, 1000),
         ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         automatic_payment_methods: { enabled: true },
@@ -262,7 +263,7 @@ export const createPaymentIntent = action({
           ...(userId ? { userId } : {}),
           ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
           ...(anonymous ? { anonymous: "true" } : {}),
-          coverFees: coverFees ? "true" : "false",
+          coverFees: "true",
           intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
@@ -274,7 +275,7 @@ export const createPaymentIntent = action({
       },
       {
         stripeAccount: campaign.stripeAccountId,
-        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:${coverFees}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
+        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:cover:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
       },
     );
 
@@ -353,8 +354,8 @@ export const createFundPaymentIntent = action({
     }
 
     // Community funds are Merchant of Record on the platform account (not Connect).
-    // Fee envelope (5% + 20p) is retained on allocation; Stripe fees hit the platform balance.
-    const feeBreakdown = calculateDonationFeeBreakdown(amount, false);
+    // Donor pays estimated Stripe processing on top; no Dono platform retention.
+    const feeBreakdown = calculateDonationFeeBreakdown(amount);
     const grossAmountMinor = feeBreakdown.totalChargedMinor;
 
     const paymentIntent = await stripe.paymentIntents.create({
@@ -372,7 +373,8 @@ export const createFundPaymentIntent = action({
         donationType: "fund_one_time",
         merchantOfRecord: "platform",
         feeEnvelopeMinor: String(feeBreakdown.feeEnvelopeMinor),
-        donoShareMinor: String(feeBreakdown.applicationFeeAmountMinor),
+        donoShareMinor: "0",
+        intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
       },
     });
 
@@ -685,9 +687,8 @@ export const createSocietySubscription = action({
     const stripe = getStripeClient();
     const connectOpts = { stripeAccount: society.stripeAccountId };
 
-    // Direct charge on the society's connected account (society MoR) with
-    // Dono's 5% platform fee via application_fee_percent — same pattern the
-    // old campaign-level recurring donation used.
+    // Direct charge on the society's connected account (society MoR).
+    // No Dono platform fee — Stripe's processing is deducted by Stripe.
     const customer = await stripe.customers.create(
       {
         email: userContext.email || undefined,
@@ -713,7 +714,6 @@ export const createSocietySubscription = action({
       {
         customer: customer.id,
         items: [{ price: price.id }],
-        application_fee_percent: PLATFORM_FEE_RATE * 100,
         payment_behavior: "default_incomplete",
         payment_settings: {
           save_default_payment_method: "on_subscription",

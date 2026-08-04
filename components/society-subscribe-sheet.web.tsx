@@ -256,8 +256,8 @@ export function SocietySubscribeSheet({
                   })}
                 </View>
                 <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-                  Charged monthly until you cancel. Includes Dono's 5% platform fee.
-                  Not Gift Aid.
+                  Charged monthly until you cancel. Stripe processing fees apply
+                  normally. Not Gift Aid.
                 </Text>
 
                 <View className="mt-4">

@@ -146,8 +146,8 @@ export function SocietyPayoutSetupBanner({
         </View>
         <Text className="mb-3 text-xs leading-relaxed text-amber-800">
           {connectStatus?.requiresMerchantReonboarding
-            ? "This society still has the old Stripe payout account. Complete the new Stripe merchant setup so it can accept campaign donations directly. Dono collects a 5% + 20p fee on each gift (shared with Stripe processing)."
-            : "Finish connecting a Stripe merchant account so this society can accept campaign donations directly. Dono collects a 5% + 20p fee on each gift (shared with Stripe processing)."}
+            ? "This society still has the old Stripe payout account. Complete the new Stripe merchant setup so it can accept campaign donations directly. Donors pay an estimated Stripe processing fee so the intended amount reaches the society."
+            : "Finish connecting a Stripe merchant account so this society can accept campaign donations directly. Donors pay an estimated Stripe processing fee so the intended amount reaches the society."}
         </Text>
         <Pressable
           onPress={() => void handleComplete()}
@@ -182,8 +182,8 @@ export function SocietyPayoutSetupBanner({
         </Text>
       </View>
       <Text className="mb-3 text-xs leading-relaxed text-green-800">
-        This society can accept campaign donations directly. Dono collects a 5% +
-        20p fee on each gift (shared with Stripe processing).
+        This society can accept campaign donations directly. Donors pay an
+        estimated Stripe processing fee so the intended amount reaches the society.
       </Text>
       <Pressable
         onPress={() => void handleOpenDashboard()}

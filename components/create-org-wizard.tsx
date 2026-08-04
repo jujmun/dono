@@ -1137,9 +1137,10 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
             </Text>
             <Text className="font-retro-mono text-xs text-retro-ink/70">
               Set up a Stripe merchant account so your {entityLabel} can accept
-              campaign donations directly. Dono collects a 5% + 20p fee on each gift
-              (shared with Stripe processing). This is separate from identity
-              verification and only takes a few minutes.
+              campaign donations directly. Donors pay an estimated Stripe
+              processing fee (around 1.5% + 20p) so the intended amount reaches you.
+              This is separate from identity verification and only takes a few
+              minutes.
             </Text>
             {connectReady ? (
               <View className="flex-row items-center gap-2 rounded-xl bg-green-50 px-3 py-2">

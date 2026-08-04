@@ -15,7 +15,7 @@ Dono Terms of Service (society-only product)
 
 3. Age. You must be at least 18 years old to create an account, create a Campaign or make a Donation.
 
-4. Platform role. Dono is a technology and crowdfunding platform for students at Recognised Institutions. Dono is not a bank, escrow provider, payment processor, charity, or guarantor of Campaigns. Donations are processed by Stripe and paid to the Connected Account of the Campaign Owner (Merchant of Record). Dono takes a platform fee.
+4. Platform role. Dono is a technology and crowdfunding platform for students at Recognised Institutions. Dono is not a bank, escrow provider, payment processor, charity, or guarantor of Campaigns. Donations are processed by Stripe and paid to the Connected Account of the Campaign Owner (Merchant of Record). Dono does not take a platform fee; donors pay estimated payment-processing costs.
 
 5. Eligibility. The Platform initially operates in the United Kingdom. Only eligible students of Recognised Institutions may create Campaigns. Campaigns on Dono are Society Campaigns only.
 
@@ -27,7 +27,7 @@ Dono Terms of Service (society-only product)
 
 9. Refunds. Dono operates an internal refund process. Refunds are recovered from the Connected Account. Dono never pays refunds from its own funds.
 
-10. Fees. At checkout you may cover Dono's fee and estimated Payment Provider fees so the intended amount reaches the Campaign, or decline so fees are deducted from the amount received.
+10. Fees. At checkout the donor pays the intended gift plus an estimated Payment Provider processing fee so the intended amount reaches the Campaign. Dono does not take a separate platform fee.
 
 11. Community. No private messaging. Users may report content. There is no blocking feature.
 
@@ -63,7 +63,7 @@ Donor Terms
 
 You must be at least 18. A Donation is a gratuitous contribution to the stated campaign purpose — not an investment, loan, equity, or purchase. Donations are not necessarily tax-deductible; Gift Aid is not claimed.
 
-Your Donation is processed by Stripe and paid to the Campaign Owner's Connected Account. Dono receives only its platform fee. At checkout you may cover fees or decline. Checkout shows intended gift, Dono fee, estimated Stripe fee, total charged, and amount reaching the Campaign.
+Your Donation is processed by Stripe and paid to the Campaign Owner's Connected Account. Dono does not take a platform fee. Checkout shows intended gift, estimated Stripe processing fee, total charged, and amount reaching the Campaign.
 
 You may donate publicly anonymously (name hidden; amount still shown). You will receive an email confirmation.
 
