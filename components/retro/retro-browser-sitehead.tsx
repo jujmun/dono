@@ -11,6 +11,7 @@ import { useConvexAuth } from "convex/react";
 import { Menu, X } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { canCreate } from "@/lib/auth/user-type";
 import { NotificationBell } from "@/components/notification-bell";
 
 const baseNavItems = [
@@ -78,13 +79,15 @@ export function RetroBrowserSitehead() {
         )}
 
         <View className="flex-row items-center gap-2.5">
-          <Link href="/create" asChild>
-            <Pressable className="rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2 shadow-[3px_3px_0_#211E1A]">
-              <Text className="font-retro-bold text-[13px] text-retro-paper">
-                + Start a Campaign
-              </Text>
-            </Pressable>
-          </Link>
+          {canCreate(profile) ? (
+            <Link href="/create" asChild>
+              <Pressable className="rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2 shadow-[3px_3px_0_#211E1A]">
+                <Text className="font-retro-bold text-[13px] text-retro-paper">
+                  + Start a Campaign
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null}
           {!isLoading && isAuthenticated ? <NotificationBell /> : null}
           {!isLoading && isAuthenticated ? (
             <Link href="/account" asChild>

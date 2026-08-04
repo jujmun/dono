@@ -5,18 +5,20 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  ScrollView,
 } from "react-native";
 import { useAction, useQuery } from "convex/react";
-import { ShieldCheck } from "lucide-react-native";
+import { Check, ShieldCheck } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import {
   alumniOnboardingDetailsSchema,
-  MATRICULATION_YEAR_OPTIONS,
+  BIRTH_YEAR_OPTIONS,
+  DAY_OF_MONTH_OPTIONS,
+  MONTH_OPTIONS,
 } from "@/lib/validation/profile";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { SelectField } from "@/components/select-field";
 
 const inputClassName =
   "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
@@ -60,7 +62,13 @@ export function AlumniOnboardingForm({
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState(initialName);
-  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
+  const dateOfBirth =
+    dobDay && dobMonth && dobYear
+      ? `${dobYear}-${dobMonth.padStart(2, "0")}-${dobDay.padStart(2, "0")}`
+      : "";
   const [matriculationYear, setMatriculationYear] = useState("");
   const [college, setCollege] = useState(initialCollege);
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
@@ -189,29 +197,56 @@ export function AlumniOnboardingForm({
 
   return (
     <View className="gap-5">
-      <View className="flex-row flex-wrap gap-2">
+      <View className="w-full flex-row items-start">
         {STEPS.map((label, index) => {
           const active = index === step;
           const done = index < step;
           return (
-            <View
-              key={label}
-              className={`rounded-full border px-3 py-1.5 ${
-                active
-                  ? "border-dono-primary bg-dono-primary/10"
-                  : done
-                    ? "border-dono-border bg-dono-surface-muted"
-                    : "border-dono-border bg-white"
-              }`}
-            >
+            <View key={label} className="flex-1 items-center">
+              <View className="w-full flex-row items-center">
+                {index > 0 ? (
+                  <View
+                    className={`h-0.5 flex-1 ${
+                      index <= step ? "bg-dono-primary" : "bg-dono-border/20"
+                    }`}
+                  />
+                ) : (
+                  <View className="flex-1" />
+                )}
+                <View
+                  className={`h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                    index <= step ? "bg-dono-primary" : "bg-dono-surface-muted"
+                  }`}
+                >
+                  {done ? (
+                    <Check size={16} color="#fff" />
+                  ) : (
+                    <Text
+                      className={`text-xs font-bold ${
+                        active ? "text-white" : "text-dono-muted"
+                      }`}
+                    >
+                      {index + 1}
+                    </Text>
+                  )}
+                </View>
+                {index < STEPS.length - 1 ? (
+                  <View
+                    className={`h-0.5 flex-1 ${
+                      index < step ? "bg-dono-primary" : "bg-dono-border/20"
+                    }`}
+                  />
+                ) : (
+                  <View className="flex-1" />
+                )}
+              </View>
               <Text
-                className={`text-xs ${
-                  active
-                    ? "font-retro-bold text-dono-primary"
-                    : "text-dono-muted"
+                className={`mt-2 text-center text-[10px] ${
+                  active ? "font-retro-bold text-dono-text" : "text-dono-muted"
                 }`}
+                numberOfLines={1}
               >
-                {index + 1}. {label}
+                {label}
               </Text>
             </View>
           );
@@ -239,14 +274,32 @@ export function AlumniOnboardingForm({
             <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
               Date of birth
             </Text>
-            <TextInput
-              value={dateOfBirth}
-              onChangeText={setDateOfBirth}
-              placeholder="YYYY-MM-DD"
-              placeholderTextColor="#56615A"
-              autoCapitalize="none"
-              className={inputClassName}
-            />
+            <View className="flex-row gap-2">
+              <SelectField
+                value={dobDay}
+                onChange={setDobDay}
+                options={DAY_OF_MONTH_OPTIONS}
+                placeholder="Day"
+                title="Day"
+                className="flex-1"
+              />
+              <SelectField
+                value={dobMonth}
+                onChange={setDobMonth}
+                options={MONTH_OPTIONS}
+                placeholder="Month"
+                title="Month"
+                className="flex-[1.6]"
+              />
+              <SelectField
+                value={dobYear}
+                onChange={setDobYear}
+                options={BIRTH_YEAR_OPTIONS}
+                placeholder="Year"
+                title="Year"
+                className="flex-1"
+              />
+            </View>
             <Text className="mt-1 text-xs text-dono-muted">
               You must be at least 18 to use Dono.
             </Text>
@@ -255,41 +308,6 @@ export function AlumniOnboardingForm({
             <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
               Matriculation / graduation year
             </Text>
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              className="max-h-40"
-            >
-              <View className="flex-row flex-wrap gap-2" style={{ maxWidth: 360 }}>
-                {MATRICULATION_YEAR_OPTIONS.slice(0, 30).map((year) => {
-                  const selected = matriculationYear === year;
-                  return (
-                    <Pressable
-                      key={year}
-                      onPress={() => setMatriculationYear(year)}
-                      className={`rounded-full border px-3 py-2 ${
-                        selected
-                          ? "border-dono-primary bg-dono-primary/10"
-                          : "border-dono-border bg-white"
-                      }`}
-                    >
-                      <Text
-                        className={`text-sm ${
-                          selected
-                            ? "font-retro-bold text-dono-primary"
-                            : "text-dono-muted"
-                        }`}
-                      >
-                        {year}
-                      </Text>
-                    </Pressable>
-                  );
-                })}
-              </View>
-            </ScrollView>
-            <Text className="mt-2 text-xs text-dono-muted">
-              Or type a year
-            </Text>
             <TextInput
               value={matriculationYear}
               onChangeText={setMatriculationYear}
@@ -297,7 +315,7 @@ export function AlumniOnboardingForm({
               placeholderTextColor="#56615A"
               keyboardType="number-pad"
               maxLength={4}
-              className={`mt-1 ${inputClassName}`}
+              className={inputClassName}
             />
           </View>
         </View>

@@ -7,6 +7,7 @@ import {
   Sparkles,
   User,
   Plus,
+  Heart,
   ArrowRight,
   ArrowLeft,
   type LucideIcon,
@@ -20,7 +21,9 @@ type WelcomeTourSlide = {
   navLabel: string;
 };
 
-const slides: WelcomeTourSlide[] = [
+export type WelcomeTourVariant = "student" | "alumni";
+
+const studentSlides: WelcomeTourSlide[] = [
   {
     title: "Welcome to Dono",
     description:
@@ -79,12 +82,77 @@ const slides: WelcomeTourSlide[] = [
   },
 ];
 
+const alumniSlides: WelcomeTourSlide[] = [
+  {
+    title: "Welcome to Dono",
+    description:
+      "Dono connects Oxford students and alumni through transparent crowdfunding. Here's how to find your way around as a donor.",
+    icon: Home,
+    href: "/",
+    navLabel: "Overview",
+  },
+  {
+    title: "Home",
+    description:
+      "Start on the homepage to see featured campaigns and learn how Dono works. It's the best place to get a feel for what's happening on campus.",
+    icon: Home,
+    href: "/",
+    navLabel: "Home",
+  },
+  {
+    title: "Campaigns",
+    description:
+      "Browse student causes, read updates, donate, like posts, and leave comments. Each campaign shows exactly what your money will fund.",
+    icon: PiggyBank,
+    href: "/campaigns",
+    navLabel: "Campaigns",
+  },
+  {
+    title: "Communities",
+    description:
+      "Explore colleges, departments, and student societies. Follow the communities you care about to stay close to their latest projects and support them directly.",
+    icon: Users,
+    href: "/societies",
+    navLabel: "Communities",
+  },
+  {
+    title: "Impact",
+    description:
+      "Your dashboard tracks donations you've made, campaigns and communities you follow, and the difference your giving has made.",
+    icon: Sparkles,
+    href: "/dashboard",
+    navLabel: "Impact",
+  },
+  {
+    title: "Your account",
+    description:
+      "Update your profile and manage your recurring donations — all from Account settings.",
+    icon: User,
+    href: "/account",
+    navLabel: "You",
+  },
+  {
+    title: "Support a cause",
+    description:
+      "Find a campaign or society you care about and back it directly. Every donation shows exactly where your money went.",
+    icon: Heart,
+    href: "/campaigns",
+    navLabel: "Donate",
+  },
+];
+
 type WelcomeTourProps = {
   onComplete: () => void;
   loading?: boolean;
+  variant?: WelcomeTourVariant;
 };
 
-export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
+export function WelcomeTour({
+  onComplete,
+  loading = false,
+  variant = "student",
+}: WelcomeTourProps) {
+  const slides = variant === "alumni" ? alumniSlides : studentSlides;
   const [step, setStep] = useState(0);
   const slide = slides[step];
   const Icon = slide.icon;

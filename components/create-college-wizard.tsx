@@ -23,6 +23,8 @@ import {
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
+import { DonorCreateGate } from "@/components/donor-create-gate";
+import { isAlumni } from "@/lib/auth/user-type";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -488,6 +490,18 @@ export function CreateCollegeWizard() {
     return (
       <AppShell>
         <LoginGate message="Sign in with your Oxford email to create a college." />
+      </AppShell>
+    );
+  }
+
+  if (isAlumni(myProfile)) {
+    return (
+      <AppShell>
+        <DonorCreateGate
+          message="Donor accounts can't create a college. Browse communities to follow one instead."
+          backHref="/societies"
+          backLabel="Browse communities"
+        />
       </AppShell>
     );
   }

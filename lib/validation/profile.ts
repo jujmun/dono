@@ -16,10 +16,33 @@ export type UserType = "student" | "alumni";
 
 const CURRENT_YEAR = new Date().getFullYear();
 
-/** Matriculation / graduation years offered in alumni onboarding. */
-export const MATRICULATION_YEAR_OPTIONS = Array.from(
-  { length: CURRENT_YEAR - 1950 + 1 },
-  (_, i) => String(CURRENT_YEAR - i),
+export const DAY_OF_MONTH_OPTIONS = Array.from({ length: 31 }, (_, i) => {
+  const value = String(i + 1);
+  return { label: value, value };
+});
+
+export const MONTH_OPTIONS = [
+  { label: "January", value: "1" },
+  { label: "February", value: "2" },
+  { label: "March", value: "3" },
+  { label: "April", value: "4" },
+  { label: "May", value: "5" },
+  { label: "June", value: "6" },
+  { label: "July", value: "7" },
+  { label: "August", value: "8" },
+  { label: "September", value: "9" },
+  { label: "October", value: "10" },
+  { label: "November", value: "11" },
+  { label: "December", value: "12" },
+] as const;
+
+/** Birth years covering ages 18–100, most recent (18yo) first. */
+export const BIRTH_YEAR_OPTIONS = Array.from(
+  { length: 100 - 18 + 1 },
+  (_, i) => {
+    const value = String(CURRENT_YEAR - 18 - i);
+    return { label: value, value };
+  },
 );
 
 const phoneSchema = z

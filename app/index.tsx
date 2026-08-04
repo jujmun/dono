@@ -17,6 +17,7 @@ import { api } from "@convex/_generated/api";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency } from "@/lib/constants";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { canCreate } from "@/lib/auth/user-type";
 
 export default function HomePage() {
   const { width } = useWindowDimensions();
@@ -196,17 +197,19 @@ export default function HomePage() {
               <ArrowRight size={16} color="#F7F3E8" />
             </Pressable>
           </Link>
-          <Link href="/create" asChild>
-            <Pressable
-              className={`flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-6 py-3 shadow-[3px_3px_0_#211E1A] ${
-                isWide ? "" : "w-full"
-              }`}
-            >
-              <Text className="font-retro-bold text-sm text-retro-ink">
-                Start a Campaign
-              </Text>
-            </Pressable>
-          </Link>
+          {canCreate(profile) ? (
+            <Link href="/create" asChild>
+              <Pressable
+                className={`flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-6 py-3 shadow-[3px_3px_0_#211E1A] ${
+                  isWide ? "" : "w-full"
+                }`}
+              >
+                <Text className="font-retro-bold text-sm text-retro-ink">
+                  Start a Campaign
+                </Text>
+              </Pressable>
+            </Link>
+          ) : null}
         </View>
       </RetroPanel>
     </AppShell>
