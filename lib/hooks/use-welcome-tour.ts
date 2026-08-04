@@ -5,8 +5,12 @@ import {
   setWelcomeTourComplete,
   setWelcomeTourPending,
 } from "@/lib/welcome-tour-storage";
+import type { WelcomeTourVariant } from "@/components/welcome-tour";
 
-export function useWelcomeTourStatus(userId: string | undefined) {
+export function useWelcomeTourStatus(
+  userId: string | undefined,
+  variant: WelcomeTourVariant = "student",
+) {
   const [complete, setComplete] = useState<boolean | null>(null);
   const [pending, setPending] = useState<boolean | null>(null);
 
@@ -19,8 +23,8 @@ export function useWelcomeTourStatus(userId: string | undefined) {
 
     let cancelled = false;
     void Promise.all([
-      getWelcomeTourComplete(userId),
-      getWelcomeTourPending(userId),
+      getWelcomeTourComplete(userId, variant),
+      getWelcomeTourPending(userId, variant),
     ]).then(([isComplete, isPending]) => {
       if (!cancelled) {
         setComplete(isComplete);
@@ -31,20 +35,20 @@ export function useWelcomeTourStatus(userId: string | undefined) {
     return () => {
       cancelled = true;
     };
-  }, [userId]);
+  }, [userId, variant]);
 
   const markPending = useCallback(async () => {
     if (!userId) return;
-    await setWelcomeTourPending(userId);
+    await setWelcomeTourPending(userId, variant);
     setPending(true);
-  }, [userId]);
+  }, [userId, variant]);
 
   const markComplete = useCallback(async () => {
     if (!userId) return;
-    await setWelcomeTourComplete(userId);
+    await setWelcomeTourComplete(userId, variant);
     setComplete(true);
     setPending(false);
-  }, [userId]);
+  }, [userId, variant]);
 
   const loading = Boolean(userId) && (complete === null || pending === null);
 

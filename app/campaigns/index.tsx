@@ -24,13 +24,14 @@ import { api } from "@convex/_generated/api";
 import { cn } from "@/lib/utils";
 import { isNearGoal } from "@/lib/donation-psychology";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { canCreate } from "@/lib/auth/user-type";
 
 const categories = ["all", ...Object.keys(categoryLabels)];
 
 type CampaignsTab = "discover" | "mine";
 type DiscoverSort = "all" | "trending" | "near_goal";
 
-const tabs: { id: CampaignsTab; label: string }[] = [
+const allTabs: { id: CampaignsTab; label: string }[] = [
   { id: "discover", label: "Discover Campaigns" },
   { id: "mine", label: "My Campaigns" },
 ];
@@ -46,6 +47,9 @@ export default function CampaignsPage() {
   const columns = width >= 1200 ? 3 : width >= 820 ? 2 : 1;
   const { isAuthenticated } = useConvexAuth();
   const profile = useCurrentProfile();
+  const tabs = canCreate(profile)
+    ? allTabs
+    : allTabs.filter((t) => t.id !== "mine");
 
   const [tab, setTab] = useState<CampaignsTab>("discover");
   const [discoverSort, setDiscoverSort] = useState<DiscoverSort>("all");

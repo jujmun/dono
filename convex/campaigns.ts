@@ -11,6 +11,7 @@ import {
 import {
   requireAdmin,
   requireSocietyMember,
+  requireStudentCreator,
   resolveCreatorContact,
   optionalUserId,
   getProfileByUserId,
@@ -724,6 +725,7 @@ export const create = mutation({
   },
   handler: async (ctx, args) => {
     const communitySlug = args.communitySlug.trim();
+    const { profile } = await requireStudentCreator(ctx);
     const { userId, community, membership } = await requireSocietyMember(
       ctx,
       communitySlug,
@@ -732,10 +734,6 @@ export const create = mutation({
       userId,
       context: "create_campaign",
     });
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .unique();
     assertAdultOrThrow(
       profile?.dateOfBirth,
       "You must be at least 18 years old to create a campaign.",

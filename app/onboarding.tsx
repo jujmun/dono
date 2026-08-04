@@ -40,7 +40,7 @@ export default function OnboardingPage() {
 
   const afterOnboardingComplete = async () => {
     if (profile?.id) {
-      await setWelcomeTourPending(profile.id);
+      await setWelcomeTourPending(profile.id, isAlumni ? "alumni" : "student");
     }
     router.replace("/welcome");
   };

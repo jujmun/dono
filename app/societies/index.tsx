@@ -15,11 +15,13 @@ import { SocietyCardGrid } from "@/components/society-card-grid";
 import { api } from "@convex/_generated/api";
 import type { MySociety, OrgType, Society } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useCurrentProfile } from "@/lib/auth/hooks";
+import { canCreate } from "@/lib/auth/user-type";
 
 type SocietiesTab = "discover" | "mine";
 type OrgTypeFilter = "all" | OrgType;
 
-const tabs: { id: SocietiesTab; label: string }[] = [
+const allTabs: { id: SocietiesTab; label: string }[] = [
   { id: "discover", label: "Discover" },
   { id: "mine", label: "My societies" },
 ];
@@ -46,6 +48,11 @@ export default function SocietiesPage() {
   const [orgTypeFilter, setOrgTypeFilter] = useState<OrgTypeFilter>("all");
   const [search, setSearch] = useState("");
   const { isAuthenticated } = useConvexAuth();
+  const profile = useCurrentProfile();
+  const canCreateSociety = canCreate(profile);
+  const tabs = canCreateSociety
+    ? allTabs
+    : allTabs.filter((t) => t.id !== "mine");
 
   const activeSocieties = (useQuery(api.societies.listActive) ?? undefined) as
     | Society[]
@@ -138,7 +145,7 @@ export default function SocietiesPage() {
               </Pressable>
             ))}
           </View>
-          {orgTypeFilter === "society" ? (
+          {orgTypeFilter === "society" && canCreateSociety ? (
             <Link href="/create-society" asChild>
               <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5 shadow-[3px_3px_0_#211E1A]">
                 <Plus size={14} color="#FFF9EF" />
@@ -148,7 +155,7 @@ export default function SocietiesPage() {
               </Pressable>
             </Link>
           ) : null}
-          {orgTypeFilter === "college" ? (
+          {orgTypeFilter === "college" && canCreateSociety ? (
             <Link href="/create-college" asChild>
               <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5 shadow-[3px_3px_0_#211E1A]">
                 <Plus size={14} color="#FFF9EF" />

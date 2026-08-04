@@ -42,8 +42,9 @@ const posthogHost =
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const profile = useCurrentProfile();
+  const welcomeTourVariant = profile?.userType === "alumni" ? "alumni" : "student";
   const { complete: welcomeTourComplete, pending: welcomeTourPending, loading: welcomeTourLoading } =
-    useWelcomeTourStatus(profile?.id);
+    useWelcomeTourStatus(profile?.id, welcomeTourVariant);
   const ensureMyProfile = useMutation(api.users.ensureMyProfile);
   const segments = useSegments();
   const router = useRouter();

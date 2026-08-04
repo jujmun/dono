@@ -188,6 +188,20 @@ export async function requireVerifiedUser(ctx: CtxWithDb) {
   return { userId, user, profile };
 }
 
+/**
+ * Verified user, fails closed for alumni/donor accounts. Blocks on
+ * `userType === "alumni"` rather than requiring `"student"` so accounts
+ * predating this field (`userType` undefined) keep existing behaviour.
+ * Use for every campaign/society/college creation entry point.
+ */
+export async function requireStudentCreator(ctx: CtxWithDb) {
+  const { userId, user, profile } = await requireVerifiedUser(ctx);
+  if (profile?.userType === "alumni") {
+    accessDenied();
+  }
+  return { userId, user, profile };
+}
+
 function isSocietyVerified(community: Doc<"communities">) {
   if (community.type !== "society") return false;
   if (community.verificationStatus === "verified") return true;

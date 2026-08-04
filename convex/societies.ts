@@ -6,6 +6,7 @@ import {
   getProfileByUserId,
   optionalUserId,
   requireAdmin,
+  requireStudentCreator,
   requireVerifiedUser,
 } from "./lib/authz";
 import { logAdminAction } from "./adminAudit";
@@ -293,7 +294,7 @@ export const create = mutation({
     orgType: v.optional(v.union(v.literal("college"), v.literal("society"))),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    const { userId, profile } = await requireStudentCreator(ctx);
     await assertLegalAcceptedForContext(ctx, {
       userId,
       context: "create_society",
@@ -303,7 +304,6 @@ export const create = mutation({
     // legacy shared create args cannot skip society verification.
     const orgType: OrgType = "society";
     const entityLabel = "society";
-    const profile = await getProfileByUserId(ctx, userId);
     assertAdultOrThrow(
       profile?.dateOfBirth,
       `You must be at least 18 years old to create a ${entityLabel}.`,
@@ -410,12 +410,11 @@ export const createCollege = mutation({
     coverImageStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    const { userId, profile } = await requireStudentCreator(ctx);
     await assertLegalAcceptedForContext(ctx, {
       userId,
       context: "create_society",
     });
-    const profile = await getProfileByUserId(ctx, userId);
     assertAdultOrThrow(
       profile?.dateOfBirth,
       "You must be at least 18 years old to create a college.",

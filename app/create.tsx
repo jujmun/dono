@@ -25,6 +25,8 @@ import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignPreview } from "@/components/campaign-preview";
 import { LoginGate } from "@/components/login-gate";
+import { DonorCreateGate } from "@/components/donor-create-gate";
+import { isAlumni } from "@/lib/auth/user-type";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
@@ -633,6 +635,14 @@ export default function CreateCampaignPage() {
     return (
       <AppShell>
         <LoginGate message="If you're a student, sign in with your Oxford email to create a campaign." />
+      </AppShell>
+    );
+  }
+
+  if (isAlumni(myProfile)) {
+    return (
+      <AppShell>
+        <DonorCreateGate message="Donor accounts can't create campaigns. Browse campaigns to find one to support instead." />
       </AppShell>
     );
   }
