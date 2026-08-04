@@ -17,7 +17,7 @@ import {
 } from "@convex-dev/auth/server";
 import { internal } from "./_generated/api";
 import { validatePasswordRequirements } from "./auth/passwordPolicy";
-import { getProfileByUserId, requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
+import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
 import { isAdminIdentityEmail, isAllowedAuthEmail } from "./auth/adminConfig";
 import {
   assertNotRateLimited,
@@ -25,16 +25,8 @@ import {
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
 import { assertAdultOrThrow } from "./lib/ageGate";
-import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
 
 const userTypeValidator = v.union(v.literal("student"), v.literal("alumni"));
-const stripeVerificationStatusValidator = v.union(
-  v.literal("created"),
-  v.literal("requires_input"),
-  v.literal("processing"),
-  v.literal("verified"),
-  v.literal("canceled"),
-);
 
 function roleForEmail(email: string): "user" | "admin" {
   return isAdminIdentityEmail(email) ? "admin" : "user";
@@ -110,11 +102,6 @@ export const me = query({
       userType: profile.userType ?? null,
       matriculationYear: profile.matriculationYear ?? null,
       interestedSocietySlugs: profile.interestedSocietySlugs ?? [],
-      stripeVerificationStatus: profile.stripeVerificationStatus ?? null,
-      stripeVerificationLastErrorCode:
-        profile.stripeVerificationLastErrorCode ?? null,
-      stripeVerificationLastErrorReason:
-        profile.stripeVerificationLastErrorReason ?? null,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
       onboardingSkippedAt: profile.onboardingSkippedAt ?? null,
     };
@@ -539,9 +526,7 @@ export const setUserType = mutation({
 });
 
 /**
- * Completes alumni onboarding. Enforces userType === alumni server-side and,
- * when Stripe Identity is enabled, requires a verified Identity session on
- * the profile before accepting the rest of the fields.
+ * Completes alumni onboarding. Enforces userType === alumni server-side.
  */
 export const completeAlumniOnboarding = mutation({
   args: {
@@ -563,16 +548,6 @@ export const completeAlumniOnboarding = mutation({
       throw new ConvexError({
         code: "FORBIDDEN",
         message: "Alumni onboarding is only available for alumni accounts.",
-      });
-    }
-
-    if (
-      isStripeIdentityEnabled() &&
-      profile.stripeVerificationStatus !== "verified"
-    ) {
-      throw new ConvexError({
-        code: "IDENTITY_REQUIRED",
-        message: "Stripe Identity verification must be completed first.",
       });
     }
 
@@ -666,76 +641,6 @@ export const completeAlumniOnboarding = mutation({
     }
 
     return null;
-  },
-});
-
-/** Internal — used by alumniIdentity actions (ActionCtx has no ctx.db). */
-export const getProfileForIdentity = internalQuery({
-  args: { userId: v.id("users") },
-  handler: async (ctx, args) => {
-    const profile = await getProfileByUserId(ctx, args.userId);
-    if (!profile) return null;
-    return {
-      userId: profile.userId,
-      userType: profile.userType ?? null,
-      stripeVerificationSessionId: profile.stripeVerificationSessionId ?? null,
-      stripeVerificationStatus: profile.stripeVerificationStatus ?? null,
-    };
-  },
-});
-
-export const recordVerificationSessionCreated = internalMutation({
-  args: {
-    userId: v.id("users"),
-    stripeVerificationSessionId: v.string(),
-    status: stripeVerificationStatusValidator,
-  },
-  handler: async (ctx, args) => {
-    const profile = await getProfileByUserId(ctx, args.userId);
-    if (!profile) return null;
-    await ctx.db.patch(profile._id, {
-      stripeVerificationSessionId: args.stripeVerificationSessionId,
-      stripeVerificationStatus: args.status,
-      updatedAt: Date.now(),
-    });
-    return null;
-  },
-});
-
-/** Webhook-driven update — matches purely by stripeVerificationSessionId. */
-export const updateVerificationFromWebhook = internalMutation({
-  args: {
-    stripeVerificationSessionId: v.string(),
-    status: stripeVerificationStatusValidator,
-    verifiedName: v.optional(v.string()),
-    verifiedDob: v.optional(v.string()),
-    lastErrorCode: v.optional(v.string()),
-    lastErrorReason: v.optional(v.string()),
-  },
-  handler: async (ctx, args) => {
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_stripeVerificationSessionId", (q) =>
-        q.eq("stripeVerificationSessionId", args.stripeVerificationSessionId),
-      )
-      .unique();
-    if (!profile) return { updated: false };
-
-    await ctx.db.patch(profile._id, {
-      stripeVerificationStatus: args.status,
-      ...(args.verifiedName !== undefined
-        ? { verifiedName: args.verifiedName }
-        : {}),
-      ...(args.verifiedDob !== undefined
-        ? { verifiedDob: args.verifiedDob }
-        : {}),
-      stripeVerificationLastErrorCode:
-        args.status === "requires_input" ? args.lastErrorCode : undefined,
-      stripeVerificationLastErrorReason:
-        args.status === "requires_input" ? args.lastErrorReason : undefined,
-      updatedAt: Date.now(),
-    });
-    return { updated: true };
   },
 });
 

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import {
   View,
   Text,
@@ -6,8 +6,8 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { useAction, useQuery } from "convex/react";
-import { Check, ShieldCheck } from "lucide-react-native";
+import { useQuery } from "convex/react";
+import { Check } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import {
   alumniOnboardingDetailsSchema,
@@ -15,8 +15,6 @@ import {
   DAY_OF_MONTH_OPTIONS,
   MONTH_OPTIONS,
 } from "@/lib/validation/profile";
-import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
-import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { SelectField } from "@/components/select-field";
 
@@ -37,12 +35,7 @@ type AlumniOnboardingFormProps = {
   }) => void | Promise<void>;
 };
 
-const STEPS = [
-  "Matriculation year",
-  "College",
-  "Societies",
-  "Identity",
-] as const;
+const STEPS = ["Matriculation year", "College", "Societies"] as const;
 
 export function AlumniOnboardingForm({
   initialName = "",
@@ -52,13 +45,6 @@ export function AlumniOnboardingForm({
   onComplete,
 }: AlumniOnboardingFormProps) {
   const societies = useQuery(api.societies.listActive);
-  const profile = useQuery(api.users.me);
-  const createVerificationSession = useAction(
-    api.alumniIdentity.createVerificationSession,
-  );
-  const refreshVerificationStatus = useAction(
-    api.alumniIdentity.refreshVerificationStatus,
-  );
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState(initialName);
@@ -73,34 +59,7 @@ export function AlumniOnboardingForm({
   const [college, setCollege] = useState(initialCollege);
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
   const [localError, setLocalError] = useState<string | null>(null);
-  const [verifying, setVerifying] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  const identityEnabled = isStripeIdentityEnabled();
-  const stripeStatus = profile?.stripeVerificationStatus ?? null;
-  const stripeVerified = stripeStatus === "verified";
-  const stripeFailed = stripeStatus === "requires_input";
-
-  useEffect(() => {
-    if (!identityEnabled || stripeVerified || !profile?.userType) {
-      return;
-    }
-    if (profile.userType !== "alumni") return;
-    if (!stripeStatus) return;
-
-    const interval = setInterval(() => {
-      void refreshVerificationStatus({}).catch(() => {
-        // Best-effort poll; webhook may still succeed.
-      });
-    }, 4000);
-    return () => clearInterval(interval);
-  }, [
-    identityEnabled,
-    stripeVerified,
-    stripeStatus,
-    profile?.userType,
-    refreshVerificationStatus,
-  ]);
 
   const toggleSociety = (slug: string) => {
     setSelectedSlugs((prev) =>
@@ -144,24 +103,6 @@ export function AlumniOnboardingForm({
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const handleVerifyIdentity = async () => {
-    setLocalError(null);
-    setVerifying(true);
-    try {
-      const { clientSecret, url } = await createVerificationSession({});
-      const result = await launchIdentityVerification({ clientSecret, url });
-      if (result.error) {
-        setLocalError(result.error);
-        return;
-      }
-      await refreshVerificationStatus({}).catch(() => undefined);
-    } catch (err) {
-      setLocalError(getFriendlyAuthError(err));
-    } finally {
-      setVerifying(false);
-    }
-  };
-
   const handleComplete = async () => {
     const parsed = alumniOnboardingDetailsSchema.safeParse({
       name,
@@ -174,10 +115,6 @@ export function AlumniOnboardingForm({
       setLocalError(
         parsed.error.issues[0]?.message ?? "Please check your details.",
       );
-      return;
-    }
-    if (identityEnabled && !stripeVerified) {
-      setLocalError("Complete identity verification before finishing setup.");
       return;
     }
 
@@ -193,7 +130,7 @@ export function AlumniOnboardingForm({
   };
 
   const displayError = error ?? localError;
-  const busy = loading || submitting || verifying;
+  const busy = loading || submitting;
 
   return (
     <View className="gap-5">
@@ -384,69 +321,6 @@ export function AlumniOnboardingForm({
         </View>
       ) : null}
 
-      {step === 3 ? (
-        <View className="gap-4">
-          <View className="gap-3 rounded-xl border border-dono-border bg-dono-surface-muted p-4">
-            <View className="flex-row items-center gap-2">
-              <ShieldCheck size={16} color="#17211B" />
-              <Text className="font-retro-bold text-base text-dono-text">
-                Identity check
-              </Text>
-            </View>
-            <Text className="text-sm leading-relaxed text-dono-muted">
-              Confirm it&apos;s you with a quick ID photo and selfie. Required
-              before you finish alumni setup.
-            </Text>
-
-            {stripeVerified ? (
-              <View className="rounded-xl bg-green-50 px-4 py-3">
-                <Text className="text-sm text-green-700">
-                  Identity verified. You can finish setup.
-                </Text>
-              </View>
-            ) : stripeStatus === "processing" ? (
-              <View className="rounded-xl bg-amber-50 px-4 py-3">
-                <Text className="text-sm text-amber-800">
-                  Verifying your identity... this usually takes a moment.
-                </Text>
-              </View>
-            ) : stripeFailed ? (
-              <View className="rounded-xl bg-rose-50 px-4 py-3">
-                <Text className="text-sm text-rose-700">
-                  {profile?.stripeVerificationLastErrorReason ??
-                    "That didn't go through — please try again."}
-                </Text>
-              </View>
-            ) : null}
-
-            {identityEnabled && !stripeVerified ? (
-              <Pressable
-                onPress={() => void handleVerifyIdentity()}
-                disabled={busy}
-                className={`items-center self-start rounded-full bg-dono-primary px-4 py-3 ${
-                  busy ? "opacity-50" : ""
-                }`}
-              >
-                {verifying ? (
-                  <ActivityIndicator color="#fff" />
-                ) : (
-                  <Text className="font-retro-bold text-sm text-white">
-                    Verify your identity
-                  </Text>
-                )}
-              </Pressable>
-            ) : null}
-
-            {!identityEnabled ? (
-              <Text className="text-xs text-dono-muted">
-                Identity verification is temporarily unavailable — you can still
-                finish setup.
-              </Text>
-            ) : null}
-          </View>
-        </View>
-      ) : null}
-
       {displayError ? (
         <View className="rounded-xl bg-rose-50 px-4 py-3">
           <Text className="text-sm text-rose-700">{displayError}</Text>
@@ -480,11 +354,9 @@ export function AlumniOnboardingForm({
         ) : (
           <Pressable
             onPress={() => void handleComplete()}
-            disabled={
-              busy || (identityEnabled && !stripeVerified)
-            }
+            disabled={busy}
             className={`flex-1 items-center rounded-full bg-dono-primary py-3 ${
-              busy || (identityEnabled && !stripeVerified) ? "opacity-50" : ""
+              busy ? "opacity-50" : ""
             }`}
           >
             {submitting || loading ? (
