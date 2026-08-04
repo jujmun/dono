@@ -1,6 +1,9 @@
 import { Password } from "@convex-dev/auth/providers/Password";
 import { convexAuth } from "@convex-dev/auth/server";
-import type { GenericActionCtxWithAuthConfig } from "@convex-dev/auth/server";
+import type {
+  ConvexCredentialsConfig,
+  GenericActionCtxWithAuthConfig,
+} from "@convex-dev/auth/server";
 import type { GenericDataModel } from "convex/server";
 import type { Value } from "convex/values";
 import { internal } from "./_generated/api";
@@ -19,7 +22,39 @@ const passwordProvider = Password({
   reset: ResendPasswordResetOTP,
 });
 
-const passwordAuthorize = passwordProvider.authorize!;
+// @convex-dev/auth keeps each provider's real config on a non-public
+// `.options` field and re-merges `.options` back over the top-level provider
+// object whenever it materializes providers for use (see
+// `providerDefaults`/`merge` in
+// node_modules/@convex-dev/auth/dist/server/provider_utils.js). That means a
+// plain `{ ...passwordProvider, authorize: wrapped }` override is silently
+// discarded at runtime — `.options.authorize` always wins. The public
+// `ConvexCredentialsConfig` type doesn't declare `.options`, hence the cast.
+const passwordOptions = (
+  passwordProvider as unknown as { options: ConvexCredentialsConfig }
+).options;
+const passwordAuthorize = passwordOptions.authorize;
+
+const authorizeWithFlowGuard = async (
+  params: Record<string, Value | undefined>,
+  ctx: GenericActionCtxWithAuthConfig<GenericDataModel>,
+) => {
+  const email = String(params.email ?? "").trim().toLowerCase();
+  const flow = String(params.flow ?? "");
+  if (email && flow) {
+    const userTypeRaw = params.userType;
+    const userType =
+      userTypeRaw === "student" || userTypeRaw === "alumni"
+        ? userTypeRaw
+        : undefined;
+    await ctx.runMutation(internal.security.consumeAuthFlow, {
+      flow,
+      email,
+      ...(flow === "signUp" ? { userType } : {}),
+    });
+  }
+  return passwordAuthorize(params, ctx);
+};
 
 export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
   providers: [
@@ -27,26 +62,8 @@ export const { auth, signIn, signOut, store, isAuthenticated } = convexAuth({
     AdminEmailOTP,
     {
       ...passwordProvider,
-      authorize: async (
-        params: Record<string, Value | undefined>,
-        ctx: GenericActionCtxWithAuthConfig<GenericDataModel>,
-      ) => {
-        const email = String(params.email ?? "").trim().toLowerCase();
-        const flow = String(params.flow ?? "");
-        if (email && flow) {
-          const userTypeRaw = params.userType;
-          const userType =
-            userTypeRaw === "student" || userTypeRaw === "alumni"
-              ? userTypeRaw
-              : undefined;
-          await ctx.runMutation(internal.security.consumeAuthFlow, {
-            flow,
-            email,
-            ...(flow === "signUp" ? { userType } : {}),
-          });
-        }
-        return passwordAuthorize(params, ctx);
-      },
+      authorize: authorizeWithFlowGuard,
+      options: { ...passwordOptions, authorize: authorizeWithFlowGuard },
     },
   ],
   signIn: {
