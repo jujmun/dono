@@ -16,10 +16,9 @@ function getStripeClient() {
 /**
  * Separate from the payments webhook (/stripe/webhook): a distinct endpoint,
  * a distinct signing secret (STRIPE_IDENTITY_WEBHOOK_SECRET), and it never
- * touches donations — only the Stripe Identity fields on societies,
- * campaigns, and alumni profiles. Each event is matched by session id against
- * societies first, then campaigns, then profiles (a session only ever belongs
- * to one record).
+ * touches donations — only the Stripe Identity fields on societies and
+ * campaigns. Each event is matched by session id against societies first,
+ * then campaigns (a session only ever belongs to one record).
  */
 export const identityWebhook = httpAction(async (ctx, request) => {
   const signature = request.headers.get("stripe-signature");
@@ -83,16 +82,10 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         update,
       );
       if (!societyResult.updated) {
-        const campaignResult = await ctx.runMutation(
+        await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
         );
-        if (!campaignResult.updated) {
-          await ctx.runMutation(
-            internal.users.updateVerificationFromWebhook,
-            update,
-          );
-        }
       }
       break;
     }
@@ -109,16 +102,10 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         update,
       );
       if (!societyResult.updated) {
-        const campaignResult = await ctx.runMutation(
+        await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
         );
-        if (!campaignResult.updated) {
-          await ctx.runMutation(
-            internal.users.updateVerificationFromWebhook,
-            update,
-          );
-        }
       }
       break;
     }
@@ -134,16 +121,10 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         update,
       );
       if (!societyResult.updated) {
-        const campaignResult = await ctx.runMutation(
+        await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
         );
-        if (!campaignResult.updated) {
-          await ctx.runMutation(
-            internal.users.updateVerificationFromWebhook,
-            update,
-          );
-        }
       }
       break;
     }
