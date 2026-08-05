@@ -26,7 +26,6 @@ import {
   ReceiptDivider,
   ReceiptLedger,
   ReceiptLineRow,
-  ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
 import {
   getOrCreateDonateGuestKey,
@@ -184,6 +183,7 @@ export function DonateSheet({
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showBreakdown, setShowBreakdown] = useState(false);
   const paymentCompletedRef = useRef(false);
   const activePaymentIntentIdRef = useRef<string | null>(null);
   const donorEmailRef = useRef(donorEmail);
@@ -216,6 +216,7 @@ export function DonateSheet({
       setStripeAccountId(null);
       setError(null);
       setLoading(false);
+      setShowBreakdown(false);
       return;
     }
 
@@ -306,15 +307,24 @@ export function DonateSheet({
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
           >
-            <Text className="font-retro-bold text-xl text-dono-text">Donate</Text>
+            <Text className="font-retro-bold text-2xl text-dono-text">Donate</Text>
             <Text className="mt-1 text-sm text-dono-muted" numberOfLines={2}>
               {campaignTitle}
             </Text>
 
-            <Text className="mt-5 font-retro-mono-bold text-3xl text-dono-primary">
+            <Text className="mt-5 font-retro-mono-bold text-4xl text-dono-primary">
               {feeTotalLabel}
             </Text>
-            <Text className="mt-1 text-sm text-dono-muted">One-time donation</Text>
+            <Pressable
+              onPress={() => setShowBreakdown((prev) => !prev)}
+              className="mt-1 flex-row flex-wrap items-center gap-1"
+              accessibilityRole="button"
+            >
+              <Text className="text-sm text-dono-muted">One-time donation ·</Text>
+              <Text className="text-sm text-dono-primary underline">
+                {showBreakdown ? "Hide breakdown" : "See breakdown"}
+              </Text>
+            </Pressable>
 
             {!isAuthenticated ? (
               <TextInput
@@ -346,24 +356,25 @@ export function DonateSheet({
               ) : null}
             </View>
 
-            <ReceiptLedger className="mt-4">
-              <ReceiptLineRow
-                label="Your donation"
-                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
-              />
-              <ReceiptLineRow
-                label="Estimated payment processing fee"
-                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
-                muted
-              />
-              <ReceiptDivider />
-              <ReceiptTotalRow label="Total charged" amount={feeTotalLabel} />
-              <ReceiptLineRow
-                label="Amount reaching the campaign"
-                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
-                emphasis
-              />
-            </ReceiptLedger>
+            {showBreakdown ? (
+              <ReceiptLedger className="mt-4">
+                <ReceiptLineRow
+                  label="Your donation"
+                  amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
+                />
+                <ReceiptLineRow
+                  label="Estimated processing fee"
+                  amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
+                  muted
+                />
+                <ReceiptDivider />
+                <ReceiptLineRow
+                  label="Amount reaching the campaign"
+                  amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
+                  emphasis
+                />
+              </ReceiptLedger>
+            ) : null}
 
             <Pressable
               onPress={() => onAnonymousChange(!isAnonymous)}
@@ -383,7 +394,7 @@ export function DonateSheet({
                 ) : null}
               </View>
               <Text className="min-w-0 flex-1 text-sm text-dono-text">
-                Anonymous donation
+                Make this donation anonymous
               </Text>
             </Pressable>
 
