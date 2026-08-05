@@ -13,6 +13,7 @@ import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { canCreate } from "@/lib/auth/user-type";
 import { NotificationBell } from "@/components/notification-bell";
+import { DonoDino } from "./dono-dino";
 
 const baseNavItems = [
   { href: "/campaigns", label: "Campaigns" },
@@ -36,8 +37,8 @@ export function RetroBrowserSitehead() {
     <View className="border-b-[3px] border-retro-ink bg-retro-paper">
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
         <Link href="/" asChild>
-          <Pressable className="flex-row items-center gap-2">
-            <View className="h-3.5 w-3.5 rounded-full border-2 border-retro-ink bg-retro-coral" />
+          <Pressable className="flex-row items-center gap-2" accessibilityLabel="Dono home">
+            <DonoDino height={26} />
             <Text className="font-retro-bold text-xl text-retro-ink">Dono</Text>
           </Pressable>
         </Link>

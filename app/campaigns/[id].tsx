@@ -11,6 +11,7 @@ import {
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { usePostHog } from "posthog-react-native";
+import { Pencil } from "lucide-react-native";
 import {
   CampaignMediaHero,
   CampaignPhotoGrid,
@@ -21,7 +22,6 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
-import { CampaignRecentDonations } from "@/components/campaign-recent-donations";
 import { CampaignLiveStream } from "@/components/campaign-live-stream";
 import {
   ReceiptDivider,
@@ -93,6 +93,11 @@ export default function CampaignDetailPage() {
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
   }) as Campaign | null | undefined;
+  const mineForEdit = useQuery(
+    api.campaignCreator.getMineForEdit,
+    isAuthenticated && id ? { slug: id } : "skip",
+  );
+  const showEditPencil = Boolean(mineForEdit?.requiresApproval);
   const donationReadiness = useQuery(
     api.stripeConnectInternal.getCampaignDonationReadiness,
     id ? { campaignSlug: id } : "skip",
@@ -514,6 +519,16 @@ export default function CampaignDetailPage() {
         <Text className="font-retro-bold text-[28px] uppercase leading-tight text-retro-ink md:text-[34px]">
           {campaign.title}
         </Text>
+        {showEditPencil ? (
+          <Link href={`/create?editSlug=${campaign.id}`} asChild>
+            <Pressable
+              accessibilityLabel="Edit campaign"
+              className="h-8 w-8 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream"
+            >
+              <Pencil size={14} color="#211E1A" />
+            </Pressable>
+          </Link>
+        ) : null}
         {activeMatch ? (
           <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2.5 py-0.5">
             <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
@@ -563,12 +578,6 @@ export default function CampaignDetailPage() {
           </RetroPanel>
         </View>
       ) : null}
-
-      <View className="mb-6">
-        <RetroPanel title="Donations.log" accent="mint">
-          <CampaignRecentDonations campaignSlug={campaign.id} />
-        </RetroPanel>
-      </View>
 
       <View nativeID="campaign-comments" className="mb-4">
         <RetroPanel title="Comments.log" accent="marigold">

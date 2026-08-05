@@ -226,6 +226,61 @@ export default defineSchema({
   })
     .index("by_campaign", ["campaignId"])
     .index("by_status", ["status"]),
+  /** Post-approval campaign content edits — live row stays unchanged until admin approves. */
+  campaignEditRequests: defineTable({
+    campaignId: v.id("campaigns"),
+    requestedBy: v.id("users"),
+    proposed: v.object({
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      story: v.optional(v.string()),
+      category: v.optional(v.string()),
+      goal: v.optional(v.number()),
+      template: v.optional(v.string()),
+      additionalNotes: v.optional(v.string()),
+      expectedExpenditureDate: v.optional(v.string()),
+      plannedUpdateSchedule: v.optional(v.string()),
+      ownershipStatement: v.optional(v.string()),
+      videoUrl: v.optional(v.string()),
+      impactItems: v.optional(v.array(v.string())),
+    }),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_status", ["status"]),
+  /** Post-approval society/college profile edits — live + communities stay until approved. */
+  societyEditRequests: defineTable({
+    societyId: v.id("societies"),
+    requestedBy: v.id("users"),
+    proposed: v.object({
+      name: v.optional(v.string()),
+      description: v.optional(v.string()),
+      story: v.optional(v.string()),
+      websiteUrl: v.optional(v.string()),
+      secondaryLink: v.optional(v.string()),
+      socialUrl: v.optional(v.string()),
+      coverImageStorageId: v.optional(v.id("_storage")),
+    }),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
+  })
+    .index("by_society", ["societyId"])
+    .index("by_status", ["status"]),
   communityFunds: defineTable(fundFields).index("by_slug", ["slug"]),
   activityItems: defineTable(activityFields)
     .index("by_slug", ["slug"])

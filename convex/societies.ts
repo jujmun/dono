@@ -3,6 +3,7 @@ import { internalMutation, internalQuery, mutation, query } from "./_generated/s
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import {
+  canManageSociety,
   getProfileByUserId,
   optionalUserId,
   requireAdmin,
@@ -1378,6 +1379,46 @@ export const getMine = query({
       stripeVerificationStatus: society.stripeVerificationStatus ?? null,
       stripeVerificationLastErrorCode: society.stripeVerificationLastErrorCode ?? null,
       stripeVerificationLastErrorReason: society.stripeVerificationLastErrorReason ?? null,
+    };
+  },
+});
+
+/** Creator or society leader — full profile for post-approval edit form. */
+export const getMineForEdit = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!society) return null;
+
+    if (!(await canManageSociety(ctx, userId, society.slug))) {
+      return null;
+    }
+
+    const coverImageUrl = society.coverImageStorageId
+      ? ((await ctx.storage.getUrl(society.coverImageStorageId)) ?? null)
+      : null;
+
+    const requiresApproval = society.status === "active";
+    const editable = society.status === "pending" || requiresApproval;
+
+    return {
+      slug: society.slug,
+      name: society.name,
+      description: society.description,
+      story: society.story,
+      websiteUrl: society.websiteUrl,
+      secondaryLink: society.secondaryLink ?? "",
+      socialUrl: society.socialUrl ?? "",
+      coverImageUrl,
+      coverImageStorageId: society.coverImageStorageId ?? null,
+      orgType: society.orgType === "college" ? ("college" as const) : ("society" as const),
+      status: society.status,
+      editable,
+      requiresApproval,
     };
   },
 });
