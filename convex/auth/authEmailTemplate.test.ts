@@ -5,13 +5,16 @@ import { describe, expect, it } from "vitest";
 import { renderAuthEmailHtml } from "./authEmailTemplate";
 
 describe("renderAuthEmailHtml", () => {
-  it("spaces out the code digits", () => {
+  it("renders the code as one unbroken, copyable token", () => {
     const html = renderAuthEmailHtml({
       heading: "Confirm it's you.",
       code: "482916",
       expiryText: "Expires in 10 minutes.",
     });
-    expect(html).toContain("4 8 2 9 1 6");
+    // No literal whitespace inside or around the digits — mail clients would
+    // otherwise copy "4 8 2 9 1 6", which no OTP input accepts.
+    expect(html).toContain(">482916</td>");
+    expect(html).not.toContain("4 8 2 9 1 6");
   });
 
   it("escapes HTML in every interpolated field", () => {

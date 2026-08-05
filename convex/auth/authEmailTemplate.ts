@@ -18,11 +18,6 @@ function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
-/** "482916" -> "4 8 2 9 1 6", matching the design's spaced-digit code display. */
-function spaceOutCode(code: string): string {
-  return code.split("").join(" ");
-}
-
 export type AuthEmailTemplateParams = {
   heading: string;
   intro?: string;
@@ -40,7 +35,7 @@ export function renderAuthEmailHtml({
 }: AuthEmailTemplateParams): string {
   const safeHeading = escapeHtml(heading);
   const safeIntro = intro ? escapeHtml(intro) : null;
-  const safeCode = escapeHtml(spaceOutCode(code));
+  const safeCode = escapeHtml(code);
   const safeExpiryText = escapeHtml(expiryText);
   const safeFooterNote = footerNote ? escapeHtml(footerNote) : null;
   const preheader = escapeHtml(`${heading} Your code is inside — ${expiryText}`);
@@ -94,7 +89,7 @@ export function renderAuthEmailHtml({
   @media only screen and (max-width:600px) {
     .container { width:100% !important; }
     .fluid-pad { padding-left:20px !important; padding-right:20px !important; }
-    .code-cell { font-size:28px !important; letter-spacing:6px !important; }
+    .code-cell { font-size:28px !important; line-height:36px !important; letter-spacing:2px !important; text-indent:2px !important; }
   }
   @media (prefers-color-scheme: dark) {
     .bg-cream { background-color:#1c1a16 !important; }
@@ -145,9 +140,7 @@ ${introBlock}
                   </td>
                 </tr>
                 <tr>
-                  <td align="center" class="code-cell" style="padding:4px 16px 22px; font-family:'Space Mono', 'Courier New', Courier, monospace; font-size:36px; font-weight:bold; letter-spacing:10px; color:#1a1a1a;">
-                    ${safeCode}
-                  </td>
+                  <td align="center" class="code-cell" style="padding:4px 16px 22px; font-family:'Space Mono', 'Courier New', Courier, monospace; font-size:34px; line-height:42px; font-weight:bold; letter-spacing:4px; text-indent:4px; white-space:nowrap; color:#1a1a1a;">${safeCode}</td>
                 </tr>
               </table>
 
