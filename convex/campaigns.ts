@@ -321,9 +321,17 @@ export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const [campaigns, societies] = await Promise.all([
+    const [campaigns, societies, campaignEdits, societyEdits] = await Promise.all([
       ctx.db.query("campaigns").collect(),
       ctx.db.query("societies").collect(),
+      ctx.db
+        .query("campaignEditRequests")
+        .withIndex("by_status", (q) => q.eq("status", "pending"))
+        .collect(),
+      ctx.db
+        .query("societyEditRequests")
+        .withIndex("by_status", (q) => q.eq("status", "pending"))
+        .collect(),
     ]);
     let pending = 0;
     let live = 0;
@@ -338,7 +346,13 @@ export const getAdminStats = query({
       else if (s.status === "active") live += 1;
       else if (s.status === "rejected") moderated += 1;
     }
-    return { pending, live, moderated };
+    pending += campaignEdits.length + societyEdits.length;
+    return {
+      pending,
+      live,
+      moderated,
+      pendingEdits: campaignEdits.length + societyEdits.length,
+    };
   },
 });
 

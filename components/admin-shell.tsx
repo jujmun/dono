@@ -9,6 +9,7 @@ import {
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Menu, X, LogOut } from "lucide-react-native";
 import { cn } from "@/lib/utils";
+import { DonoDino } from "@/components/retro/dono-dino";
 import { RetroBrowserFooter } from "@/components/retro/retro-browser-footer";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -59,7 +60,7 @@ function AdminSitehead() {
     <View className="border-b-[3px] border-retro-ink bg-retro-paper">
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
         <View className="flex-row items-center gap-2">
-          <View className="h-3.5 w-3.5 rounded-full border-2 border-retro-ink bg-retro-coral" />
+          <DonoDino height={26} />
           <Text className="font-retro-bold text-xl text-retro-ink">Dono</Text>
           <View className="rounded-full border-2 border-retro-ink bg-retro-coral px-2.5 py-0.5">
             <Text className="font-retro-bold text-[11px] text-retro-paper">

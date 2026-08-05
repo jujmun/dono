@@ -11,7 +11,7 @@ import { useMemo } from "react";
 import { ArrowRight } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
-import { RetroPanel } from "@/components/retro";
+import { RetroDinoHero, RetroPanel } from "@/components/retro";
 import { ReceiptDivider, ReceiptLedger, ReceiptLineRow } from "@/components/ui/receipt-lines";
 import { api } from "@convex/_generated/api";
 import type { Campaign } from "@/lib/types";
@@ -71,20 +71,7 @@ export default function HomePage() {
 
   return (
     <AppShell>
-      <View className="mb-8 flex-row flex-wrap items-center justify-between gap-5 rounded-2xl border-[3px] border-retro-ink bg-retro-coral px-5 py-6 md:px-8 md:py-8">
-        <View className="min-w-0 flex-1">
-          <Text className="mb-2 font-retro-mono text-xs uppercase text-retro-paper opacity-90">
-            Community infrastructure for university giving
-          </Text>
-          <Text className="mb-3 font-retro-bold text-[32px] leading-tight text-retro-paper md:text-4xl">
-            Give. See the receipt.
-          </Text>
-          <Text className="max-w-xl text-[15px] leading-6 text-retro-paper opacity-95">
-            Fund specific, tangible improvements to student life — and watch
-            exactly where the money goes, line by line.
-          </Text>
-        </View>
-      </View>
+      <RetroDinoHero />
 
       <View className="mb-10">
         <View className="mb-6 items-center">
@@ -141,18 +128,6 @@ export default function HomePage() {
           />
         </View>
       ) : null}
-
-      <RetroPanel title="WHY_DONO.txt" accent="marigold">
-        <Text className="text-center font-retro-bold text-xl text-retro-ink">
-          People don&apos;t dislike giving
-        </Text>
-        <View className="my-4 border-t border-dashed border-retro-ink" />
-        <Text className="text-center text-base leading-6 text-dono-muted">
-          They dislike giving without knowing what difference they made. Dono is
-          built around visible, specific giving — so every donor knows exactly
-          where their money went.
-        </Text>
-      </RetroPanel>
 
       <RetroPanel title="IMPACT.dat" accent="coral" className="mb-0">
         <Text className="text-center font-retro-bold text-2xl text-retro-ink">

@@ -67,6 +67,10 @@ module.exports = {
         "retro-pink": "#F17FB3",
         "retro-indigo": "#4D5FE3",
         "retro-tan": "#B98A4E",
+        // Mascot palette — keep in sync with DONO_GREEN/DONO_PINK in
+        // components/retro/dono-dino.tsx, which needs raw hex for SVG fills.
+        "retro-forest": "#2B7B54",
+        "retro-blush": "#EC7EA1",
       },
     },
   },

@@ -188,6 +188,7 @@ export default function CreateCampaignPage() {
   const createCampaign = useMutation(api.campaigns.create);
   const updateProfileDateOfBirth = useMutation(api.users.updateProfile);
   const updateCampaign = useMutation(api.campaignCreator.update);
+  const proposeCampaignEdit = useMutation(api.campaignEditRequests.propose);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
@@ -212,6 +213,11 @@ export default function CreateCampaignPage() {
   const editCampaign = useQuery(
     api.campaignCreator.getMineForEdit,
     isAuthenticated && editSlug ? { slug: editSlug } : "skip",
+  );
+  const requiresApproval = Boolean(editCampaign?.requiresApproval);
+  const pendingCampaignEdit = useQuery(
+    api.campaignEditRequests.getPendingForEntity,
+    isAuthenticated && editSlug && requiresApproval ? { slug: editSlug } : "skip",
   );
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
@@ -592,6 +598,8 @@ export default function CreateCampaignPage() {
           transparencyFieldsComplete
         );
       case 3:
+        // Live post-approval edits skip Identity — already verified at launch.
+        if (requiresApproval) return true;
         // DOB + legal + Stripe Identity verified.
         return stripeVerified && legalAccepted && hasDateOfBirth;
       default:
@@ -801,11 +809,22 @@ export default function CreateCampaignPage() {
             {isEditMode ? "Edit Campaign" : "Start a Campaign"}
           </Text>
           <Text className="mt-1 text-center text-[#5c574f]">
-            {isEditMode
-              ? "Update your campaign and resubmit it for review."
-              : "Free for students. Reach alumni who care about your community."}
+            {requiresApproval
+              ? "Propose changes for admin review. Your live campaign stays public until approved."
+              : isEditMode
+                ? "Update your campaign and resubmit it for review."
+                : "Free for students. Reach alumni who care about your community."}
           </Text>
         </View>
+
+        {pendingCampaignEdit ? (
+          <View className="mb-6 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3">
+            <Text className="text-center text-sm text-amber-900">
+              You already have edits pending review. Submitting again will
+              replace them.
+            </Text>
+          </View>
+        ) : null}
 
         <View className="mb-8 w-full items-center">
           <View className="w-full max-w-lg flex-row items-start">
@@ -1520,16 +1539,20 @@ export default function CreateCampaignPage() {
           {step === 4 && (
             <View className="gap-5">
               <Text className="text-lg font-retro-bold text-retro-ink">
-                {isEditMode
-                  ? "Before your changes go live"
-                  : "Before your campaign goes live"}
+                {requiresApproval
+                  ? "Submit edits for review"
+                  : isEditMode
+                    ? "Before your changes go live"
+                    : "Before your campaign goes live"}
               </Text>
               <Text className="text-sm leading-relaxed text-[#5c574f]">
-                {isEditMode
-                  ? "Resubmitting sends your campaign back to our team for review, the same as a new submission. We'll reach out directly if anything still needs adjusting."
-                  : "We take moderation seriously. Every campaign is reviewed by our team to make sure it meets Dono's guidelines and has the best possible chance of reaching alumni and getting funded. We'll reach out directly if anything needs adjusting."}
+                {requiresApproval
+                  ? "Your proposed edits go to our team. The public campaign page stays as-is until they approve."
+                  : isEditMode
+                    ? "Resubmitting sends your campaign back to our team for review, the same as a new submission. We'll reach out directly if anything still needs adjusting."
+                    : "We take moderation seriously. Every campaign is reviewed by our team to make sure it meets Dono's guidelines and has the best possible chance of reaching alumni and getting funded. We'll reach out directly if anything needs adjusting."}
               </Text>
-              {renderVerificationStatus()}
+              {requiresApproval ? null : renderVerificationStatus()}
             </View>
           )}
 
@@ -1540,7 +1563,9 @@ export default function CreateCampaignPage() {
                 Confirmed!
               </Text>
               <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
-                Check back to see if your campaign&apos;s been approved.
+                {requiresApproval
+                  ? "Submitted for admin review — your live page is unchanged until approved."
+                  : "Check back to see if your campaign\u2019s been approved."}
               </Text>
               <Link href="/campaigns" asChild>
                 <Pressable
@@ -1580,6 +1605,11 @@ export default function CreateCampaignPage() {
             ) : step === 3 ? (
               <Pressable
                 onPress={() => {
+                  if (requiresApproval) {
+                    setError(null);
+                    setStep(4);
+                    return;
+                  }
                   if (!legalAccepted) {
                     setError("Please accept the campaign terms to continue.");
                     return;
@@ -1597,7 +1627,7 @@ export default function CreateCampaignPage() {
                     .finally(() => setSubmitting(false));
                 }}
                 disabled={!canProceed() || submitting}
-                className={`${stripeVerified ? primaryBtnClass : accentBtnClass} ${
+                className={`${requiresApproval || stripeVerified ? primaryBtnClass : accentBtnClass} ${
                   !canProceed() || submitting ? "opacity-50" : ""
                 }`}
               >
@@ -1614,6 +1644,31 @@ export default function CreateCampaignPage() {
                   // edited since, then attach the extras.
                   void (async () => {
                     const slug = campaignSlug ?? (await ensureCampaignCreated());
+                    if (requiresApproval) {
+                      await proposeCampaignEdit({
+                        slug,
+                        proposed: {
+                          title: form.title,
+                          category: form.category,
+                          description: form.description,
+                          story: form.story,
+                          goal: Number(form.goal),
+                          template,
+                          additionalNotes,
+                          expectedExpenditureDate: expectedExpenditureDate.trim(),
+                          plannedUpdateSchedule: plannedUpdateSchedule.trim(),
+                          ownershipStatement: ownershipStatement.trim(),
+                          videoUrl: parsedVideoUrl?.watchUrl ?? "",
+                          impactItems:
+                            fundLinesComplete || filledFundLines.length === 0
+                              ? fundLinesComplete
+                                ? encodedImpactItems
+                                : []
+                              : undefined,
+                        },
+                      });
+                      return slug;
+                    }
                     await updateCampaign({
                       slug,
                       title: form.title,
@@ -1633,33 +1688,35 @@ export default function CreateCampaignPage() {
                     .then(async (slug) => {
                       let imageUploadFailed = false;
                       let videoSaveFailed = false;
-                      try {
-                        // Fund breakdown is optional — only persist when complete,
-                        // or clear it when the creator left the section empty.
-                        if (fundLinesComplete || filledFundLines.length === 0) {
-                          await setImpactItems({
-                            slug,
-                            impactItems: fundLinesComplete
-                              ? encodedImpactItems
-                              : [],
-                          });
-                        }
-                      } catch {
-                        setError(
-                          "Campaign saved but fund breakdown could not be saved. Try again from this page.",
-                        );
-                      }
-                      // Edit mode always pushes the video field, including
-                      // clearing it — create mode only sets it when non-empty
-                      // since a brand-new campaign starts with none anyway.
-                      if (parsedVideoUrl || isEditMode) {
+                      if (!requiresApproval) {
                         try {
-                          await setCampaignVideoUrl({
-                            slug,
-                            videoUrl: parsedVideoUrl?.watchUrl ?? "",
-                          });
+                          // Fund breakdown is optional — only persist when complete,
+                          // or clear it when the creator left the section empty.
+                          if (fundLinesComplete || filledFundLines.length === 0) {
+                            await setImpactItems({
+                              slug,
+                              impactItems: fundLinesComplete
+                                ? encodedImpactItems
+                                : [],
+                            });
+                          }
                         } catch {
-                          videoSaveFailed = true;
+                          setError(
+                            "Campaign saved but fund breakdown could not be saved. Try again from this page.",
+                          );
+                        }
+                        // Edit mode always pushes the video field, including
+                        // clearing it — create mode only sets it when non-empty
+                        // since a brand-new campaign starts with none anyway.
+                        if (parsedVideoUrl || isEditMode) {
+                          try {
+                            await setCampaignVideoUrl({
+                              slug,
+                              videoUrl: parsedVideoUrl?.watchUrl ?? "",
+                            });
+                          } catch {
+                            videoSaveFailed = true;
+                          }
                         }
                       }
                       if (pickedImages.length > 0) {
@@ -1684,12 +1741,16 @@ export default function CreateCampaignPage() {
                         return;
                       }
 
-                      if (isEditMode) {
+                      if (isEditMode && !requiresApproval) {
                         await resubmitCampaign({ slug });
                       }
 
                       posthog?.capture(
-                        isEditMode ? "campaign_resubmitted" : "campaign_created",
+                        requiresApproval
+                          ? "campaign_edit_proposed"
+                          : isEditMode
+                            ? "campaign_resubmitted"
+                            : "campaign_created",
                         {
                           campaign_title: form.title,
                           campaign_category: form.category,
@@ -1722,9 +1783,11 @@ export default function CreateCampaignPage() {
                     .catch((err: Error) => {
                       setError(
                         getFriendlyAuthError(err) ||
-                          (isEditMode
-                            ? "Failed to resubmit campaign."
-                            : "Failed to create campaign."),
+                          (requiresApproval
+                            ? "Failed to submit edits for review."
+                            : isEditMode
+                              ? "Failed to resubmit campaign."
+                              : "Failed to create campaign."),
                       );
                     })
                     .finally(() => {
@@ -1737,14 +1800,18 @@ export default function CreateCampaignPage() {
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">
                   {submitting
-                    ? isEditMode
-                      ? "Resubmitting..."
-                      : pickedImages.length > 0
-                        ? "Creating & uploading..."
-                        : "Completing..."
-                    : isEditMode
-                      ? "Resubmit for review"
-                      : "Complete"}
+                    ? requiresApproval
+                      ? "Submitting..."
+                      : isEditMode
+                        ? "Resubmitting..."
+                        : pickedImages.length > 0
+                          ? "Creating & uploading..."
+                          : "Completing..."
+                    : requiresApproval
+                      ? "Submit for review"
+                      : isEditMode
+                        ? "Resubmit for review"
+                        : "Complete"}
                 </Text>
               </Pressable>
             ) : null}

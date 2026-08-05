@@ -96,9 +96,12 @@ export const getMineForEdit = query({
     if (!campaign || campaign.createdBy !== userId) {
       return null;
     }
+    const requiresApproval =
+      campaign.status === "active" || campaign.status === "funded";
     return {
       ...(await enrichCampaignWithMedia(ctx, campaign)),
-      editable: isEditableByOwner(campaign.status),
+      editable: isEditableByOwner(campaign.status) || requiresApproval,
+      requiresApproval,
       canUploadPhotos: isPublicStatus(campaign.status),
     };
   },

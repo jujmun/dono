@@ -1,4 +1,4 @@
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import {
   View,
   Text,
@@ -22,6 +22,7 @@ import {
   Check,
   X,
   Share2,
+  Pencil,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { SocietyFollowButton } from "@/components/society-follow-button";
@@ -130,6 +131,36 @@ const statusBanners = {
   },
 } as const;
 
+function SocietyEditPencil({
+  slug,
+  orgType,
+}: {
+  slug: string;
+  orgType?: "college" | "society" | null;
+}) {
+  const { isAuthenticated } = useConvexAuth();
+  const editAccess = useQuery(
+    api.societies.getMineForEdit,
+    isAuthenticated ? { slug } : "skip",
+  );
+  if (!editAccess?.requiresApproval) return null;
+  const href = (
+    orgType === "college"
+      ? `/create-college?editSlug=${slug}`
+      : `/create-society?editSlug=${slug}`
+  ) as Href;
+  return (
+    <Link href={href} asChild>
+      <Pressable
+        accessibilityLabel="Edit society"
+        className="h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dono-border bg-white"
+      >
+        <Pencil size={14} color="#56615A" />
+      </Pressable>
+    </Link>
+  );
+}
+
 function SocietyDetail({
   society,
   community,
@@ -179,9 +210,12 @@ function SocietyDetail({
               </Text>
             </View>
             <View className="flex-1">
-              <Text className="font-retro-bold text-2xl text-dono-text">
-                {society.name}
-              </Text>
+              <View className="flex-row items-center gap-2">
+                <Text className="flex-1 font-retro-bold text-2xl text-dono-text">
+                  {society.name}
+                </Text>
+                <SocietyEditPencil slug={slug} orgType={society.orgType} />
+              </View>
               <Text className="mt-1 text-sm text-dono-muted">
                 {society.orgType === "college" ? "College" : "Student society"} ·
                 On Dono since {joinedDate}

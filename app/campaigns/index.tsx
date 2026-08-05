@@ -282,7 +282,7 @@ export default function CampaignsPage() {
                         ? (`/create?editSlug=${campaign.id}` as Href)
                         : campaign.status === "active" ||
                             campaign.status === "funded"
-                          ? (`/create?editSlug=${campaign.id}&photosOnly=1` as Href)
+                          ? (`/create?editSlug=${campaign.id}` as Href)
                           : undefined
                       : undefined
                   }

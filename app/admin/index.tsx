@@ -25,6 +25,10 @@ import { AdminShell } from "@/components/admin-shell";
 import { AdminStatsNav } from "@/components/admin-stats-nav";
 import { ReviewTypeToggle, type ReviewType } from "@/components/review-type-toggle";
 import {
+  PendingCampaignEditsSection,
+  PendingSocietyEditsSection,
+} from "@/components/pending-edit-requests";
+import {
   AdminStatusChip,
   selfieMatchChip,
   stripeStatusChip,
@@ -192,15 +196,17 @@ export default function AdminPortalPage() {
         </View>
 
         {reviewType === "campaigns" ? (
-          pendingCampaigns === undefined ? (
+          <>
+            <PendingCampaignEditsSection enabled={adminUser} />
+            {pendingCampaigns === undefined ? (
             <View className="items-center py-12">
               <ActivityIndicator color="#17211B" />
               <Text className="mt-4 text-dono-muted">Loading posts...</Text>
             </View>
-          ) : pendingCampaigns.length === 0 ? (
+            ) : pendingCampaigns.length === 0 ? (
             <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
               <Text className="font-retro-bold text-base text-dono-text">
-                {trimmedSearch ? "No matches" : "You’re all caught up"}
+                {trimmedSearch ? "No matches" : "No new submissions"}
               </Text>
               <Text className="mt-2 text-sm text-dono-muted">
                 {trimmedSearch
@@ -260,9 +266,11 @@ export default function AdminPortalPage() {
                 </Pressable>
               ))}
             </View>
-          )
+          )}
+          </>
         ) : (
           <>
+            <PendingSocietyEditsSection enabled={adminUser} />
             {societyError ? (
               <View className="mb-4 rounded-xl bg-rose-50 px-4 py-3">
                 <Text className="text-sm text-rose-700">{societyError}</Text>
@@ -282,7 +290,7 @@ export default function AdminPortalPage() {
             ) : filteredSocieties.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
                 <Text className="font-retro-bold text-base text-dono-text">
-                  {trimmedSearch ? "No matches" : "You’re all caught up"}
+                  {trimmedSearch ? "No matches" : "No new submissions"}
                 </Text>
                 <Text className="mt-2 text-sm text-dono-muted">
                   {trimmedSearch
