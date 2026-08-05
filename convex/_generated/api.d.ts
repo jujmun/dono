@@ -17,6 +17,8 @@ import type * as auth_ResendEmailOTP from "../auth/ResendEmailOTP.js";
 import type * as auth_ResendOTP from "../auth/ResendOTP.js";
 import type * as auth_ResendPasswordResetOTP from "../auth/ResendPasswordResetOTP.js";
 import type * as auth_adminConfig from "../auth/adminConfig.js";
+import type * as auth_authEmailAssets from "../auth/authEmailAssets.js";
+import type * as auth_authEmailTemplate from "../auth/authEmailTemplate.js";
 import type * as auth_otpConfig from "../auth/otpConfig.js";
 import type * as auth_passwordPolicy from "../auth/passwordPolicy.js";
 import type * as auth_rateLimit from "../auth/rateLimit.js";
@@ -114,6 +116,8 @@ declare const fullApi: ApiFromModules<{
   "auth/ResendOTP": typeof auth_ResendOTP;
   "auth/ResendPasswordResetOTP": typeof auth_ResendPasswordResetOTP;
   "auth/adminConfig": typeof auth_adminConfig;
+  "auth/authEmailAssets": typeof auth_authEmailAssets;
+  "auth/authEmailTemplate": typeof auth_authEmailTemplate;
   "auth/otpConfig": typeof auth_otpConfig;
   "auth/passwordPolicy": typeof auth_passwordPolicy;
   "auth/rateLimit": typeof auth_rateLimit;

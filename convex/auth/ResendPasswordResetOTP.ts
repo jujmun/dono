@@ -1,5 +1,4 @@
 import Resend from "@auth/core/providers/resend";
-import { Resend as ResendClient } from "resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
@@ -9,6 +8,7 @@ import {
   OTP_LENGTH,
   OTP_MAX_AGE_SECONDS,
 } from "./otpConfig";
+import { sendAuthEmail } from "./authEmailTemplate";
 
 function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
@@ -45,13 +45,16 @@ export const ResendPasswordResetOTP = Resend({
       });
     }
 
-    const resend = new ResendClient(params.provider.apiKey);
     const from = getAuthFromAddress();
 
-    const { error } = await resend.emails.send({
+    const { error } = await sendAuthEmail({
+      apiKey: params.provider.apiKey,
       from,
-      to: [email],
+      to: email,
       subject: "Reset your Dono password",
+      heading: "Reset your password.",
+      code: params.token,
+      expiryText: "Expires in 10 minutes. Didn't request this? Ignore this email.",
       text: `Your Dono password reset code is ${params.token}. It expires in 10 minutes. If you didn't request this, you can ignore this email.`,
     });
 
