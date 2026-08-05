@@ -1,18 +1,10 @@
 import { useState } from "react";
-import {
-  ActivityIndicator,
-  Pressable,
-  Text,
-  TextInput,
-  View,
-} from "react-native";
+import { ActivityIndicator, Pressable, Text, View } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
-
-const inputClassName =
-  "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
+import { DobSelect } from "@/components/dob-select";
 
 /**
  * For signed-in donors: require a stored adult DOB before payment can start.
@@ -34,7 +26,7 @@ export function useDonateDobGate(isAuthenticated: boolean) {
     setDobError(null);
     const trimmed = dobInput.trim();
     if (!parseIsoDateOnly(trimmed)) {
-      setDobError("Enter your date of birth as YYYY-MM-DD.");
+      setDobError("Select your day, month and year of birth.");
       return;
     }
     if (!isAtLeastAge(trimmed)) {
@@ -88,14 +80,7 @@ export function DonateDobGateForm({
       <Text className="mb-2 text-xs text-dono-muted">
         You must be at least 18 to donate. We store this on your profile.
       </Text>
-      <TextInput
-        value={dobInput}
-        onChangeText={onDobInputChange}
-        placeholder="YYYY-MM-DD"
-        placeholderTextColor="#56615A"
-        autoCapitalize="none"
-        className={inputClassName}
-      />
+      <DobSelect value={dobInput} onChange={onDobInputChange} />
       {dobError ? (
         <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
       ) : null}

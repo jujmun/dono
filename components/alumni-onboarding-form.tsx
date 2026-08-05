@@ -9,14 +9,9 @@ import {
 import { useQuery } from "convex/react";
 import { Check } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
-import {
-  alumniOnboardingDetailsSchema,
-  BIRTH_YEAR_OPTIONS,
-  DAY_OF_MONTH_OPTIONS,
-  MONTH_OPTIONS,
-} from "@/lib/validation/profile";
+import { alumniOnboardingDetailsSchema } from "@/lib/validation/profile";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
-import { SelectField } from "@/components/select-field";
+import { DobSelect } from "@/components/dob-select";
 
 const inputClassName =
   "w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text";
@@ -48,13 +43,7 @@ export function AlumniOnboardingForm({
 
   const [step, setStep] = useState(0);
   const [name, setName] = useState(initialName);
-  const [dobDay, setDobDay] = useState("");
-  const [dobMonth, setDobMonth] = useState("");
-  const [dobYear, setDobYear] = useState("");
-  const dateOfBirth =
-    dobDay && dobMonth && dobYear
-      ? `${dobYear}-${dobMonth.padStart(2, "0")}-${dobDay.padStart(2, "0")}`
-      : "";
+  const [dateOfBirth, setDateOfBirth] = useState("");
   const [matriculationYear, setMatriculationYear] = useState("");
   const [college, setCollege] = useState(initialCollege);
   const [selectedSlugs, setSelectedSlugs] = useState<string[]>([]);
@@ -211,32 +200,7 @@ export function AlumniOnboardingForm({
             <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
               Date of birth
             </Text>
-            <View className="flex-row gap-2">
-              <SelectField
-                value={dobDay}
-                onChange={setDobDay}
-                options={DAY_OF_MONTH_OPTIONS}
-                placeholder="Day"
-                title="Day"
-                className="flex-1"
-              />
-              <SelectField
-                value={dobMonth}
-                onChange={setDobMonth}
-                options={MONTH_OPTIONS}
-                placeholder="Month"
-                title="Month"
-                className="flex-[1.6]"
-              />
-              <SelectField
-                value={dobYear}
-                onChange={setDobYear}
-                options={BIRTH_YEAR_OPTIONS}
-                placeholder="Year"
-                title="Year"
-                className="flex-1"
-              />
-            </View>
+            <DobSelect value={dateOfBirth} onChange={setDateOfBirth} />
             <Text className="mt-1 text-xs text-dono-muted">
               You must be at least 18 to use Dono.
             </Text>

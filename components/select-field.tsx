@@ -12,6 +12,10 @@ type SelectFieldProps = {
   title?: string;
   disabled?: boolean;
   className?: string;
+  /** Replaces the default trigger box styling. */
+  triggerClassName?: string;
+  /** Replaces the default trigger label styling. */
+  textClassName?: string;
 };
 
 export function SelectField({
@@ -22,6 +26,8 @@ export function SelectField({
   title = "Select an option",
   disabled,
   className = "",
+  triggerClassName = "rounded-xl border border-dono-border px-4 py-2.5",
+  textClassName,
 }: SelectFieldProps) {
   const [open, setOpen] = useState(false);
   const selected = options.find((option) => option.value === value);
@@ -35,12 +41,15 @@ export function SelectField({
           if (!disabled) setOpen(true);
         }}
         disabled={disabled}
-        className={`flex-row items-center justify-between rounded-xl border border-dono-border px-4 py-2.5 ${
+        className={`flex-row items-center justify-between ${triggerClassName} ${
           disabled ? "opacity-50" : ""
         } ${className}`}
       >
         <Text
-          className={`text-sm ${selected ? "text-dono-text" : "text-dono-muted"}`}
+          className={
+            textClassName ??
+            `text-sm ${selected ? "text-dono-text" : "text-dono-muted"}`
+          }
           numberOfLines={1}
         >
           {selected?.label ?? placeholder}

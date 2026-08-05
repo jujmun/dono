@@ -51,6 +51,11 @@ import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign
 import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { DateInput } from "@/components/date-input";
+import {
+  DobSelect,
+  RETRO_SELECT_TEXT_CLASS,
+  RETRO_SELECT_TRIGGER_CLASS,
+} from "@/components/dob-select";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { api } from "@convex/_generated/api";
@@ -454,7 +459,7 @@ export default function CreateCampaignPage() {
     setDobError(null);
     const trimmed = dobInput.trim();
     if (!parseIsoDateOnly(trimmed)) {
-      setDobError("Enter your date of birth as YYYY-MM-DD.");
+      setDobError("Select your day, month and year of birth.");
       return;
     }
     if (!isAtLeastAge(trimmed)) {
@@ -1428,13 +1433,11 @@ export default function CreateCampaignPage() {
                         You must be at least 18 to create a campaign — we need this on
                         file before you can verify your identity.
                       </Text>
-                      <TextInput
+                      <DobSelect
                         value={dobInput}
-                        onChangeText={setDobInput}
-                        placeholder="YYYY-MM-DD"
-                        placeholderTextColor="#56615A"
-                        autoCapitalize="none"
-                        className={inputClass}
+                        onChange={setDobInput}
+                        triggerClassName={RETRO_SELECT_TRIGGER_CLASS}
+                        textClassName={RETRO_SELECT_TEXT_CLASS}
                       />
                       {dobError ? (
                         <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
