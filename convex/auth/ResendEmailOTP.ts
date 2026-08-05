@@ -1,8 +1,8 @@
-import { Resend as ResendClient } from "resend";
 import Resend from "@auth/core/providers/resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
+import { sendAuthEmail } from "./authEmailTemplate";
 
 const OTP_ALPHABET = "0123456789";
 const OTP_LENGTH = 6;
@@ -79,12 +79,15 @@ export const ResendEmailOTP = Resend({
       return;
     }
 
-    const resend = new ResendClient(params.provider.apiKey);
     const from = process.env.AUTH_EMAIL_FROM ?? "Dono <auth@dono.app>";
-    const { error } = await resend.emails.send({
+    const { error } = await sendAuthEmail({
+      apiKey: params.provider.apiKey,
       from,
-      to: [email],
+      to: email,
       subject: "Your Dono sign-in code",
+      heading: "Confirm it's you.",
+      code: params.token,
+      expiryText: "Expires in 10 minutes. Didn't request this? Ignore this email.",
       text: `Your Dono code is ${params.token}. It expires in 10 minutes.`,
     });
 
