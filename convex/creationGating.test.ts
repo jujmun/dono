@@ -93,19 +93,17 @@ describe("creation mutations reject alumni/donor accounts", () => {
       userType: "alumni",
       dateOfBirth: ADULT_DOB,
     });
-    const storageId = await seedStorageId(t);
     const asAlumni = t.withIdentity({ subject: alumniId });
 
     await expect(
       asAlumni.mutation(api.campaigns.create, {
         title: "Test Campaign",
-        category: "academic",
+        category: "textbooks",
         communitySlug: "some-society",
         description: "desc",
         story: "story",
         goal: 100,
-        template: "general",
-        idDocumentStorageId: storageId,
+        template: "classic",
       }),
     ).rejects.toThrow();
   });
@@ -117,7 +115,6 @@ describe("creation mutations reject alumni/donor accounts", () => {
       userType: "alumni",
       dateOfBirth: ADULT_DOB,
     });
-    const storageId = await seedStorageId(t);
     const asAlumni = t.withIdentity({ subject: alumniId });
 
     await expect(
@@ -127,7 +124,6 @@ describe("creation mutations reject alumni/donor accounts", () => {
         story: "story",
         websiteUrl: "https://example.com",
         supportingDocumentStorageIds: [],
-        idDocumentStorageId: storageId,
       }),
     ).rejects.toThrow();
   });
@@ -167,6 +163,128 @@ describe("creation mutations reject alumni/donor accounts", () => {
     const result = await asStudent.mutation(api.societies.createCollege, {
       name: "Test College",
       description: "desc",
+    });
+    expect(result.slug).toBeDefined();
+  });
+});
+
+async function seedVerifiedSocietyCommunity(
+  t: ReturnType<typeof newTestConvex>,
+  slug: string,
+) {
+  await t.run(async (ctx) => {
+    await ctx.db.insert("communities", {
+      slug,
+      name: `Society ${slug}`,
+      type: "society",
+      description: "desc",
+      avatar: "",
+      coverImage: "",
+      university: "University of Oxford",
+      followers: 0,
+      campaigns: 0,
+      totalRaised: 0,
+      verified: true,
+      verificationType: "society",
+      verificationStatus: "verified",
+    });
+  });
+}
+
+async function seedApprovedMembership(
+  t: ReturnType<typeof newTestConvex>,
+  args: { communitySlug: string; userId: Id<"users"> },
+) {
+  await t.run(async (ctx) => {
+    await ctx.db.insert("societyMembers", {
+      communitySlug: args.communitySlug,
+      userId: args.userId,
+      role: "member",
+      status: "approved",
+      createdAt: Date.now(),
+    });
+  });
+}
+
+describe("creation mutations without student card", () => {
+  it("societies.create succeeds without idDocumentStorageId", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "stu@ox.ac.uk",
+      userType: "student",
+      dateOfBirth: ADULT_DOB,
+    });
+    await t.run(async (ctx) => {
+      await recordLegalAcceptancesForContext(ctx, {
+        userId: studentId,
+        context: "create_society",
+      });
+    });
+    const asStudent = t.withIdentity({ subject: studentId });
+
+    const result = await asStudent.mutation(api.societies.create, {
+      name: "Test Society",
+      description: "desc",
+      story: "story",
+      websiteUrl: "https://example.com",
+      supportingDocumentStorageIds: [],
+    });
+    expect(result.slug).toBeDefined();
+  });
+
+  it("societies.create still accepts an optional idDocumentStorageId", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "stu2@ox.ac.uk",
+      userType: "student",
+      dateOfBirth: ADULT_DOB,
+    });
+    const storageId = await seedStorageId(t);
+    await t.run(async (ctx) => {
+      await recordLegalAcceptancesForContext(ctx, {
+        userId: studentId,
+        context: "create_society",
+      });
+    });
+    const asStudent = t.withIdentity({ subject: studentId });
+
+    const result = await asStudent.mutation(api.societies.create, {
+      name: "Legacy Card Society",
+      description: "desc",
+      story: "story",
+      websiteUrl: "https://example.com",
+      supportingDocumentStorageIds: [],
+      idDocumentStorageId: storageId,
+    });
+    expect(result.slug).toBeDefined();
+  });
+
+  it("campaigns.create succeeds without idDocumentStorageId", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "camp@ox.ac.uk",
+      userType: "student",
+      dateOfBirth: ADULT_DOB,
+    });
+    const societySlug = "test-society";
+    await seedVerifiedSocietyCommunity(t, societySlug);
+    await seedApprovedMembership(t, { communitySlug: societySlug, userId: studentId });
+    await t.run(async (ctx) => {
+      await recordLegalAcceptancesForContext(ctx, {
+        userId: studentId,
+        context: "create_campaign",
+      });
+    });
+    const asStudent = t.withIdentity({ subject: studentId });
+
+    const result = await asStudent.mutation(api.campaigns.create, {
+      title: "Test Campaign",
+      category: "textbooks",
+      communitySlug: societySlug,
+      description: "desc",
+      story: "story",
+      goal: 100,
+      template: "classic",
     });
     expect(result.slug).toBeDefined();
   });

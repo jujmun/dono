@@ -345,7 +345,7 @@ export function AlumniOnboardingForm({
           <Pressable
             onPress={goNext}
             disabled={busy}
-            className={`flex-1 items-center rounded-full bg-dono-primary py-3 ${
+            className={`retro-key flex-1 items-center rounded-full bg-dono-primary py-3 ${
               busy ? "opacity-50" : ""
             }`}
           >
@@ -355,7 +355,7 @@ export function AlumniOnboardingForm({
           <Pressable
             onPress={() => void handleComplete()}
             disabled={busy}
-            className={`flex-1 items-center rounded-full bg-dono-primary py-3 ${
+            className={`retro-key flex-1 items-center rounded-full bg-dono-primary py-3 ${
               busy ? "opacity-50" : ""
             }`}
           >

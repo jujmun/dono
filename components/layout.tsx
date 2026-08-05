@@ -55,8 +55,7 @@ export function Header() {
               return (
                 <Link key={item.href} href={item.href as Href} asChild>
                   <Pressable
-                    className={cn(
-                      "rounded-lg px-3 py-2",
+                    className={cn("retro-key", "rounded-lg px-3 py-2",
                       active ? "bg-dono-primary/10" : "",
                     )}
                   >
@@ -79,7 +78,7 @@ export function Header() {
           {isWide && (
             <>
               <Link href="/create" asChild>
-                <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
+                <Pressable className="retro-key flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
                   <Plus size={16} color="#fff" />
                   <Text className="font-retro-bold text-sm text-white">
                     Start a Campaign
@@ -89,7 +88,7 @@ export function Header() {
 
               {!isLoading && isAuthenticated && (
                 <Link href="/account" asChild>
-                  <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
+                  <Pressable className="retro-key h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
                     {profile?.avatarUrl ? (
                       <Image
                         source={{ uri: profile.avatarUrl }}

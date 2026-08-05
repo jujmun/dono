@@ -121,7 +121,7 @@ function UpdatesComposer({
           {pendingPhoto && !pickingPhoto ? (
             <Pressable
               onPress={onRemovePhoto}
-              className="absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full border border-retro-ink bg-retro-paper"
+              className="retro-key absolute right-1 top-1 h-5 w-5 items-center justify-center rounded-full border border-retro-ink bg-retro-paper"
               hitSlop={6}
             >
               <X size={10} color="#211E1A" />
@@ -365,7 +365,7 @@ export function CampaignLiveStream({
     <View
       className={cn(
         "w-full bg-retro-cream",
-        connected ? "h-full" : "overflow-hidden rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
+        connected ? "h-full" : "overflow-hidden rounded-[14px] border-[3px] border-retro-ink",
       )}
       style={
         matchHeight != null

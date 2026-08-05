@@ -90,7 +90,7 @@ export default function SocietiesPage() {
         </Text>
       </View>
 
-      <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5 shadow-[3px_3px_0_#211E1A]">
+      <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5">
         <Search size={16} color="#8a8478" />
         <TextInput
           placeholder="Search colleges & societies…"
@@ -106,10 +106,10 @@ export default function SocietiesPage() {
           <Pressable
             key={t.id}
             onPress={() => setTab(t.id)}
-            className={cn(
+            className={cn("retro-key", 
               "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
               tab === t.id
-                ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                ? "bg-retro-mint"
                 : "bg-retro-paper",
             )}
           >
@@ -132,10 +132,10 @@ export default function SocietiesPage() {
               <Pressable
                 key={f.id}
                 onPress={() => setOrgTypeFilter(f.id)}
-                className={cn(
+                className={cn("retro-key", 
                   "rounded-full border-2 border-retro-ink px-3 py-1",
                   orgTypeFilter === f.id
-                    ? "bg-retro-marigold shadow-[2px_2px_0_#211E1A]"
+                    ? "bg-retro-marigold"
                     : "bg-retro-cream",
                 )}
               >
@@ -147,7 +147,7 @@ export default function SocietiesPage() {
           </View>
           {orgTypeFilter === "society" && canCreateSociety ? (
             <Link href="/create-society" asChild>
-              <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5 shadow-[3px_3px_0_#211E1A]">
+              <Pressable className="retro-key ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5">
                 <Plus size={14} color="#FFF9EF" />
                 <Text className="font-retro-bold text-[11.5px] text-retro-paper">
                   Create Society
@@ -157,7 +157,7 @@ export default function SocietiesPage() {
           ) : null}
           {orgTypeFilter === "college" && canCreateSociety ? (
             <Link href="/create-college" asChild>
-              <Pressable className="ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5 shadow-[3px_3px_0_#211E1A]">
+              <Pressable className="retro-key ml-auto flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-1.5">
                 <Plus size={14} color="#FFF9EF" />
                 <Text className="font-retro-bold text-[11.5px] text-retro-paper">
                   Create College
@@ -173,7 +173,7 @@ export default function SocietiesPage() {
           <ActivityIndicator color="#211E1A" />
         </View>
       ) : filtered.length === 0 ? (
-        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-12 shadow-[5px_5px_0_#211E1A]">
+        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-12">
           <Text className="text-center font-retro-mono text-sm text-[#5c574f]">
             No communities match your search.
           </Text>

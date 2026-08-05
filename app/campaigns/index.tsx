@@ -128,7 +128,7 @@ export default function CampaignsPage() {
         Support specific, tangible projects at universities across the UK
       </Text>
 
-      <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5 shadow-[3px_3px_0_#211E1A]">
+      <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5">
         <Search size={16} color="#8a8478" />
         <TextInput
           placeholder="Search campaigns, universities…"
@@ -144,10 +144,10 @@ export default function CampaignsPage() {
           <Pressable
             key={t.id}
             onPress={() => setTab(t.id)}
-            className={cn(
+            className={cn("retro-key", 
               "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
               tab === t.id
-                ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                ? "bg-retro-mint"
                 : "bg-retro-paper",
             )}
           >
@@ -169,10 +169,10 @@ export default function CampaignsPage() {
             <Pressable
               key={chip.id}
               onPress={() => setDiscoverSort(chip.id)}
-              className={cn(
+              className={cn("retro-key", 
                 "rounded-full border-2 border-retro-ink px-3 py-1",
                 discoverSort === chip.id
-                  ? "bg-retro-sky shadow-[2px_2px_0_#211E1A]"
+                  ? "bg-retro-sky"
                   : "bg-retro-cream",
               )}
             >
@@ -192,10 +192,10 @@ export default function CampaignsPage() {
       <View className="mb-5 flex-row items-center gap-2">
         <Pressable
           onPress={() => setShowFilters((v) => !v)}
-          className={cn(
+          className={cn("retro-key", 
             "rounded-lg border-2 border-retro-ink px-2.5 py-2",
             showFilters
-              ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+              ? "bg-retro-mint"
               : "bg-retro-cream",
           )}
         >
@@ -217,10 +217,10 @@ export default function CampaignsPage() {
                 <Pressable
                   key={cat}
                   onPress={() => toggleCategory(cat)}
-                  className={cn(
+                  className={cn("retro-key", 
                     "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
                     on
-                      ? "bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                      ? "bg-retro-mint"
                       : "bg-retro-paper",
                   )}
                 >
@@ -242,7 +242,7 @@ export default function CampaignsPage() {
       {showMineLoginGate ? null : scoped === undefined ? (
         <ActivityIndicator color="#211E1A" className="py-12" />
       ) : filtered.length === 0 ? (
-        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-10 shadow-[5px_5px_0_#211E1A]">
+        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-10">
           <Text className="text-center font-retro-mono text-sm text-[#5c574f]">
             {tab === "mine"
               ? "You haven't created any campaigns yet."

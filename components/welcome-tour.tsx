@@ -202,7 +202,7 @@ export function WelcomeTour({
           <Pressable
             onPress={() => setStep((current) => current - 1)}
             disabled={loading}
-            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border py-3"
+            className="retro-key flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border py-3"
           >
             <ArrowLeft size={16} color="#56615A" />
             <Text className="font-retro-bold text-sm text-dono-muted">Back</Text>
@@ -220,7 +220,7 @@ export function WelcomeTour({
             setStep((current) => current + 1);
           }}
           disabled={loading}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-primary py-3 ${
+          className={`retro-key flex-1 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-primary py-3 ${
             loading ? "opacity-50" : ""
           }`}
         >

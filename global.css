@@ -41,6 +41,45 @@
   }
 }
 
+/* Flat at rest; hard shadow + lift on hover; press flattens (retro keyboard key). */
+.retro-key {
+  box-shadow: none;
+  transition:
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .retro-key:hover:not(:disabled):not([aria-disabled="true"]) {
+    transform: translate(-4px, -4px);
+    box-shadow: 5px 5px 0 #211e1a;
+  }
+}
+
+.retro-key:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translate(0, 0);
+  box-shadow: none;
+}
+
+.retro-key-mint {
+  box-shadow: none;
+  transition:
+    transform 150ms ease-out,
+    box-shadow 150ms ease-out;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .retro-key-mint:hover:not(:disabled):not([aria-disabled="true"]) {
+    transform: translate(-4px, -4px);
+    box-shadow: 5px 5px 0 #159e88;
+  }
+}
+
+.retro-key-mint:active:not(:disabled):not([aria-disabled="true"]) {
+  transform: translate(0, 0);
+  box-shadow: none;
+}
+
 @keyframes retro-ticker {
   from {
     transform: translateX(0);

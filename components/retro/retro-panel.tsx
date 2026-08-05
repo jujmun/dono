@@ -39,7 +39,7 @@ export function RetroPanel({
   return (
     <View
       className={cn(
-        "mb-5 overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper shadow-[5px_5px_0_#211E1A]",
+        "mb-5 overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper",
         className,
       )}
     >

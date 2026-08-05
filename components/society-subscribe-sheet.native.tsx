@@ -21,7 +21,7 @@ export function SocietySubscribeSheet({
           </Text>
           <Pressable
             onPress={onClose}
-            className="mt-6 items-center rounded-full bg-dono-primary py-3"
+            className="retro-key mt-6 items-center rounded-full bg-dono-primary py-3"
           >
             <Text className="font-retro-bold text-sm text-white">Close</Text>
           </Pressable>

@@ -10,7 +10,7 @@ export function LoginGate({ message }: { message: string }) {
         </Text>
         <Text className="mt-2 text-center text-sm text-dono-muted">{message}</Text>
         <Link href="/signin" asChild>
-          <Pressable className="mt-6 items-center rounded-full bg-dono-primary px-6 py-3">
+          <Pressable className="retro-key mt-6 items-center rounded-full bg-dono-primary px-6 py-3">
             <Text className="font-retro-bold text-sm text-white">Sign in to continue</Text>
           </Pressable>
         </Link>

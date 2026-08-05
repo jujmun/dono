@@ -19,7 +19,7 @@ export function DonorCreateGate({
         </Text>
         <Text className="mt-2 text-center text-sm text-dono-muted">{message}</Text>
         <Link href={backHref} asChild>
-          <Pressable className="mt-6 items-center rounded-full bg-dono-primary px-6 py-3">
+          <Pressable className="retro-key mt-6 items-center rounded-full bg-dono-primary px-6 py-3">
             <Text className="font-retro-bold text-sm text-white">{backLabel}</Text>
           </Pressable>
         </Link>

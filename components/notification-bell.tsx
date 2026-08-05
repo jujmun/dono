@@ -88,7 +88,7 @@ function NotificationRow({
               event.stopPropagation();
               onEditCampaign(notification);
             }}
-            className="mt-2 flex-row items-center gap-1.5 self-start rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-1.5"
+            className="retro-key mt-2 flex-row items-center gap-1.5 self-start rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-1.5"
           >
             <Pencil size={12} color="#211E1A" />
             <Text className="font-retro-bold text-xs text-retro-ink">

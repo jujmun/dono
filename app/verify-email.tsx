@@ -151,7 +151,7 @@ export default function VerifyEmailPage() {
             <Pressable
               onPress={onSubmit}
               disabled={loading}
-              className={`items-center rounded-full bg-dono-primary py-3 ${
+              className={`retro-key items-center rounded-full bg-dono-primary py-3 ${
                 loading ? "opacity-50" : ""
               }`}
             >

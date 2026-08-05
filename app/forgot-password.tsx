@@ -198,7 +198,7 @@ export default function ForgotPasswordPage() {
                 <Pressable
                   onPress={requestReset}
                   disabled={loading || normalizedEmail.length === 0}
-                  className={`items-center rounded-full bg-dono-primary py-3 ${
+                  className={`retro-key items-center rounded-full bg-dono-primary py-3 ${
                     loading || normalizedEmail.length === 0 ? "opacity-50" : ""
                   }`}
                 >
@@ -246,7 +246,7 @@ export default function ForgotPasswordPage() {
                 <Pressable
                   onPress={completeReset}
                   disabled={loading}
-                  className={`items-center rounded-full bg-dono-primary py-3 ${
+                  className={`retro-key items-center rounded-full bg-dono-primary py-3 ${
                     loading ? "opacity-50" : ""
                   }`}
                 >

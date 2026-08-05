@@ -279,7 +279,7 @@ export default function InstagramStorySharePage() {
           : ""}
       </Text>
 
-      <View className="mt-6 overflow-hidden rounded-[18px] border-[3px] border-retro-ink bg-white shadow-[5px_5px_0_#211E1A]">
+      <View className="mt-6 overflow-hidden rounded-[18px] border-[3px] border-retro-ink bg-white">
         {previewUri ? (
           <Image
             source={{ uri: previewUri }}
@@ -304,7 +304,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleShareStory()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-mint py-3.5 shadow-[3px_3px_0_#211E1A]"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-mint py-3.5"
         >
           {fileShareSupported ? (
             <Share2 size={18} color="#F7F3E8" />
@@ -323,7 +323,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleSave()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-marigold py-3.5 shadow-[3px_3px_0_#211E1A]"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-marigold py-3.5"
         >
           <Download size={18} color="#211E1A" />
           <Text className="font-retro-bold text-sm text-retro-ink">
@@ -334,7 +334,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleOpenInstagram()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
         >
           <Instagram size={16} color="#211E1A" />
           <Text className="font-retro-bold text-sm text-retro-ink">
@@ -345,7 +345,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleCopyCaption()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
         >
           <Copy size={16} color="#211E1A" />
           <Text className="font-retro-bold text-sm text-retro-ink">

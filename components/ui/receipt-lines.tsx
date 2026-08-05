@@ -20,7 +20,7 @@ export function ReceiptLedger({
   return (
     <View
       className={cn(
-        "rounded-xl border border-dono-border/70 bg-dono-surface-muted p-4",
+        "rounded-sm border border-dashed border-dono-border bg-white px-3 py-3",
         className,
       )}
     >

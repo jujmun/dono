@@ -174,7 +174,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               placeholderTextColor="#56615A"
               multiline
               maxLength={MAX_COMMENT_LENGTH}
-              className={cn(
+              className={cn("retro-key", 
                 "min-h-[88px] px-4 py-3 text-sm text-dono-text",
                 embedded
                   ? "rounded-lg border-2 border-retro-ink bg-white"
@@ -194,10 +194,10 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               <Pressable
                 onPress={() => void handlePost()}
                 disabled={posting || !body.trim()}
-                className={cn(
+                className={cn("retro-key", 
                   "px-4 py-2",
                   embedded
-                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[2px_2px_0_#211E1A]"
+                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint"
                     : "rounded-full bg-dono-primary",
                   posting || !body.trim() ? "opacity-50" : "",
                 )}
@@ -222,7 +222,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
           </View>
         ) : isAuthenticated && canComment === undefined ? null : (
           <View
-            className={cn(
+            className={cn("retro-key", 
               "mb-6 px-4 py-4",
               embedded
                 ? "rounded-[10px] border-2 border-dashed border-retro-ink bg-retro-cream"
@@ -242,10 +242,9 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
             {isAuthenticated ? null : (
               <Link href="/signin" asChild>
                 <Pressable
-                  className={cn(
-                    "mt-3 self-start px-4 py-2",
+                  className={cn("retro-key", "mt-3 self-start px-4 py-2",
                     embedded
-                      ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]"
+                      ? "rounded-lg border-2 border-retro-ink bg-retro-mint"
                       : "rounded-full bg-dono-primary",
                   )}
                 >
@@ -374,7 +373,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                           <Pressable
                             onPress={() => void handleSaveEdit(comment.id)}
                             disabled={busyId === comment.id}
-                            className="rounded-full bg-dono-primary px-3 py-1.5"
+                            className="retro-key rounded-full bg-dono-primary px-3 py-1.5"
                           >
                             <Text className="text-xs font-retro-bold text-white">
                               Save

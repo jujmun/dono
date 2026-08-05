@@ -222,7 +222,7 @@ export function SocietySubscribeSheet({
                   Society subscriptions need an account so you can manage your subscription.
                 </Text>
                 <Link href="/signin" asChild>
-                  <Pressable className="mt-4 items-center rounded-full bg-dono-primary py-3">
+                  <Pressable className="retro-key mt-4 items-center rounded-full bg-dono-primary py-3">
                     <Text className="font-retro-bold text-sm text-white">
                       Sign in to continue
                     </Text>

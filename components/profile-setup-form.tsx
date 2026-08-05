@@ -269,7 +269,7 @@ export function ProfileSetupForm({
       <Pressable
         onPress={handleSubmit}
         disabled={loading}
-        className={`items-center rounded-full bg-dono-primary py-3 ${
+        className={`retro-key items-center rounded-full bg-dono-primary py-3 ${
           loading ? "opacity-50" : ""
         }`}
       >

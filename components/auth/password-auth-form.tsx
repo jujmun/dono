@@ -279,7 +279,7 @@ function PasswordAuthFormInner({
   };
 
   const roleChoiceClass = (selected: boolean) =>
-    `flex-1 items-center gap-2 rounded-2xl border-2 border-retro-ink p-4 shadow-[3px_3px_0_#211E1A] ${
+    `retro-key flex-1 items-center gap-2 rounded-2xl border-2 border-retro-ink p-4 ${
       selected ? "bg-retro-mint" : "bg-white"
     }`;
 
@@ -429,7 +429,7 @@ function PasswordAuthFormInner({
                   normalizedEmail.length === 0 ||
                   (mode === "signUp" && !acceptedLegal)
                 }
-                className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
+                className={`retro-key items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 ${
                   loading ||
                   normalizedEmail.length === 0 ||
                   (mode === "signUp" && !acceptedLegal)
@@ -480,7 +480,7 @@ function PasswordAuthFormInner({
               <Pressable
                 onPress={handleVerifySubmit}
                 disabled={loading}
-                className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
+                className={`retro-key items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 ${
                   loading ? "opacity-50" : ""
                 }`}
               >

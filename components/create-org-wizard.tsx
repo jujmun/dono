@@ -19,7 +19,6 @@ import {
   ArrowRight,
   ImagePlus,
   Paperclip,
-  IdCard,
   Globe,
   Link2,
   ShieldCheck,
@@ -162,10 +161,8 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
   const [form, setForm] = useState(initialForm);
   const [coverImage, setCoverImage] = useState<PickedFile | null>(null);
   const [supportingDocs, setSupportingDocs] = useState<PickedFile[]>([]);
-  const [idDocument, setIdDocument] = useState<PickedFile | null>(null);
   const [pickingCover, setPickingCover] = useState(false);
   const [pickingDocs, setPickingDocs] = useState(false);
-  const [pickingId, setPickingId] = useState(false);
   const [societySlug, setSocietySlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [connectLoading, setConnectLoading] = useState(false);
@@ -344,44 +341,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
     setSupportingDocs((current) => current.filter((_, i) => i !== index));
   };
 
-  const pickIdDocument = async () => {
-    setError(null);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo library permission is required to add your student card.");
-      return;
-    }
-
-    setPickingId(true);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        quality: 0.85,
-      });
-
-      if (result.canceled || !result.assets[0]) {
-        return;
-      }
-
-      const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > MAX_FILE_BYTES) {
-        setError("The student card image must be 5MB or smaller.");
-        return;
-      }
-
-      setIdDocument({
-        uri: asset.uri,
-        name: fileNameFromAsset(asset),
-        mimeType: asset.mimeType,
-        fileSize: asset.fileSize,
-      });
-    } catch (err) {
-      setError(getFriendlyAuthError(err));
-    } finally {
-      setPickingId(false);
-    }
-  };
-
   const uploadPickedFile = async (file: PickedFile): Promise<Id<"_storage">> => {
     const uploadUrl = await generateUploadUrl({});
     return await uploadImageToConvexStorage(uploadUrl, file.uri, file.mimeType);
@@ -392,9 +351,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
     if (societySlug) return societySlug;
     if (!legalAccepted) {
       throw new Error(`Please accept the ${entityLabel} terms to continue.`);
-    }
-    if (!idDocument) {
-      throw new Error("A student card is required.");
     }
 
     await acceptDocuments({ context: "create_society" });
@@ -410,8 +366,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
       supportingDocumentStorageIds.push(storageId);
     }
 
-    const idDocumentStorageId = await uploadPickedFile(idDocument);
-
     const result = await createSociety({
       name: form.name,
       description: form.description,
@@ -420,7 +374,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
       secondaryLink: form.secondaryLink.trim() || undefined,
       coverImageStorageId,
       supportingDocumentStorageIds,
-      idDocumentStorageId,
       orgType,
     });
 
@@ -485,8 +438,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
 
   const websiteInvalid = !isValidOptionalUrl(form.website);
   const secondaryLinkInvalid = !isValidOptionalUrl(form.secondaryLink);
-  const manualFieldsValid =
-    idDocument !== null && !websiteInvalid && !secondaryLinkInvalid;
+  const manualFieldsValid = !websiteInvalid && !secondaryLinkInvalid;
 
   /**
    * The society record is created the moment identity verification starts,
@@ -617,7 +569,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
       case 1:
         return form.description.trim().length > 0 && form.story.trim().length > 0;
       case 2:
-        // Student card + DOB + legal + Stripe Identity verified.
+        // DOB + legal + Stripe Identity verified.
         return (
           legalAccepted &&
           manualFieldsValid &&
@@ -655,9 +607,9 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
   const inputClass =
     "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
   const secondaryActionClass =
-    "flex-row items-center gap-2 rounded-lg border-2 border-retro-ink bg-white px-3 py-2";
+    "retro-key flex-row items-center gap-2 rounded-lg border-2 border-retro-ink bg-white px-3 py-2";
   const inkActionClass =
-    "flex-row items-center justify-center gap-2 rounded-lg bg-retro-ink px-4 py-2.5";
+    "retro-key flex-row items-center justify-center gap-2 rounded-lg bg-retro-ink px-4 py-2.5";
 
   if (isLoading) {
     return (
@@ -982,16 +934,14 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
 
             <View className="gap-3 rounded-lg border-2 border-retro-ink/20 bg-white p-3">
               <View className="flex-row items-center gap-2">
-                <IdCard size={16} color="#17211B" />
+                <ShieldCheck size={16} color="#17211B" />
                 <Text className="font-retro-display text-base text-retro-ink">
-                  Student verification
+                  Identity check
                 </Text>
               </View>
               <Text className="font-retro-mono text-xs text-retro-ink/60">
-                Upload a photo of your Bodleian / university student card to confirm
-                you&apos;re a current student setting up this {entityLabel}. Only
-                student cards are accepted. This is used for verification only and
-                is never shown publicly.
+                You&apos;ll be asked for a quick photo of your ID and a selfie so we
+                can confirm it&apos;s really you — it only takes a minute.
               </Text>
 
               {!dobLoading && !hasDateOfBirth ? (
@@ -1029,59 +979,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   </Pressable>
                 </View>
               ) : null}
-
-              {idDocument ? (
-                <View className="flex-row items-center gap-3 rounded-lg border-2 border-retro-ink/20 bg-white p-2">
-                  <Image
-                    source={{ uri: idDocument.uri }}
-                    style={{ width: 40, height: 40, borderRadius: 8 }}
-                    resizeMode="cover"
-                    accessibilityLabel="Student card thumbnail"
-                  />
-                  <Text
-                    className="flex-1 font-retro-mono text-sm text-retro-ink"
-                    numberOfLines={1}
-                  >
-                    {idDocument.name}
-                  </Text>
-                  <Pressable
-                    onPress={() => setIdDocument(null)}
-                    className="h-6 w-6 items-center justify-center rounded-full bg-retro-cream"
-                  >
-                    <Text className="font-retro-mono text-xs text-retro-ink">×</Text>
-                  </Pressable>
-                </View>
-              ) : null}
-
-              <Pressable
-                onPress={() => void pickIdDocument()}
-                disabled={pickingId}
-                className={`${secondaryActionClass} self-start ${
-                  pickingId ? "opacity-50" : ""
-                }`}
-              >
-                <IdCard size={16} color="#17211B" />
-                <Text className="font-retro-mono text-xs text-retro-ink">
-                  {pickingId
-                    ? "Opening library..."
-                    : idDocument
-                      ? "Replace student card"
-                      : "Add student card"}
-                </Text>
-              </Pressable>
-            </View>
-
-            <View className="gap-3 rounded-lg border-2 border-retro-ink/20 bg-white p-3">
-              <View className="flex-row items-center gap-2">
-                <ShieldCheck size={16} color="#17211B" />
-                <Text className="font-retro-display text-base text-retro-ink">
-                  Identity check
-                </Text>
-              </View>
-              <Text className="font-retro-mono text-xs text-retro-ink/60">
-                You&apos;ll be asked for a quick photo of your ID and a selfie so we
-                can confirm it&apos;s really you — it only takes a minute.
-              </Text>
 
               <LegalAcceptanceCheckbox
                 context="create_society"
@@ -1129,7 +1026,8 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                 </Text>
               ) : !manualFieldsValid ? (
                 <Text className="font-retro-mono text-xs text-retro-ink/60">
-                  Add your student card above first.
+                  Fix any invalid website or link URLs above before starting identity
+                  verification.
                 </Text>
               ) : stripeFailed ? (
                 <Text className="font-retro-mono text-xs text-red-700">
@@ -1175,7 +1073,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
             <Pressable
               onPress={() => void handleConnectOnboarding()}
               disabled={!societySlug || connectLoading || connectReady}
-              className={`flex-row items-center justify-center gap-2 rounded-lg border-2 border-retro-ink bg-white px-4 py-3 ${
+              className={`retro-key flex-row items-center justify-center gap-2 rounded-lg border-2 border-retro-ink bg-white px-4 py-3 ${
                 !societySlug || connectLoading || connectReady ? "opacity-50" : ""
               }`}
             >
@@ -1249,12 +1147,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   {supportingDocs.length === 1 ? "" : "s"} attached
                 </Text>
               </View>
-              <View className="flex-row items-center gap-2">
-                <CheckCircle2 size={14} color={idDocument ? "#17211B" : "#56615A"} />
-                <Text className="font-retro-mono text-sm text-retro-ink/70">
-                  {idDocument ? "Student card provided" : "No student card provided"}
-                </Text>
-              </View>
               <Text className="font-retro-mono text-sm text-retro-ink/70">
                 Website: {form.website.trim() || "Not provided"}
               </Text>
@@ -1299,7 +1191,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   <Link href="/societies" asChild>
                     <Pressable
                       onPress={() => clearPersistedOrgSlug(orgType)}
-                      className="self-center rounded-lg bg-retro-ink px-4 py-2.5"
+                      className="retro-key self-center rounded-lg bg-retro-ink px-4 py-2.5"
                     >
                       <Text className="font-retro-mono text-sm text-white">
                         Back to Communities
@@ -1328,7 +1220,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
           {step > 0 && step < 5 ? (
             <Pressable
               onPress={() => setStep(step - 1)}
-              className="rounded-lg border-2 border-retro-ink/30 px-4 py-2.5"
+              className="retro-key rounded-lg border-2 border-retro-ink/30 px-4 py-2.5"
             >
               <Text className="font-retro-mono text-sm text-retro-ink">Back</Text>
             </Pressable>
@@ -1340,7 +1232,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
             <Pressable
               onPress={handleContinue}
               disabled={!canProceed() || syncingMaterials}
-              className={`flex-row items-center gap-2 rounded-lg bg-retro-ink px-4 py-2.5 ${
+              className={`retro-key flex-row items-center gap-2 rounded-lg bg-retro-ink px-4 py-2.5 ${
                 !canProceed() || syncingMaterials ? "opacity-50" : ""
               }`}
             >
@@ -1399,7 +1291,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                     setDocsPopupVisible(false);
                     void continueFromVerification();
                   }}
-                  className="rounded-lg bg-retro-ink px-4 py-2.5"
+                  className="retro-key rounded-lg bg-retro-ink px-4 py-2.5"
                 >
                   <Text className="font-retro-mono text-sm text-white">
                     Continue anyway

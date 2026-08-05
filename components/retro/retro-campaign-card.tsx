@@ -9,6 +9,7 @@ import {
   getProgress,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
+import { retroKeyClass, retroKeyMintClass } from "@/lib/retro-key";
 import { getPrimaryCampaignImage } from "@/lib/campaign-images";
 import {
   buildGoalLineItems,
@@ -56,18 +57,19 @@ export function RetroCampaignCard({
   return (
     <Link href={destination} asChild>
       <Pressable
-        className={cn("active:opacity-90", approvalStage && "opacity-60")}
+        className={cn("group active:opacity-90", approvalStage && "opacity-60")}
       >
         <View
           className={cn(
             "overflow-hidden rounded-[14px] border-[3px] bg-retro-paper",
             owned
-              ? "border-retro-mint shadow-[5px_5px_0_#159E88]"
-              : "border-retro-ink shadow-[5px_5px_0_#211E1A]",
+              ? cn("border-retro-mint", retroKeyMintClass)
+              : cn("border-retro-ink", retroKeyClass),
           )}
         >
           <CampaignImage
             image={imageSource}
+            zoomOnHover
             className={cn(
               "h-[170px] border-b-[3px] border-retro-ink",
               accent === "tan" ? "bg-retro-tan" : "bg-retro-indigo",
@@ -75,7 +77,7 @@ export function RetroCampaignCard({
           >
             <View
               className={cn(
-                "absolute left-3.5 top-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1 shadow-[3px_3px_0_#211E1A]",
+                "absolute left-3.5 top-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1",
                 tagMarigold ? "bg-retro-marigold" : "bg-retro-paper",
               )}
             >
@@ -85,21 +87,21 @@ export function RetroCampaignCard({
             </View>
             <View className="absolute right-3.5 top-3.5 flex-row flex-wrap justify-end gap-1">
               {matched ? (
-                <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2 py-0.5">
                   <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
                     {matchMultiplier ? `${matchMultiplier}× MATCH` : "MATCHED"}
                   </Text>
                 </View>
               ) : null}
               {nearGoal ? (
-                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
                   <Text className="font-retro-mono-bold text-[10px] text-retro-ink">
                     NEAR GOAL
                   </Text>
                 </View>
               ) : null}
               {collegeMatch ? (
-                <View className="rounded-full border-2 border-retro-ink bg-retro-sky px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                <View className="rounded-full border-2 border-retro-ink bg-retro-sky px-2 py-0.5">
                   <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
                     YOUR COLLEGE
                   </Text>
@@ -109,7 +111,7 @@ export function RetroCampaignCard({
             {approvalStage && (
               <View
                 className={cn(
-                  "absolute inset-x-3.5 bottom-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1.5 shadow-[3px_3px_0_#211E1A]",
+                  "absolute inset-x-3.5 bottom-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1.5",
                   approvalStage.label === "Rejected" ||
                     approvalStage.label === "Rejected by society"
                     ? "bg-retro-coral"
@@ -142,29 +144,31 @@ export function RetroCampaignCard({
               {campaign.university} · {creatorType}
             </Text>
 
-            <View className="mb-3 rounded-lg border-2 border-dashed border-retro-ink bg-retro-paper px-3 py-2.5">
+            <View className="mb-3 rounded-sm border border-dashed border-retro-ink bg-white px-3 py-2.5">
               {goalLines.map((line) => (
                 <View
                   key={line.label}
-                  className="flex-row items-center justify-between py-0.5"
+                  className="flex-row items-end gap-2 py-0.5"
                 >
                   <Text
-                    className="mr-2 flex-1 font-retro-mono text-[12.5px] text-retro-ink"
+                    className="max-w-[55%] shrink font-retro-mono text-[12.5px] text-retro-ink"
                     numberOfLines={1}
                   >
                     {line.label}
                   </Text>
-                  <Text className="font-retro-mono text-[12.5px] text-retro-ink">
+                  <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
+                  <Text className="shrink-0 font-retro-mono text-[12.5px] text-retro-ink">
                     {formatCurrency(line.amount)}
                   </Text>
                 </View>
               ))}
               <View className="my-1.5 border-t border-dashed border-retro-ink" />
-              <View className="flex-row items-center justify-between py-0.5">
-                <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+              <View className="flex-row items-end gap-2 py-0.5">
+                <Text className="shrink font-retro-mono-bold text-[12.5px] text-retro-ink">
                   {footer.label}
                 </Text>
-                <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
+                <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
+                <Text className="shrink-0 font-retro-mono-bold text-[12.5px] text-retro-ink">
                   {formatCurrency(footer.amount)}
                 </Text>
               </View>
