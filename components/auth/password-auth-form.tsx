@@ -196,36 +196,6 @@ function PasswordAuthFormInner({
         setStep("verify");
         setInfo("Enter the 6-digit code we sent to your email.");
       } catch (err) {
-        // #region agent log
-        {
-          const raw =
-            err instanceof Error
-              ? { name: err.name, message: err.message.slice(0, 400) }
-              : { message: String(err).slice(0, 400) };
-          fetch("http://127.0.0.1:7751/ingest/5beb672d-420c-42f5-80af-728dc75ed71f", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-Debug-Session-Id": "e2a54c",
-            },
-            body: JSON.stringify({
-              sessionId: "e2a54c",
-              runId: "signin-debug",
-              hypothesisId: "A",
-              location: "password-auth-form.tsx:credentials-catch",
-              message: "password auth credentials failed",
-              data: {
-                mode,
-                emailDomain: normalizedEmail.split("@")[1] ?? null,
-                passwordLen: mode === "signUp" ? newPassword.length : password.length,
-                raw,
-                friendly: getFriendlyAuthError(err),
-              },
-              timestamp: Date.now(),
-            }),
-          }).catch(() => {});
-        }
-        // #endregion
         if (mode === "signUp" && isAccountAlreadyExistsError(err)) {
           setError(
             "An account with this email already exists. Sign in or use Forgot password.",

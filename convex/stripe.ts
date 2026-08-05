@@ -820,6 +820,80 @@ export const cancelSocietySubscription = action({
 });
 
 /**
+ * Cancels every still-billing subscription a user has — society-level and
+ * legacy campaign-level — as part of account deletion.
+ *
+ * Called before the account's identity is released (see
+ * users.requestAccountDeletion): once the email is severed the user can no
+ * longer sign in to reach the cancel UI, so a subscription left running would
+ * charge them indefinitely. Throwing here aborts the deletion by design.
+ */
+export const cancelAllSubscriptionsForUser = internalAction({
+  args: { userId: v.id("users") },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    societySubscriptionsCanceled: number;
+    recurringDonationsCanceled: number;
+  }> => {
+    const live = await ctx.runQuery(
+      internal.stripeInternal.listLiveSubscriptionsForUser,
+      { userId: args.userId },
+    );
+
+    const stripe = getStripeClient();
+
+    for (const societySubscription of live.societySubscriptions) {
+      const connect = await ctx.runQuery(
+        internal.stripeInternal.getConnectAccountIdForCommunity,
+        { communitySlug: societySubscription.communitySlug },
+      );
+
+      try {
+        if (connect?.stripeAccountId) {
+          await stripe.subscriptions.cancel(
+            societySubscription.stripeSubscriptionId,
+            {},
+            { stripeAccount: connect.stripeAccountId },
+          );
+        } else {
+          await stripe.subscriptions.cancel(
+            societySubscription.stripeSubscriptionId,
+          );
+        }
+      } catch (error) {
+        if (!isStripeCancelErrorSafeToIgnore(error)) {
+          await stripe.subscriptions.cancel(
+            societySubscription.stripeSubscriptionId,
+          );
+        }
+      }
+
+      await ctx.runMutation(
+        internal.stripeInternal.cancelSocietySubscriptionRecord,
+        {
+          stripeSubscriptionId: societySubscription.stripeSubscriptionId,
+          reason: "user_requested",
+        },
+      );
+    }
+
+    for (const recurringDonationId of live.recurringDonationIds) {
+      await ctx.runAction(
+        internal.stripe.cancelRecurringDonationSubscriptionOnStripe,
+        { recurringDonationId },
+      );
+    }
+
+    return {
+      societySubscriptionsCanceled: live.societySubscriptions.length,
+      recurringDonationsCanceled: live.recurringDonationIds.length,
+    };
+  },
+});
+
+/**
  * Safety net for processSuccessfulSocietyInvoice: a society subscription
  * invoice was already charged (Stripe bills synchronously) but the society
  * turned out to have zero active campaigns at that moment — refunds the

@@ -373,6 +373,9 @@ export const ensureProfile = internalMutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .unique();
     if (existing) {
+      // Tombstone from account deletion — patching it would write the released
+      // email back onto a profile that is only kept for historical records.
+      if (existing.deletedAt) return;
       await ctx.db.patch(existing._id, {
         email: user.email,
         emailVerifiedAt: user.emailVerificationTime ?? existing.emailVerifiedAt,
@@ -410,6 +413,9 @@ export const ensureMyProfile = mutation({
 
     const now = Date.now();
     if (existing) {
+      // Tombstone from account deletion — see ensureProfile. This is the path
+      // that used to un-anonymize a deleted profile on the next app load.
+      if (existing.deletedAt) return;
       await ctx.db.patch(existing._id, {
         email: user.email,
         name: existing.name ?? user.name,
@@ -506,6 +512,14 @@ export const setUserType = mutation({
         updatedAt: now,
       });
       return { userType: args.userType, profileId };
+    }
+
+    // Tombstone from account deletion — see ensureProfile.
+    if (profile.deletedAt) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission for this action.",
+      });
     }
 
     if (profile.userType && profile.userType !== args.userType) {
@@ -667,11 +681,77 @@ export const setUserRole = mutation({
   },
 });
 
-export const requestAccountDeletion = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const { userId, profile } = await requireVerifiedUser(ctx);
-    const anonymized = `deleted-${userId}@deleted.dono.app`;
+/**
+ * Releases a deleted account's email so a later signup with the same address
+ * creates a genuinely new account, while keeping the `users` row itself —
+ * donations, subscriptions, payouts, legal acceptances and audit entries all
+ * point at that id and must stay resolvable.
+ *
+ * Both of @convex-dev/auth's re-link paths have to be broken together, or the
+ * next signup lands back on this row:
+ *  - `authAccounts` lookup by (provider, providerAccountId = email);
+ *  - the `users.email` + `emailVerificationTime` lookup it falls back to when
+ *    no account row matches (`uniqueUserWithVerifiedEmail`), which would then
+ *    create a fresh authAccounts row pointing straight back here.
+ *
+ * The email is rewritten to a per-user sentinel rather than cleared because
+ * security.ts looks up `users` by email with `.unique()`, which throws if two
+ * rows ever share an address.
+ */
+export const severAccountIdentity = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+    const now = Date.now();
+    const anonymized = `deleted-${userId}@deleted.invalid`;
+
+    await ctx.db.patch(userId, {
+      email: anonymized,
+      emailVerificationTime: undefined,
+      name: undefined,
+      image: undefined,
+      phone: undefined,
+      phoneVerificationTime: undefined,
+    });
+
+    // Every credential mapping the old email to this user — a single user can
+    // hold several (password + resend + admin-email).
+    const accounts = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+      .collect();
+    for (const account of accounts) {
+      const codes = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", account._id))
+        .collect();
+      for (const code of codes) {
+        await ctx.db.delete(code._id);
+      }
+      await ctx.db.delete(account._id);
+    }
+
+    // Every live session, not just the caller's device — otherwise another
+    // signed-in device could patch the released email back via ensureMyProfile.
+    const sessions = await ctx.db
+      .query("authSessions")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .collect();
+    for (const session of sessions) {
+      const refreshTokens = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const token of refreshTokens) {
+        await ctx.db.delete(token._id);
+      }
+      await ctx.db.delete(session._id);
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
     if (profile) {
       await ctx.db.patch(profile._id, {
         email: anonymized,
@@ -682,10 +762,56 @@ export const requestAccountDeletion = mutation({
         yearInCollege: undefined,
         avatarUrl: undefined,
         avatarStorageId: undefined,
-        updatedAt: Date.now(),
+        deletedAt: now,
+        updatedAt: now,
       });
     }
-    return { requestedAt: Date.now() };
+
+    // Campaign update emails send to `donorEmail` directly when it is set, so
+    // anonymizing the profile alone would keep mail flowing to the address we
+    // just released.
+    const optIns = await ctx.db
+      .query("campaignUpdateOptIns")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const optIn of optIns) {
+      if (optIn.unsubscribedAt) continue;
+      await ctx.db.patch(optIn._id, { unsubscribedAt: now });
+    }
+
+    return { deletedAt: now };
+  },
+});
+
+export const requestAccountDeletion = action({
+  args: {},
+  handler: async (ctx): Promise<{ requestedAt: number }> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "You must be signed in to perform this action.",
+      });
+    }
+
+    // Same verified-user gate the mutation form used, via an internal query
+    // since actions have no db access.
+    await ctx.runQuery(internal.stripeInternal.getVerifiedUserContext, {
+      userId,
+    });
+
+    // Money first: cancelling before the identity is released means a Stripe
+    // failure aborts the deletion with the account still usable, rather than
+    // stranding a live subscription on an account nobody can sign in to.
+    await ctx.runAction(internal.stripe.cancelAllSubscriptionsForUser, {
+      userId,
+    });
+
+    const { deletedAt } = await ctx.runMutation(
+      internal.users.severAccountIdentity,
+      { userId },
+    );
+    return { requestedAt: deletedAt };
   },
 });
 

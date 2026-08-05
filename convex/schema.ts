@@ -40,6 +40,10 @@ export default defineSchema({
     avatarStorageId: v.optional(v.id("_storage")),
     role: v.union(v.literal("user"), v.literal("admin")),
     emailVerifiedAt: v.optional(v.number()),
+    /** Set by users.requestAccountDeletion. The row is kept as a tombstone so
+     * historical donations/comments still resolve to "Deleted User" — never
+     * patch a tombstoned profile back to a live one. */
+    deletedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
