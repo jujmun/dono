@@ -29,6 +29,11 @@ import { LoginGate } from "@/components/login-gate";
 import { DonorCreateGate } from "@/components/donor-create-gate";
 import { isAlumni } from "@/lib/auth/user-type";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
+import {
+  DobSelect,
+  RETRO_SELECT_TEXT_CLASS,
+  RETRO_SELECT_TRIGGER_CLASS,
+} from "@/components/dob-select";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -386,7 +391,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
     setDobError(null);
     const trimmed = dobInput.trim();
     if (!parseIsoDateOnly(trimmed)) {
-      setDobError("Enter your date of birth as YYYY-MM-DD.");
+      setDobError("Select your day, month and year of birth.");
       return;
     }
     if (!isAtLeastAge(trimmed)) {
@@ -947,15 +952,13 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
               {!dobLoading && !hasDateOfBirth ? (
                 <View className="gap-2 rounded-lg border-2 border-retro-ink/20 bg-retro-cream/40 p-3">
                   <Text className="font-retro-mono text-xs text-retro-ink">
-                    Confirm you are 18+ (YYYY-MM-DD)
+                    Confirm you are 18+
                   </Text>
-                  <TextInput
+                  <DobSelect
                     value={dobInput}
-                    onChangeText={setDobInput}
-                    placeholder="1998-05-21"
-                    placeholderTextColor="#56615A"
-                    autoCapitalize="none"
-                    className={inputClass}
+                    onChange={setDobInput}
+                    triggerClassName={RETRO_SELECT_TRIGGER_CLASS}
+                    textClassName={RETRO_SELECT_TEXT_CLASS}
                   />
                   {dobError ? (
                     <Text className="font-retro-mono text-[10px] text-red-700">

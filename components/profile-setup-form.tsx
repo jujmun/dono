@@ -15,6 +15,7 @@ import {
   type YearInCollege,
 } from "@/lib/validation/profile";
 import { CountryCodePicker } from "@/components/country-code-picker";
+import { DobSelect } from "@/components/dob-select";
 import { DEFAULT_COUNTRY, splitPhoneNumber, type Country } from "@/lib/countries";
 
 export type ProfileSetupValues = {
@@ -217,14 +218,7 @@ export function ProfileSetupForm({
         <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
           Date of birth
         </Text>
-        <TextInput
-          value={dateOfBirth}
-          onChangeText={setDateOfBirth}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#56615A"
-          autoCapitalize="none"
-          className={inputClassName}
-        />
+        <DobSelect value={dateOfBirth} onChange={setDateOfBirth} />
         <Text className="mt-1 text-xs text-dono-muted">
           You must be at least 18 to use Dono.
         </Text>

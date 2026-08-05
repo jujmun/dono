@@ -13,6 +13,7 @@ import { Link, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
+import { DobSelect } from "@/components/dob-select";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
 import { profileDetailsSchema, YEAR_IN_COLLEGE_OPTIONS } from "@/lib/validation/profile";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -379,13 +380,10 @@ export default function AccountPage() {
           <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
             Date of birth
           </Text>
-          <TextInput
+          <DobSelect
             value={dateOfBirth}
-            onChangeText={setDateOfBirth}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#56615A"
-            autoCapitalize="none"
-            className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+            onChange={setDateOfBirth}
+            className="mt-2"
           />
           <Text className="mt-1 text-xs text-dono-muted">
             You must be at least 18 to use Dono.
