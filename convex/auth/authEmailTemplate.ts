@@ -49,7 +49,7 @@ export function renderAuthEmailHtml({
     ? `
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-bottom:16px;">
                 <tr>
-                  <td align="center" style="font-family:Arial, Helvetica, sans-serif; font-size:15px; line-height:22px; color:#3a362f;">
+                  <td align="center" style="font-family:'Fredoka', Verdana, Geneva, sans-serif; font-size:15px; line-height:22px; color:#3a362f;">
                     ${safeIntro}
                   </td>
                 </tr>
@@ -59,7 +59,7 @@ export function renderAuthEmailHtml({
   const footerNoteBlock = safeFooterNote
     ? `
                 <tr>
-                  <td align="center" style="padding-bottom:14px; font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:18px; color:#8a8374;">
+                  <td align="center" style="padding-bottom:14px; font-family:'Fredoka', Verdana, Geneva, sans-serif; font-size:12px; line-height:18px; color:#8a8374;">
                     ${safeFooterNote}
                   </td>
                 </tr>`
@@ -74,6 +74,9 @@ export function renderAuthEmailHtml({
 <meta name="color-scheme" content="light dark" />
 <meta name="supported-color-schemes" content="light dark" />
 <title>${safeHeading} — Dono</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="" />
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&amp;family=Space+Mono:wght@400;700&amp;display=swap" rel="stylesheet" />
 <!--[if mso]>
 <noscript>
 <xml>
@@ -99,7 +102,7 @@ export function renderAuthEmailHtml({
   }
 </style>
 </head>
-<body style="margin:0; padding:0; background-color:#FBF3E7; font-family:Arial, Helvetica, sans-serif;">
+<body style="margin:0; padding:0; background-color:#FBF3E7; font-family:'Fredoka', Verdana, Geneva, sans-serif;">
   <span style="display:none; font-size:1px; color:#FBF3E7; line-height:1px; max-height:0; max-width:0; opacity:0; overflow:hidden; mso-hide:all;">
     ${preheader}
   </span>
@@ -117,12 +120,12 @@ export function renderAuthEmailHtml({
             </td>
           </tr>
 
-          <!-- Orange hero band -->
+          <!-- Hero band -->
           <tr>
-            <td align="center" class="fluid-pad" style="background-color:#E8562A; padding:40px 32px 36px; border-left:2px solid #1a1a1a; border-right:2px solid #1a1a1a;">
+            <td align="center" class="fluid-pad" style="background-color:#159E88; padding:40px 32px 36px; border-left:2px solid #1a1a1a; border-right:2px solid #1a1a1a;">
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
                 <tr>
-                  <td align="center" style="font-family:Arial, Helvetica, sans-serif; font-size:30px; line-height:36px; font-weight:bold; color:#ffffff;">
+                  <td align="center" style="font-family:'Fredoka', Verdana, Geneva, sans-serif; font-size:30px; line-height:36px; font-weight:bold; color:#ffffff;">
                     ${safeHeading}
                   </td>
                 </tr>
@@ -137,12 +140,12 @@ ${introBlock}
               <!-- Code / receipt-style box -->
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border:2px dashed #1a1a1a; border-radius:8px; background-color:#FBF3E7; margin-top:8px;">
                 <tr>
-                  <td align="center" style="padding:24px 16px 6px; font-family:'Courier New', Courier, monospace; font-size:12px; letter-spacing:2px; color:#6b6558; text-transform:uppercase;">
+                  <td align="center" style="padding:24px 16px 6px; font-family:'Space Mono', 'Courier New', Courier, monospace; font-size:12px; letter-spacing:2px; color:#6b6558; text-transform:uppercase;">
                     Your code
                   </td>
                 </tr>
                 <tr>
-                  <td align="center" class="code-cell" style="padding:4px 16px 22px; font-family:'Courier New', Courier, monospace; font-size:36px; font-weight:bold; letter-spacing:10px; color:#1a1a1a;">
+                  <td align="center" class="code-cell" style="padding:4px 16px 22px; font-family:'Space Mono', 'Courier New', Courier, monospace; font-size:36px; font-weight:bold; letter-spacing:10px; color:#1a1a1a;">
                     ${safeCode}
                   </td>
                 </tr>
@@ -150,7 +153,7 @@ ${introBlock}
 
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="padding-top:20px;">
                 <tr>
-                  <td align="center" style="font-family:Arial, Helvetica, sans-serif; font-size:13px; line-height:20px; color:#6b6558;">
+                  <td align="center" style="font-family:'Fredoka', Verdana, Geneva, sans-serif; font-size:13px; line-height:20px; color:#6b6558;">
                     ${safeExpiryText}
                   </td>
                 </tr>
@@ -174,13 +177,13 @@ ${introBlock}
               <table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0">
 ${footerNoteBlock}
                 <tr>
-                  <td align="center" style="font-family:Arial, Helvetica, sans-serif; font-size:12px; line-height:19px; color:#8a8374;">
+                  <td align="center" style="font-family:'Fredoka', Verdana, Geneva, sans-serif; font-size:12px; line-height:19px; color:#8a8374;">
                     Sent by Dono · Community infrastructure for university giving<br />
                     27 St Giles', Oxford, OX1 3LB, United Kingdom
                   </td>
                 </tr>
                 <tr>
-                  <td align="center" style="padding-top:14px; font-family:Arial, Helvetica, sans-serif; font-size:12px; color:#8a8374;">
+                  <td align="center" style="padding-top:14px; font-family:'Fredoka', Verdana, Geneva, sans-serif; font-size:12px; color:#8a8374;">
                     <a href="https://dono.app/unsubscribe" style="color:#2D9C89; text-decoration:underline;">Unsubscribe</a>
                     &nbsp;·&nbsp;
                     <a href="https://dono.app/help" style="color:#2D9C89; text-decoration:underline;">Help centre</a>
