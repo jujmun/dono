@@ -78,7 +78,7 @@ export default function AccountPage() {
     isAuthenticated ? {} : "skip",
   );
   const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
-  const requestAccountDeletion = useMutation(api.users.requestAccountDeletion);
+  const requestAccountDeletion = useAction(api.users.requestAccountDeletion);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -498,7 +498,9 @@ export default function AccountPage() {
             <View className="flex-1">
               <Text className="font-retro-bold text-dono-text">Delete account</Text>
               <Text className="mt-1 text-sm text-dono-muted">
-                Anonymises your profile data. This cannot be undone.
+                Anonymises your profile data, cancels any active recurring
+                donations, and releases your email address. This cannot be
+                undone.
               </Text>
               {confirmDeleteAccount ? (
                 <Text className="mt-2 text-sm text-rose-700">

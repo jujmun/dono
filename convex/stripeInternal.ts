@@ -784,6 +784,39 @@ export const listActiveOrPastDueRecurringDonations = internalQuery({
   },
 });
 
+/**
+ * Every still-billing subscription for one user, across both the society-level
+ * table and the legacy campaign-level one. Used by account deletion: a deleted
+ * account can no longer reach the cancel UI, so anything left running would
+ * keep charging someone who has no way to stop it.
+ */
+export const listLiveSubscriptionsForUser = internalQuery({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const societySubscriptions = await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    const recurringDonations = await ctx.db
+      .query("recurringDonations")
+      .withIndex("by_user", (q) => q.eq("userId", args.userId))
+      .collect();
+
+    return {
+      societySubscriptions: societySubscriptions
+        .filter((row) => row.status !== "canceled")
+        .map((row) => ({
+          stripeSubscriptionId: row.stripeSubscriptionId,
+          communitySlug: row.communitySlug,
+        })),
+      recurringDonationIds: recurringDonations
+        .filter((row) => row.status !== "canceled")
+        .map((row) => row._id),
+    };
+  },
+});
+
 export const createSocietySubscriptionRecord = internalMutation({
   args: {
     userId: v.id("users"),
