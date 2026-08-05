@@ -152,7 +152,7 @@ export function SocietyPayoutSetupBanner({
         <Pressable
           onPress={() => void handleComplete()}
           disabled={loading}
-          className={`flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2 ${
+          className={`retro-key flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2 ${
             loading ? "opacity-50" : ""
           }`}
         >
@@ -188,7 +188,7 @@ export function SocietyPayoutSetupBanner({
       <Pressable
         onPress={() => void handleOpenDashboard()}
         disabled={loading}
-        className={`flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2 ${
+        className={`retro-key flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2 ${
           loading ? "opacity-50" : ""
         }`}
       >

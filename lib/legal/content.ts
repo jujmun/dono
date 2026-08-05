@@ -87,7 +87,7 @@ Privacy Policy (stub)
 
 Data controller: Amrit Kaur Rooprai trading as Dono. Contact: dono.outreach@gmail.com.
 
-We collect account data (email, name, optional profile fields, date of birth for age eligibility), student-card images for society and campaign creator verification, Stripe Identity outputs (name/DOB when returned), donation and transaction metadata (not full card numbers), campaign content, comments, reports, and legal acceptance records (document id, version string, context, timestamp — not a full archive of wording).
+We collect account data (email, name, optional profile fields, date of birth for age eligibility), Stripe Identity outputs (name/DOB when returned), donation and transaction metadata (not full card numbers), campaign content, comments, reports, and legal acceptance records (document id, version string, context, timestamp — not a full archive of wording).
 
 We use data to operate the Platform, verify students, process donations via Stripe, moderate content, handle refunds, and meet legal obligations. Stripe processes payment data under its own privacy policy.
 
@@ -129,7 +129,7 @@ Verification Policy (stub)
 
 Labels have limited meanings:
 
-• "Student status checked by Dono" — limited manual review of university email, Bodleian/student-card image and current student status (campaign and society creators upload a card).
+• "Student status checked by Dono" — limited manual review of university email and current student status.
 • "Stripe Identity" (when enabled) — document + matching selfie for creators; may return name/DOB when Stripe extracts them.
 • "Stripe onboarding completed" — Payment Provider Connect KYC for the Connected Account (separate from age gating).
 • "Society approved" — society page approved the Campaign as a society campaign (not institutional endorsement).

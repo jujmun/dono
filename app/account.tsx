@@ -426,7 +426,7 @@ export default function AccountPage() {
           <Pressable
             onPress={saveProfile}
             disabled={savingProfile || uploadingAvatar}
-            className={`mt-4 items-center self-start rounded-full bg-dono-primary px-6 py-2.5 ${
+            className={`retro-key mt-4 items-center self-start rounded-full bg-dono-primary px-6 py-2.5 ${
               savingProfile ? "opacity-50" : ""
             }`}
           >

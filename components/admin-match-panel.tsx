@@ -165,7 +165,7 @@ export function AdminMatchPanel({
           <Pressable
             disabled={busy}
             onPress={() => void handleCreate()}
-            className="items-center rounded-full bg-dono-primary py-3"
+            className="retro-key items-center rounded-full bg-dono-primary py-3"
           >
             <Text className="font-retro-bold text-sm text-white">
               {busy ? "Saving…" : "Create match window"}

@@ -194,7 +194,7 @@ export function LeaderDonationLedger({ slug }: LeaderDonationLedgerProps) {
         <Pressable
           onPress={() => void handleExport()}
           disabled={exporting}
-          className="flex-row items-center gap-2 rounded-full bg-dono-primary px-4 py-2"
+          className="retro-key flex-row items-center gap-2 rounded-full bg-dono-primary px-4 py-2"
         >
           {exporting ? (
             <ActivityIndicator size="small" color="#fff" />

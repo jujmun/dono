@@ -50,10 +50,9 @@ export function RetroBrowserSitehead() {
               return (
                 <Link key={item.label} href={item.href} asChild>
                   <Pressable
-                    className={cn(
-                      "rounded-lg border-2 px-3 py-1.5",
+                    className={cn("retro-key", "rounded-lg border-2 px-3 py-1.5",
                       active
-                        ? "border-retro-ink bg-retro-cream shadow-[2px_2px_0_#211E1A]"
+                        ? "border-retro-ink bg-retro-cream"
                         : "border-transparent",
                     )}
                   >
@@ -81,7 +80,7 @@ export function RetroBrowserSitehead() {
         <View className="flex-row items-center gap-2.5">
           {canCreate(profile) ? (
             <Link href="/create" asChild>
-              <Pressable className="rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2 shadow-[3px_3px_0_#211E1A]">
+              <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
                 <Text className="font-retro-bold text-[13px] text-retro-paper">
                   + Start a Campaign
                 </Text>
@@ -91,7 +90,7 @@ export function RetroBrowserSitehead() {
           {!isLoading && isAuthenticated ? <NotificationBell /> : null}
           {!isLoading && isAuthenticated ? (
             <Link href="/account" asChild>
-              <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-retro-ink bg-retro-cream">
+              <Pressable className="retro-key h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-retro-ink bg-retro-cream">
                 {profile?.avatarUrl ? (
                   <Image
                     source={{ uri: profile.avatarUrl }}
@@ -108,7 +107,7 @@ export function RetroBrowserSitehead() {
             </Link>
           ) : !isLoading ? (
             <Link href="/signin" asChild>
-              <Pressable className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 shadow-[3px_3px_0_#211E1A]">
+              <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
                 <Text className="font-retro-bold text-[13px] text-retro-ink">
                   Sign in
                 </Text>

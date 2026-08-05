@@ -289,7 +289,7 @@ export const create = mutation({
     secondaryLink: v.optional(v.string()),
     coverImageStorageId: v.optional(v.id("_storage")),
     supportingDocumentStorageIds: v.array(v.id("_storage")),
-    idDocumentStorageId: v.id("_storage"),
+    idDocumentStorageId: v.optional(v.id("_storage")),
     responsibleIndividualUserId: v.optional(v.id("users")),
     orgType: v.optional(v.union(v.literal("college"), v.literal("society"))),
   },
@@ -369,7 +369,9 @@ export const create = mutation({
     for (const storageId of args.supportingDocumentStorageIds) {
       await claimStorageId(ctx, userId, storageId);
     }
-    await claimStorageId(ctx, userId, args.idDocumentStorageId);
+    if (args.idDocumentStorageId) {
+      await claimStorageId(ctx, userId, args.idDocumentStorageId);
+    }
 
     const slug = await allocateUniqueSlug(ctx, name, "society");
 
@@ -382,7 +384,9 @@ export const create = mutation({
       websiteUrl,
       secondaryLink: secondaryLink || undefined,
       supportingDocumentStorageIds: args.supportingDocumentStorageIds,
-      idDocumentStorageId: args.idDocumentStorageId,
+      ...(args.idDocumentStorageId
+        ? { idDocumentStorageId: args.idDocumentStorageId }
+        : {}),
       creatorId: userId,
       responsibleIndividualUserId,
       orgType,
@@ -940,12 +944,6 @@ export const approve = mutation({
       });
     }
     if (resolveOrgType(society) === "society") {
-      if (!society.idDocumentStorageId) {
-        throw new ConvexError({
-          code: "STUDENT_CARD_REQUIRED",
-          message: "A student card must be on file before approval.",
-        });
-      }
       if (
         isStripeIdentityEnabled() &&
         society.stripeVerificationStatus !== "verified"

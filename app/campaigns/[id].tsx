@@ -367,7 +367,7 @@ export default function CampaignDetailPage() {
     >
       <View
         style={connectedMediaUpdatesStyle}
-        className="flex-row overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream shadow-[5px_5px_0_#211E1A]"
+        className="flex-row overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream"
       >
         <View className="min-w-0 flex-1 border-r-[3px] border-retro-ink">
           <CampaignMediaHero
@@ -403,7 +403,7 @@ export default function CampaignDetailPage() {
     </View>
   ) : (
     <View key="hero" className="mb-6 gap-5">
-      <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream shadow-[5px_5px_0_#211E1A]">
+      <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream">
         <CampaignMediaHero campaign={campaign} accent={accent} embedded />
         {id ? (
           <View className="border-t-[3px] border-retro-ink">
@@ -543,12 +543,6 @@ export default function CampaignDetailPage() {
           </Text>
           <Text className="font-retro-mono text-[11px] text-[#5c574f]">
             Deadline {deadlineLabel}
-          </Text>
-          <Text className="mt-1 text-xs leading-relaxed text-[#5c574f]">
-            Donations are paid to this society&apos;s Stripe Connected Account. The
-            Connected Account holder is the Merchant of Record. An estimated payment
-            processing fee is added at checkout so the intended amount reaches the
-            campaign.
           </Text>
           {campaign.ownershipStatement ? (
             <Text className="mt-1 text-xs text-[#5c574f]">

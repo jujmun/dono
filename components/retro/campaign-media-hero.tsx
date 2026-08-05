@@ -92,7 +92,7 @@ export function CampaignMediaHero({
               index === activeIndex
                 ? "border-retro-ink"
                 : "border-retro-ink/40",
-              matchedFrame && "border-retro-paper shadow-[2px_2px_0_#211E1A]",
+              matchedFrame && "border-retro-paper",
             )}
           >
             <CampaignImage image={uri} className="h-full w-full" />
@@ -115,7 +115,7 @@ export function CampaignMediaHero({
           compact && "h-full",
           embedded
             ? accentFrameClasses[accent]
-            : "rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
+            : "rounded-[14px] border-[3px] border-retro-ink",
           !embedded && accentFrameClasses[accent],
         )}
         style={matchHeight ? { height: matchHeight, width: "100%" } : undefined}
@@ -155,7 +155,7 @@ export function CampaignMediaHero({
                 onPress={openExternalVideo}
                 className="absolute inset-0 items-center justify-center bg-black/15"
               >
-                <View className="h-16 w-16 items-center justify-center rounded-full border-[3px] border-retro-ink bg-retro-paper/95 shadow-[3px_3px_0_#211E1A]">
+                <View className="h-16 w-16 items-center justify-center rounded-full border-[3px] border-retro-ink bg-retro-paper/95">
                   <Play size={28} color="#211E1A" fill="#211E1A" />
                 </View>
               </Pressable>
@@ -197,7 +197,7 @@ export function CampaignPhotoGrid({ campaign, accent = "indigo" }: CampaignPhoto
         <View
           key={`${uri}-${index}`}
           className={cn(
-            "overflow-hidden rounded-[14px] border-[3px] border-retro-ink shadow-[5px_5px_0_#211E1A]",
+            "overflow-hidden rounded-[14px] border-[3px] border-retro-ink",
             accentFrameClasses[accent],
           )}
           style={{

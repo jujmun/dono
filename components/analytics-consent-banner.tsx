@@ -26,7 +26,7 @@ export function AnalyticsConsentBanner({
       <View className="mt-3 flex-row flex-wrap gap-2">
         <Pressable
           onPress={onGrant}
-          className="rounded-full bg-retro-mint px-4 py-2"
+          className="retro-key rounded-full bg-retro-mint px-4 py-2"
           accessibilityRole="button"
           accessibilityLabel="Accept analytics"
         >
@@ -34,7 +34,7 @@ export function AnalyticsConsentBanner({
         </Pressable>
         <Pressable
           onPress={onDeny}
-          className="rounded-full border-2 border-retro-ink bg-white px-4 py-2"
+          className="retro-key rounded-full border-2 border-retro-ink bg-white px-4 py-2"
           accessibilityRole="button"
           accessibilityLabel="Reject analytics"
         >

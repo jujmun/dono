@@ -74,7 +74,7 @@ export function RetroDonateSidebar({
       : null;
 
   return (
-    <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-4 shadow-[5px_5px_0_#211E1A]">
+    <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-4">
       <View className="mb-2 overflow-hidden rounded-md border-2 border-retro-ink bg-white">
         <View className="h-3 flex-row">
           <View
@@ -122,10 +122,10 @@ export function RetroDonateSidebar({
                 <Pressable
                   key={amount}
                   onPress={() => onSelectPreset(amount)}
-                  className={cn(
+                  className={cn("retro-key", 
                     "relative flex-1 items-center rounded-lg border-2 border-retro-ink py-2.5",
                     on
-                      ? "bg-retro-sky shadow-[2px_2px_0_#211E1A]"
+                      ? "bg-retro-sky"
                       : "bg-retro-cream",
                   )}
                 >
@@ -188,7 +188,7 @@ export function RetroDonateSidebar({
           <Pressable
             onPress={onDonate}
             disabled={donationsDisabled}
-            className={`mb-3 flex-row items-center justify-center gap-2 rounded-[10px] border-2 border-retro-ink py-3.5 shadow-[3px_3px_0_#211E1A] ${
+            className={`retro-key mb-3 flex-row items-center justify-center gap-2 rounded-[10px] border-2 border-retro-ink py-3.5 ${
               donationsDisabled ? "bg-retro-cream opacity-60" : "bg-retro-marigold"
             }`}
           >
@@ -214,8 +214,7 @@ export function RetroDonateSidebar({
         <Pressable
           onPress={onToggleLike}
           disabled={likeLoading}
-          className={cn(
-            "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
+          className={cn("retro-key", "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
             liked ? "bg-retro-cream" : "bg-retro-paper",
           )}
         >
@@ -237,8 +236,7 @@ export function RetroDonateSidebar({
         <Pressable
           onPress={onToggleFollow}
           disabled={followLoading}
-          className={cn(
-            "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
+          className={cn("retro-key", "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
             following ? "bg-retro-cream" : "bg-retro-paper",
           )}
         >
@@ -256,7 +254,7 @@ export function RetroDonateSidebar({
         <Pressable
           onPress={onShare}
           accessibilityLabel="Share campaign"
-          className="items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
+          className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
         >
           <Share2 size={14} color="#211E1A" />
         </Pressable>

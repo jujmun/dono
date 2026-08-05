@@ -75,10 +75,9 @@ function AdminSitehead() {
               return (
                 <Link key={item.href} href={item.href as Href} asChild>
                   <Pressable
-                    className={cn(
-                      "rounded-lg border-2 px-3 py-1.5",
+                    className={cn("retro-key", "rounded-lg border-2 px-3 py-1.5",
                       active
-                        ? "border-retro-ink bg-retro-cream shadow-[2px_2px_0_#211E1A]"
+                        ? "border-retro-ink bg-retro-cream"
                         : "border-transparent",
                     )}
                   >
@@ -105,7 +104,7 @@ function AdminSitehead() {
 
         <Pressable
           onPress={handleSignOut}
-          className="flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-paper px-3 py-2 shadow-[3px_3px_0_#211E1A]"
+          className="retro-key flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-paper px-3 py-2"
           accessibilityLabel="Sign out"
         >
           <LogOut size={14} color="#211E1A" />

@@ -388,6 +388,13 @@ export function DonateSheet({
             </Pressable>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
+              Donations are paid to this society&apos;s Stripe Connected Account.
+              The Connected Account holder is the Merchant of Record. An estimated
+              payment processing fee is added at checkout so the intended amount
+              reaches the campaign.
+            </Text>
+
+            <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
               Not Gift Aid. Dono does not issue charitable tax receipts.
             </Text>
 

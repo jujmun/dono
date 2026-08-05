@@ -56,7 +56,7 @@ export function SocietyFollowButton({
     <Pressable
       onPress={() => void handleToggleFollow()}
       disabled={followLoading}
-      className={`flex-row items-center justify-center gap-2 rounded-full px-5 py-2.5 ${
+      className={`retro-key flex-row items-center justify-center gap-2 rounded-full px-5 py-2.5 ${
         following ? "border border-dono-primary bg-dono-primary/5" : "bg-dono-primary"
       }`}
     >

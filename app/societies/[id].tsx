@@ -643,7 +643,7 @@ function LeaderJoinRequests({ slug }: { slug: string }) {
               <Pressable
                 onPress={() => void handle(req.id as Id<"societyMembers">, "approve")}
                 disabled={busyId === req.id}
-                className="flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
+                className="retro-key flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
               >
                 <Check size={14} color="#fff" />
                 <Text className="font-retro-bold text-xs text-white">Approve</Text>
@@ -748,7 +748,7 @@ function LeaderPendingCampaigns({ slug }: { slug: string }) {
               <Pressable
                 onPress={() => void handleApprove(campaign.id)}
                 disabled={busySlug === campaign.id}
-                className="flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
+                className="retro-key flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
               >
                 {busySlug === campaign.id ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -990,7 +990,7 @@ function LeaderCampaignUpdates({ slug }: { slug: string }) {
                 <Pressable
                   onPress={() => void handleSubmit(campaign.slug, campaign.raised)}
                   disabled={submitting}
-                  className="flex-row items-center justify-center gap-1 self-start rounded-full bg-dono-primary px-4 py-2"
+                  className="retro-key flex-row items-center justify-center gap-1 self-start rounded-full bg-dono-primary px-4 py-2"
                 >
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />

@@ -6,7 +6,8 @@ import * as ExpoLinking from "expo-linking";
 import { Building2, Users } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
-import { initialsFor } from "@/lib/utils";
+import { retroKeyClass } from "@/lib/retro-key";
+import { cn, initialsFor } from "@/lib/utils";
 import type { MySociety, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
@@ -63,14 +64,19 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
   };
 
   return (
-    <View className="w-full overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper shadow-[5px_5px_0_#211E1A]">
+    <View
+      className={cn(
+        "w-full overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper",
+        retroKeyClass,
+      )}
+    >
       <Link href={`/societies/${society.slug}`} asChild>
         <Pressable className="active:opacity-95">
           <CampaignImage
             image={society.coverImageUrl ?? "default"}
             className="h-[170px] border-b-[3px] border-retro-ink bg-retro-indigo"
           >
-            <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]">
+            <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint">
               <Text className="font-retro-bold text-sm text-retro-paper">
                 {initialsFor(society.name)}
               </Text>
@@ -110,7 +116,7 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
           <Pressable
             onPress={() => void handleCompletePayoutSetup()}
             disabled={connectLoading}
-            className={`mt-1 items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-2 ${
+            className={`retro-key mt-1 items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-2 ${
               connectLoading ? "opacity-50" : ""
             }`}
           >

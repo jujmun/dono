@@ -140,7 +140,7 @@ function OtpRequestFormInner({
             <Pressable
               onPress={handleSubmit}
               disabled={loading || !canSubmit}
-              className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
+              className={`retro-key items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 ${
                 loading || !canSubmit ? "opacity-50" : ""
               }`}
             >

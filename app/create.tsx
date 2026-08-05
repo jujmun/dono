@@ -6,7 +6,6 @@ import {
   Pressable,
   ScrollView,
   ActivityIndicator,
-  Image,
 } from "react-native";
 import { useRouter, useLocalSearchParams, Link } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -15,7 +14,6 @@ import {
   ArrowRight,
   Check,
   CheckCircle2,
-  IdCard,
   ImagePlus,
   Plus,
   ShieldCheck,
@@ -24,6 +22,7 @@ import {
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignPreview } from "@/components/campaign-preview";
+import { ImageCropModal, type CropSourceImage } from "@/components/image-crop-modal";
 import { LoginGate } from "@/components/login-gate";
 import { DonorCreateGate } from "@/components/donor-create-gate";
 import { isAlumni } from "@/lib/auth/user-type";
@@ -44,7 +43,6 @@ import {
 } from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
-import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
 import { encodeImpactItems, parseImpactItem } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
@@ -56,7 +54,6 @@ import { DateInput } from "@/components/date-input";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 
 const steps = ["Details", "Story", "Goal", "Review", "Submit"];
 
@@ -103,12 +100,14 @@ function PhotoThumbnailPicker({
   onPick,
   onRemove,
   onRemoveAll,
+  onRecrop,
 }: {
   pickedImages: PickedImage[];
   pickingImage: boolean;
   onPick: () => void;
   onRemove: (index: number) => void;
   onRemoveAll: () => void;
+  onRecrop?: (index: number) => void;
 }) {
   return (
     <View>
@@ -120,7 +119,13 @@ function PhotoThumbnailPicker({
         >
           {pickedImages.map((image, index) => (
             <View key={`${image.uri}-${index}`} className="relative">
-              <CampaignImage image={image.uri} className="h-16 w-24 rounded-lg" />
+              <Pressable
+                onPress={() => onRecrop?.(index)}
+                disabled={!onRecrop}
+                accessibilityLabel="Adjust crop"
+              >
+                <CampaignImage image={image.uri} className="h-16 w-28 rounded-lg" />
+              </Pressable>
               <Pressable
                 onPress={() => onRemove(index)}
                 className="absolute -right-1 -top-1 h-5 w-5 items-center justify-center rounded-full bg-retro-ink"
@@ -135,7 +140,7 @@ function PhotoThumbnailPicker({
         <Pressable
           onPress={onPick}
           disabled={pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES}
-          className={`flex-row items-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
+          className={`retro-key flex-row items-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 ${
             pickingImage || pickedImages.length >= MAX_CAMPAIGN_IMAGES ? "opacity-50" : ""
           }`}
         >
@@ -151,14 +156,15 @@ function PhotoThumbnailPicker({
         {pickedImages.length > 0 ? (
           <Pressable
             onPress={onRemoveAll}
-            className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2"
+            className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2"
           >
             <Text className="font-retro-bold text-sm text-[#5c574f]">Remove all</Text>
           </Pressable>
         ) : null}
       </View>
       <Text className="mt-1.5 text-xs text-[#5c574f]">
-        Optional. Up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each).
+        Optional. Up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each). Tap a
+        photo to adjust the crop.
       </Text>
     </View>
   );
@@ -180,7 +186,6 @@ export default function CreateCampaignPage() {
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
-  const generateStorageUploadUrl = useMutation(api.societies.generateUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
   const setCampaignVideoUrl = useMutation(api.campaignCreator.setVideoUrl);
@@ -206,6 +211,8 @@ export default function CreateCampaignPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
+  const [cropQueue, setCropQueue] = useState<CropSourceImage[]>([]);
+  const [cropReplaceIndex, setCropReplaceIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
   const [template, setTemplate] = useState<string>(DEFAULT_CAMPAIGN_TEMPLATE_ID);
@@ -221,10 +228,6 @@ export default function CreateCampaignPage() {
   const [dobInput, setDobInput] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
   const [dobSaving, setDobSaving] = useState(false);
-  const [idDocument, setIdDocument] = useState<PickedImage | null>(null);
-  const [pickingId, setPickingId] = useState(false);
-  const [idDocumentStorageId, setIdDocumentStorageId] =
-    useState<Id<"_storage"> | null>(null);
   const [fundLines, setFundLines] = useState<FundLine[]>(initialFundLines);
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
@@ -367,14 +370,14 @@ export default function CreateCampaignPage() {
         mediaTypes: ["images"],
         allowsMultipleSelection: true,
         selectionLimit: remaining,
-        quality: 0.85,
+        quality: 1,
       });
 
       if (result.canceled || result.assets.length === 0) {
         return;
       }
 
-      const nextImages: PickedImage[] = [];
+      const nextImages: CropSourceImage[] = [];
       for (const asset of result.assets) {
         if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
           setError("Each campaign photo must be 5MB or smaller.");
@@ -384,10 +387,13 @@ export default function CreateCampaignPage() {
           uri: asset.uri,
           mimeType: asset.mimeType,
           fileSize: asset.fileSize,
+          width: asset.width,
+          height: asset.height,
         });
       }
 
-      setPickedImages((current) => [...current, ...nextImages].slice(0, MAX_CAMPAIGN_IMAGES));
+      setCropReplaceIndex(null);
+      setCropQueue(nextImages.slice(0, remaining));
     } catch (err) {
       setError(getFriendlyAuthError(err));
     } finally {
@@ -399,37 +405,40 @@ export default function CreateCampaignPage() {
     setPickedImages((current) => current.filter((_, i) => i !== index));
   };
 
-  const pickIdDocument = async () => {
-    setError(null);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo library permission is required to add your student card.");
+  const recropCampaignImage = (index: number) => {
+    const image = pickedImages[index];
+    if (!image) return;
+    setCropReplaceIndex(index);
+    setCropQueue([
+      {
+        uri: image.uri,
+        mimeType: image.mimeType,
+        fileSize: image.fileSize,
+      },
+    ]);
+  };
+
+  const handleCropCancel = () => {
+    setCropQueue([]);
+    setCropReplaceIndex(null);
+  };
+
+  const handleCropConfirm = (cropped: PickedImage) => {
+    if (cropReplaceIndex != null) {
+      setPickedImages((current) =>
+        current.map((image, index) =>
+          index === cropReplaceIndex ? cropped : image,
+        ),
+      );
+      setCropReplaceIndex(null);
+      setCropQueue([]);
       return;
     }
-    setPickingId(true);
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsMultipleSelection: false,
-        quality: 0.85,
-      });
-      if (result.canceled || result.assets.length === 0) return;
-      const asset = result.assets[0];
-      if (asset.fileSize && asset.fileSize > MAX_IMAGE_BYTES) {
-        setError("The student card image must be 5MB or smaller.");
-        return;
-      }
-      setIdDocument({
-        uri: asset.uri,
-        mimeType: asset.mimeType,
-        fileSize: asset.fileSize,
-      });
-      setIdDocumentStorageId(null);
-    } catch (err) {
-      setError(getFriendlyAuthError(err));
-    } finally {
-      setPickingId(false);
-    }
+
+    setPickedImages((current) =>
+      [...current, cropped].slice(0, MAX_CAMPAIGN_IMAGES),
+    );
+    setCropQueue((current) => current.slice(1));
   };
 
   const campaignImageSource =
@@ -470,25 +479,8 @@ export default function CreateCampaignPage() {
     if (!legalAccepted) {
       throw new Error("Please accept the campaign terms to continue.");
     }
-    if (!isEditMode && !idDocument && !idDocumentStorageId) {
-      throw new Error("A student card is required.");
-    }
     await acceptDocuments({ context: "create_campaign" });
     if (campaignSlug) return campaignSlug;
-
-    let storageId = idDocumentStorageId;
-    if (!storageId && idDocument) {
-      const uploadUrl = await generateStorageUploadUrl({});
-      storageId = await uploadImageToConvexStorage(
-        uploadUrl,
-        idDocument.uri,
-        idDocument.mimeType,
-      );
-      setIdDocumentStorageId(storageId);
-    }
-    if (!storageId) {
-      throw new Error("A student card is required.");
-    }
 
     const result = await createCampaign({
       title: form.title,
@@ -501,7 +493,6 @@ export default function CreateCampaignPage() {
       expectedExpenditureDate: expectedExpenditureDate.trim(),
       plannedUpdateSchedule: plannedUpdateSchedule.trim(),
       ownershipStatement: ownershipStatement.trim(),
-      idDocumentStorageId: storageId,
     });
     setCampaignSlug(result.slug);
     return result.slug;
@@ -511,10 +502,6 @@ export default function CreateCampaignPage() {
     setError(null);
     if (!hasDateOfBirth) {
       setError("Please confirm your date of birth before verifying your identity.");
-      return;
-    }
-    if (!idDocument && !idDocumentStorageId && !isEditMode) {
-      setError("Please upload your student card before verifying your identity.");
       return;
     }
     if (!legalAccepted) {
@@ -600,13 +587,8 @@ export default function CreateCampaignPage() {
           transparencyFieldsComplete
         );
       case 3:
-        // Card + DOB + legal + Stripe Identity verified.
-        return (
-          stripeVerified &&
-          legalAccepted &&
-          hasDateOfBirth &&
-          (isEditMode || Boolean(idDocument) || Boolean(idDocumentStorageId))
-        );
+        // DOB + legal + Stripe Identity verified.
+        return stripeVerified && legalAccepted && hasDateOfBirth;
       default:
         return true;
     }
@@ -615,11 +597,11 @@ export default function CreateCampaignPage() {
   const inputClass =
     "w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none";
   const primaryBtnClass =
-    "items-center rounded-full border-2 border-retro-ink bg-retro-mint px-5 py-2.5 shadow-[3px_3px_0_#211E1A]";
+    "retro-key items-center rounded-full border-2 border-retro-ink bg-retro-mint px-5 py-2.5";
   const accentBtnClass =
-    "items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-6 py-2.5 shadow-[3px_3px_0_#211E1A]";
+    "retro-key items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-6 py-2.5";
   const secondaryBtnClass =
-    "items-center rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-2.5 shadow-[3px_3px_0_#211E1A]";
+    "retro-key items-center rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-2.5";
 
   if (isLoading) {
     return (
@@ -714,13 +696,14 @@ export default function CreateCampaignPage() {
                 setPickedImages((current) => current.filter((_, i) => i !== index))
               }
               onRemoveAll={() => setPickedImages([])}
+              onRecrop={recropCampaignImage}
             />
           </View>
 
           <View className="mt-8 flex-row gap-3">
             <Pressable
               onPress={() => router.push(`/campaigns/${editCampaign.id}`)}
-              className="rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-3"
+              className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-5 py-3"
             >
               <Text className="font-retro-bold text-sm text-retro-ink">Cancel</Text>
             </Pressable>
@@ -748,7 +731,7 @@ export default function CreateCampaignPage() {
                   .catch((err: Error) => setError(getFriendlyAuthError(err)))
                   .finally(() => setSubmitting(false));
               }}
-              className={`rounded-full border-2 border-retro-ink bg-retro-indigo px-5 py-3 shadow-[3px_3px_0_#211E1A] ${
+              className={`retro-key rounded-full border-2 border-retro-ink bg-retro-indigo px-5 py-3 ${
                 submitting || pickedImages.length === 0 ? "opacity-50" : ""
               }`}
             >
@@ -764,6 +747,17 @@ export default function CreateCampaignPage() {
             </View>
           ) : null}
         </View>
+        <ImageCropModal
+          visible={cropQueue.length > 0}
+          image={cropQueue[0] ?? null}
+          progressLabel={
+            cropReplaceIndex == null && cropQueue.length > 0
+              ? `${pickedImages.length + 1} of ${pickedImages.length + cropQueue.length}`
+              : undefined
+          }
+          onCancel={handleCropCancel}
+          onConfirm={handleCropConfirm}
+        />
       </AppShell>
     );
   }
@@ -870,7 +864,7 @@ export default function CreateCampaignPage() {
           </View>
         </View>
 
-        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-6 shadow-[5px_5px_0_#211E1A]">
+        <View className="rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-6">
           {step === 0 && (
             <View className="gap-5">
               <View>
@@ -929,6 +923,7 @@ export default function CreateCampaignPage() {
                     onPick={() => void pickCampaignImages()}
                     onRemove={removeCampaignImage}
                     onRemoveAll={() => setPickedImages([])}
+                    onRecrop={recropCampaignImage}
                   />
                 </View>
               </View>
@@ -988,14 +983,14 @@ export default function CreateCampaignPage() {
                     </Text>
                     <View className="flex-row flex-wrap gap-2">
                       <Link href="/societies" asChild>
-                        <Pressable className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
+                        <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
                           <Text className="font-retro-bold text-xs text-retro-ink">
                             Browse societies
                           </Text>
                         </Pressable>
                       </Link>
                       <Link href="/create-society" asChild>
-                        <Pressable className="rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
+                        <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
                           <Text className="font-retro-bold text-xs text-retro-paper">
                             Create a society
                           </Text>
@@ -1315,6 +1310,7 @@ export default function CreateCampaignPage() {
                       onPick={() => void pickCampaignImages()}
                       onRemove={removeCampaignImage}
                       onRemoveAll={() => setPickedImages([])}
+                      onRecrop={recropCampaignImage}
                     />
                   </View>
 
@@ -1411,168 +1407,108 @@ export default function CreateCampaignPage() {
                   />
                 </View>
               ) : (
-                <View className="gap-4">
-                  {!isEditMode ? (
-                    <View className="rounded-xl border border-retro-ink bg-retro-cream p-4">
-                      <View className="mb-1.5 flex-row items-center gap-2">
-                        <IdCard size={16} color="#17211B" />
-                        <Text className="font-retro-bold text-sm text-retro-ink">
-                          Student Verification
-                        </Text>
-                      </View>
-                      <Text className="mb-3 text-xs text-[#5c574f]">
-                        Upload a photo of your Bodleian / university student card.
-                        Only student cards are accepted. This is used for verification
-                        only and is never shown publicly.
+                <View className="rounded-xl border border-retro-ink bg-white p-4">
+                  <View className="mb-1.5 flex-row items-center gap-2">
+                    <ShieldCheck size={16} color="#17211B" />
+                    <Text className="font-retro-bold text-sm text-retro-ink">
+                      Identity Check
+                    </Text>
+                  </View>
+                  <Text className="mb-3 text-xs text-[#5c574f]">
+                    You'll be asked for a quick photo of your ID and a selfie so we
+                    can confirm it's really you — it only takes a minute.
+                  </Text>
+
+                  {!dobLoading && !hasDateOfBirth ? (
+                    <View className="mb-3 rounded-lg border border-dono-border bg-dono-surface-muted p-3">
+                      <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
+                        Confirm your date of birth
                       </Text>
-                      {idDocument ? (
-                        <View className="mb-3 flex-row items-center gap-3 rounded-xl border border-retro-ink bg-white p-2">
-                          <Image
-                            source={{ uri: idDocument.uri }}
-                            className="h-14 w-14 rounded-lg"
-                          />
-                          <Text className="flex-1 text-xs text-retro-ink" numberOfLines={2}>
-                            Student card selected
-                          </Text>
-                          <Pressable
-                            onPress={() => {
-                              setIdDocument(null);
-                              setIdDocumentStorageId(null);
-                            }}
-                            className="rounded-full border border-retro-ink bg-white px-2 py-1"
-                          >
-                            <Text className="text-xs font-bold text-retro-ink">×</Text>
-                          </Pressable>
-                        </View>
+                      <Text className="mb-2 text-xs text-[#5c574f]">
+                        You must be at least 18 to create a campaign — we need this on
+                        file before you can verify your identity.
+                      </Text>
+                      <TextInput
+                        value={dobInput}
+                        onChangeText={setDobInput}
+                        placeholder="YYYY-MM-DD"
+                        placeholderTextColor="#56615A"
+                        autoCapitalize="none"
+                        className={inputClass}
+                      />
+                      {dobError ? (
+                        <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
                       ) : null}
                       <Pressable
-                        onPress={() => void pickIdDocument()}
-                        disabled={pickingId}
-                        className={`flex-row items-center justify-center gap-2 self-start rounded-full border border-retro-ink bg-white px-4 py-2 ${
-                          pickingId ? "opacity-50" : ""
+                        onPress={() => void handleSaveDateOfBirth()}
+                        disabled={dobSaving || !dobInput.trim()}
+                        className={`mt-2 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
+                          dobSaving || !dobInput.trim() ? "opacity-50" : ""
                         }`}
                       >
-                        <IdCard size={16} color="#17211B" />
-                        <Text className="font-retro-bold text-sm text-retro-ink">
-                          {pickingId
-                            ? "Opening library..."
-                            : idDocument
-                              ? "Replace student card"
-                              : "Add student card"}
-                        </Text>
+                        {dobSaving ? (
+                          <ActivityIndicator color="#fff" />
+                        ) : (
+                          <Text className="font-retro-bold text-sm text-retro-paper">
+                            Save date of birth
+                          </Text>
+                        )}
                       </Pressable>
                     </View>
                   ) : null}
 
-                  <View className="rounded-xl border border-retro-ink bg-white p-4">
-                    <View className="mb-1.5 flex-row items-center gap-2">
-                      <ShieldCheck size={16} color="#17211B" />
-                      <Text className="font-retro-bold text-sm text-retro-ink">
-                        Identity Check
+                  <LegalAcceptanceCheckbox
+                    context="create_campaign"
+                    accepted={legalAccepted}
+                    onAcceptedChange={setLegalAccepted}
+                    className="mb-3"
+                  />
+
+                  {renderVerificationStatus()}
+
+                  <Pressable
+                    onPress={() => void handleVerifyIdentity()}
+                    disabled={
+                      verifying ||
+                      stripeVerified ||
+                      !legalAccepted ||
+                      !hasDateOfBirth
+                    }
+                    className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
+                      verifying ||
+                      stripeVerified ||
+                      !legalAccepted ||
+                      !hasDateOfBirth
+                        ? "opacity-50"
+                        : ""
+                    }`}
+                  >
+                    {verifying ? (
+                      <ActivityIndicator color="#fff" />
+                    ) : (
+                      <Text className="font-retro-bold text-sm text-retro-paper">
+                        Verify your identity
                       </Text>
-                    </View>
-                    <Text className="mb-3 text-xs text-[#5c574f]">
-                      You'll be asked for a quick photo of your ID and a selfie so we
-                      can confirm it's really you — it only takes a minute.
+                    )}
+                  </Pressable>
+                  {!hasDateOfBirth ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      Confirm your date of birth above before starting identity
+                      verification.
                     </Text>
-
-                    {!dobLoading && !hasDateOfBirth ? (
-                      <View className="mb-3 rounded-lg border border-dono-border bg-dono-surface-muted p-3">
-                        <Text className="mb-1.5 font-retro-bold text-xs text-retro-ink">
-                          Confirm your date of birth
-                        </Text>
-                        <Text className="mb-2 text-xs text-[#5c574f]">
-                          You must be at least 18 to create a campaign — we need this on
-                          file before you can verify your identity.
-                        </Text>
-                        <TextInput
-                          value={dobInput}
-                          onChangeText={setDobInput}
-                          placeholder="YYYY-MM-DD"
-                          placeholderTextColor="#56615A"
-                          autoCapitalize="none"
-                          className={inputClass}
-                        />
-                        {dobError ? (
-                          <Text className="mt-1.5 text-xs text-rose-700">{dobError}</Text>
-                        ) : null}
-                        <Pressable
-                          onPress={() => void handleSaveDateOfBirth()}
-                          disabled={dobSaving || !dobInput.trim()}
-                          className={`mt-2 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
-                            dobSaving || !dobInput.trim() ? "opacity-50" : ""
-                          }`}
-                        >
-                          {dobSaving ? (
-                            <ActivityIndicator color="#fff" />
-                          ) : (
-                            <Text className="font-retro-bold text-sm text-retro-paper">
-                              Save date of birth
-                            </Text>
-                          )}
-                        </Pressable>
-                      </View>
-                    ) : null}
-
-                    <LegalAcceptanceCheckbox
-                      context="create_campaign"
-                      accepted={legalAccepted}
-                      onAcceptedChange={setLegalAccepted}
-                      className="mb-3"
-                    />
-
-                    {renderVerificationStatus()}
-
-                    <Pressable
-                      onPress={() => void handleVerifyIdentity()}
-                      disabled={
-                        verifying ||
-                        stripeVerified ||
-                        !legalAccepted ||
-                        !hasDateOfBirth ||
-                        (!isEditMode && !idDocument && !idDocumentStorageId)
-                      }
-                      className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
-                        verifying ||
-                        stripeVerified ||
-                        !legalAccepted ||
-                        !hasDateOfBirth ||
-                        (!isEditMode && !idDocument && !idDocumentStorageId)
-                          ? "opacity-50"
-                          : ""
-                      }`}
-                    >
-                      {verifying ? (
-                        <ActivityIndicator color="#fff" />
-                      ) : (
-                        <Text className="font-retro-bold text-sm text-retro-paper">
-                          Verify your identity
-                        </Text>
-                      )}
-                    </Pressable>
-                    {!hasDateOfBirth ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        Confirm your date of birth above before starting identity
-                        verification.
-                      </Text>
-                    ) : !isEditMode && !idDocument && !idDocumentStorageId ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        Add your student card above first.
-                      </Text>
-                    ) : !legalAccepted ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        Accept the terms above before starting identity verification.
-                      </Text>
-                    ) : stripeFailed ? (
-                      <Text className="mt-2 text-xs text-rose-700">
-                        That didn't go through — please try again.
-                      </Text>
-                    ) : !stripeVerified ? (
-                      <Text className="mt-2 text-xs text-[#5c574f]">
-                        You'll be able to continue once your identity is verified.
-                      </Text>
-                    ) : null}
-                  </View>
+                  ) : !legalAccepted ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      Accept the terms above before starting identity verification.
+                    </Text>
+                  ) : stripeFailed ? (
+                    <Text className="mt-2 text-xs text-rose-700">
+                      That didn't go through — please try again.
+                    </Text>
+                  ) : !stripeVerified ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      You'll be able to continue once your identity is verified.
+                    </Text>
+                  ) : null}
                 </View>
               )}
             </View>
@@ -1818,6 +1754,17 @@ export default function CreateCampaignPage() {
           )}
         </View>
       </View>
+      <ImageCropModal
+        visible={cropQueue.length > 0}
+        image={cropQueue[0] ?? null}
+        progressLabel={
+          cropReplaceIndex == null && cropQueue.length > 0
+            ? `${pickedImages.length + 1} of ${pickedImages.length + cropQueue.length}`
+            : undefined
+        }
+        onCancel={handleCropCancel}
+        onConfirm={handleCropConfirm}
+      />
     </AppShell>
   );
 }

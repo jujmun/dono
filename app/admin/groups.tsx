@@ -421,7 +421,7 @@ export default function AdminGroupsPage() {
                   <Pressable
                     onPress={() => void handleCreateGroup()}
                     disabled={createBusy || !newGroupName.trim()}
-                    className={cn(
+                    className={cn("retro-key", 
                       "mt-3 items-center rounded-xl bg-dono-primary py-2.5",
                       (createBusy || !newGroupName.trim()) && "opacity-50",
                     )}

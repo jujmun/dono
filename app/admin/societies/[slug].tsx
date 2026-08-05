@@ -85,7 +85,7 @@ export default function AdminSocietyReviewPage() {
           </Text>
           <Pressable
             onPress={() => router.replace("/dashboard")}
-            className="mt-6 items-center rounded-full bg-dono-primary py-3"
+            className="retro-key mt-6 items-center rounded-full bg-dono-primary py-3"
           >
             <Text className="font-retro-bold text-sm text-white">
               Back to dashboard

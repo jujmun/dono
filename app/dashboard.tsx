@@ -117,7 +117,7 @@ export default function DashboardPage() {
         ].map((stat) => (
           <View
             key={stat.label}
-            className="min-w-[140px] flex-1 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4 shadow-[5px_5px_0_#211E1A]"
+            className="min-w-[140px] flex-1 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4"
           >
             <stat.icon size={20} color="#211E1A" />
             <Text className="mt-2 font-retro-bold text-xl text-retro-ink">{stat.value}</Text>
@@ -127,7 +127,7 @@ export default function DashboardPage() {
       </View>
 
       {donoWrapped ? (
-        <View className="mb-8 rounded-[14px] border-[3px] border-retro-ink bg-retro-mint/15 p-5 shadow-[5px_5px_0_#211E1A]">
+        <View className="mb-8 rounded-[14px] border-[3px] border-retro-ink bg-retro-mint/15 p-5">
           <Text className="font-retro-mono text-xs uppercase text-[#5c574f]">
             Your {donoWrapped.year}
           </Text>

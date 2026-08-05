@@ -76,7 +76,7 @@ export function DateInput({
       {open && Platform.OS === "ios" ? (
         <Pressable
           onPress={() => setOpen(false)}
-          className="mt-2 self-end rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-1.5"
+          className="retro-key mt-2 self-end rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-1.5"
         >
           <Text className="font-retro-bold text-xs text-retro-ink">Done</Text>
         </Pressable>

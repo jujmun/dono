@@ -362,7 +362,7 @@ export function DonationThankYouModal({
               <Animated.View entering={FadeInDown.delay(360).springify()} className="mt-4 w-full">
                 <Pressable
                   onPress={onClose}
-                  className="items-center rounded-full bg-dono-primary py-3.5"
+                  className="retro-key items-center rounded-full bg-dono-primary py-3.5"
                 >
                   <Text className="font-retro-bold text-sm text-white">
                     Continue exploring

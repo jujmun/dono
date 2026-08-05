@@ -494,12 +494,6 @@ export const approve = mutation({
         message: "Stripe Identity verification must be completed before approval.",
       });
     }
-    if (!campaign.idDocumentStorageId) {
-      throw new ConvexError({
-        code: "STUDENT_CARD_REQUIRED",
-        message: "A student card must be on file before approval.",
-      });
-    }
     if (
       !campaign.ownershipStatement?.trim() ||
       !campaign.plannedUpdateSchedule?.trim() ||
@@ -721,7 +715,7 @@ export const create = mutation({
     plannedUpdateSchedule: v.optional(v.string()),
     ownershipStatement: v.optional(v.string()),
     responsibleIndividualUserId: v.optional(v.id("users")),
-    idDocumentStorageId: v.id("_storage"),
+    idDocumentStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
     const communitySlug = args.communitySlug.trim();
@@ -738,7 +732,9 @@ export const create = mutation({
       profile?.dateOfBirth,
       "You must be at least 18 years old to create a campaign.",
     );
-    await claimStorageId(ctx, userId, args.idDocumentStorageId);
+    if (args.idDocumentStorageId) {
+      await claimStorageId(ctx, userId, args.idDocumentStorageId);
+    }
     const title = args.title.trim();
     const category = args.category.trim();
     const description = args.description.trim();
@@ -883,7 +879,9 @@ export const create = mutation({
       impactItems: [],
       createdBy: userId,
       responsibleIndividualUserId,
-      idDocumentStorageId: args.idDocumentStorageId,
+      ...(args.idDocumentStorageId
+        ? { idDocumentStorageId: args.idDocumentStorageId }
+        : {}),
       ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
       ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
       ...(ownershipStatement ? { ownershipStatement } : {}),

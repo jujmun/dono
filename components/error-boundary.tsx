@@ -45,7 +45,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           ) : null}
           <Pressable
             onPress={() => this.setState({ error: null })}
-            className="mt-2 self-start rounded-full bg-dono-primary px-4 py-2"
+            className="retro-key mt-2 self-start rounded-full bg-dono-primary px-4 py-2"
           >
             <Text className="font-retro-bold text-sm text-white">Try again</Text>
           </Pressable>

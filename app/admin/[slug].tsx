@@ -131,7 +131,7 @@ export default function AdminCampaignReviewPage() {
           </Text>
           <Pressable
             onPress={() => router.replace("/dashboard")}
-            className="mt-6 items-center rounded-full bg-dono-primary py-3"
+            className="retro-key mt-6 items-center rounded-full bg-dono-primary py-3"
           >
             <Text className="font-retro-bold text-sm text-white">
               Back to dashboard
@@ -560,7 +560,7 @@ export default function AdminCampaignReviewPage() {
                     void handleApprove();
                   }}
                   disabled={busy !== null}
-                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-dono-primary py-3 ${
+                  className={`retro-key flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-dono-primary py-3 ${
                     busy !== null ? "opacity-50" : ""
                   }`}
                 >

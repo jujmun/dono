@@ -630,7 +630,7 @@ export function CreateCollegeWizard() {
               {coverPreviewUri ? (
                 <Pressable
                   onPress={clearCover}
-                  className="rounded-lg border-2 border-retro-ink/30 px-3 py-2"
+                  className="retro-key rounded-lg border-2 border-retro-ink/30 px-3 py-2"
                 >
                   <Text className="font-retro-mono text-xs text-retro-ink/70">
                     Remove
