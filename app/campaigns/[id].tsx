@@ -34,6 +34,7 @@ import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
 import { CampaignUpdateDisplay } from "@/components/campaign-update-display";
 import { computeMatchCredit } from "@/lib/donation-psychology";
+import { cn } from "@/lib/utils";
 
 type DonationThankYouState = {
   amount?: number;
@@ -366,12 +367,19 @@ export default function CampaignDetailPage() {
   );
 
   const whyBlock = (
-    <StoryWithCostBreakdown
-      story={campaign.story}
-      goalLines={goalLines}
-      goal={campaign.goal}
-      accent={accent}
-    />
+    <View className="gap-2">
+      <StoryWithCostBreakdown
+        story={campaign.story}
+        goalLines={goalLines}
+        goal={campaign.goal}
+        accent={accent}
+      />
+      {campaign.ownershipStatement ? (
+        <Text className="px-0.5 font-retro-mono text-[10px] leading-4 text-[#5c574f]">
+          Ownership: {campaign.ownershipStatement}
+        </Text>
+      ) : null}
+    </View>
   );
 
   // GoFundMe-style: left = media + story; right = linked donate + updates card.
@@ -421,7 +429,12 @@ export default function CampaignDetailPage() {
       </Link>
 
       <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
-        <Text className="font-retro-bold text-[28px] uppercase leading-tight text-retro-ink md:text-[34px]">
+        <Text
+          className={cn(
+            "font-retro-bold uppercase leading-tight text-retro-ink",
+            isWide ? "max-w-full text-[34px]" : "w-full text-[22px]",
+          )}
+        >
           {campaign.title}
         </Text>
         {showEditPencil ? (
@@ -451,82 +464,71 @@ export default function CampaignDetailPage() {
         ) : null}
       </View>
 
-      <View className="mb-6 flex-row flex-wrap items-center gap-2.5">
-        <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
-          <Text className="font-retro-bold text-sm text-retro-ink">
-            {creatorInitial}
-          </Text>
-        </View>
-        <View className="min-w-0 flex-1">
-          <Text className="font-retro-bold text-sm text-retro-ink">
-            {campaign.creator.name}
-          </Text>
-          <Text className="font-retro-mono text-[11px] text-[#5c574f]">
-            Deadline {deadlineLabel}
-          </Text>
-          {campaign.ownershipStatement ? (
-            <Text className="mt-1 text-xs text-[#5c574f]">
-              Ownership: {campaign.ownershipStatement}
+      <View className="mb-6 w-full gap-2">
+        <View className="w-full flex-row items-center gap-2.5">
+          <View className="h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
+            <Text className="font-retro-bold text-base text-retro-ink">
+              {creatorInitial}
             </Text>
-          ) : null}
-        </View>
-        <View className="flex-row gap-2">
-          <Pressable
-            onPress={() => void handleToggleLike()}
-            disabled={likeLoading}
-            className={`retro-key flex-row items-center gap-1 rounded-lg border-2 border-retro-ink px-3 py-2 ${
-              liked ? "bg-retro-cream" : "bg-retro-paper"
-            }`}
-          >
-            {likeLoading ? (
-              <ActivityIndicator size="small" color="#211E1A" />
-            ) : (
-              <>
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text className="font-retro-bold text-sm text-retro-ink">
+              {campaign.creator.name}
+            </Text>
+            <Text className="font-retro-mono text-[11px] text-[#5c574f]">
+              Deadline {deadlineLabel}
+            </Text>
+          </View>
+          <View className="shrink-0 flex-row items-center gap-1.5">
+            <Pressable
+              onPress={() => void handleToggleLike()}
+              disabled={likeLoading}
+              accessibilityLabel={liked ? "Unlike" : "Like"}
+              className={`retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink ${
+                liked ? "bg-retro-cream" : "bg-retro-paper"
+              }`}
+            >
+              {likeLoading ? (
+                <ActivityIndicator size="small" color="#211E1A" />
+              ) : (
                 <Heart
-                  size={12}
+                  size={16}
                   color="#211E1A"
                   fill={liked ? "#F2542D" : "transparent"}
                 />
-                <Text className="font-retro-mono-bold text-[11px] text-retro-ink">
-                  {liked ? "Liked" : "Like"}
-                </Text>
-              </>
-            )}
-          </Pressable>
-          <Pressable
-            onPress={() => void handleToggleFollow()}
-            disabled={followLoading}
-            className={`retro-key flex-row items-center gap-1 rounded-lg border-2 border-retro-ink px-3 py-2 ${
-              following ? "bg-retro-cream" : "bg-retro-paper"
-            }`}
-          >
-            {followLoading ? (
-              <ActivityIndicator size="small" color="#211E1A" />
-            ) : (
-              <>
-                <UserPlus size={12} color="#211E1A" />
-                <Text className="font-retro-mono-bold text-[11px] text-retro-ink">
-                  {following ? "Following" : "Follow"}
-                </Text>
-              </>
-            )}
-          </Pressable>
-          <Pressable
-            onPress={() => void handleShare()}
-            accessibilityLabel="Share campaign"
-            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
-          >
-            <Share2 size={14} color="#211E1A" />
-          </Pressable>
-          <Pressable
-            onPress={() =>
-              isAuthenticated ? setReportOpen(true) : router.push("/signin")
-            }
-            accessibilityLabel="Report campaign"
-            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
-          >
-            <Flag size={14} color="#211E1A" />
-          </Pressable>
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => void handleToggleFollow()}
+              disabled={followLoading}
+              accessibilityLabel={following ? "Unfollow" : "Follow"}
+              className={`retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink ${
+                following ? "bg-retro-cream" : "bg-retro-paper"
+              }`}
+            >
+              {followLoading ? (
+                <ActivityIndicator size="small" color="#211E1A" />
+              ) : (
+                <UserPlus size={16} color="#211E1A" />
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => void handleShare()}
+              accessibilityLabel="Share campaign"
+              className="retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper"
+            >
+              <Share2 size={16} color="#211E1A" />
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                isAuthenticated ? setReportOpen(true) : router.push("/signin")
+              }
+              accessibilityLabel="Report campaign"
+              className="retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper"
+            >
+              <Flag size={16} color="#211E1A" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
