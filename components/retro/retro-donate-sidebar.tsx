@@ -5,7 +5,7 @@ import {
   Pressable,
   ActivityIndicator,
 } from "react-native";
-import { Gift, Heart, Share2, UserPlus } from "lucide-react-native";
+import { Flag, Gift, Heart, Share2, UserPlus } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -39,6 +39,7 @@ interface RetroDonateSidebarProps {
   onToggleLike: () => void;
   onToggleFollow: () => void;
   onShare: () => void;
+  onReport?: () => void;
 }
 
 export function RetroDonateSidebar({
@@ -58,6 +59,7 @@ export function RetroDonateSidebar({
   onToggleLike,
   onToggleFollow,
   onShare,
+  onReport,
 }: RetroDonateSidebarProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const isFunded = campaign.status === "funded";
@@ -258,6 +260,15 @@ export function RetroDonateSidebar({
         >
           <Share2 size={14} color="#211E1A" />
         </Pressable>
+        {onReport ? (
+          <Pressable
+            onPress={onReport}
+            accessibilityLabel="Report campaign"
+            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
+          >
+            <Flag size={14} color="#211E1A" />
+          </Pressable>
+        ) : null}
       </View>
     </View>
   );

@@ -23,8 +23,10 @@ import {
   Share2,
   Pencil,
   Shield,
+  Flag,
 } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
+import { ReportContentModal } from "@/components/report-content-modal";
 import { SocietyFollowButton } from "@/components/society-follow-button";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { LeaderDonationLedger } from "@/components/leader-donation-ledger";
@@ -493,14 +495,17 @@ function SocietyActionHeader({
   canJoin: boolean;
 }) {
   const { isAuthenticated } = useConvexAuth();
+  const router = useRouter();
   const [cancelingSubscription, setCancelingSubscription] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const mySubscription = useQuery(
     api.donations.getMySocietySubscription,
     isAuthenticated ? { communitySlug: slug } : "skip",
   );
   const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
+  const createReport = useMutation(api.reports.createReport);
 
   const handleCancelSubscription = () => {
     if (!mySubscription) return;
@@ -582,7 +587,30 @@ function SocietyActionHeader({
             ) : null}
           </View>
         ) : null}
+        <Pressable
+          onPress={() =>
+            isAuthenticated ? setReportOpen(true) : router.push("/signin")
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Report society"
+          className="h-10 w-10 items-center justify-center rounded-full border border-dono-border bg-white"
+        >
+          <Flag size={16} color="#56615A" />
+        </Pressable>
       </View>
+
+      <ReportContentModal
+        visible={reportOpen}
+        label="society"
+        onClose={() => setReportOpen(false)}
+        onSubmit={async (reason) => {
+          await createReport({
+            targetType: "society",
+            societySlug: slug,
+            reason,
+          });
+        }}
+      />
     </View>
   );
 }

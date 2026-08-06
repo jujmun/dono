@@ -22,6 +22,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
+import { ReportContentModal } from "@/components/report-content-modal";
 import { CampaignLiveStream } from "@/components/campaign-live-stream";
 import {
   ReceiptDivider,
@@ -69,6 +70,7 @@ export default function CampaignDetailPage() {
   const unlikeCampaign = useMutation(api.engagement.unlikeCampaign);
   const followCampaign = useMutation(api.engagement.followCampaign);
   const unfollowCampaign = useMutation(api.engagement.unfollowCampaign);
+  const createReport = useMutation(api.reports.createReport);
   const engagement = useQuery(
     api.engagement.isFollowing,
     id ? { campaignSlug: id } : "skip",
@@ -90,6 +92,7 @@ export default function CampaignDetailPage() {
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const commentsSectionRef = useRef<View>(null);
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
@@ -350,6 +353,9 @@ export default function CampaignDetailPage() {
       onToggleLike={() => void handleToggleLike()}
       onToggleFollow={() => void handleToggleFollow()}
       onShare={() => void handleShare()}
+      onReport={
+        isAuthenticated ? () => setReportOpen(true) : () => router.push("/signin")
+      }
       />
     </View>
   );
@@ -629,6 +635,19 @@ export default function CampaignDetailPage() {
         pendingConfirmation={thankYou?.pendingConfirmation}
         paymentIntentId={thankYou?.paymentIntentId}
         onClose={() => setThankYou(null)}
+      />
+
+      <ReportContentModal
+        visible={reportOpen}
+        label="campaign"
+        onClose={() => setReportOpen(false)}
+        onSubmit={async (reason) => {
+          await createReport({
+            targetType: "campaign",
+            campaignSlug: campaign.id,
+            reason,
+          });
+        }}
       />
     </AppShell>
   );
