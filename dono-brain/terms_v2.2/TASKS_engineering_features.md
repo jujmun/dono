@@ -46,7 +46,7 @@ Must show, before confirmation: the Campaign; the Campaign Owner; for a Society 
 ### Age and children
 
 **8. Build the checkout age confirmation, and remove the donate age gate.**
-Replace `DonateDobGate` with: *"I am 18 or over, or I have the permission of a parent or guardian to make this donation."* Actively confirmed, on every donation including guest donations, wording and version stored. This is the only control at the point where a child parts with money.
+Replace `DonateDobGate` with: *"I am 18 or over."* **Not** the parent-or-guardian-permission alternative from earlier drafts — that branch was decided against building, not deferred (6 Aug 2026, see TRUTH.md, Age section). Actively confirmed, on every donation including guest donations, wording and version stored. This is the only control at the point where a child parts with money.
 *Source: ToS 11.4; Donor 2.2; Children's RA §8 item 1; Society Forms 8.3 item 1.*
 
 ### Online safety

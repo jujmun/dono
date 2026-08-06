@@ -8,7 +8,7 @@
 
 **How to use it.** Read this before drafting anything. Update it the day a decision is made, not later. Every entry carries the date it was settled, so a stale entry is visible.
 
-**Last updated:** 31 July 2026
+**Last updated:** 6 August 2026
 
 ---
 

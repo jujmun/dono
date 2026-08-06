@@ -3,7 +3,7 @@
 **Version:** Working draft v2.2 — 31 July 2026
 **Status:** DRAFT — NOT FOR PUBLICATION. Applies the counsel review, the founder's amendments and the engineering configuration answers of 31 July 2026. Requires final UK solicitor sign-off on the consumer-law analysis. Open items marked **[SOLICITOR SIGN-OFF]** or **[ENGINEERING — BUILD REQUIRED]**.
 
-> **What changed from v2.1:** **anyone may donate, at any age**, with an age confirmation at checkout and a route for a parent or guardian; contract **formation** is rebuilt around a standing offer and Dono's agency; the **£100 liability cap is removed**; the **fee rate table is corrected**; both **fee structures** are explained, including who is buying Dono's service in each; **"hide my name" is narrowed** to public display, with the Stripe limitation stated; **Recurring Donations and Match Windows** are added; the claim that Dono can withhold a Campaign Owner's payouts is removed.
+> **What changed from v2.1:** **anyone may donate, at any age**, with a flat 18-or-over age confirmation at checkout (no parent-or-guardian-permission alternative — decided against, 6 Aug 2026); contract **formation** is rebuilt around a standing offer and Dono's agency; the **£100 liability cap is removed**; the **fee rate table is corrected**; both **fee structures** are explained, including who is buying Dono's service in each; **"hide my name" is narrowed** to public display, with the Stripe limitation stated; **Recurring Donations and Match Windows** are added; the claim that Dono can withhold a Campaign Owner's payouts is removed.
 
 ---
 

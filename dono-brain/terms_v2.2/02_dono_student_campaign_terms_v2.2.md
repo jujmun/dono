@@ -33,7 +33,7 @@
 
 3.3 **Reverification** occurs each October, or on the card expiry date if earlier; a check within the preceding three months defers reverification to the next cycle. Dono also reverifies your status at Campaign creation. While a reverification is pending and in time, your Campaign runs normally.
 
-3.4 **Age.** You must be at least 18 to hold an account and therefore to create a Campaign. **You declare your date of birth; this is a declaration, not a verified age check.** Your student card is not relied on as proof of age, and the Payment Provider's identity check does not reliably return a date of birth in every flow, so Dono does not rely on it for age.
+3.4 **Age.** There is no minimum age to hold an account. You must be at least 18 to create a Campaign — checked at that step. **You declare your date of birth; this is a declaration, not a verified age check.** Your student card is not relied on as proof of age, and the Payment Provider's identity check does not reliably return a date of birth in every flow, so Dono does not rely on it for age.
 
 3.5 Completion of Dono's checks and the pre-publication validation does not verify every campaign statement, the authenticity of documents, the accuracy of costs, the viability of your Project, your future conduct, institutional endorsement, or completion. Dono does not use "Verified" badges.
 
