@@ -78,12 +78,14 @@ export default function AdminReportsPage() {
   const [deletingCommentId, setDeletingCommentId] =
     useState<Id<"campaignComments"> | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [info, setInfo] = useState<string | null>(null);
 
   const handleResolve = async (
     id: Id<"contentReports">,
     resolution: "resolved" | "dismissed",
   ) => {
     setError(null);
+    setInfo(null);
     setBusy({ id, resolution });
     try {
       await resolveReport({
@@ -104,9 +106,11 @@ export default function AdminReportsPage() {
 
   const handleDeleteComment = async (commentId: Id<"campaignComments">) => {
     setError(null);
+    setInfo(null);
     setDeletingCommentId(commentId);
     try {
       await deleteComment({ commentId });
+      setInfo("Comment deleted.");
     } catch (err) {
       setError(getFriendlyAuthError(err));
     } finally {
@@ -153,6 +157,12 @@ export default function AdminReportsPage() {
         {error ? (
           <View className="mb-4 rounded-xl bg-rose-50 px-4 py-3">
             <Text className="text-sm text-rose-700">{error}</Text>
+          </View>
+        ) : null}
+
+        {info ? (
+          <View className="mb-4 rounded-xl bg-green-50 px-4 py-3">
+            <Text className="text-sm text-green-700">{info}</Text>
           </View>
         ) : null}
 
@@ -221,9 +231,19 @@ export default function AdminReportsPage() {
 
                   {report.commentSnippet ? (
                     <View className="mt-3 rounded-xl border border-dono-border bg-dono-surface-muted px-4 py-3">
-                      <Text className="text-sm italic text-dono-text">
+                      <Text
+                        className={cn(
+                          "text-sm italic",
+                          report.commentDeleted ? "text-dono-muted line-through" : "text-dono-text",
+                        )}
+                      >
                         &quot;{report.commentSnippet}&quot;
                       </Text>
+                      {report.commentDeleted ? (
+                        <Text className="mt-1 text-xs font-retro-bold text-dono-muted">
+                          This comment has been deleted.
+                        </Text>
+                      ) : null}
                     </View>
                   ) : null}
 
@@ -262,23 +282,32 @@ export default function AdminReportsPage() {
                   )}
 
                   {report.targetType === "comment" && report.commentId ? (
-                    <Pressable
-                      onPress={() => void handleDeleteComment(report.commentId!)}
-                      disabled={deletingCommentId !== null}
-                      className={cn(
-                        "mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-rose-300 bg-rose-50 py-3",
-                        deletingCommentId !== null ? "opacity-50" : "",
-                      )}
-                    >
-                      {deletingThisComment ? (
-                        <ActivityIndicator size="small" color="#be123c" />
-                      ) : (
-                        <Trash2 size={16} color="#be123c" />
-                      )}
-                      <Text className="font-retro-bold text-sm text-rose-700">
-                        {deletingThisComment ? "Deleting..." : "Delete comment"}
-                      </Text>
-                    </Pressable>
+                    report.commentDeleted ? (
+                      <View className="mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-dono-border bg-dono-surface-muted py-3">
+                        <Check size={16} color="#56615A" />
+                        <Text className="font-retro-bold text-sm text-dono-muted">
+                          Comment removed
+                        </Text>
+                      </View>
+                    ) : (
+                      <Pressable
+                        onPress={() => void handleDeleteComment(report.commentId!)}
+                        disabled={deletingCommentId !== null}
+                        className={cn(
+                          "mt-3 flex-row items-center justify-center gap-2 rounded-xl border border-rose-300 bg-rose-50 py-3",
+                          deletingCommentId !== null ? "opacity-50" : "",
+                        )}
+                      >
+                        {deletingThisComment ? (
+                          <ActivityIndicator size="small" color="#be123c" />
+                        ) : (
+                          <Trash2 size={16} color="#be123c" />
+                        )}
+                        <Text className="font-retro-bold text-sm text-rose-700">
+                          {deletingThisComment ? "Deleting..." : "Delete comment"}
+                        </Text>
+                      </Pressable>
+                    )
                   ) : null}
 
                   <View className="mt-4 flex-row gap-2">
