@@ -127,6 +127,7 @@ export const listOpenForAdmin = query({
         let targetTitle: string | null = null;
         let targetCampaignSlug = r.campaignSlug;
         let commentSnippet: string | null = null;
+        let commentDeleted = false;
 
         if (r.targetType === "campaign" && r.campaignSlug) {
           const campaign = await ctx.db
@@ -138,6 +139,7 @@ export const listOpenForAdmin = query({
           const comment = await ctx.db.get(r.commentId);
           if (comment) {
             targetCampaignSlug = comment.campaignSlug;
+            commentDeleted = comment.deletedAt != null;
             commentSnippet =
               comment.body.length > COMMENT_SNIPPET_LENGTH
                 ? `${comment.body.slice(0, COMMENT_SNIPPET_LENGTH)}…`
@@ -147,6 +149,8 @@ export const listOpenForAdmin = query({
               .withIndex("by_slug", (q) => q.eq("slug", comment.campaignSlug))
               .unique();
             targetTitle = campaign?.title ?? null;
+          } else {
+            commentDeleted = true;
           }
         } else if (r.targetType === "society" && r.societySlug) {
           const society = await ctx.db
@@ -173,6 +177,7 @@ export const listOpenForAdmin = query({
           campaignSlug: targetCampaignSlug,
           commentId: r.commentId,
           commentSnippet,
+          commentDeleted,
           societySlug: r.societySlug,
           targetTitle,
           reason: r.reason,
