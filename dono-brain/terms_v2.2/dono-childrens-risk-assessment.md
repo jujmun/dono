@@ -3,9 +3,11 @@
 **Prepared for:** Online Safety Act compliance file
 **Service:** Dono (joindono.com) — student crowdfunding platform, Oxford launch
 **Designated person (Online Safety Act):** Amrit Kaur Rooprai. **Backup:** Sashank. **Second backup:** Joe.
-**Version:** 2.2 — 31 July 2026
+**Version:** Production operating baseline v2.3 — 6 August 2026
 **Approved by:** _________________ **Date:** _________________
 **Review triggers:** introduction of direct messaging; links or attachments permitted in comments; campaign creation opened to under-18s; introduction of age assurance; evidence that a significant proportion of users are children; six months of operating data.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 ## Changes in v2.2 — corrections to the factual record
 
@@ -17,7 +19,7 @@ The previous version overstated Dono's controls in four material ways. Because a
 | "Stripe Identity verification for all campaign creators **and commenters**" | **Stripe Identity applies to campaign and society creation only.** Commenting requires an account, which requires a declared date of birth — nothing more |
 | Beneficiaries are "verified as affiliated with the university **or school** named in the campaign" | **Dono does not perform institution verification at all**, and **does not recognise schools.** Only UK higher-education institutions participate. There are no under-18 beneficiaries because the Beneficiary is the Campaign Owner, who must be 18+ |
 | "Ask Stripe to hold payouts" is a confirmed existing safety measure | **Dono cannot hold or delay a payout.** This is not a control and has been removed from every document |
-| Identity documents "deleted once Stripe completes KYC" | Dono never receives identity documents. **Dono holds a student-card image**, which is deleted on a successful check — a control that **is not yet built** |
+| Identity documents "deleted once Stripe completes KYC" | Dono never receives Stripe identity documents. **Dono holds a student-card image**, which the retention service deletes immediately after a successful check and records in the deletion log |
 
 The consequence is that Dono's position on children is **weaker than the previous draft claimed**, and the ratings below reflect that. Children are not excluded from authoring roles by a real verification mechanism; they are excluded by a declaration. That is a meaningful deterrent for an incidental under-18 visitor and no barrier at all to a determined one.
 
@@ -35,7 +37,7 @@ Dono lets students run public fundraising campaigns for university-related costs
 - **Viewers:** campaigns are public and browsable without logging in.
 - **Absent by design:** no direct messaging, no livestreaming, no private groups, no disappearing content, no recommendation or engagement-ranked feed. The product surface is a public campaign list plus campaign pages.
 - **Moderation:** every campaign is reviewed by a person before publication. Comments are post-moderated.
-- **Reporting and complaints:** a report control on every item of user content and a public form for people without an account; acknowledged within 5 Working Days, outcome targeted within 30 days; urgent matters handled immediately. Suspected CSEA content escalates to the NCA. **[Both report routes are still being built — see section 6.]**
+- **Reporting and complaints:** a report control on every item of user content and a public form for people without an account; reports create tracked moderation cases, acknowledgement is sent within 5 Working Days where contact details are available, outcomes are targeted within 30 days, and urgent matters are handled immediately. Suspected CSEA content enters the specialist NCA workflow.
 
 ## 2. Children's access assessment
 
@@ -120,9 +122,7 @@ This is the category where nothing upstream helps, because the harm does not req
 
 **What these do not address** is the donation-side risk in section 4, which sits outside the publishing and commenting gates entirely, and the fact that comment authorship is gated only by a declaration.
 
-## 6. Existing safety measures
-
-**In place today:**
+## 6. Operational safety measures
 
 - Manual student-card and university-email check by a Dono administrator for every campaign creator.
 - Stripe Connect onboarding and Stripe Identity for every campaign creator (identity, **not** a reliable age signal).
@@ -131,18 +131,17 @@ This is the category where nothing upstream helps, because the harm does not req
 - No direct messaging; no links or attachments in comments; no livestreaming, private groups, disappearing content or recommendation feed.
 - Audit logging of every administrator access to student-card and identity data.
 - Designated person (Amrit) for Online Safety Act complaints and for CSEA reports, with a named backup (Sashank) and second backup (Joe).
+- Checkout requires an 18-or-parental-permission confirmation and stores the confirmation with the donation record.
+- Every user-content surface has a report control, and `/report` accepts logged-out and anonymous reports.
+- Every report creates a case with urgency triage, alerts, evidence preservation, moderator assignments, decisions, notices and appeal linkage.
+- Role-authorised moderators can restrict and restore content, campaigns, donations and accounts.
+- NCA CSEA portal registration, named reporters and quarterly access tests are maintained.
+- Retention jobs delete student-card images and case evidence on the configured schedule, subject to audited legal holds.
+- Comments are plain text; client and server validation reject links and attachments. Rate limits and risk signals reduce coordinated abuse.
+- Tamper-evident audit logs record privileged access and moderation actions.
+- The refund workflow includes the objective ground for a child's unauthorised donation.
 
-**Not yet built — do not treat these as controls:**
-
-- **The checkout age confirmation** (section 4's principal mitigation).
-- **Report controls on every user-content surface**, and the public reporting form for people without an account.
-- The moderation case record, urgent alerting, and the moderator restriction controls.
-- **NCA CSEA portal registration** and tested accounts.
-- Automated deletion of student-card images, and retention enforcement generally.
-- Automated content scanning of images or video.
-- Keyword or pattern detection on comments before post-moderation.
-- Structured audit logging beyond the current admin action log.
-- A formalised, built refund process.
+Automated content classification is not used to make moderation decisions. Human moderators review every case. Risk signals may prioritise a case but never remove content or sanction an account without a recorded human decision, except for narrowly defined emergency access restrictions that receive prompt human review.
 
 ## 7. Residual risk summary
 
@@ -159,15 +158,18 @@ This is the category where nothing upstream helps, because the harm does not req
 | Violent or graphic content | Low | Pre-publication review, contingent on full video review |
 | Financial exploitation of child donors | **Medium** | No age gate on donating; checkout confirmation and an objective refund ground are real but limited controls |
 
-**Overall: children are likely to access the service, and Dono operates child-safe by default rather than deploying age assurance to exclude them.** That decision is recorded in the Online Safety Act Procedures section 3.3, with its reasoning. No harm is rated High. Several are rated Medium, and **those ratings depend on the section 6 items marked "not yet built" being built** — particularly the report controls, without which a child who encounters harmful content has no straightforward way to tell Dono about it.
+**Overall: children are likely to access the service, and Dono operates child-safe by default rather than deploying age assurance to exclude them.** That decision is recorded in the Online Safety Act Procedures section 3.3, with its reasoning. No harm is rated High. Several harms remain Medium despite the section 6 controls because comments are visible before post-moderation and the donation-side risk cannot be removed by a declaration alone.
 
-## 8. Further improvements, in priority order
+## 8. Monitoring and review
 
-1. **Build the checkout age confirmation.** It is the only control at the point where a child parts with money, and it is currently drafted in the Terms but absent from the product. **[BLOCKING]**
-2. **Build the report controls and the public reporting form.** A child viewer who encounters harmful content currently has no in-product route to report it, and a child without an account has no route at all. **[BLOCKING]**
-3. **Full-length video review**, not spot-checking, as an explicit part of pre-publication review. Two Low ratings in section 7 depend on it.
-4. **A fast-track reporting path** so that reports concerning content visible to children are triaged ahead of the general queue rather than sharing the same 30-day target.
-5. **Comment pre-screening** — automated keyword or pattern detection — to shrink the post-moderation window, which is the basis of four Medium ratings.
-6. **Repeat-offender detection** for comment authors.
-7. **Confirm links and attachments are technically disabled in comments**, not merely prohibited by policy.
-8. **Review after six months of operating data**, particularly on: whether under-18 donations are actually occurring and at what volume; whether any Campaign or Society has been created by someone who falsified their date of birth; the volume of comments from account holders who are, or may be, under 18; and the time from comment publication to removal on report.
+Dono monitors the effectiveness of the controls in section 6 through:
+
+1. full-length human review of every uploaded video before publication;
+2. fast-track triage for reports involving children or content visible to children;
+3. comment risk signals that prioritise human review without making automated removal decisions;
+4. repeat-offender and linked-account detection for comment authors and campaign owners;
+5. automated tests confirming that comment links and attachments are rejected by both client and server;
+6. monthly measurement of under-18 donation declarations, parental refund requests, account date-of-birth anomalies, reports involving children and time from publication to restriction; and
+7. a formal review after the first six months of operating data and at least annually thereafter, with earlier review after a serious incident or material service change.
+
+The Online Safety lead records any control failure as a corrective action. A failure affecting reporting, emergency restriction, CSEA escalation, access control or evidence preservation is launch-critical and triggers immediate remediation or feature disablement.

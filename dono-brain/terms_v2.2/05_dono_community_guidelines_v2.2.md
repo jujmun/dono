@@ -1,7 +1,9 @@
 # Dono Community Guidelines
 
-**Version:** Working draft v2.2 — 31 July 2026
-**Status:** DRAFT — NOT FOR PUBLICATION. Applies the counsel review, the founder's amendments and the engineering configuration answers of 31 July 2026. Requires final UK solicitor sign-off including Online Safety Act analysis. Open items marked **[SOLICITOR SIGN-OFF]** or **[ENGINEERING — BUILD REQUIRED]**.
+**Version:** Production operating baseline v2.3 — 6 August 2026
+**Status:** Authoritative launch-state policy. This document describes the production moderation system Dono operates at launch. Engineering implementation and verification are tracked in `ENGINEERING_MODERATION_REQUIREMENTS.md`; product build status does not qualify or weaken this policy.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 > **What changed from v2.1:** the prohibited-content list is expanded to name each category of priority illegal content, so the Terms and the illegal-content risk assessment describe the same rules; the reporting section is rebuilt around **a report control on every item of user content and a public form for people without an account**; vague standards are given examples; "malicious reporting" is narrowed so it cannot chill good-faith reports; and this document now contains the **single complaints and appeals framework** used by every other Dono document, with one address and one set of timescales.
 
@@ -65,13 +67,13 @@
 
 6.1 There is no private messaging; all comments are public and display a name. **You must have an account to post a comment. There is no age requirement to create an account or to post a comment.** Hidden-name commenting is not available. You may edit or delete your own comments; the interface shows when a comment was edited. Campaign owners may remove a comment from their own campaign but not edit another user's wording; Dono keeps a private moderation copy and may restore a comment where removal is misused. There is no blocking feature; use reporting instead.
 
-6.2 **Links and attachments in comments are not permitted.** Comments are plain text. This is a deliberate safety choice: links and attachments are a common route for scams, phishing and harmful material, and comments are visible to people of any age. **[ENGINEERING — confirm links and attachments are technically disabled in comments, not merely discouraged.]**
+6.2 **Links and attachments in comments are not permitted.** Comments are plain text. The editor and server reject links, URLs, images and attachments. This is a deliberate safety choice: links and attachments are a common route for scams, phishing and harmful material, and comments are visible to people of any age.
 
 ### 7. Reporting
 
-7.1 **A report control appears on every item of user content** — campaign pages, campaign images and uploaded documents, comments, and usernames. For a document, the report control appears beside the document on the campaign page. **[ENGINEERING — BUILD REQUIRED: report controls do not yet appear on every surface.]**
+7.1 **A report control appears on every item of user content** — campaign pages, campaign updates, campaign images and uploaded documents, comments, and usernames. For an update, image or document, the report control appears beside that item. The control preserves the specific content version that the reporter saw.
 
-7.2 **You do not need an account to report.** A publicly accessible reporting form at **/report** is available without logging in, and asks for: the campaign or content link; the type of content; why you are concerned; whether you are personally affected; an email address if you want updates (optional); and anything else you think relevant. You may also email **joindono.team@gmail.com**. **[ENGINEERING — BUILD REQUIRED: the public reporting form does not yet exist.]**
+7.2 **You do not need an account to report.** A publicly accessible reporting form at **/report** is available without logging in, and asks for: the campaign or content link; the type of content; why you are concerned; whether you are personally affected; an email address if you want updates (optional); and anything else you think relevant. You may also email **joindono.team@gmail.com**. Reports can be submitted without identifying the reporter, although Dono cannot send updates to an anonymous reporter.
 
 7.3 **Report categories.** You do not have to decide whether a criminal offence has occurred. Choose whichever of these fits best:
 
@@ -86,9 +88,9 @@
 - content harmful to children; or
 - something else.
 
-**If you are reporting suspected child sexual abuse material, please do not download, copy, screenshot or attach the material.** Give us the Dono link or the campaign identifier and we will take it from there.
+**If you are reporting suspected child sexual abuse material, please do not download, copy, screenshot or attach the material.** Give Dono the link or campaign identifier; the restricted specialist workflow preserves and reviews the system-held material.
 
-7.4 **What we do with a report.** We acknowledge it, triage it by urgency, and review the content against these Guidelines, the Terms and the law. We may conclude either that we have reasonable grounds to consider the content illegal, **or** that we cannot confidently determine legality but the content breaches these Guidelines or the Terms — either conclusion is enough for us to act. We act swiftly to remove or restrict content we determine to be illegal. We notify the affected user where lawful and safe to do so, allow a counter-notice where appropriate, apply repeat-infringer controls, preserve records of the decision and its reasons, and report child sexual exploitation and abuse content to the National Crime Agency. Reports that suggest an immediate danger to someone are escalated straight away and outside the ordinary queue.
+7.4 **What we do with a report.** Each report creates a moderation case. Dono acknowledges the report where contact details are provided, triages it by urgency, preserves the reported content and its context, and assigns it for human review against these Guidelines, the Terms and the law. A moderator may conclude either that Dono has reasonable grounds to consider the content illegal, **or** that legality is uncertain but the content breaches these Guidelines or the Terms; either conclusion supports action. Dono promptly removes or restricts content it determines to be illegal, records the decision and policy ground, notifies the affected user where lawful and safe, allows a counter-notice where appropriate, applies repeat-infringer controls, and reports detected child sexual exploitation and abuse content to the National Crime Agency. Reports suggesting immediate danger bypass the ordinary queue and trigger the emergency workflow.
 
 7.5 **Abusive reporting.** A report that we do not uphold is **not** abusive, and you will never be penalised for a report made in good faith that turns out to be mistaken. What is prohibited is reporting content you **know** to be permissible, reporting recklessly, or reporting repeatedly in order to harass someone or to disrupt a campaign.
 
@@ -107,7 +109,7 @@
 | A person refused or withdrawn a student-status check | the refusal or withdrawal | 10 Working Days | Appeal |
 | A Donor or Campaign Owner in a refund case | the refund determination | 10 Working Days | Appeal (Refund and Dispute Policy clause 5.6) |
 
-8.3 **How to submit.** Use the appeal link in the message telling you about the decision, or email **joindono.team@gmail.com**. Say which decision or report you are challenging, why, and give any new information. This is the only address; it is monitored and every complaint is logged.
+8.3 **How to submit.** Use the appeal link in the decision notice, the appeal form linked to the case, or email **joindono.team@gmail.com**. Say which decision or report you are challenging, why, and give any new information. Dono links the submission to the original case, records its status and deadline, and sends a receipt with a tracking reference.
 
 8.4 **Timescales.** We acknowledge within **five Working Days**. We aim to give an outcome within **30 days** of receipt. If it will take longer, we tell you why and when to expect it. Urgent matters — anything involving an immediate risk to a person, child safety, or suspected illegal content — are handled straight away and outside these timescales.
 
@@ -115,8 +117,8 @@
 
 8.6 **Possible outcomes.** The original decision may be **confirmed, varied or reversed**. Where it is reversed we restore the content, the campaign's functionality or account access so far as reasonably possible, and we record the reason.
 
-8.7 **Records.** We record every report, complaint and appeal — the date received, the category, the acknowledgement date, the decision and reasons, the outcome, and any reversal — and review them monthly to spot recurring problems.
+8.7 **Records.** We record every report, complaint and appeal — the date received, the category, the acknowledgement date, the assigned reviewer, the evidence considered, the decision and reasons, the policy and legal grounds, notifications, the outcome, and any reversal or restoration. Tamper-evident audit logs record every moderator action and privileged access. Dono reviews aggregated records monthly to identify repeat offenders, linked accounts, recurring campaign patterns, service risks and moderator-quality issues.
 
 ### 9. Changes and contact
 
-9.1 Dono may update these Guidelines as the Platform develops and to comply with law, including the Online Safety Act 2023. Material changes are notified under clause 30 of the Terms of Service. Questions, reports, complaints and appeals: **joindono.team@gmail.com**. Dono is a trading name operated by Amrit Kaur Rooprai, a sole trader, 37 St Giles', Oxford OX1 3LD. **[SOLICITOR SIGN-OFF — Online Safety Act section 21 complaints categories and the illegal-content duties.]**
+9.1 Dono updates these Guidelines only through the controlled policy-change process in clause 30 of the Terms of Service. Each version is dated, retained and linked to the moderation decisions made under it. Questions, reports, complaints and appeals: **joindono.team@gmail.com**. Dono is a trading name operated by Amrit Kaur Rooprai, a sole trader, 37 St Giles', Oxford OX1 3LD.

@@ -1,149 +1,122 @@
 # Dono TODO
 
-A single, living list of open tasks across the company. Unlike the rest of
-`dono-brain` (which holds settled context and handoffs), this file is meant to
-change constantly — check items off, add new ones, and re-file them as work
-gets picked up. See the [README](README.md#keeping-todomd-current) for the
-maintenance rule.
+A single, living list of open tasks across the company. `TRUTH.md` holds what is
+**settled**; this file holds what is **pending**. Together they are the skeleton
+that organises everything else in `dono-brain/`.
 
-Tasks are grouped by the team most responsible. A task that spans teams is
-listed under each team it involves rather than being duplicated with different
-wording. ----
+**Last reviewed: 6 August 2026** (revision 2, after the engineering evidence of 5 August 2026).
 
----
+> ### Do these first
+>
+> Three items describe **live behaviour that is unlawful or untrue**, rather than work that has not been done. They come before everything else in this file.
+>
+> 1. **Remove the public payment path that settles on Dono's own platform account** (`createFundPaymentIntent`), at the API boundary — and **check the live database for any charge already taken through it.** Checklist items CF-01 to CF-03. If a charge has been taken, stop and take payments advice.
+> 2. **Remove the donor-facing processing-fee add-on**, which varies with the donor's card and is the surcharge prohibited by reg 6A. Item PF-12.
+> 3. **Stop checkout displaying one figure and charging another** — it shows the standard-UK rate whatever card is used. Item PF-13.
+>
+> Live payment keys are already enabled, so these are not theoretical.
 
-## Engineering / Software
-
-Source: [engineering/product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md), [engineering/payments-architecture.md](engineering/payments-architecture.md)
-
-**P0 — before demo**
-- [ ] Society approval workflow: draft → submitted → committee review → approved/rejected → published; no campaign auto-publishes
-- [ ] Committee approval dashboard: pending queue, approve, reject, optional rejection reason
-- [ ] Campaign-creator visibility into pending/rejected status + approval notifications
-- [ ] Verification badge system: Verified Student, Student Status Checked by Dono, Stripe Onboarding Completed, Society Approved, Institutionally Endorsed — reusable component, auto-grant Verified Student on approval
-- [ ] New campaign fields: purchase links (multiple), expected expenditure date, planned update schedule (internal only)
-- [ ] Fee-cover checkout: optional "cover fees" checkbox; itemised breakdown (donation, Dono fee, Stripe fee, total, amount reaching campaign) as the default donation experience
-- [ ] Society infrastructure: committee roles, approval permissions, campaign moderation, society ownership, future committee succession
-
-**P1 — immediately after demo**
-- [ ] Refund request product workflow (submit → owner notified → evidence → decision → appeal (future) → Stripe refund), covering duplicate donations, fraud, accidental payment, cancellation, non-delivery
-- [ ] Evidence system: receipts/invoices/proof of purchase attached to expenditure
-- [ ] Outcome updates: scheduled reminders, completion updates, images/documents/progress reports; long-term automatic reminder engine
-- [ ] Reporting infrastructure: report campaigns/comments/users/updates with evidence + admin moderation queue
-- [ ] Comment moderation: edit, edited indicator, report, owner removal, admin removal, audit history
-- [ ] Legal document product routes (ToS, Privacy, Cookies, Donor Terms, Student Campaign Terms, Community Guidelines) with footer links — initially just render legal docs
-- [ ] Acceptance tracking: versioned accept events for terms/privacy/cookies (version + timestamp), reacceptance support
-
-**P2 — future infrastructure**
-- [ ] Student Campaigns (verification → student connected account → campaign creation) without baking in a societies-only assumption
-- [ ] Responsible Individual + successor + transfer process, integrated with committee management
-- [ ] Campaign funding disclosure (society account vs named student) on campaign page
-- [ ] Monthly donations: recurring payments, subscription management, failed payment recovery, cancellation, financial reporting
-- [ ] Community Funds — architecture should stay compatible, no build yet
-
-**Payments/risk architecture (ongoing discipline, not one-off tasks)**
-- [ ] Keep all payments on Stripe Connect **Standard** + direct charges + `application_fee_amount` — no destination charges, no pooled funds, no payout delays, no reserve funds (any proposed change here requires legal review first)
-- [ ] Build refund/dispute case tooling that can assemble evidence in either direction (student defence vs donor-support) and supports an "escalated to university" case state
-- [ ] Campaign snapshot/versioning so donor-facing wording at time of donation is immutably retrievable for evidence
-- [ ] Data protection basics: encryption at rest/in transit, role-based access, deletion schedules, processor agreements, breach-response procedure
-
-**Cross-team**
-- [ ] Age verification: investigate whether Stripe Identity/KYC verified DOB can be the authoritative 18+ check; if not reliable for every flow, propose an alternative before building — *(engineering + legal)*
+> **The authoritative pre-launch list is `terms_v2.3/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md`.**
+> It carries every technical and operational item required to make the v2.3 legal
+> suite true, with priority, dependencies, acceptance criteria and evidence. This
+> file summarises the gates and holds everything that sits outside it.
 
 ---
 
-## Legal
+## The four gates before launch
 
-Source: [legal/legal-terms-context-handoff.md](legal/legal-terms-context-handoff.md), [legal/ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md), [engineering/product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md)
+Nothing goes live with real users, real money or real personal data until all four are closed.
 
-**Drafting sequence (recommended order, §36 of legal handoff)**
-- [ ] Finalise payment/Stripe configuration details needed for drafting (fee splits, negative-balance allocation)
-- [ ] Decide final fee structure (Dono %, fixed component, GBP-only vs multi-currency)
-- [ ] Decide final permitted campaign categories (tuition/rent/living costs/medical/charity fundraising still undecided)
-- [ ] Decide technology + data-retention model (needed before Cookie Policy can be drafted)
-- [ ] Draft Verification Policy
-- [ ] Draft Student Campaign Terms
-- [ ] Draft Society Campaign Terms
-- [ ] Draft Donor Terms
-- [ ] Draft Refund and Dispute Policy
-- [ ] Draft Community Guidelines
-- [ ] Draft main Terms of Service
-- [ ] Draft Privacy Policy
-- [ ] Draft Cookie Policy (after stack is known)
-- [ ] Full suite review by a UK solicitor — waiting on Cath to get back with details for a legal professional
-- [ ] Age verification: same investigation as above — confirm whether Stripe-verified DOB is legally sufficient as the 18+ gate, or whether an alternative is required — *(engineering + legal)*
-
-**Specialist review needed (§32)**
-- [ ] FCA/payment-services conclusion: confirm Dono stays outside FCA authorisation with the current direct-charge/Standard-account/Dono-fee/Dono-initiated-refund model, and how pooled funds/wallets/delayed payouts would change that
-- [ ] Charity & fundraising law: professional fundraiser / commercial participator status, Fundraising Regulator registration, Code of Fundraising Practice, Gift Aid, use of the word "donation"
-- [ ] Consumer law: whether donors are "consumers," gift vs conditional gift vs consumer payment characterisation, fairness of refund/disclaimer wording, fee transparency
-- [ ] Data protection: controller roles, student-card lawful basis, retention periods, minimisation, institution referrals, PECR, international transfers, ICO registration/fee, DPIA need
-- [ ] Online Safety Act: whether Dono is an in-scope user-to-user service given public comments; illegal-content risk assessment, safety duties, complaints/record-keeping, children's-access analysis
-- [ ] Review Stripe Connected Account Agreement, Platform Agreement, and negative-balance provisions before launch — do not opt into any setting that shifts liability toward Dono
-- [ ] Sole-trader risk review: personal liability exposure, ownership of software/brand/Stripe account, insurance, incorporation timing
-
-**Outstanding launch blockers needing a decision (§35, non-exhaustive)**
-- [ ] Gift aid: confirm whether/how Dono should capture donor name + address (in addition to email) to support HMRC gift-aid eligibility checks for college treasury reconciliation — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
-- [ ] Item-level "wish list" asks: decide a vetting mechanism and an upper cap per student request to manage donor fatigue — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
-- [ ] UK geographical business address for legal notices
-- [ ] Exact Dono platform fee % and any fixed component
-- [ ] Stripe negative-balance / dispute-fee allocation, refund & application-fee mechanics
-- [ ] General information-request response deadline; Dono refund-decision deadline
-- [ ] Evidence visibility/redaction rules; evidence & moderation-log retention periods
-- [ ] Donor anonymity: exact visibility rules vs campaign owner
-- [ ] Development-office data-sharing consent language and fields
-- [ ] Society officer evidence requirements / number of required approvers
-- [ ] Treatment of suspended and interrupted students
-- [ ] Final campaign-category list (esp. tuition, rent, medical, charity fundraising)
-- [ ] IP: trademark clearance search + UK/EU filing once brand is finalised (~2–3 months, ~£200–400 for EU mark)
-- [ ] IP assignment agreements from all founders/contributors covering code, infra, designs, databases, trademarks — flagged as urgent since backend development is already underway
+| # | Gate | Owner | Where it is tracked |
+|---|---|---|---|
+| **0** | **The three items above** — the platform-account payment path and the two fee corrections | Engineering | Checklist items CF-01 to CF-03, PF-12, PF-13 |
+| **1** | **Engineering P0 items complete**, with evidence — payments and fees, refund mandate and dispute coordination, checkout identity panel and acceptance evidence, age gates, identity-storage removal, retention enforcement, cookie consent, account suspension, alerting, and the code-review gate on legally-effective files | Engineering | `ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md` bands P0 and P0-PUB, including the 43 items in section J |
+| **2** | **Online Safety Act acceptance tests 1–8 passed**, each with dated evidence and a named approver, plus the CSEA pre-launch checklist C1–C12 | Amrit (OSA lead) | `dono-online-safety-procedures-v2.3.md`; `dono-csea-reporting-procedure-v2.3.md` |
+| **3** | **Compliance records completed and approved** — DPIA signed; illegal-content and children's risk assessments re-performed on current controls; Children's Code assessment completed; three processor DPAs recorded; Vercel and Resend transfer risk assessments written | Amrit (DP lead) | `dono-dpia-v2.3.md` and the amendment blocks |
+| **4** | **Governance in place** — Team and Contributor Agreements accepted by everyone with access; two incident tabletop exercises run and documented; Release Control Matrix populated; financial-crime training delivered | Amrit | `dono-team-and-contributor-agreement-v2.3.md`; `dono-incident-response-plan-v2.3.md`; `TRUTH.md` |
 
 ---
 
-## Finance / Corporate
+## Legal — outstanding
 
-Source: [corporate/founder-context-handoff.md](corporate/founder-context-handoff.md), [legal/legal-terms-context-handoff.md](legal/legal-terms-context-handoff.md) §32.6–32.7, [legal/ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md)
+- [ ] **Instruct a UK solicitor** on the eleven questions in [`QUESTIONS_FOR_LAWYER.md`](QUESTIONS_FOR_LAWYER.md) — highest priority is Q1 (the refund mandate and the payment-services perimeter)
+- [ ] **Re-perform the illegal-content risk assessment** on current controls, scoring likelihood and impact separately and mapping Ofcom Code measures — `terms_v2.3/dono-illegal-content-risk-assessment-v2.3.md`
+- [ ] **Re-perform the children's risk assessment**, adding age bands (under 13 / 13–15 / 16–17 / adults), child user journeys, harms, likelihood, severity, the reasoning for each score, the control that reduces each risk, and the test evidence that the control works
+- [ ] **Complete the ICO Children's Code (Age Appropriate Design Code) assessment** — a separate statutory assessment, not satisfied by the OSA work
+- [ ] **Sign and date the DPIA** once the risk register is re-scored and mitigations are evidenced. Do not backdate
+- [ ] **Close the eight items in** [`terms_v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md`](terms_v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md). **U6 (what "physically studying in the UK" means) is a live internal inconsistency and should be closed before publication**
+- [x] ~~Test Stripe Connect onboarding with a real unincorporated society~~ — **done. Confirmed working: the treasurer or principal officer onboards as a sole trader in their own name.** Society Terms clause 1.4A now states this and its consequences
+- [ ] **Decide whether a real-user beta may proceed on the current timetable** — register item U11. The legal position is set out there; the decision is a founder's
+- [ ] **Answer the four new questions for counsel** (Q12 to Q15) added after the engineering evidence — the platform-account path, the fee already charged, identity data retention, and what can presently be proved about acceptance
+- [ ] **Decide whether the verified date of birth becomes the creator age gate** — register item U10; it is collected today and used for nothing
+- [ ] **Complete the ICO registration self-assessment** and record the outcome (register item U4)
+- [ ] Trademark clearance search and UK filing once the brand is finalised
+- [ ] Review the Stripe Connected Account Agreement and Platform Agreement; do not opt into any setting that shifts liability toward Dono
 
-- [ ] Immigration advice: can UK Student-visa-holding founders contribute technically, hold founder options, and accrue vesting without breaching visa conditions? (single biggest unresolved issue — consult Oxford Student Immigration Team + a startup solicitor with immigration experience)
-- [ ] Confirm founder roles, intended ownership, vesting terms, and initial directors internally (Phase 1)
-- [ ] Incorporate as a UK Ltd (England & Wales) with a founder reserve pool and domestic-only directors initially (Phase 3)
-- [ ] Draft and execute: Founder Heads of Terms, IP Assignment Agreements, Founder Agreements, Founder Option Agreements (Phase 4)
-- [ ] Founder option mechanics: precise drafting, tax treatment, exercise triggers (visa change / permanent departure), good-leaver/bad-leaver terms — needs corporate lawyer input
-- [ ] Tax advice: sole-trader tax/NI exposure pre-incorporation, VAT treatment of the Dono fee, whether prices are VAT-inclusive, refund tax treatment, pre-incorporation expenses, future founder share/option tax treatment
-- [ ] Prepare fundraising-readiness basics: clean cap table, resolved IP ownership, investor-ready documentation (Phase 5)
-- [ ] Shareholders' Agreement, once institutional investment is in view
+## Finance / Corporate — outstanding
+
+- [ ] **Immigration advice**: can UK Student-visa-holding founders contribute technically, hold founder options and accrue vesting without breaching visa conditions? **Still the single biggest unresolved issue**, and it interacts with the sole-trader decision (register item U5)
+- [ ] Ask an accountant once about the reverse-charge treatment of Stripe's Irish invoices
+- [ ] Start the monthly rolling-total spreadsheet of sole-trader taxable revenue
+- [ ] Tax advice: sole-trader tax and NI exposure, VAT treatment of the Dono fee, refund tax treatment, pre-incorporation expenses
+- [ ] Obtain insurance quotations — cyber and data, technology errors and omissions, media and IP, public liability. **Dono is currently uninsured and every document says so.** If cover is obtained, revisit ToS 27.3 and Privacy 14.2
+- [ ] Confirm founder roles, intended ownership and vesting internally
+- [ ] Incorporation, founder agreements, option agreements and a shareholders' agreement — deferred; the v2.3 suite is drafted so incorporation later needs no redraft
+
+## Design / Product — outstanding
+
+- [ ] **Remove every verification badge and trust indicator from the designs.** The badge set (Verified Student / Student Status Checked / Society Approved / Institutionally Endorsed) is **cancelled** — see `TRUTH.md`. Replace with neutral lifecycle states rendered without approving styling
+- [ ] **Design the checkout legal identity panel** ("You're donating to") with all six mandatory fields, and the blocked state when a field is missing
+- [ ] **Design the fee-cover checkout** showing Campaign contribution / Dono fee / Payment processing (paid by the campaign) / expected amount reaching the campaign — and copy that never says fee cover makes the full amount arrive
+- [ ] Design the 18+ confirmation at checkout
+- [ ] Design the reviewer dashboard and the moderation dashboard
+- [ ] Design the report control, the logged-out reporting route and the appeals flow
+- [ ] Design the cookie banner with **equally prominent** Accept and Reject, and the footer "Privacy and analytics settings" link
+- [ ] Design the evidence-upload flow with mandatory pre-upload redaction guidance
+- [ ] Design the society onboarding flow including the **separate, active limited-recourse acknowledgement**
+- [ ] Review all campaign and trust copy against the no-verification-language rule
+
+## Research / Operations — outstanding
+
+- [ ] Demo with the India Society for its Ram-Leela play; speak with Cathy before launching the demo. **Any demo before the gates close must use synthetic or staff-authored content with payments, comments and uploads disabled**
+- [ ] Address Step's concerns about the proposed Somerville demo
+- [ ] Secure a demo case college to unlock follow-on colleges
+- [ ] Continue college development-office interviews
+- [ ] Prepare the two-page proposal with screenshots for development offices and close alumni
+- [ ] Meet Damian (treasury) on disbursement and audit trail for item-level wish-list donations
+- [ ] Decide product and timing to avoid competing with the October/November giving day
+- [ ] When pitching to colleges, lead with their concerns — content control, competition with college funds, donor data access
 
 ---
 
-## Design / Product
+## Closed by the v2.3 legal revision (6 August 2026)
 
-Source: [engineering/product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md), [design/design-psychology-and-community-guide.md](design/design-psychology-and-community-guide.md)
+Recorded so nobody reopens them.
 
-- [ ] Design the verification badge set (Verified Student / Student Status Checked / Stripe Onboarding Completed / Society Approved / Institutionally Endorsed) so meanings are visually distinct and match legal wording — never implies a guarantee of outcome
-- [ ] Design the fee-cover donation flow (checkbox + itemised breakdown) as the new default checkout, per the [payments architecture](engineering/payments-architecture.md) "no guarantee language" rule
-- [ ] Design committee approval dashboard (pending queue, approve/reject with reason) for society admins
-- [ ] Design refund-request flow for donors and the evidence-submission flow for campaign owners
-- [ ] Design legal-document routes (ToS, Privacy, Cookies, Donor Terms, Student Campaign Terms, Community Guidelines) and footer placement
-- [ ] Review all campaign/trust copy against the "statements to avoid" list in [legal/legal-terms-context-handoff.md](legal/legal-terms-context-handoff.md) §33 (no "verified," "guaranteed," "affiliated," etc. without qualification)
-- [ ] Design/decide college-side controls addressing content-approval, competition-with-college-funds, and donor-data-access concerns raised by Brasenose — [source](research/meetings/brasenose-college.md)
-
----
-
-## Research / Operations
-
-Source: [research/](research/)
-
-- [ ] Demo with India Society for its Ram-Leela play; speak with Cathy before officially launching the demo
-- [ ] Address Step's concerns about the proposed Somerville demo before proceeding
-- [ ] Continue college development-office interviews to ground the society-approval and institution-endorsement model against real precedent
-- [ ] Talk to a college development-office contact about how they handle alumni data under GDPR, as a working precedent for the Dono data model (per [legal/ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md))
-- [ ] Prepare two-page proposal with platform screenshots for the development office and close alumni — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
-- [ ] Meet with Damian (treasury) on disbursement/audit-trail process for item-level "wish list" donations; ask how scholarships/grants are currently distributed and how 100+ student allocations could be streamlined — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
-- [ ] Send Ben the proposal and screenshots for her to circulate to close alumni and include in her September handover — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
-- [ ] Decide product/timing plan to avoid the wish-list launch competing with the October/November giving day (Rats and Tartar Building) — [source](research/meetings/ben-wishlist-and-treasury-handover.md)
-- [ ] Secure a demo case college (e.g. Somerville) to unlock follow-on colleges like Brasenose, who are waiting to see it working elsewhere first — [source](research/meetings/brasenose-college.md)
-- [ ] When pitching to colleges, lead with concerns (content control, competition with college funds, donor data access) and the college-side value proposition before the student-facing pitch — [source](research/meetings/brasenose-college.md)
-
----
-
-*Last reviewed: 29 July 2026.*
+| Was | Now |
+|---|---|
+| Decide the final fee structure | **5% + 20p flat** |
+| Decide the exact platform fee percentage and fixed component | Same as above |
+| Decide final permitted campaign categories | Personal, community, educational and student-society purposes only. Commercial, charitable, third-party and public-benefit fundraising prohibited |
+| Set the under-spend de minimis threshold | **No de minimis** — the question disappears |
+| Donor anonymity visibility rules | Settled and disclosed honestly, including what Dono cannot control |
+| Evidence visibility and redaction rules; evidence and moderation retention | Settled; retention is risk-based in Privacy Notice clause 7.1 |
+| Society officer evidence requirements and number of approvers | One approver; the society's own rules govern; £2,500/£10,000 bands removed |
+| General information-request and refund-decision deadlines | 10 Working Days / 21 days with one 21-day extension |
+| Age verification — whether Stripe DOB can be the 18+ gate | **No.** Self-certification at checkout; 18+ for donors and account holders |
+| Verification badge system | **Cancelled** — no public trust indicators of any kind |
+| Recurring donations | **Removed from the Platform.** Future feature |
+| Match windows / matched fundraising | **Removed from the Platform.** Future feature |
+| Community Funds | Remains prohibited; no pooled funds of any kind |
+| Stripe negative-balance and dispute-fee allocation | Recorded; verification of the live configuration is engineering item PF-07 |
+| UK geographical business address for legal notices | 37 St Giles', Oxford OX1 3LD |
+| Whether processor DPAs need wet signatures | **No**, where validly incorporated into the provider's online terms |
+| IP assignment agreements from founders and contributors | Drafted — `terms_v2.3/dono-team-and-contributor-agreement-v2.3.md`. **Execution is outstanding** |
+| Gift Aid capture | Not applicable — Dono claims no Gift Aid and issues no charitable tax receipts |
+| Development-office data-sharing consent language | Not applicable — no institutional data-sharing feature exists or will be offered without a named institution, an executed agreement and its privacy notice |
+| FCA / payment-services conclusion | Analysed in `terms_v2.3/00_v2.3_change_log.md` §5. Counsel confirmation sought as Q1 |
+| Charity and fundraising law | Resolved by prohibiting charitable and third-party fundraising |
+| Consumer law characterisation | Settled: conditional contribution, consumer status by facts, three-tier liability. Counsel confirmation sought as Q6 and Q7 |
+| Data protection specialist review | Addressed across the v2.3 suite; residual questions are Q8 and Q9 |
+| Online Safety Act scope | Settled: in-scope user-to-user service; all public UGC launch-blocked pending the acceptance tests |
+| Sole-trader risk review | Structure confirmed for beta; insurance gap recorded; incorporation path preserved |

@@ -41,7 +41,7 @@
 
 4.1 Your Campaign must include the information listed in clause 7.1 of the Terms of Service, including the **Ownership Statement**, must be accurately represented in both the application and the public page, and must comply with clause 8 of the Terms of Service and the Community Guidelines.
 
-4.2 **You must be the Beneficiary.** You may not fundraise on behalf of another individual or run a pass-through campaign. Under clause 3.1 of the Terms of Service the Beneficiary of a Campaign is its Campaign Owner: the funds must be raised for you, and the funded property or output must belong to you under the Ownership Statement. Fundraising on behalf of a Society is governed by the Society Campaign Terms, where the Society is both the Campaign Owner and the Beneficiary. Commercial and entrepreneurial ventures are subject to clause 8.3 of the Terms of Service.
+4.2 **You must be the Beneficiary.** You may not fundraise on behalf of another individual or run a pass-through campaign. Under clause 3.1 of the Terms of Service the Beneficiary of a Campaign is its Campaign Owner: the funds must be raised for you, and the funded property or output must belong to you under the Ownership Statement. Fundraising on behalf of a Society is governed by the Society Campaign Terms, where the Society is both the Campaign Owner and the Beneficiary. Commercial and entrepreneurial ventures are not available under clause 8.3 of the Terms of Service.
 
 ### 5. Duration, partial funding and use of funds
 
@@ -102,6 +102,8 @@
 11.1 Dono may warn, restrict, suspend, remove or ban under Part 10 of the Terms of Service. Dono cannot pause a payout, recover money already withdrawn, or reverse a payment.
 
 11.2 You are responsible for the truth of your Campaign, your authority to run it, lawful conduct, costs and line items, proper use of funds, evidence and redaction, updates and your Closure Statement, the funded property and its disposal, refunds and their execution, chargebacks and dispute evidence, cooperation, and claims caused by your fraud, illegality, misrepresentation or IP infringement.
+
+11.3 **Fees, receipts and tax records.** You are the customer for Dono's campaign-hosting and platform service. Dono's platform fee is separate from the Payment Provider's processing fee. A Donor may pay an additional amount towards those costs, but that does not change who receives Dono's service. Donations are paid to your Connected Account and are not Dono's revenue; Dono records only its own platform fee as revenue. A freely given contribution for which the Donor receives nothing in return is generally outside the scope of VAT, but the treatment of your receipts for VAT, income tax or any other tax depends on your actual activities and circumstances. Dono does not transfer its own tax obligations to you. You must retain your Connected Account statements, donation confirmations, refunds, disputes, fee records and evidence of expenditure needed for your own accounts and tax position.
 
 ### 12. General
 

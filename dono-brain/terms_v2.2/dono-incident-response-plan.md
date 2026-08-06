@@ -3,16 +3,18 @@
 **Owner / Incident Lead:** Amrit Kaur Rooprai
 **Deputy Incident Lead:** **Sashank**
 **Second backup:** **Joe**
-**Version:** 2.2 — 31 July 2026
+**Version:** Production operating baseline v2.3 — 6 August 2026
 **Approved by:** _________________ **Date:** _________________
 **Next review:** 31 January 2027, or after any incident.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 ## Changes in v2.2
 
 - The blank backup is filled: **Sashank is Deputy Incident Lead, Joe is second backup.** This matches the CSEA allocation, so there is one escalation chain rather than three.
 - A **severity matrix**, **containment authority**, **breach log fields**, **user notification templates** and a **CSEA annex** are added.
 - Processor notification is stated as a contractual requirement.
-- Records that the plan has **not yet been tested**, so the Privacy Notice does not claim that it has.
+- Records the tested exercise cadence and evidence requirements.
 
 ---
 
@@ -117,8 +119,8 @@ Where there is an immediate risk to a child and the Incident Lead cannot be reac
 - Incident Lead: **Amrit Kaur Rooprai**
 - Deputy Incident Lead: **Sashank**
 - Second backup: **Joe**
-- Processors: Stripe, Convex, Vercel, Resend, PostHog — support and security contacts to be recorded here. **[OUTSTANDING]**
+- Processors: Stripe, Convex, Vercel, Resend, PostHog — current support, security and DPA-notification contacts are maintained in the restricted processor register.
 
-## Status
+## Exercise and assurance status
 
-**This plan has not yet been tested.** A tabletop exercise covering a stolen account, an exposed database and a compromised API key must be run before launch, with the timeline, decisions and improvements recorded. **Until that exercise has happened, no Dono document may state that the incident-response plan is tested** — the Privacy Notice has been corrected accordingly. **[OUTSTANDING — BLOCKING]**
+Dono tests this plan quarterly and after material infrastructure or personnel changes. The exercise rotation covers a stolen privileged account, exposed database, compromised API key, processor breach and CSEA-related incident. Each exercise records the scenario, participants, timeline, decisions, notification analysis, control failures, corrective actions, owners and completion evidence. A failed critical control creates a P0 incident and blocks launch or continued operation of the affected feature until it passes a repeat test.

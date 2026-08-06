@@ -27,6 +27,7 @@ everything.
 | [legal/](legal/) | **Legal & policy** | Terms of Service structure, eligibility, use-of-funds rules, verification, fee model, IP/branding, and data handling |
 | [corporate/](corporate/) | **Corporate & founders** | Incorporation, cap table, founder equity, vesting, immigration constraints, required documents |
 | [research/](research/) | **Research** | Student survey instrument and responses; market research; college development-office and advisor meeting notes |
+| [pitch/](pitch/) | **Investor pitch** | Competition pitch decks, speaker script, traction evidence and the pitch handoff. **Start at [pitch/HANDOFF.md](pitch/HANDOFF.md)** — it carries the whole extracted fact base so pitch work never needs to re-read the meeting notes or survey data |
 
 ---
 
@@ -78,6 +79,14 @@ everything.
   - [sean-rainey-magdalen-development-fund.md](research/meetings/sean-rainey-magdalen-development-fund.md) — Magdalen's contrarian, major-gifts-only view: skeptical of small-donor pipelines and student-led platforms.
   - [will-gregory-advisor-call.md](research/meetings/will-gregory-advisor-call.md) — Advisor call on UK vs US philanthropy culture, the difficulty of working with universities, and for-profit vs. fiscal-sponsorship structuring.
   - [brasenose-college.md](research/meetings/brasenose-college.md) — Brasenose College pitch meeting: college concerns (content control, competition with college funds, donor data access), adoption dynamics across colleges, and comparison to Hubbub.
+
+### [pitch/](pitch/) — Investor pitch
+- [HANDOFF.md](pitch/HANDOFF.md) — **the routing document for all pitch work.** Task and judging criteria, settled decisions, the complete extracted fact base (survey figures, all 11 development-office interviews, external market data, quote bank), accuracy flags and anti-patterns. Written so an agent never has to re-read `research/meetings/` or `research/responses/` for a pitch task.
+- [Dono Pitch Deck v1.pptx](pitch/) — the team's own deck. **This is the base**; all pitch work targets it.
+- [Dono_v1_Deck_Fix_List.md](pitch/Dono_v1_Deck_Fix_List.md) — slide-by-slide fixes against v1: ship-blockers, restructure, paste-ready copy, distribution-chart build instructions, timing budget.
+- [Dono_Pitch_Script_and_Playbook.md](pitch/Dono_Pitch_Script_and_Playbook.md) — full speaker script, three narrative strands with opening scripts, demo storyboard, Q&A preparation, judging-criteria map.
+- [Dono_Traction_Evidence_Inventory.md](pitch/Dono_Traction_Evidence_Inventory.md) — every traction and validation signal graded by persuasive strength, with recommended slide selection and the gaps to close.
+- [Dono_Investor_Pitch.pptx](pitch/) / [.pdf](pitch/) — a reference deck built as an alternative structure. Parts bin for copy and narrative, not the shipping deck.
 
 ---
 

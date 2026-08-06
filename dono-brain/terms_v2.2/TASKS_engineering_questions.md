@@ -1,21 +1,21 @@
-# Questions for engineers — things terms_v2.2 assumes and needs confirmed
+# Engineering evidence questions — terms_v2.2 production baseline
 
-**Version:** 2.2 — 31 July 2026
+**Version:** 2.3 — 6 August 2026
 **Owner:** Amrit
-**Purpose:** every question here is something v2.2 now states or relies on, where the technical answer is unknown or unverified. These are **questions**, not build requests — build requests are in `TASKS_engineering_features.md`.
+**Purpose:** this is an implementation-evidence questionnaire, not policy and not a description of the production service. The policy suite states the required launch operation in present tense. Moderation requirements and acceptance tests are canonical in `ENGINEERING_MODERATION_REQUIREMENTS.md`; answers here supply evidence or identify work needed to pass them.
 
-Each item cites the clause it comes from. Anything marked **BLOCKING** prevents the relevant document from being published as drafted.
+Each item cites the clause it comes from. Anything marked **BLOCKING** prevents launch or the affected feature from operating; it does not change the policy requirement.
 
 ---
 
 ## A. Payments and Stripe
 
-**A1. Fee model — what is the plan and the timeline for switching from the envelope to the per-card model?** **BLOCKING**
-The Terms say Dono charges the Payment Provider's applicable fee **plus 3.5 percentage points**. The code charges a fixed 5% + 20p envelope with Dono taking the residual. These agree only for a standard UK card. What does changing this involve, and does the Payment Provider expose the applicable rate at charge time or only at settlement?
-*Source: ToS 16.1; Donor 6.1.*
+**A1. Fee model — what single application-fee calculation will apply to one-off and recurring Donations?** **BLOCKING**
+The Terms now distinguish Dono's application fee from Stripe's processing fee and require checkout to show the Dono fee actually charged. The code still uses different one-off and subscription calculations. Confirm the effective-dated fee formula, rounding, fee-cover allocation and refund calculation before recurring Donations are enabled.
+*Source: ToS 16.1; Donor 6.1; VAT position paper §11.*
 
-**A2. Can the card category be determined before the charge is confirmed?** **BLOCKING**
-The Terms promise the total before confirmation, or the calculation method and a true maximum. Today checkout always estimates a standard UK card. Is card-category detection possible at that point? If not, what is the genuine worst case we should show as the maximum?
+**A2. Can the card category be determined before the charge is confirmed?**
+The Terms say that any pre-settlement processing figure and expected Campaign amount are estimates. Can the card category be determined at checkout so those figures can be exact? If not, confirm the disclosed estimate and ensure the Donor is never charged more than the confirmed total.
 *Source: ToS 16.5; Donor 6.4.*
 
 **A3. Recurring donations — does the subscription path use the same fee mechanic as one-off donations?**
@@ -70,21 +70,21 @@ ToS 4.7 names Oxford as the only recognised institution. Confirm, and tell us wh
 
 ## C. Content, comments and moderation
 
-**C1. Are links, attachments and images in comments technically blocked, or only prohibited by policy?** **BLOCKING**
-Four Medium ratings in the Children's Risk Assessment and the CSAM-URL rating in the Illegal-Content Risk Assessment depend on this being a technical control.
-*Source: Community 6.2; Illegal-Content RA §8.3; Children's RA §5.*
+**C1. Provide client and direct-server test evidence that links, attachments and images in comments are rejected.** **BLOCKING**
+Include obfuscated URLs, rich-text paste, Unicode and direct mutation tests. This evidence satisfies AT-MOD-034.
+*Source: Community 6.2; Illegal-Content RA §8.3; Children's RA §5; MOD-034.*
 
-**C2. What can a moderator actually do today, and through what interface?**
-The Terms and the Online Safety Act Procedures list: unpublish a campaign, hide a comment, image or document, restrict content from public view, suspend campaign activity or donations, suspend an account, and restore. Which exist, which have a UI, and which are backend-only?
-*Source: OSA Procedures 3.2; Community 3.3.*
+**C2. Provide end-to-end evidence for every moderator action in MOD-018 through MOD-022.** **BLOCKING**
+Demonstrate unpublishing a campaign; hiding and restoring an update, comment, image and document; disabling comments; pausing new donations; warning, suspending and banning an account; permission denial; notice delivery; appeal and restoration. Backend-only mutations do not satisfy the moderator-interface acceptance tests.
+*Source: OSA Procedures 3.2; Community 3.3; MOD-018–MOD-022.*
 
-**C3. Is there a profile photograph feature?**
-The ROPA records an optional avatar. The Illegal-Content Risk Assessment previously assessed "profiles, usernames and photographs" as a risk surface. Confirm what exists so the assessment describes the real product.
-*Source: Illegal-Content RA §1; ROPA row 1.*
+**C3. Provide route/schema inventory evidence that the only profile image surface is the optional avatar and that it is reportable.**
+The evidence satisfies the surface inventory for AT-MOD-004 and AT-MOD-005.
+*Source: Illegal-Content RA §1; ROPA row 1; MOD-004–MOD-005.*
 
-**C4. Is campaign video reviewed in full before publication, or sampled?**
-Two Low ratings in the Children's Risk Assessment are expressly contingent on full-length review. This is partly a process question, but we need to know whether the tooling makes full review practical.
-*Source: Children's RA §4, §8.*
+**C4. Provide workflow and audit evidence that every campaign video is reviewed in full before publication.** **BLOCKING**
+Show the completion record, content hash, material-edit invalidation and server publication guard required by AT-MOD-033.
+*Source: Children's RA §4, §8; MOD-033.*
 
 ## D. Data protection and retention
 

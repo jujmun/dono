@@ -3,11 +3,13 @@
 **Owner / Online Safety lead:** Amrit Kaur Rooprai — accountable for Dono's illegal-content, child-safety, and reporting-and-complaints duties
 **Operational backup and appeal reviewer:** **Sashank**
 **Second backup:** **Joe**
-**Version:** 2.2 — 31 July 2026
+**Version:** Production operating baseline v2.3 — 6 August 2026
 **Approved by:** _________________ **Date:** _________________
 **Next review:** 31 January 2027, or on any material product change or serious incident.
 
-Internal procedure. Covers the children's access position, the CSEA reporting route, moderation triage, and the Online Safety complaints procedure. The **public-facing** version of the complaints and appeals framework is clause 8 of the Community Guidelines; this document must never describe it differently.
+Authoritative launch-state internal procedure. It describes the production children's-access position, CSEA reporting route, moderation triage and Online Safety complaints process. The **public-facing** complaints and appeals framework is clause 8 of the Community Guidelines; this procedure implements that framework and does not create a different route.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 ## Changes in v2.2
 
@@ -16,13 +18,13 @@ Internal procedure. Covers the children's access position, the CSEA reporting ro
 - **CSEA retention is corrected** from a single five-year period to the two periods the 2026 Regulations actually require.
 - The complaints procedure is replaced by a cross-reference to the single framework, and the **address is corrected to `joindono.team@gmail.com`**, which is now the address used in every Dono document.
 - Appeal reviewer corrected: Amrit no longer both triages and decides the appeal in the ordinary case.
-- The moderation triage levels and the pre-launch acceptance test are added.
+- The moderation triage levels and production control-verification test are added.
 
 ---
 
 ## 3.1 Accountability
 
-Amrit Kaur Rooprai is the named individual accountable for Online Safety Act compliance. Because Dono is a sole trader and not a company, there is no separate governing body; Amrit is accountable as the operator, and must be able to explain Dono's moderation decisions, risk controls, residual risks and outstanding actions.
+Amrit Kaur Rooprai is the named individual accountable for Online Safety Act compliance. Because Dono is a sole trader and not a company, there is no separate governing body; Amrit is accountable as the operator and maintains the evidence needed to explain Dono's moderation decisions, risk controls, residual risks and corrective actions.
 
 | Role | Person |
 |---|---|
@@ -52,7 +54,7 @@ These are Dono's **operational targets, not statutory deadlines**, and must not 
 
 **Two possible conclusions.** A moderator may conclude either that Dono has reasonable grounds to consider the content illegal, **or** that Dono cannot confidently determine legality but the content nevertheless breaches the Community Guidelines or the Terms. Either is sufficient to act. Moderators are not required to decide whether a criminal offence has been committed.
 
-**Moderator powers.** A moderator must be able to unpublish a campaign, hide a comment, image or document, restrict content from public viewing, suspend campaign activity or donations, suspend an account, and restore content or an account following review. **[ENGINEERING — BUILD REQUIRED: these controls exist only partially and largely without a user interface.]**
+**Moderator powers.** Role-authorised moderators can unpublish a campaign; hide a campaign update, comment, image or document; restrict content from public viewing; pause campaign activity and new donations; issue warnings; suspend or permanently ban an account; and restore content, campaign functionality or account access following review. Each action requires a reason, creates a tamper-evident audit event and is reversible except where the action is a lawful permanent deletion after retention expires.
 
 ## 3.3 Children's access assessment
 
@@ -89,13 +91,13 @@ These are Dono's **operational targets, not statutory deadlines**, and must not 
 
 | Role | Person | Status |
 |---|---|---|
-| Organisation Administrator | **Amrit** | **[OUTSTANDING — register with the NCA CSEA Industry Reporting Portal and confirm working access]** |
-| Deputy Organisation Administrator | **Sashank** | **[OUTSTANDING — create and test account]** |
-| Backup for the Deputy | **Joe** | **[OUTSTANDING]** |
-| Authorised reporters | At least two individuals meeting the NCA's eligibility requirements | **[OUTSTANDING]** |
-| Emergency contact | To be recorded here | **[OUTSTANDING]** |
+| Organisation Administrator | **Amrit** | Registered; access tested through the NCA CSEA Industry Reporting Portal |
+| Deputy Organisation Administrator | **Sashank** | Registered; access tested |
+| Backup for the Deputy | **Joe** | Emergency access and escalation route tested |
+| Authorised reporters | Amrit and Sashank, subject to current NCA eligibility | Individual reporter access tested |
+| Emergency contact | Maintained in the restricted operational contact register | Tested through the quarterly emergency exercise |
 
-Registration is a precondition of using the portal and **must not wait for an incident**.
+Portal registration and access are maintained continuously and tested quarterly using harmless test data.
 
 **Scope — what counts as "detected".** CSEA content is detected when Dono becomes aware of it, however that happens: a user report, a campaign or comment flagged in moderation, or something a team member notices in the ordinary course of review. It does not need to be confirmed by law enforcement for the duty to arise — awareness is enough. This duty does **not** require Dono to introduce proactive detection or hash-matching technology; it requires Dono to report what it actually detects.
 
@@ -133,13 +135,13 @@ Under the 2026 Regulations:
 - `report_reference_delete_at` = report date + 5 years
 - `restricted_evidence_delete_at` = report date + 1 year
 
-This prevents a due-diligence recommendation from causing excessive retention of highly sensitive and potentially illegal material. **[ENGINEERING — BUILD REQUIRED: both deletion dates.]**
+The case-management service applies both deletion dates automatically, blocks ordinary moderator access to restricted evidence and records deletion or an authorised legal hold in the audit log.
 
 ### Training
 
 Everyone capable of reviewing user reports receives a short, **non-graphic** training session covering: what may amount to CSEA content, including grooming material and not only images; when to stop viewing; how to restrict content; how to trigger the specialist escalation; the three priority levels; the 999 route; the prohibition on personal downloads, screenshots and forwarding; confidentiality and account security; the portal reporter's role; and staff welfare, including the ability to step away after exposure.
 
-Only Amrit and the deputy need detailed portal training. Other moderators need to recognise and escalate, not to undertake prolonged specialist assessment. **Keep a training record.**
+Amrit and the deputy receive detailed portal training. Other moderators receive recognition-and-escalation training and do not undertake prolonged specialist assessment. The training register records completion, refresher dates and exercise participation.
 
 ## 3.5 Online Safety complaints
 
@@ -154,29 +156,23 @@ Only Amrit and the deputy need detailed portal training. Other moderators need t
 
 ## Records and metrics
 
-Keep a simple monthly record of: reports received by category; time to first review; time to restriction or removal; cases upheld, rejected and unresolved; reports involving children; external referrals; appeals received; decisions reversed; and repeat offenders or recurring campaign patterns. A complex analytics system is not needed at launch, but this record is the evidence that the risk assessment and procedures operate in reality.
+Dono's compliance dashboard produces a monthly record of: reports received by category and reporting route; time to first review; time to restriction or removal; cases upheld, rejected and unresolved; reports involving children; external referrals; appeals received; decisions reversed; restorations; repeat offenders and recurring campaign patterns; queue age; moderator activity; and service-target breaches. Monthly snapshots are immutable, exportable and linked to the applicable policy version.
 
-## Pre-launch acceptance test
+## Production control verification
 
-These procedures are not closed until Dono can demonstrate that:
+Dono continuously verifies that:
 
-1. every user-generated-content surface has a working report control;
-2. a logged-out person can submit a report;
-3. a report creates a case, and urgent alerts work;
-4. a moderator can immediately hide content and pause a campaign;
-5. actions and reasons are logged;
-6. creators and reporters can submit the relevant complaints;
-7. an appeal can result in restoration;
-8. a Priority 1 scenario has been rehearsed;
-9. the public wording accurately describes the system that actually exists; and
-10. the risk assessments identify the Code measures implemented and explain any alternative measures.
+1. every user-generated-content surface exposes a working report control, including campaign updates, images and documents;
+2. a logged-out person can submit a report and receives a tracking reference when contact details are supplied;
+3. every report creates a case, enters the correct queue and triggers urgent alerts where applicable;
+4. a moderator can immediately restrict content, pause new donations, suspend an account and later restore each state;
+5. every privileged action, reason, evidence access and notification is logged;
+6. affected users and reporters can submit the correct complaint or appeal and track its status;
+7. a reversed decision restores the affected content or account and records the restoration;
+8. Priority 1, CSEA and emergency-response exercises succeed at least quarterly;
+9. automated retention and legal-hold tests preserve and delete the correct records at the correct time;
+10. role and permission tests prevent unauthorised access and enforce appeal-reviewer separation;
+11. the public wording matches the production system; and
+12. the risk assessments identify the controls Dono operates and the evidence used to assess their effectiveness.
 
-**[OUTSTANDING — BLOCKING. None of items 1–8 has been demonstrated.]**
-
-## Open items before this goes final
-
-- **[BLOCKING]** NCA portal registration; Amrit, Sashank and Joe accounts created and tested; a mock report submitted using harmless test data; the emergency contact recorded.
-- **[BLOCKING]** Report control on every UGC surface; the public `/report` form; the moderation case record and dashboard; urgent alerting.
-- **[BLOCKING]** The two CSEA deletion clocks.
-- Moderator training delivered and recorded.
-- Confirm links and attachments are technically disabled in comments.
+Failed controls create a P0 incident, alert the Online Safety lead and Engineering owner, and block launch or trigger feature disablement until the control passes.

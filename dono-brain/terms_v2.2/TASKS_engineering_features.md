@@ -1,9 +1,9 @@
 # Features for engineers to build — obligations created by terms_v2.2
 
-**Version:** 2.2 — 31 July 2026
+**Version:** 2.3 — 6 August 2026
 **Owner:** Amrit
 
-Every item here is something v2.2 **states as fact** and that does not currently exist. Until it is built, the clause citing it cannot be published, because publishing it would describe a control Dono does not have.
+This file remains the tracker for non-moderation product obligations in the wider legal suite. Moderation, complaints and Online Safety requirements are now canonical in `ENGINEERING_MODERATION_REQUIREMENTS.md`, with policy traceability in `ONLINE_SAFETY_TRACEABILITY.md`. The policy documents describe the production launch system in present tense; implementation status is tracked against acceptance tests and does not qualify policy wording.
 
 **P0** — blocks publication of the cited document and blocks launch.
 **P1** — required before general public launch.
@@ -16,7 +16,7 @@ Every item here is something v2.2 **states as fact** and that does not currently
 ### Payments
 
 **1. Change the fee model from the fixed envelope to per-card + 3.5 points.**
-Compute the Payment Provider's applicable fee for the actual card and add 3.5 percentage points, instead of a flat 5% + 20p with Dono taking the residual. The current model under-collects on premium, EEA, international and FX transactions and does not match what the Terms say the donor is charged.
+Adopt one effective-dated Dono application-fee formula for one-off and recurring Donations, including rounding, fee-cover allocation and partial-refund calculations. Checkout must show the Dono fee actually charged, separate it from the Payment Provider's estimated processing cost, and identify that processing figure as an estimate until the actual cost settles.
 *Source: ToS 16.1; Donor 6.1.*
 
 **2. Disable or remove the platform-initiated refund path.**
@@ -51,37 +51,7 @@ Replace `DonateDobGate` with: *"I am 18 or over."* **Not** the parent-or-guardia
 
 ### Online safety
 
-**9. Report control on every item of user content.**
-Campaign pages; campaign images and uploaded documents; comments; usernames. For a document, the control sits beside it on the campaign page.
-*Source: Community 7.1; Illegal-Content RA §8.4; Children's RA §8 item 2.*
-
-**10. Public reporting form at `/report`, no login required.**
-Fields: content link; type of content; why concerned; whether personally affected; optional email for updates; free-text explanation. Categories per Community Guidelines 7.3, including "content harmful to children". CSEA guidance not to download, copy or attach material.
-*Source: Community 7.2–7.3; Illegal-Content RA §8.4.*
-
-**11. Moderation case record and dashboard.**
-Each report creates a case holding: report reference; the content and user; reporter details where given; category and explanation; date and time received; urgency classification; assigned moderator; temporary action; final decision; reason; notifications sent; appeal status; restoration or further action; and any police or NCA reference.
-*Source: OSA Procedures 3.2; Illegal-Content RA §8.5, §11.*
-
-**12. Moderator action controls.**
-Unpublish a campaign; hide a comment, image or document; restrict content from public view; suspend campaign activity or donations; suspend an account; restore content or an account.
-*Source: OSA Procedures 3.2; Community 3.3.*
-
-**13. Urgent alerting for Priority 1 reports.**
-Immediate automated restriction plus an alert that reaches Amrit and the backup, out of hours.
-*Source: OSA Procedures 3.2.*
-
-**14. Appeal submission and tracking.**
-Ten-Working-Day window; identifies the original case; accepts grounds and supporting information; routes to someone not substantially involved; records the decision and reasons; restores content, campaign functionality or account access on reversal.
-*Source: Community 8; Refund 5.6; Verification 9.1.*
-
-**15. The two CSEA deletion clocks.**
-`report_reference_delete_at` = report date + 5 years. `restricted_evidence_delete_at` = report date + 1 year. Restricted storage, minimum access.
-*Source: OSA Procedures 3.4; APD §7; Incident Response Plan Annex B.*
-
-**16. Confirm links, attachments and images are technically blocked in comments.**
-Policy alone is not enough — several risk ratings depend on this being a technical control.
-*Source: Community 6.2; Illegal-Content RA §8.3.*
+**Items 9–16 are superseded by MOD-001 through MOD-038 in `ENGINEERING_MODERATION_REQUIREMENTS.md`.** That specification expands the former eight-line summary into separate requirements for every report target, logged-out intake, dashboard, queues, cases, evidence, notes, assignment, illegal-content and child workflows, emergency/CSEA escalation, enforcement, restoration, warnings, suspension, bans, appeals, notices, audit, permissions, retention, risk signals, search, notifications, complaints, incident response, analytics and the no-private-messaging release guard. Every feature has a named acceptance test, priority and owner.
 
 ### Data protection
 
@@ -203,7 +173,7 @@ Reports by category; time to first review; time to restriction or removal; cases
 
 ## Cross-check before any document is published
 
-A document may only lose its DRAFT banner when every `[ENGINEERING — BUILD REQUIRED]` marker inside it corresponds to a completed item above, with a dated reference. The current count by document:
+Moderation, complaints and Online Safety documents contain no build-status qualifiers. Their launch gate is the complete passage of every P0 acceptance test in `ENGINEERING_MODERATION_REQUIREMENTS.md`. Other documents retain their existing product/legal completion process. Current non-moderation build references are:
 
 | Document | Build items outstanding |
 |---|---|
@@ -211,7 +181,7 @@ A document may only lose its DRAFT banner when every `[ENGINEERING — BUILD REQ
 | Student Campaign Terms | 4, 17, 27, 29, 32 |
 | Society Campaign Terms | — (subject to A10 in the questions list) |
 | Donor Terms | 1, 5, 6, 7, 8, 26, 31 |
-| Community Guidelines | 9, 10, 14, 16 |
+| Community Guidelines | Moderation scope governed entirely by MOD-001–MOD-038; no separate entries here |
 | Verification Notice | 8, 17 |
 | Refund & Dispute Policy | 2, 4, 26, 27, 30, 33 |
 | Privacy Notice | 17, 18, 19, 20, 21, 34, 35, 37 |

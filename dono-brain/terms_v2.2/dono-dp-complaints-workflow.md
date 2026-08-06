@@ -1,9 +1,11 @@
 # Data Protection Complaints Workflow — Dono
 
 **Owner:** Amrit Kaur Rooprai (data protection lead). **Deputy:** **Sashank**. **Second backup:** **Joe**.
-**Version:** 2.2 — 31 July 2026
+**Version:** Production operating baseline v2.3 — 6 August 2026
 **Approved by:** _________________ **Date:** _________________
 **Next review:** 31 January 2027.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 ## Changes in v2.2
 
@@ -42,11 +44,11 @@ Where a complaint spans more than one, run the process with the shortest acknowl
 
 7. **Escalate where relevant.** If the complaint concerns a possible data breach, run the Incident Response Plan **in parallel** — do not wait for the complaint process to conclude. Tell the complainant they may also complain to the ICO.
 
-8. **Who handles it.** **Amrit** handles data-protection complaints; **Sashank** covers in Amrit's absence and must be briefed on this workflow before launch; **Joe** is the second backup. Where the complaint concerns a decision Amrit made, **Sashank handles it in the first instance.**
+8. **Who handles it.** **Amrit** handles data-protection complaints; **Sashank** is the trained deputy; **Joe** is the trained second backup. Where the complaint concerns a decision Amrit made, **Sashank handles it in the first instance.** The case-management service enforces the assignment and recusal rules.
 
 ## Standard response text
 
-> We will acknowledge your complaint within 30 days of receiving it. We will investigate it appropriately and respond without undue delay. We aim to resolve most complaints within 30 days where reasonably possible, but more complex matters may take longer. If that happens, we will keep you informed of our progress. You can also complain to the Information Commissioner's Office at ico.org.uk or on 0303 123 1113 — you do not have to come to us first, though we would rather you did.
+> Dono acknowledges your complaint within 30 days of receiving it, investigates it appropriately and responds without undue delay. Dono aims to resolve most complaints within 30 days where reasonably possible. For a more complex matter, Dono sends progress updates and a revised target date. You can also complain to the Information Commissioner's Office at ico.org.uk or on 0303 123 1113 — you do not have to come to us first, though we would rather you did.
 
 ---
 
@@ -71,6 +73,6 @@ Where a complaint spans more than one, run the process with the shortest acknowl
 
 ---
 
-*On submission:* "Thank you — we've received your complaint and will acknowledge it within 30 days. [Standard response text above.]"
+*On submission:* "Thank you — we've received your complaint. Your tracking reference is [reference]. We acknowledge data-protection complaints within 30 days. [Standard response text above.]"
 
-**[ENGINEERING — BUILD REQUIRED: this form does not exist. Data-protection complaints and subject-access requests are currently handled by email only, with no in-product intake, no data export and no tracking.]**
+The public form and email intake create the same tracked case. The case stores routing, deadlines, identity-verification status, requests for information, data exports, communications, outcome and audit history. Access is limited to the data-protection team and authorised incident responders.

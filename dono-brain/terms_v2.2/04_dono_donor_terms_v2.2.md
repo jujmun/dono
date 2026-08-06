@@ -4,6 +4,7 @@
 **Status:** DRAFT — NOT FOR PUBLICATION. Applies the counsel review, the founder's amendments and the engineering configuration answers of 31 July 2026. Requires final UK solicitor sign-off on the consumer-law analysis. Open items marked **[SOLICITOR SIGN-OFF]** or **[ENGINEERING — BUILD REQUIRED]**.
 
 > **What changed from v2.1:** **anyone may donate, at any age**, with a flat 18-or-over age confirmation at checkout (no parent-or-guardian-permission alternative — decided against, 6 Aug 2026); contract **formation** is rebuilt around a standing offer and Dono's agency; the **£100 liability cap is removed**; the **fee rate table is corrected**; both **fee structures** are explained, including who is buying Dono's service in each; **"hide my name" is narrowed** to public display, with the Stripe limitation stated; **Recurring Donations and Match Windows** are added; the claim that Dono can withhold a Campaign Owner's payouts is removed.
+> **What changed from v2.1:** **anyone may donate, at any age**, with an age confirmation at checkout and a route for a parent or guardian; contract **formation** is rebuilt around a standing offer and Dono's agency; the **£100 liability cap is removed**; Dono's fee is separated from the Payment Provider's fee; the Campaign Owner is identified consistently as the recipient of Dono's paid platform service; **"hide my name" is narrowed** to public display, with the Stripe limitation stated; **Recurring Donations and Match Windows** are added; the claim that Dono can withhold a Campaign Owner's payouts is removed.
 
 ---
 
@@ -33,9 +34,9 @@
 
 3.4 **The Campaign Owner is the Beneficiary.** Dono does not permit fundraising for a third party. The funds are raised for the person or Society running the Campaign, and the funded property belongs to the person or body named in the Campaign's Ownership Statement.
 
-3.5 Donations are not necessarily tax-deductible; Dono issues no charitable tax receipts and claims no Gift Aid. Taxes are your responsibility.
+3.5 Donations are not necessarily tax-deductible. Dono issues no charitable tax receipts and claims no Gift Aid. A charitable purpose or description does not by itself mean that the Campaign Owner is a charity or that tax relief is available. Dono remains responsible for the tax and VAT treatment of its own fees.
 
-3.6 **Commercial and entrepreneurial campaigns** are permitted **only** where no reward, financial return, repayment, priority access, discount, product, service or other benefit is offered, and they are marked on the page. If you donate to one you receive no equity, ownership, repayment right or financial return; any value created belongs to the Campaign Owner. Consider this before donating.
+3.6 **Commercial and entrepreneurial campaigns are not available.** Dono does not publish Campaigns operated for the purposes of a trade, business or entrepreneurial venture. No Campaign may offer a reward, product, service, financial return, repayment, priority access, discount, equity or ownership right.
 
 ### 4. Who receives your money
 
@@ -45,9 +46,9 @@
 
 5.1 Donations are charged when you confirm and are collected even if the target is not met. You must provide correct payment information and be authorised to use the payment method. The Payment Provider's terms and privacy policy also apply.
 
-5.2 **Cancellation of the Dono service element.** Where you choose to pay Dono's fee (by covering fees), you enter a paid distance service contract with Dono for that element, and Dono is your supplier for it. Before you confirm we tell you the price of that service, that it is optional, and how to contact us. Dono's service is performed immediately when your donation is processed. If you ask us to begin providing that service immediately and acknowledge that you will lose your right to cancel once it is fully performed, we act on that request; we ask for that request and acknowledgement in a **separate, unticked control**. Where our service is not fully performed, you retain the right to cancel within 14 days and to a proportionate refund of the fee for what has been performed. **This does not affect the separate conditional contribution to the Campaign or your rights against the Campaign Owner.** **[SOLICITOR SIGN-OFF — Consumer Contracts Regulations 2013 wording, model cancellation form and the immediate-performance acknowledgement.]**
+5.2 **Fee cover does not create a separate paid service.** The Campaign Owner has chosen and receives Dono's campaign-hosting and platform service. If you choose fee cover, you make an additional payment towards the Campaign Owner's platform and payment-processing costs so that the intended campaign amount can reach the Recipient. You receive no additional Dono service or benefit for selecting fee cover.
 
-5.3 **Where the fee is deducted instead**, you are not purchasing Dono's service: the Campaign Owner has chosen Dono's platform and Dono's fee is deducted from the funds otherwise payable to them. Clause 5.2 does not apply in that case, and your only contract is the conditional contribution to the Campaign Owner.
+5.3 If you do not select fee cover, the Campaign Owner's platform and processing costs are deducted from the amount otherwise reaching the Campaign. Your conditional contribution contract with the Campaign Owner and your rights under these Terms do not depend on which option you choose.
 
 5.4 **Recurring Donations.** You may set up a Donation that repeats monthly until you cancel. Before you set one up we show the amount, the interval, the dates of the first and next charges, and how to cancel. **You may cancel at any time, without giving a reason, from your account or by contacting us at clause 15.2, with effect from the next scheduled charge.** We email you before any change to the amount, which needs your express agreement. If the Campaign closes or is removed, further charges stop. Each charge is a Donation and carries the same refund rights as a one-off gift.
 
@@ -55,27 +56,17 @@
 
 ### 6. Fees and the fee-cover choice
 
-6.1 **Fee model.** The processing amount replicates the Payment Provider's applicable fee for your transaction (which varies by card type and any currency conversion) **plus 3.5 percentage points, which is Dono's platform fee.** Current worked rates (the Payment Provider's published UK pricing, verified 31 July 2026 — indicative, not a contractual price list):
+6.1 **Fees.** Dono charges the Campaign Owner a platform fee, collected as a Payment Provider application fee. The amount and calculation that apply are shown before you confirm. The Payment Provider separately charges the Connected Account a processing fee, which varies by payment method, card category and any currency conversion. Where your card category is not known before confirmation, checkout identifies the processing figure as an estimate. Your card issuer may separately charge you a foreign-transaction or conversion fee; that issuer charge is not received by Dono or the Campaign Owner.
 
-| Card / scenario | Payment Provider rate | Total charged (incl. Dono's +3.5pts) |
-|---|---|---|
-| Standard UK card | 1.5% + 20p | **5% + 20p** |
-| Premium UK card (commercial/corporate/rewards) | 2.8% + 20p | **6.3% + 20p** |
-| European Economic Area card | 2.5% + 20p | **6% + 20p** |
-| International card (outside UK & EEA) | 3.15% + 20p | **6.65% + 20p** |
-| Currency conversion performed by the Payment Provider | +2% | +2% on top of the above |
+6.2 Dono is not currently registered for VAT, so it does not currently add VAT or issue VAT invoices. Dono's platform fee is subject to VAT at the standard rate if the place of supply is the United Kingdom once Dono is required or chooses to register. The total shown to you is the total amount payable and, from any effective date of registration, will include applicable VAT. Dono is responsible for VAT on its fee.
 
-The 2% conversion charge applies only where the Payment Provider actually performs a currency conversion, not simply because a card is non-UK. **Your own card issuer may separately charge you a foreign-transaction fee. That charge is set by your issuer, is not received by Dono or the Campaign Owner, and we cannot tell you its amount.** **[ENGINEERING — BUILD REQUIRED: the current implementation charges a flat envelope regardless of card type; it must be changed to match this clause.]**
+6.3 **Your choice.** At checkout you may choose either to **cover the transaction costs**, so your intended campaign amount reaches the Recipient, or to have those costs deducted from the amount otherwise reaching the Campaign. Fee cover is optional, unticked by default and charged only if you actively select it. It is a payment towards the Campaign Owner's costs and does not make you the recipient of Dono's paid platform service. The final button shows the total including any fee cover. Checkout labels each element as **"Campaign contribution"**, **"Dono platform fee"** and **"Payment processing"**.
 
-6.2 Dono is not registered for VAT, so no VAT is charged on its fee and the prices shown contain no VAT element.
-
-6.3 **Your choice.** At checkout you may choose either to **cover the fees**, so your intended campaign amount reaches the Recipient, or to have the **fees deducted** from your donation. Fee cover is **optional, unticked by default, and charged only if you actively select it.** The final button shows the total including any fee cover. Checkout labels each element as **"Campaign contribution"**, **"Dono service fee"** and **"Payment processing"**.
-
-6.4 **The total you will be charged.** Before you confirm, checkout shows the total, the amount intended for the Campaign, Dono's fee, any optional fee cover and the payment-processing cost. Where your card category is not known before confirmation, checkout shows how the amount is calculated and the **maximum** that may be charged. **You are never charged more than the total you confirmed.** **[ENGINEERING — BUILD REQUIRED: card category is not currently known before the charge.]**
+6.4 **The total you will be charged.** Before you confirm, checkout shows the total, the amount intended for the Campaign, Dono's fee, any optional fee cover, the estimated payment-processing cost and the expected amount reaching the Campaign. You are never charged more than the total you confirmed. Where your card category is not known before confirmation, the processing figure and expected Campaign amount are estimates based on the method disclosed at checkout; the actual Payment Provider cost may reduce the amount reaching the Campaign.
 
 ### 7. Receipts
 
-7.1 You receive an email **donation confirmation**, showing: the amount; the date; the Campaign; the Campaign Owner and the Recipient who received the money; Dono's platform fee, shown separately; any fee-cover amount you chose; any currency-conversion cost; and the version of each document that applied. It states clearly that it is **not a charitable tax receipt** and that no Gift Aid is claimed. It is a record of your contribution, not a VAT invoice and not the Payment Provider's own payment record. Dono is not the recipient of your Donation.
+7.1 You receive an email **donation confirmation**, showing: the amount; the date; the Campaign; the Campaign Owner and the Recipient who received the money; Dono's platform fee and the Payment Provider's processing cost, shown separately; any fee-cover amount you chose; any currency-conversion cost; and the version of each document that applied. It states clearly that it is **not a charitable tax receipt**, that no Gift Aid is claimed, and that it is not a VAT invoice. Dono provides any required fee invoice to the recipient of Dono's platform service, and the Payment Provider is responsible for its own payment and fee records. Dono is not the recipient of your Donation.
 
 ### 8. Hiding your name
 
@@ -111,7 +102,7 @@ The 2% conversion charge applies only where the Payment Provider actually perfor
 
 11.6 **Appeals** may be brought within ten Working Days and are decided under the single appeal framework in clause 8 of the Community Guidelines.
 
-11.7 **Fees on a refund.** Where a refund is due and you were not at fault, **Dono refunds its own platform fee**; where you caused the refund through your own error, Dono's fee is not refunded. On a partial refund, Dono's fee is refunded proportionately where you were not at fault. Any fee-cover amount you paid is treated the same way as Dono's fee. Dono returns its fee through the Payment Provider's application-fee mechanism; the Payment Provider's own processing cost is not returned by Dono and is borne as set out in the Refund and Dispute Policy.
+11.7 **Fees on a refund.** Where a refund is due and you were not at fault, Dono reverses its own platform fee; where you caused the refund through your own error, Dono's fee is not reversed. On a partial refund, Dono's fee is reversed proportionately where you were not at fault. Any fee-cover amount is returned to you to the extent stated in the Refund and Dispute Policy. Dono makes the platform-fee reversal through the Payment Provider's application-fee mechanism and, after VAT registration, makes the corresponding VAT adjustment and issues any required credit note. The Payment Provider's processing cost is separate, is not returned by Dono, and is borne as set out in the Refund and Dispute Policy.
 
 ### 12. How an approved refund is paid
 

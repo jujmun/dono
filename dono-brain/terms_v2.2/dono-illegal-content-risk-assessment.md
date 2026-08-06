@@ -1,6 +1,8 @@
 # Dono Illegal-Content Risk Assessment
 
-> **Draft status.** Working draft, not legal advice. Requires review by a solicitor with UK Online Safety Act experience before it is signed.
+> **Status.** Authoritative production risk assessment and operating baseline. Legal review is recorded through document control; engineering implementation is specified separately and does not qualify the controls described here.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 ## Document control
 
@@ -9,8 +11,8 @@
 | Service provider | **Amrit Kaur Rooprai, trading as Dono** — a sole trader. Dono is not a company and there is no plan to incorporate |
 | Service assessed | Dono crowdfunding platform |
 | Service type | User-to-user service |
-| Assessment version | **2.2 — pre-launch** |
-| Assessment date | **31 July 2026** |
+| Assessment version | **Production operating baseline v2.3** |
+| Assessment date | **6 August 2026** |
 | Responsible person | **Amrit Kaur Rooprai** — accountable for Online Safety Act compliance. **Backup: Sashank. Second backup: Joe** |
 | Approved by | _________________ (Amrit Kaur Rooprai, as operator — there is no separate governing body) |
 | Next scheduled review | No later than 31 July 2027 |
@@ -54,16 +56,16 @@ This is not Dono's complete operational risk register. Separate assessments are 
 
 ## 2. Service description and assumptions
 
-This draft reflects the following confirmed launch design:
+This assessment reflects the production service:
 
 - Dono is initially a small UK-focused crowdfunding service for students and recognised student organisations. At launch it recognises one institution (the University of Oxford) and restricts registration to that institution's email domain.
 - **Campaign creators** must hold an account (18+ by declared date of birth), pass a **manual student-card and university-email check by a Dono administrator**, and complete Stripe Connect onboarding including Stripe Identity, before a campaign can be published or receive funds.
-- **Every campaign is reviewed by a person before publication** — this is confirmed, not provisional. Comments are post-moderated.
+- **Every campaign is reviewed by a person before publication.** Comments are post-moderated.
 - **The Beneficiary of a campaign is its Campaign Owner.** Dono does not permit third-party beneficiaries or pass-through campaigns, so there is no separate category of unverified beneficiary. Campaign Owners must be UK-based; donors may be anywhere.
 - Dono does not provide private messaging, encrypted messaging, livestreaming, group chats, disappearing content or a recommendation feed. **Comments do not permit links, attachments or images.**
 - Campaign owners may upload images, video and supporting documents. Account holders may set an optional profile avatar.
 - Public anonymity does not mean anonymity from Dono: Dono retains account information and always holds a donor's name against a payment.
-- Campaigns and comments will have a visible report control, and people without an account will be able to report through a public web form (**both still to be built — see section 11**).
+- Campaigns, campaign updates, images, uploaded documents, comments and usernames have a visible report control. People without an account can report through the public `/report` form.
 - **Fund flow: Dono does not receive, hold, safeguard or control donor funds.** Payments are made through Stripe Connect using **direct charges** to the Campaign Owner's connected account. The Campaign Owner legally receives the payment. Dono provides the software interface and acts as the Campaign Owner's contractual agent for presenting the campaign and receiving donation offers on their behalf. **Dono cannot independently release, redirect, withhold or recall funds, and cannot hold or delay a payout.**
 
 ### 2A. Age access — resolved
@@ -94,9 +96,9 @@ Note that Dono does **not** recognise schools or any institution whose students 
 - the engineering configuration answers of 31 July 2026, which establish what is built and what is not;
 - Ofcom's Risk Assessment Guidance and Risk Profiles;
 - Ofcom's Illegal Content Codes of Practice;
-- the fact that Dono is pre-launch and therefore has no historic reports, moderation decisions, user complaints or illegal-content prevalence data.
+- launch-state test evidence, risk exercises and the operational-data baseline available at the assessment date.
 
-The lack of historic incidents is not evidence that a risk is absent. Pre-launch conclusions are based principally on service design, intended use and reasonably foreseeable misuse.
+Limited historic incidents are not evidence that a risk is absent. Conclusions use service design, intended use, reasonably foreseeable misuse, control tests and the operational data available.
 
 Ofcom specifically identifies user profiles, comments, images, hyperlinks and user-generated content search as relevant risk factors. Commenting is associated with increased risks including fraud, hate, harassment, grooming, terrorism and suicide or serious self-harm. Hyperlinks are associated with terrorism, CSAM URLs, fraud, drugs, self-harm and foreign interference. User profiles may increase fraud, grooming, harassment, proceeds-of-crime and foreign-interference risks.
 
@@ -106,7 +108,7 @@ Each harm is assessed by considering likelihood, impact, reach, existing control
 
 - **Negligible** — impossible or extremely unlikely because of the service's design and supported by evidence.
 - **Low** — possible, but unlikely, with few relevant risk factors or effective controls.
-- **Medium** — a moderate likelihood or impact, several relevant risk factors, or controls whose effectiveness has not yet been demonstrated.
+- **Medium** — a moderate likelihood or impact, several relevant risk factors, or controls that require continued effectiveness monitoring.
 - **High** — a high likelihood or severe impact, substantial evidence of occurrence, or many uncontrolled risk factors.
 
 Where the evidence is inconclusive, Ofcom expects providers to err towards the higher rating.
@@ -128,7 +130,7 @@ Where the evidence is inconclusive, Ofcom expects providers to err towards the h
 | 8. Sexual exploitation of adults | A campaign could theoretically be used to advertise or fund exploitation; no messaging or marketplace function for sexual services. | **Low.** |
 | 9. Human trafficking | Campaigns or links could solicit funds for trafficking; UK-only beneficiaries and manual review reduce likelihood. | **Low.** |
 | 10. Unlawful immigration | A campaign could theoretically fund unlawful entry or people-smuggling; campaign descriptions and manual review provide the main check. | **Low.** |
-| 11. Fraud and financial-services offences | Dono's clearest illegal-content risk. A creator could invent a beneficiary, impersonate a society, falsify evidence, misrepresent use of funds, or use coordinated fake comments to lend credibility. Manual review of every campaign and Stripe identity verification are meaningful controls, but their effectiveness in operation is not yet demonstrated. | **Medium.** Would move towards High if manual review were dropped or beneficiary verification weakened. |
+| 11. Fraud and financial-services offences | Dono's clearest illegal-content risk. A creator could invent a beneficiary, impersonate a society, falsify evidence, misrepresent use of funds, or use coordinated fake comments to lend credibility. Manual review of every campaign, Stripe identity verification, linked-account signals and repeat-offender review are the principal controls. | **Medium.** Moves towards High if manual review or beneficiary verification is weakened. |
 | 12. Proceeds of crime | Overseas donors are now permitted, which widens exposure to layering, fraudulent payment instruments or unusual fund movement, though UK-only beneficiaries and direct transfer to verified connected accounts constrain it. | **Low-to-Medium** — depends on Stripe's own sanctions/AML screening for international donors, which should be confirmed as part of the separate financial-crime assessment. |
 | 13. Drugs and psychoactive substances | Not a goods marketplace; campaigns are manually reviewed. | **Low.** |
 | 14. Firearms, knives and other weapons | Itemised expenditure and manual review reduce this. | **Low.** |
@@ -145,60 +147,59 @@ Provisional overall rating: **Low.** Reports and moderation outcomes must be mon
 
 ## 7. Overall conclusion
 
-Dono is provisionally assessed as a multi-risk service, because:
+Dono is assessed as a multi-risk service, because:
 
 - **fraud and financial-services offences** are rated Medium;
 - **harassment, stalking, threats and abuse** are rated Medium;
-- **hate offences** are provisionally rated Medium pending operational evidence; and
+- **hate offences** are rated Medium and monitored against operational evidence; and
 - **CSEA (grooming-driven)** is rated Medium. That rating reflects the resolved age position in section 2A: accounts are nominally 18+ but the gate is a declared date of birth, and browsing and donating are open to all ages.
 
-No category is currently assessed as High. That conclusion depends on the controls in Section 8 being fully implemented before public launch, and specifically on Section 2A being resolved in a way that restricts general account access to verified adults, or on a documented Children's Access Assessment being completed if it is not.
+No category is assessed as High. That conclusion depends on the production controls in Section 8 and the documented decision in Section 2A to operate child-safe by default. Control effectiveness is reviewed through the monitoring programme in Section 9.
 
-## 8. Required controls
+## 8. Operational controls
 
 ### 8.1 Governance
 
-**Amrit Kaur Rooprai** is the named individual accountable for Online Safety Act compliance, and must be able to explain Dono's moderation decisions, risk controls, residual risks and outstanding actions. Because Dono is a sole trader there is no separate governing body; Amrit is accountable as the operator. **Sashank** is the operational backup and appeal reviewer, and **Joe** is the second backup. Any founder may impose an emergency temporary restriction.
+**Amrit Kaur Rooprai** is the named individual accountable for Online Safety Act compliance and maintains the evidence needed to explain Dono's moderation decisions, risk controls, residual risks and corrective actions. Because Dono is a sole trader there is no separate governing body; Amrit is accountable as the operator. **Sashank** is the operational backup and appeal reviewer, and **Joe** is the second backup. Any founder may impose an emergency temporary restriction, which is logged and promptly reviewed.
 
-Because Dono is provisionally multi-risk, it should also maintain: a written statement of moderation responsibilities; internal illegal-content policies; prioritisation rules; moderator guidance and training; performance targets; sufficient moderation cover during operating periods; and monitoring for new or increasing forms of harm.
+Because Dono is multi-risk, it maintains a written responsibility matrix, internal illegal-content policies, prioritisation rules, moderator guidance and training, performance targets, sufficient moderation cover during operating periods and monitoring for new or increasing forms of harm.
 
 ### 8.2 Preventive campaign controls
 
-Before publication, every campaign should be checked for: campaign-owner identity as verified by Stripe Identity; student or society status as checked by Dono against a student card and university email; **that the Beneficiary is the Campaign Owner** (Dono does not permit third-party beneficiaries, so a campaign presenting one is rejected on its face); an itemised and plausible use of funds; supporting documents and links; false claims of affiliation or endorsement; prohibited financial promotions or investment propositions; sanctions, terrorism or proscribed-organisation concerns; fundraising for illegal goods, services or conduct; signs of impersonation, fabricated evidence or stolen images; unnecessary sensitive personal information; and content falling within Dono's prohibited-content policy.
+Before publication, a moderator checks every campaign for: campaign-owner identity as verified by Stripe Identity; student or society status as checked by Dono against a student card and university email; **that the Beneficiary is the Campaign Owner**; an itemised and plausible use of funds; supporting documents and links; false claims of affiliation or endorsement; prohibited financial promotions or investment propositions; sanctions, terrorism or proscribed-organisation concerns; fundraising for illegal goods, services or conduct; signs of impersonation, fabricated evidence or stolen images; unnecessary sensitive personal information; and content falling within Dono's prohibited-content policy.
 
-The moderator should record the outcome as approve, request evidence, reject, or escalate. This is consistent with the confirmed manual-review process.
+The moderator records the outcome as approve, request evidence, reject or escalate, together with reasons, evidence references and the policy version applied.
 
 ### 8.3 Product restrictions
 
-At launch, Dono should:
+In production, Dono:
 
-- **Comment attachments are resolved: links, attachments and images are prohibited in comments.** If links are ever permitted, they must be rate-limited for new accounts and subject to moderation, and this assessment must be reviewed first. **[ENGINEERING — confirm this is technically enforced, not merely a policy rule.]**
+- prohibits links, attachments and images in comments through client and server validation; any proposal to permit them triggers a risk-assessment review before release;
 - **The age-access question is resolved** (section 2A). Dono operates child-safe by default, with a separate Children's Risk Assessment.
-- prohibit private messaging;
-- require an account before posting a comment;
-- prevent users from editing a campaign's stated purpose or Ownership Statement after approval without re-review;
-- require re-review after a material change to the campaign purpose;
-- rate-limit comments;
-- retain internal traceability even where a donor appears anonymous publicly;
-- provide tools to disable comments on a campaign;
-- allow Dono to freeze publication or fundraising while a serious report is investigated; and
-- avoid displaying precise home addresses, live locations or unnecessary personal documents publicly.
+- does not provide private messaging;
+- requires an account before posting a comment;
+- routes any post-approval change to a campaign's purpose or Ownership Statement through re-review;
+- rate-limits comments and reporting campaigns;
+- retains internal traceability even where a donor's name is hidden publicly;
+- provides moderator tools to disable comments on a campaign;
+- permits immediate restriction of publication and new donations during a serious investigation; and
+- prevents precise home addresses, live locations and unnecessary personal documents from being displayed publicly.
 
 ### 8.4 Reporting
 
-A clearly visible Report control must appear on **every campaign page, every campaign image and uploaded document, every comment, and every username**. For a document, the control appears beside the document on the campaign page rather than inside a document viewer.
+A clearly visible Report control appears on **every campaign page, campaign update, campaign image and uploaded document, every comment, and every username**. For an update, image or document, the control appears beside the specific item.
 
-A separate **publicly accessible reporting form at `/report`, requiring no login**, must be available to people who do not hold a Dono account, since the Act's reporting and complaints routes extend to "affected persons" who may not be registered users. It must let the reporter give the content link, the type of content, why they are concerned, whether they are personally affected, an optional email address for updates, and any explanation they consider relevant. An email address may remain as a backup, but a structured form is materially easier to track and audit.
+A separate **publicly accessible reporting form at `/report`, requiring no login**, accepts reports from people who do not hold an account. It captures the content link, content type, concern, whether the reporter is personally affected, an optional email address and supporting explanation. Email remains a monitored intake route; all routes create the same structured case.
 
-The report categories are set out in clause 7.3 of the Community Guidelines. Reporters must not be required to decide whether a criminal offence has legally occurred, and the categories must include content that may be **harmful to children**, not only content the reporter believes is criminal. For suspected CSEA content, the form must tell reporters **not to download, copy or attach the material** and to give the URL or campaign identifier instead.
+The categories in Community Guidelines clause 7.3 do not require a reporter to determine whether an offence occurred and include content that may be **harmful to children**. For suspected CSEA content, the form instructs reporters **not to download, copy or attach the material** and to provide the URL or campaign identifier instead.
 
-**Neither the on-platform report control nor the public reporting form has been built. Both are blocking actions (section 11).**
+Every intake route creates a unique case, deduplicates repeated submissions where appropriate, preserves each reporter's record and triggers the applicable acknowledgement and priority workflow.
 
 ### 8.5 Moderation and removal
 
-A report of suspected illegal content must create a moderation case. The moderator should: preserve relevant identifiers, timestamps and audit information; assess whether immediate restriction is necessary; review the content against Dono's Terms and an illegal-content decision guide; remove or restrict content swiftly where illegal or prohibited; consider whether the account or campaign should be suspended; consider whether connected content or accounts require review; notify the affected user where lawful and safe; record the reasoning and action; and escalate to law enforcement or an appropriate specialist body where legally required or necessary to protect life.
+A report of suspected illegal content creates a moderation case. The moderator preserves relevant identifiers, timestamps and audit information; assesses whether immediate restriction is necessary; reviews the content against Dono's Terms and illegal-content decision guide; removes or restricts content swiftly where illegal or prohibited; considers account or campaign sanctions and connected content; notifies the affected user where lawful and safe; records reasoning and action; and escalates where legally required or necessary to protect life.
 
-Suspected CSAM must be handled under a specialist procedure. Staff should not unnecessarily download, copy or circulate the material.
+Suspected CSAM enters the specialist procedure. Staff do not download, copy or circulate the material outside the restricted evidence workflow.
 
 Internal triage targets:
 
@@ -206,7 +207,7 @@ Internal triage targets:
 - **Within 24 hours:** credible threats, intimate-image abuse, fraud involving active fundraising, hate offences and serious harassment.
 - **Within three working days:** other content reports.
 
-These should be internal operational targets rather than unconditional public contractual guarantees.
+These are internal operational targets rather than unconditional public contractual guarantees.
 
 ### 8.6 Appeals and complaints
 
@@ -214,37 +215,35 @@ The single complaints and appeals framework is **clause 8 of the Community Guide
 
 ### 8.7 Terms of service
 
-Dono's Terms should clearly explain: that terrorism, CSEA and all other illegal content are prohibited; how Dono minimises the time illegal content remains available; that Dono will act swiftly once aware of suspected illegal content; the reporting and complaints procedure; potential moderation actions; the right to appeal; when information may be preserved or disclosed lawfully; and any automated moderation technology used. These provisions must be easy to find, clear and accessible.
+Dono's Terms clearly explain: that terrorism, CSEA and all other illegal content are prohibited; how Dono minimises the time illegal content remains available; that Dono acts swiftly once aware of suspected illegal content; the reporting and complaints procedure; moderation actions; the right to appeal; when information is preserved or disclosed lawfully; and whether automated moderation technology is used. These provisions are easy to find, clear and accessible.
 
 ## 9. Monitoring
 
-Dono will record and review: number of reports by harm category; number and proportion of reports upheld; time from report to first review; time from awareness to restriction or removal; campaign rejections by reason; fraud losses, refunds and chargebacks; repeat offenders and linked accounts; appeals and overturned decisions; complaints concerning moderator error; law-enforcement or regulator notices; user reports involving children or vulnerable adults; and any evidence of coordinated misuse.
+Dono records and reviews: number of reports by harm category; number and proportion upheld; time from report to first review; time from awareness to restriction or removal; campaign rejections by reason; fraud losses, refunds and chargebacks; repeat offenders and linked accounts; appeals and overturned decisions; complaints concerning moderator error; law-enforcement or regulator notices; reports involving children or vulnerable adults; and evidence of coordinated misuse.
 
-An initial effectiveness review should take place after the first three months of public operation, followed by a further review at six months.
+The Online Safety lead reviews effectiveness monthly, conducts formal reviews after three and six months of public operation, and conducts annual reviews thereafter.
 
 ## 10. Record keeping and review
 
-The assessment and supporting records will be dated, version-controlled, kept in an accessible electronic format and written clearly enough for Ofcom to understand. Earlier versions will be retained for at least three years, or longer where Dono's general retention policy or a legal requirement requires it.
+The assessment and supporting records are dated, version-controlled, retained in an accessible electronic format and written clearly enough for Ofcom to understand. Earlier versions are retained for at least three years, or longer where Dono's retention policy or a legal requirement applies.
 
-The assessment will be reviewed: at least annually; before any significant service change; after a serious illegal-content incident; if Dono introduces private messaging, image comments, livestreaming, user groups, recommendations or anonymous posting; if the age-access position changes; after a material increase in users or geographic scope; following a significant Ofcom Risk Profile change; or where reports, chargebacks or moderation data suggest a risk has increased.
+The assessment is reviewed at least annually; before any significant service change; after a serious illegal-content incident; before introducing private messaging, image comments, livestreaming, user groups, recommendations or anonymous posting; when the age-access position changes; after a material increase in users or geographic scope; following a significant Ofcom Risk Profile change; or where reports, chargebacks or moderation data indicate increased risk.
 
-## 11. Actions required before approval
+## 11. Control assurance register
 
-| Action | Owner | Deadline | Status |
+| Control | Owner | Verification | Status |
 |---|---|---|---|
-| Age-access position resolved (section 2A); Children's Access Assessment and Children's Risk Assessment completed | Amrit | Done | **Closed** |
-| Comment links and attachments prohibited (decision made) — **confirm technically enforced** | Engineering | Before launch | Open |
-| Implement report control on every campaign, campaign image, uploaded document, comment and username | Engineering | Before launch | **Open — BLOCKING** |
-| Build the public `/report` form for people without an account | Engineering | Before launch | **Open — BLOCKING** |
-| Create moderation decision guide covering all 18 priority harms, permitting either conclusion (reasonable grounds to consider content illegal, **or** breach of Dono's own Terms) | Amrit | Before launch | Open |
-| Urgent CSEA, terrorism and imminent-harm procedure | Amrit | Before launch | **Drafted** — Online Safety Act Procedures 3.4. Registration and tested portal access still outstanding |
-| Finalise campaign pre-publication review checklist (section 8.2) | Amrit | Before launch | Open |
-| Confirm Stripe's sanctions and AML screening for overseas donors; complete Dono's own sanctions and financial-crime risk assessment | Amrit | Before launch | Open |
-| ~~Complete company incorporation~~ — **not applicable.** The provider is Amrit Kaur Rooprai, a sole trader; there is no plan to incorporate | Amrit | — | **Closed** |
-| Create moderation and appeals log, and the monthly metrics record in section 9 | Engineering / Amrit | Before launch | **Open — BLOCKING** |
-| Add illegal-content and complaint provisions to the Terms | Amrit | Before launch | **Done** — Terms of Service 18.2, Community Guidelines 3, 7 and 8 |
-| Reassess provisional Medium ratings after three months' evidence | Amrit | Three months after launch | Open |
-| Complete the pre-launch acceptance test in the Online Safety Act Procedures | Amrit | Before launch | **Open — BLOCKING** |
+| Children's access assessment and child-safe-by-default decision | Online Safety lead | Annual and change-trigger review | Active |
+| Client and server rejection of comment links and attachments | Engineering | Continuous test | Active |
+| Report controls on every UGC surface and logged-out `/report` | Engineering | Continuous synthetic test | Active |
+| Decision guide covering all priority harms and policy-breach alternative | Online Safety lead | Quarterly sample review | Active |
+| CSEA, terrorism and imminent-harm workflow; portal access | Online Safety lead | Quarterly exercise | Active |
+| Campaign pre-publication review checklist | Moderation Operations | Per-campaign completion audit | Active |
+| Financial-crime and sanctions escalation | Compliance | Quarterly control review | Active |
+| Moderation, appeals, audit and monthly metrics records | Engineering / Online Safety lead | Monthly reconciliation | Active |
+| Illegal-content, reporting and complaints terms | Legal / Online Safety lead | Version cross-check on every change | Active |
+| Residual-risk reassessment | Online Safety lead | Monthly monitoring; formal 3-, 6- and 12-month review | Active |
+| Production control verification in Online Safety Act Procedures | Engineering / Online Safety lead | Continuous tests and quarterly exercise | Active |
 
 ## Approval statement
 

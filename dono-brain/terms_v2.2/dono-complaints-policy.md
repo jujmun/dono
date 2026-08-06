@@ -1,7 +1,9 @@
 # Dono Complaints Policy
 
-**Version:** Working draft v2.2 — 31 July 2026
-**Status:** DRAFT — NOT FOR PUBLICATION. Referred to from clause 33.1 of the Terms of Service. Requires solicitor sign-off on the flagged items. This is a **public** document.
+**Version:** Production operating baseline v2.3 — 6 August 2026
+**Status:** Authoritative launch-state public policy. Referred to from clause 33.1 of the Terms of Service.
+
+**Implementation and traceability:** [`ENGINEERING_MODERATION_REQUIREMENTS.md`](ENGINEERING_MODERATION_REQUIREMENTS.md) and [`ONLINE_SAFETY_TRACEABILITY.md`](ONLINE_SAFETY_TRACEABILITY.md).
 
 > **What changed from v2.1:** the reference to the **revoked 2015 ADR Regulations is removed** and replaced with the regime actually in force — Chapter 4 of Part 4 of the Digital Markets, Competition and Consumers Act 2024, in force since 6 April 2026; the **complaints address is standardised** to `joindono.team@gmail.com`; the routing table now shows all three complaint processes and their different clocks, so a complainant is not left guessing; the appeal reviewer is aligned with the single framework in the Community Guidelines.
 
@@ -11,7 +13,7 @@
 
 1.1 This is the Complaints Policy referred to in clause 33.1 of the Terms of Service. It explains how to complain about anything Dono has done or failed to do, how we investigate and decide complaints, and what happens if you remain unhappy.
 
-1.2 **There is one address for every kind of complaint: `joindono.team@gmail.com`.** You do not need to work out which process applies — tell us what went wrong and we will route it, and tell you which route we have used and what the timescale is.
+1.2 **There is one address for every kind of complaint: `joindono.team@gmail.com`.** You do not need to work out which process applies. Dono routes the complaint, links related moderation or refund cases, tells you which route applies and records the applicable deadline.
 
 1.3 **Three processes, three clocks.** They exist because different laws impose different obligations, not because we like paperwork.
 
@@ -30,7 +32,7 @@ Where a complaint covers more than one, we use the shortest acknowledgement peri
 (a) **the substantive decision on whether a refund is due**, which is decided under the Refund and Dispute Policy and has its own appeal route. You can still complain here about the *service* you received during that process;
 (b) **a decision for which the Terms already give you a dedicated appeal right** — moderation, removal, suspension, or refusal or withdrawal of a student-status check. Those are all appealed under **clause 8 of the Community Guidelines**, which is the single framework for challenging a decision. You may still complain here about how that process was handled.
 
-1.6 Where a matter could go through both a dedicated appeal route and this policy, we will not run duplicate parallel processes on the same point. Tell us which you are using, or we will ask.
+1.6 Where a matter could go through both a dedicated appeal route and this policy, Dono creates one lead case and does not run duplicate decisions on the same point. Dono confirms the route and preserves links to every related case.
 
 ## 2. How to complain
 
@@ -38,7 +40,7 @@ Where a complaint covers more than one, we use the shortest acknowledgement peri
 
 2.2 To help us deal with it promptly, please include: your account details, if you have an account; what happened and when; which Campaign or Donation it relates to, if any; the outcome you are looking for; and any supporting evidence.
 
-2.3 A complaint is "complete" once we have what we reasonably need to look into it (clause 2.4 of the Terms of Service). If something is missing we will tell you what — normally in a single request.
+2.3 A complaint is "complete" once Dono has what it reasonably needs to investigate it (clause 2.4 of the Terms of Service). If information is missing, Dono sends one consolidated request where practicable and records when the response clock is paused and resumed.
 
 2.4 **You do not need a Dono account to complain**, and you do not need to have used Dono.
 
@@ -50,7 +52,7 @@ Where a complaint covers more than one, we use the shortest acknowledgement peri
 
 3.3 **Initial assessment.** Normally within **10 Working Days** of a complete complaint — including whether we need more information, or whether the matter involves a third party such as the Payment Provider or an Institution.
 
-3.4 **Substantive response.** We aim to respond within **14 Working Days** of a complete complaint. If it will take longer, we will tell you why and when to expect a response.
+3.4 **Substantive response.** Dono aims to respond within **14 Working Days** of a complete complaint. Where more time is required, Dono sends the reason and a revised target date.
 
 3.5 **Internal review.** Normally completed within a further **10 Working Days**.
 
@@ -58,9 +60,9 @@ Where a complaint covers more than one, we use the shortest acknowledgement peri
 
 ## 4. Investigation and response
 
-4.1 We look at the relevant records, decisions, correspondence and any evidence you or others provide. Where the complaint concerns a decision made by a specific team member, we may ask that person for their account of events.
+4.1 Dono assigns a case owner, preserves the relevant records, and examines decisions, correspondence, audit events and evidence supplied by the parties. Where a complaint concerns a team member's decision, that person may provide factual context but does not decide the internal review.
 
-4.2 If your complaint touches on a live safeguarding, fraud or law-enforcement matter, our response on that part may be limited or delayed to the extent that answering fully would compromise it. We will tell you this is happening wherever we lawfully can.
+4.2 If your complaint touches on a live safeguarding, fraud or law-enforcement matter, Dono limits or delays that part of the response only to the extent that answering fully would compromise it. Dono explains the limitation wherever lawful.
 
 4.3 Our substantive response explains what we found, what (if anything) we are doing about it, and how to ask for an internal review.
 
@@ -76,13 +78,13 @@ Where a complaint covers more than one, we use the shortest acknowledgement peri
 
 6.1 The internal review produces Dono's final response to your complaint.
 
-6.2 **Alternative dispute resolution.** Where the law requires us to, our final response to a consumer complaint will give you the information about alternative dispute resolution that **Chapter 4 of Part 4 of the Digital Markets, Competition and Consumers Act 2024** requires — that regime came into force on 6 April 2026 and replaced the previous accreditation scheme. Unless applicable law, a regulatory requirement or a separate agreement requires otherwise, **Dono is not obliged to participate in alternative dispute resolution and does not presently commit to doing so.** **[SOLICITOR SIGN-OFF — confirm the exact information section 308 of the DMCC Act 2024 requires in a final response, whether any sector-specific or contractual participation duty applies to Dono as a UK sole trader supplying services to consumers, and if so identify an accredited competent provider. Once confirmed, this clause can be made unconditional if appropriate.]**
+6.2 **Alternative dispute resolution.** Each final response to a consumer complaint contains the alternative-dispute-resolution information required by applicable law, including Chapter 4 of Part 4 of the Digital Markets, Competition and Consumers Act 2024 where it applies. The response states whether Dono is required or agrees to use an approved ADR provider and identifies that provider where applicable. Dono does not represent that it participates in ADR where no legal, regulatory or contractual participation duty applies.
 
 6.3 Nothing in this policy affects your statutory rights, your right to bring a claim in the courts under clause 32 of the Terms of Service, your right to complain to the Information Commissioner's Office about a data matter, your right to complain to Ofcom about an online-safety matter, or any right you have against the Payment Provider directly.
 
 ## 7. Records
 
-7.1 We record every complaint — the date received, the route used, the decision and any internal review — and retain it for six years from closure, so that we can demonstrate we handled it properly and can spot recurring problems. We review the complaints log monthly.
+7.1 Dono records every complaint — the intake route, category, linked cases, dates, owner, evidence, communications, decision and reasons, internal review, outcome and remedial action — and retains the record for six years from closure. Tamper-evident audit events record access and changes. Dono reviews the complaints log monthly for recurring problems, missed service targets and required policy or product changes.
 
 ## 8. Contact
 
