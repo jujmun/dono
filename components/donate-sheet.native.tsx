@@ -363,13 +363,13 @@ export function DonateSheet({
                   amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
                 />
                 <ReceiptLineRow
-                  label="Estimated processing fee"
+                  label="Estimated processing fee (typical UK card)"
                   amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
                   muted
                 />
                 <ReceiptDivider />
                 <ReceiptLineRow
-                  label="Amount reaching the campaign"
+                  label="Estimated amount reaching the campaign"
                   amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
                   emphasis
                 />
@@ -399,10 +399,11 @@ export function DonateSheet({
             </Pressable>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-              Donations are paid to this society&apos;s Stripe Connected Account.
-              The Connected Account holder is the Merchant of Record. An estimated
-              payment processing fee is added at checkout so the intended amount
-              reaches the campaign.
+              Donations are paid to this society&apos;s Stripe Connected Account,
+              which is the Merchant of Record. The processing fee shown is an
+              estimate based on a typical UK card; your card&apos;s actual fee may
+              be higher or lower, so the amount the campaign receives may differ
+              slightly from the estimate above.
             </Text>
 
             <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
