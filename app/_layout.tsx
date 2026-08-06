@@ -28,6 +28,7 @@ import {
 import { StripeAppProvider } from "@/lib/stripe/provider";
 import { AnalyticsConsentBanner } from "@/components/analytics-consent-banner";
 import { ErrorBoundary } from "@/components/error-boundary";
+import { RetroKeyFlatLock } from "@/components/retro/retro-key-flat-lock";
 import { api } from "@convex/_generated/api";
 
 const convex = new ConvexReactClient(
@@ -162,6 +163,7 @@ function AppTree() {
   return (
     <ErrorBoundary>
       <AuthGuard>
+        <RetroKeyFlatLock />
         <StatusBar style="dark" />
         <Stack screenOptions={{ headerShown: false }} />
       </AuthGuard>
