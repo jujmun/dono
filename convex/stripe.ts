@@ -39,34 +39,6 @@ function normalizeDonorEmail(email: string | undefined) {
   return trimmed;
 }
 
-async function getOrCreateStripeCustomer(
-  ctx: ActionCtx,
-  userId: Id<"users">,
-  userContext: { email: string; name?: string },
-) {
-  const stripe = getStripeClient();
-
-  const existingCustomer = await ctx.runQuery(
-    internal.stripeInternal.getStripeCustomerByUserId,
-    { userId },
-  );
-
-  if (existingCustomer) {
-    return existingCustomer.stripeCustomerId;
-  }
-
-  const customer = await stripe.customers.create({
-    email: userContext.email || undefined,
-    name: userContext.name || undefined,
-    metadata: { userId },
-  });
-
-  return await ctx.runMutation(internal.stripeInternal.saveStripeCustomer, {
-    userId,
-    stripeCustomerId: customer.id,
-  });
-}
-
 /**
  * Current Stripe API versions no longer attach a PaymentIntent object to
  * `invoice.payment_intent` — the client secret for confirming a
@@ -305,104 +277,6 @@ export const createPaymentIntent = action({
         amountToCampaignMinor: feeBreakdown.amountToCampaignMinor,
         coverFees,
       },
-    };
-  },
-});
-
-export const createFundPaymentIntent = action({
-  args: {
-    fundSlug: v.string(),
-    amount: v.number(),
-    donorEmail: v.optional(v.string()),
-    anonymous: v.optional(v.boolean()),
-  },
-  handler: async (ctx, args) => {
-    const amount = Number(args.amount);
-    const donorEmail = normalizeDonorEmail(args.donorEmail);
-    const anonymous = args.anonymous === true;
-    const amountValidation = validateDonationAmount(amount);
-    if (!amountValidation.valid) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: amountValidation.message,
-      });
-    }
-
-    const fund = await ctx.runQuery(internal.stripeFunds.getFundForDonation, {
-      fundSlug: args.fundSlug.trim(),
-    });
-
-    const stripe = getStripeClient();
-    const userId = await getAuthUserId(ctx);
-
-    const quotaKey = userId
-      ? `stripeFundPi:${userId}`
-      : `stripeFundPi:guest:${donorEmail ?? "anonymous"}`;
-    await enforceStripeCreateQuota(ctx, quotaKey, userId ?? undefined);
-
-    let stripeCustomerId: string | undefined;
-    let receiptEmail = donorEmail;
-
-    if (userId) {
-      await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
-      const userContext = await ctx.runQuery(
-        internal.stripeInternal.getVerifiedUserContext,
-        { userId },
-      );
-      stripeCustomerId = await getOrCreateStripeCustomer(ctx, userId, userContext);
-      receiptEmail = receiptEmail || userContext.email || undefined;
-    }
-
-    // Community funds are Merchant of Record on the platform account (not Connect).
-    // Donor pays estimated Stripe processing on top; no Dono platform retention.
-    const feeBreakdown = calculateDonationFeeBreakdown(amount);
-    const grossAmountMinor = feeBreakdown.totalChargedMinor;
-
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: grossAmountMinor,
-      currency: "gbp",
-      ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
-      ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        ...(userId ? { userId } : {}),
-        ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
-        ...(anonymous ? { anonymous: "true" } : {}),
-        fundId: fund.fundId,
-        fundSlug: fund.fundSlug,
-        donationType: "fund_one_time",
-        merchantOfRecord: "platform",
-        feeEnvelopeMinor: String(feeBreakdown.feeEnvelopeMinor),
-        donoShareMinor: "0",
-        intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
-      },
-    });
-
-    if (!paymentIntent.client_secret) {
-      throw new ConvexError({
-        code: "STRIPE_ERROR",
-        message: "Stripe did not return a client secret.",
-      });
-    }
-
-    await ctx.runMutation(internal.stripeFunds.createPendingFundDonation, {
-      userId: userId ?? undefined,
-      donorEmail: receiptEmail,
-      isAnonymous: anonymous,
-      fundId: fund.fundId,
-      amount,
-      stripePaymentIntentId: paymentIntent.id,
-      grossAmountMinor,
-      applicationFeeAmountMinor: feeBreakdown.applicationFeeAmountMinor,
-      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
-      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
-    });
-
-    await resetStripeCreateQuota(ctx, quotaKey);
-
-    return {
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
     };
   },
 });
