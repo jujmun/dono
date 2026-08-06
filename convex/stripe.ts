@@ -179,11 +179,12 @@ export const createPaymentIntent = action({
         message: "You must confirm you are at least 18 years old to donate.",
       });
     }
+    const ageAttested = args.ageAttested === true;
 
     await ctx.runMutation(internal.legalInternal.assertDonateGates, {
       userId: userId ?? undefined,
       guestKey: args.guestKey,
-      ageAttested: true,
+      ageAttested,
     });
 
     const quotaKey = userId
@@ -218,7 +219,8 @@ export const createPaymentIntent = action({
       coverFees,
       intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
       estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
-      ageAttested: true,
+      ageAttested,
+      ageAttestedAt: Date.now(),
       legalAcceptedAt: Date.now(),
     });
 
