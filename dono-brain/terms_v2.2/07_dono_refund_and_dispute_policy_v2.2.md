@@ -34,10 +34,11 @@ Refund grounds fall into two classes, and the test that applies depends on the c
 (a) duplicate payment;
 (b) payment error, including a charge for the wrong amount;
 (c) unauthorised payment;
-(d) **a Donation made by a child without the permission of a parent or guardian** (Donor Terms clause 2.2);
-(e) cancellation of the Campaign before the money is spent;
-(f) failure or withdrawal of the Campaign Owner's student-status check, where the Campaign should not have been published; and
-(g) Surplus Funds falling to be refunded under clause 10.
+(d) cancellation of the Campaign before the money is spent;
+(e) failure or withdrawal of the Campaign Owner's student-status check, where the Campaign should not have been published; and
+(f) Surplus Funds falling to be refunded under clause 10.
+
+*(A donation made by a child without a parent or guardian's permission is no longer a separate ground — there is no parental-permission checkout mechanism to have been bypassed. It falls under (c), unauthorised payment, on the same footing as any other unauthorised card use. Revised 6 Aug 2026 — see TRUTH.md, Age section.)*
 
 3.2 **Conduct grounds.** These depend on something the Campaign Owner did or failed to do, and the test in clause 4.2 applies. They are:
 

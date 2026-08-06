@@ -47,8 +47,8 @@
 
 4.3 **Age — stated plainly.**
 
-- **You must be 18 or over to create a Dono account**, and therefore to create or operate a Campaign, act for a Society, or post a comment.
-- **There is no age restriction on browsing, and none on donating.** Anyone may view a public campaign page, and anyone may donate, with or without an account. At checkout we ask you to confirm that you are 18 or over, or that you have a parent or guardian's permission.
+- **There is no minimum age to create a Dono account or to post a comment.** You must be 18 or over to create or operate a Campaign, or to act for a Society — checked at that step.
+- **There is no age restriction on browsing, and none on donating.** Anyone may view a public campaign page, and anyone may donate, with or without an account. At checkout we ask you to confirm that you are 18 or over. There is no parent-or-guardian-permission alternative.
 - **Age is declared, not verified.** Dono asks for your date of birth and relies on your answer. **A declared date of birth is not highly effective age assurance**, and Dono does not claim it is. The student card is not relied on as proof of age. The Payment Provider's identity check does not reliably return a date of birth in every flow, so Dono does not use it as an age gate.
 
 Because children can reach the Platform, Dono has completed a children's access assessment and a children's risk assessment under the Online Safety Act 2023, and operates the safety measures described in the Community Guidelines rather than relying on an age restriction it does not enforce. **[SOLICITOR SIGN-OFF — children's access assessment and children's risk assessment.]**

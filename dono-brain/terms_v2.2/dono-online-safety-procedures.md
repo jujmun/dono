@@ -59,10 +59,10 @@ These are Dono's **operational targets, not statutory deadlines**, and must not 
 **The position, stated accurately.**
 
 - **Anyone of any age may view public campaign pages**, without logging in. Campaign links are shareable, so a child can reach any public page via search, a shared link or social media.
-- **Anyone of any age may donate**, with or without an account. There is no age gate on donating. Checkout asks the donor to confirm they are 18 or over, or have a parent or guardian's permission — a **declaration, not a verified check**.
-- **Only people aged 18 or over may create an account**, and therefore only they may create a campaign or post a comment. **Age is established by a declared date of birth.**
+- **Anyone of any age may donate**, with or without an account. There is no age gate on donating. Checkout asks the donor to confirm they are 18 or over — a **declaration, not a verified check**, with no parent-or-guardian-permission alternative.
+- **There is no minimum age to create an account or to post a comment.** Only people aged 18 or over may create a campaign or act for a society, checked at that step. **Age is established by a declared date of birth**, where it is checked at all.
 - Campaign creators additionally complete Stripe Identity verification. **Stripe Identity does not reliably return a date of birth in every flow and is not used as Dono's age gate** — engineering has confirmed this. The gate is the declared date of birth.
-- Children **cannot** author campaigns or comments, but they **can** read everything published, and they **can** donate.
+- Children **cannot** author campaigns or act for a society, but they **can** read everything published, they **can** comment, and they **can** donate. **[COMPLIANCE — 6 Aug 2026: revised — commenting was previously listed as blocked to children via the account-creation age gate; that gate will not be built (see TRUTH.md, Age section). Downstream moderation/OSA procedures that assumed comments come only from declared-adult accounts should be reviewed against this — Amrit/counsel to re-assess.]**
 
 **Conclusion: children are likely to access the service.** A declared date of birth is not highly effective age assurance, so Dono cannot conclude that it excludes under-18s. Dono therefore operates as a service likely to be accessed by children and has completed a full children's risk assessment.
 

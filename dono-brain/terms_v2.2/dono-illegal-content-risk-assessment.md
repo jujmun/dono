@@ -70,10 +70,12 @@ This draft reflects the following confirmed launch design:
 
 The age position is settled and is no longer an open question. It is:
 
-- **18 or over is required to create an account**, and therefore to create a campaign, act for a society, or post a comment.
+- **There is no minimum age to create an account or to post a comment.** 18 or over is required only to create a campaign or act for a society, checked at that specific step.
 - **Browsing and donating are open to everyone, at any age.** No account is needed to donate.
-- **Age is established by a declared date of birth.** Stripe Identity does not reliably return a date of birth in every flow and **is not used as Dono's age gate**. A declared date of birth is **not** highly effective age assurance under Ofcom's children's access assessment tool.
-- Checkout asks a donor to confirm they are 18 or over or have a parent or guardian's permission — again a declaration, not a check.
+- **Age is established by a declared date of birth**, where it is checked at all. Stripe Identity does not reliably return a date of birth in every flow and **is not used as Dono's age gate**. A declared date of birth is **not** highly effective age assurance under Ofcom's children's access assessment tool.
+- Checkout asks a donor to confirm they are 18 or over — a declaration, not a check, and with no parent-or-guardian-permission alternative.
+
+**[COMPLIANCE — 6 Aug 2026: revised from "18+ to create an account, and therefore to comment" (see TRUTH.md, Age section). Any severity/likelihood rating elsewhere in this document that assumed a declared-DOB gate on account creation or commenting was assessing a control that will not be built and needs re-scoring against no gate at all — Amrit/counsel to re-assess.]**
 
 **Consequence: children are likely to access the service**, and Dono has completed a separate Children's Risk Assessment on that footing. Dono operates **child-safe by default** rather than deploying age assurance to exclude under-18s; the decision and its reasoning are recorded in the Online Safety Act Procedures section 3.3.
 

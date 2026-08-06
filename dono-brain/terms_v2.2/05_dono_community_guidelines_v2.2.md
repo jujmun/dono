@@ -63,7 +63,7 @@
 
 ### 6. Comments
 
-6.1 There is no private messaging; all comments are public and display a name. **You must have an account, and therefore be 18 or over, to post a comment.** Hidden-name commenting is not available. You may edit or delete your own comments; the interface shows when a comment was edited. Campaign owners may remove a comment from their own campaign but not edit another user's wording; Dono keeps a private moderation copy and may restore a comment where removal is misused. There is no blocking feature; use reporting instead.
+6.1 There is no private messaging; all comments are public and display a name. **You must have an account to post a comment. There is no age requirement to create an account or to post a comment.** Hidden-name commenting is not available. You may edit or delete your own comments; the interface shows when a comment was edited. Campaign owners may remove a comment from their own campaign but not edit another user's wording; Dono keeps a private moderation copy and may restore a comment where removal is misused. There is no blocking feature; use reporting instead.
 
 6.2 **Links and attachments in comments are not permitted.** Comments are plain text. This is a deliberate safety choice: links and attachments are a common route for scams, phishing and harmful material, and comments are visible to people of any age. **[ENGINEERING — confirm links and attachments are technically disabled in comments, not merely discouraged.]**
 

@@ -45,11 +45,11 @@ Dono lets students run public fundraising campaigns for university-related costs
 
 **Can they donate?** **Yes.** No account is required and there is no age gate. The only control is a self-declaration at checkout.
 
-**Can they comment?** Not without an account, and accounts require a declared date of birth of 18 or over. **A child who states a false date of birth can create an account and comment.** They can in any event **read** every comment as an unauthenticated visitor.
+**Can they comment?** **Yes.** Commenting needs an account, but account creation asks for no date of birth and has no age gate of any kind — not even a self-declaration to state falsely. **[COMPLIANCE — 6 Aug 2026: the account-creation/comment age gate this section previously assumed will not be built (see TRUTH.md, Age section). The paragraph above and the Conclusion below need re-scoring against "no barrier at all" rather than "gameable self-declaration" — Amrit/counsel to re-assess.]** They can in any event **read** every comment as an unauthenticated visitor.
 
 **Can they publish campaigns?** Not without an account, and additionally not without passing a manual student-card check and Stripe Identity. **The student-card check is the meaningful barrier here** — a child would need a plausible university student card and a working university email address, which is a real obstacle in a way that a declared date of birth is not.
 
-**Conclusion.** **Children are likely to access the service.** Dono cannot conclude otherwise on the strength of a self-declared date of birth. Children are effectively excluded from **publishing campaigns** by the student-card and university-email requirement, but only nominally excluded from **commenting**, and not excluded at all from **viewing** or **donating**. Those last three are where the risk sits.
+**Conclusion.** **Children are likely to access the service.** Dono cannot conclude otherwise on the strength of a self-declared date of birth. Children are effectively excluded from **publishing campaigns** by the student-card and university-email requirement, but only nominally excluded from **commenting**, and not excluded at all from **viewing** or **donating**. Those last three are where the risk sits. **[COMPLIANCE — this conclusion still describes commenting as "only nominally excluded," which assumed a gameable declared-DOB gate at account creation. That gate does not exist and will not be built; commenting has no age-related barrier at all. Needs re-scoring, not just a wording fix.]**
 
 ## 3. User journeys
 
