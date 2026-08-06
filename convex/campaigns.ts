@@ -19,7 +19,12 @@ import {
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
-import { isPublicCampaign, isPublicStatus, isUnderReview } from "./lib/campaignVisibility";
+import {
+  isPublicCampaign,
+  isPublicStatus,
+  isReadyForAdminReview,
+  isUnderReview,
+} from "./lib/campaignVisibility";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
 import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
@@ -293,7 +298,7 @@ export const listPendingForAdmin = query({
     await requireAdmin(ctx);
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
-      .filter((c) => c.status === "pending" && matchesSearch(c, args.search))
+      .filter((c) => isReadyForAdminReview(c) && matchesSearch(c, args.search))
       .map((c) => ({
         ...toCampaign(c),
         stripeVerificationStatus: c.stripeVerificationStatus ?? null,
@@ -337,7 +342,7 @@ export const getAdminStats = query({
     let live = 0;
     let moderated = 0;
     for (const c of campaigns) {
-      if (c.status === "pending") pending += 1;
+      if (isReadyForAdminReview(c)) pending += 1;
       else if (isPublicStatusLocal(c.status)) live += 1;
       else if (c.status === "rejected") moderated += 1;
     }

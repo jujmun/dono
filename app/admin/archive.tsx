@@ -58,11 +58,11 @@ export default function AdminArchivePage() {
   const trimmedSearch = search.trim();
   const moderated = useQuery(
     api.campaigns.listModeratedForAdmin,
-    adminUser && reviewType === "campaigns" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as Campaign[] | undefined;
   const moderatedSocieties = useQuery(
     api.societies.listModeratedForAdmin,
-    adminUser && reviewType === "societies" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as AdminSociety[] | undefined;
 
   const filtered = (moderated ?? []).filter((c) =>
@@ -100,7 +100,14 @@ export default function AdminArchivePage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="removed" />
 
-        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+        <ReviewTypeToggle
+          value={reviewType}
+          onChange={setReviewType}
+          counts={{
+            campaigns: moderated?.length,
+            societies: moderatedSocieties?.length,
+          }}
+        />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />

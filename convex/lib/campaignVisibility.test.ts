@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   isEditableByOwner,
   isPublicCampaign,
+  isReadyForAdminReview,
   isUnderReview,
   requiresSocietyApproval,
 } from "./campaignVisibility";
@@ -28,6 +29,54 @@ describe("campaignVisibility", () => {
       societyApprovalStatus: "approved" as const,
     };
     expect(isPublicCampaign(campaign as never)).toBe(true);
+  });
+});
+
+describe("isReadyForAdminReview", () => {
+  const societyCreator = {
+    type: "society" as const,
+    name: "Soc",
+    avatar: "SO",
+    communityId: "soc",
+  };
+
+  it("excludes society campaigns awaiting leader approval", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "pending",
+      } as never),
+    ).toBe(false);
+  });
+
+  it("includes society campaigns after leader approval", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "approved",
+      } as never),
+    ).toBe(true);
+  });
+
+  it("excludes non-pending campaigns even if society-approved", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "active",
+        creator: societyCreator,
+        societyApprovalStatus: "approved",
+      } as never),
+    ).toBe(false);
+  });
+
+  it("includes pending non-society campaigns without society approval", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: { type: "student", name: "Stu", avatar: "ST" },
+      } as never),
+    ).toBe(true);
   });
 });
 

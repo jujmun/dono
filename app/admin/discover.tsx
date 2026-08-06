@@ -44,11 +44,11 @@ export default function AdminDiscoverPage() {
   const trimmedSearch = search.trim();
   const campaigns = (useQuery(
     api.campaigns.list,
-    adminUser && reviewType === "campaigns" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const societies = useQuery(
     api.societies.listActiveForAdmin,
-    adminUser && reviewType === "societies" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as AdminSociety[] | undefined;
 
   const liveCampaigns = [...(campaigns ?? []).filter((c) =>
@@ -85,7 +85,14 @@ export default function AdminDiscoverPage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="live" />
 
-        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+        <ReviewTypeToggle
+          value={reviewType}
+          onChange={setReviewType}
+          counts={{
+            campaigns: campaigns?.length,
+            societies: societies?.length,
+          }}
+        />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />

@@ -21,10 +21,17 @@ export function buildCampaignEditedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was updated.`;
 }
 
-/** Sent to every admin (see campaignCreator.resubmit) when an owner resubmits
- * a changes-requested/rejected campaign for re-review. */
+/** Sent to every admin when a campaign becomes ready for admin review —
+ * after resubmit for non-society campaigns, or after society leader
+ * approval for society campaigns (see campaignCreator). */
 export function buildCampaignResubmittedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was resubmitted and needs re-review.`;
+}
+
+/** Sent to admins when a society leader approves a pending campaign so it
+ * enters the admin review queue. */
+export function buildCampaignReadyForAdminMessage(campaignTitle: string) {
+  return `Campaign '${campaignTitle}' was approved by its society and needs admin review.`;
 }
 
 /** Sent to a donor when Dono cancels their society subscription because the
