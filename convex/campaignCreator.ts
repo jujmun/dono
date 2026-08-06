@@ -16,7 +16,10 @@ import {
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
-import { isEditableByOwner, isPublicStatus, requiresSocietyApproval } from "./lib/campaignVisibility";
+import { isEditableByOwner, isPublicStatus, hasCompletedStripeIdentity, isReadyForSocietyReview, requiresSocietyApproval } from "./lib/campaignVisibility";
+import { buildCampaignVerifications } from "./lib/verificationBadges";
+import { notifySocietyLeadersCampaignPending } from "./lib/societyCampaignNotify";
+import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
 import {
   buildCampaignEditedMessage,
   buildCampaignReadyForAdminMessage,
@@ -303,38 +306,22 @@ export const resubmit = mutation({
       moderatedBy: undefined,
       moderationAction: undefined,
       ...(needsSocietyReapproval
-        ? { societyApprovalStatus: "pending" as const }
+        ? hasCompletedStripeIdentity(campaign)
+          ? { societyApprovalStatus: "pending" as const }
+          : { societyApprovalStatus: undefined }
         : {}),
     });
 
     if (needsSocietyReapproval) {
-      // Admins only see society campaigns after leader approval — notify
-      // leaders here and ping admins from approveBySociety instead.
+      // Notify leaders once Identity is complete; otherwise leave the campaign
+      // out of their queue until the owner completes Identity and resubmits.
       const communitySlug = campaign.creator.communityId;
-      if (communitySlug) {
-        const leaders = await ctx.db
-          .query("societyMembers")
-          .withIndex("by_community_status", (q) =>
-            q.eq("communitySlug", communitySlug).eq("status", "approved"),
-          )
-          .collect();
-        for (const leader of leaders.filter((m) => m.role === "leader")) {
-          const profile = await ctx.db
-            .query("profiles")
-            .withIndex("by_userId", (q) => q.eq("userId", leader.userId))
-            .unique();
-          if (profile?.email) {
-            await ctx.scheduler.runAfter(
-              0,
-              internal.emails.sendSocietyCampaignPending,
-              {
-                leaderEmail: profile.email,
-                societyName: campaign.creator.name,
-                campaignTitle: campaign.title,
-              },
-            );
-          }
-        }
+      if (communitySlug && hasCompletedStripeIdentity(campaign)) {
+        await notifySocietyLeadersCampaignPending(ctx, {
+          communitySlug,
+          societyName: campaign.creator.name,
+          campaignTitle: campaign.title,
+        });
       }
     } else {
       const admins = await ctx.db
@@ -351,6 +338,95 @@ export const resubmit = mutation({
           relatedEntityId: campaign.slug,
         });
       }
+    }
+
+    return null;
+  },
+});
+
+/**
+ * Final create-wizard submit — opens the society (or admin) review queue.
+ * Campaigns are created earlier for Stripe Identity; they must not appear
+ * to leaders/admins until this runs.
+ */
+export const submitForReview = mutation({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const { userId } = await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || campaign.status !== "pending") {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Campaign not found.",
+      });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+
+    // Already submitted — idempotent.
+    if (campaign.societyApprovalStatus !== undefined) {
+      return null;
+    }
+
+    if (!hasCompletedStripeIdentity(campaign)) {
+      throw new ConvexError({
+        code: "IDENTITY_REQUIRED",
+        message: "Stripe Identity verification must be completed before submitting for review.",
+      });
+    }
+
+    const communitySlug = campaign.creator.communityId;
+    let isLeader = false;
+    if (communitySlug) {
+      const membership = await ctx.db
+        .query("societyMembers")
+        .withIndex("by_community_user", (q) =>
+          q.eq("communitySlug", communitySlug).eq("userId", userId),
+        )
+        .unique();
+      isLeader =
+        membership?.status === "approved" && membership.role === "leader";
+    }
+
+    const now = Date.now();
+    const societyApprovalStatus = isLeader
+      ? ("approved" as const)
+      : ("pending" as const);
+    const patched = {
+      ...campaign,
+      societyApprovalStatus,
+    };
+    await ctx.db.patch(campaign._id, {
+      societyApprovalStatus,
+      ...(isLeader
+        ? { societyApprovedAt: now, societyApprovedBy: userId }
+        : {}),
+      verifications: buildCampaignVerifications(patched),
+    });
+
+    if (isLeader) {
+      const admins = await ctx.db
+        .query("profiles")
+        .withIndex("by_role", (q) => q.eq("role", "admin"))
+        .collect();
+      const message = buildCampaignReadyForAdminMessage(campaign.title);
+      for (const admin of admins) {
+        await createNotification(ctx, {
+          userId: admin.userId,
+          type: "campaign_resubmitted",
+          message,
+          relatedEntityType: "campaign",
+          relatedEntityId: campaign.slug,
+        });
+      }
+    } else if (communitySlug) {
+      await notifySocietyLeadersCampaignPending(ctx, {
+        communitySlug,
+        societyName: campaign.creator.name,
+        campaignTitle: campaign.title,
+      });
     }
 
     return null;
@@ -724,7 +800,11 @@ export const listPendingForSocietyLeader = query({
       .withIndex("by_society_approval", (q) => q.eq("societyApprovalStatus", "pending"))
       .collect();
     return campaigns
-      .filter((c) => c.creator.communityId === args.communitySlug)
+      .filter(
+        (c) =>
+          c.creator.communityId === args.communitySlug &&
+          isReadyForSocietyReview(c),
+      )
       .map(toCampaign);
   },
 });
@@ -740,6 +820,12 @@ export const approveBySociety = mutation({
       throw new ConvexError({
         code: "NOT_FOUND",
         message: "Pending society campaign not found.",
+      });
+    }
+    if (isStripeIdentityEnabled() && campaign.stripeVerificationStatus !== "verified") {
+      throw new ConvexError({
+        code: "IDENTITY_REQUIRED",
+        message: "Stripe Identity verification must be completed before society approval.",
       });
     }
 
