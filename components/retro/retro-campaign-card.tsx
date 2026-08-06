@@ -148,7 +148,12 @@ export function RetroCampaignCard({
                 {campaign.university} · {creatorType}
               </Text>
 
-              <View className="mb-3 min-h-[108px] rounded-sm border border-dashed border-retro-ink bg-white px-3 py-2.5">
+              <View
+                className={cn(
+                  "mb-3 rounded-sm border border-dashed border-retro-ink bg-white px-3 py-2.5",
+                  goalLines.length > 0 && "min-h-[108px]",
+                )}
+              >
                 {goalLines.map((line) => (
                   <View
                     key={line.label}
@@ -166,7 +171,9 @@ export function RetroCampaignCard({
                     </Text>
                   </View>
                 ))}
-                <View className="my-1.5 border-t border-dashed border-retro-ink" />
+                {goalLines.length > 0 ? (
+                  <View className="my-1.5 border-t border-dashed border-retro-ink" />
+                ) : null}
                 <View className="flex-row items-end gap-2 py-0.5">
                   <Text className="shrink font-retro-mono-bold text-[12.5px] text-retro-ink">
                     {footer.label}

@@ -439,11 +439,11 @@ export function DonateSheet({
               which is the Merchant of Record. The processing fee shown is an
               estimate based on a typical UK card; your card&apos;s actual fee may
               be higher or lower, so the amount the campaign receives may differ
-              slightly from the estimate above.
-            </Text>
-
-            <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
-              Not Gift Aid. Dono does not issue charitable tax receipts.
+              slightly from the estimate above. Not Gift Aid. Dono does not
+              issue charitable tax receipts.
+              {stripeConfigured && !needsDob && !ageAttested
+                ? " Confirm you are at least 18 above to continue to payment."
+                : null}
             </Text>
 
             {!stripeConfigured ? (
@@ -455,11 +455,7 @@ export function DonateSheet({
               <Text className="mt-6 text-sm text-dono-muted">
                 Confirm your date of birth above to continue to payment.
               </Text>
-            ) : !ageAttested ? (
-              <Text className="mt-6 text-sm text-dono-muted">
-                Confirm you are at least 18 above to continue to payment.
-              </Text>
-            ) : !legalAccepted ? (
+            ) : !ageAttested ? null : !legalAccepted ? (
               <Text className="mt-6 text-sm text-dono-muted">
                 Accept the terms above to continue to payment.
               </Text>
