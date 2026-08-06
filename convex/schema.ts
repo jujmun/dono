@@ -425,6 +425,7 @@ export default defineSchema({
     matchedAmountPounds: v.optional(v.number()),
     matchWindowId: v.optional(v.id("campaignMatchWindows")),
     ageAttested: v.optional(v.boolean()),
+    ageAttestedAt: v.optional(v.number()),
     legalAcceptedAt: v.optional(v.number()),
     emailUpdatesOptIn: v.optional(v.boolean()),
     emailUpdatesOptInAt: v.optional(v.number()),

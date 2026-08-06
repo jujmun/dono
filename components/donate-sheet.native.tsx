@@ -13,7 +13,10 @@ import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
 import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
-import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
+import {
+  AgeAttestationCheckbox,
+  LegalAcceptanceCheckbox,
+} from "@/components/legal-acceptance-checkbox";
 import {
   DonateDobGateForm,
   useDonateDobGate,
@@ -163,6 +166,8 @@ export function DonateSheet({
   onAnonymousChange,
   legalAccepted,
   onLegalAcceptedChange,
+  ageAttested,
+  onAgeAttestedChange,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -220,12 +225,12 @@ export function DonateSheet({
       return;
     }
 
-    if (!legalAccepted || !stripeConfigured || !dobReady) {
+    if (!legalAccepted || !ageAttested || !stripeConfigured || !dobReady) {
       setClientSecret(null);
       setPaymentIntentId(null);
       setStripeAccountId(null);
       setLoading(false);
-      if (!legalAccepted) {
+      if (!legalAccepted || !ageAttested) {
         setError(null);
       }
       return;
@@ -247,7 +252,7 @@ export function DonateSheet({
         donorEmail: donorEmailRef.current.trim() || undefined,
         anonymous: isAnonymous,
         coverFees: true,
-        ageAttested: true,
+        ageAttested,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
       });
     };
@@ -294,6 +299,7 @@ export function DonateSheet({
     selectedAmount,
     isAnonymous,
     legalAccepted,
+    ageAttested,
     stripeConfigured,
     isAuthenticated,
     dobReady,
@@ -339,10 +345,15 @@ export function DonateSheet({
             ) : null}
 
             <View className="mt-4 gap-2">
+              <AgeAttestationCheckbox
+                accepted={ageAttested}
+                onAcceptedChange={onAgeAttestedChange}
+              />
               <LegalAcceptanceCheckbox
                 context="donate"
                 accepted={legalAccepted}
                 onAcceptedChange={onLegalAcceptedChange}
+                showAgeAttestation={false}
               />
 
               {needsDob ? (
@@ -363,13 +374,13 @@ export function DonateSheet({
                   amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
                 />
                 <ReceiptLineRow
-                  label="Estimated processing fee"
+                  label="Estimated processing fee (typical UK card)"
                   amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
                   muted
                 />
                 <ReceiptDivider />
                 <ReceiptLineRow
-                  label="Amount reaching the campaign"
+                  label="Estimated amount reaching the campaign"
                   amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
                   emphasis
                 />
@@ -399,10 +410,11 @@ export function DonateSheet({
             </Pressable>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-              Donations are paid to this society&apos;s Stripe Connected Account.
-              The Connected Account holder is the Merchant of Record. An estimated
-              payment processing fee is added at checkout so the intended amount
-              reaches the campaign.
+              Donations are paid to this society&apos;s Stripe Connected Account,
+              which is the Merchant of Record. The processing fee shown is an
+              estimate based on a typical UK card; your card&apos;s actual fee may
+              be higher or lower, so the amount the campaign receives may differ
+              slightly from the estimate above.
             </Text>
 
             <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
@@ -417,6 +429,10 @@ export function DonateSheet({
             ) : needsDob ? (
               <Text className="mt-6 text-sm text-dono-muted">
                 Confirm your date of birth above to continue to payment.
+              </Text>
+            ) : !ageAttested ? (
+              <Text className="mt-6 text-sm text-dono-muted">
+                Confirm you are at least 18 above to continue to payment.
               </Text>
             ) : !legalAccepted ? (
               <Text className="mt-6 text-sm text-dono-muted">

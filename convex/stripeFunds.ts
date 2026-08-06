@@ -1,87 +1,13 @@
 import { ConvexError, v } from "convex/values";
-import { internalMutation, internalQuery } from "./_generated/server";
+import { internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
-import {
-  DONATION_CURRENCY,
-  donationAmountToStripeMinorUnits,
-  validateDonationAmount,
-} from "./lib/donationAmounts";
+import { donationAmountToStripeMinorUnits } from "./lib/donationAmounts";
 import { estimateStripeFeeMinor } from "./lib/platformFee";
 import { incrementCommunityRaised, incrementFundRaised } from "./lib/aggregates";
 import { isPublicCampaign } from "./lib/campaignVisibility";
-
-export const getFundForDonation = internalQuery({
-  args: { fundSlug: v.string() },
-  handler: async (ctx, args) => {
-    const fund = await ctx.db
-      .query("communityFunds")
-      .withIndex("by_slug", (q) => q.eq("slug", args.fundSlug))
-      .unique();
-
-    if (!fund) {
-      throw new ConvexError({
-        code: "FUND_NOT_FOUND",
-        message: "Community fund not found.",
-      });
-    }
-
-    return {
-      fundId: fund._id,
-      fundSlug: fund.slug,
-      name: fund.name,
-      category: fund.category,
-    };
-  },
-});
-
-export const createPendingFundDonation = internalMutation({
-  args: {
-    userId: v.optional(v.id("users")),
-    donorEmail: v.optional(v.string()),
-    isAnonymous: v.optional(v.boolean()),
-    fundId: v.id("communityFunds"),
-    amount: v.number(),
-    stripePaymentIntentId: v.string(),
-    grossAmountMinor: v.optional(v.number()),
-    applicationFeeAmountMinor: v.optional(v.number()),
-    estimatedStripeFeeMinor: v.optional(v.number()),
-    intendedCampaignAmountMinor: v.optional(v.number()),
-  },
-  handler: async (ctx, args) => {
-    const amountValidation = validateDonationAmount(args.amount);
-    if (!amountValidation.valid) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: amountValidation.message,
-      });
-    }
-
-    const grossAmountMinor =
-      args.grossAmountMinor ?? donationAmountToStripeMinorUnits(args.amount);
-
-    return await ctx.db.insert("donations", {
-      userId: args.userId,
-      donorEmail: args.donorEmail,
-      isAnonymous: args.isAnonymous ?? false,
-      fundId: args.fundId,
-      amount: args.amount,
-      currency: DONATION_CURRENCY,
-      type: "one_time",
-      paymentStatus: "pending",
-      stripePaymentIntentId: args.stripePaymentIntentId,
-      grossAmountMinor,
-      applicationFeeAmountMinor: args.applicationFeeAmountMinor,
-      applicationFeeRefundedMinor: 0,
-      refundedAmountMinor: 0,
-      estimatedStripeFeeMinor: args.estimatedStripeFeeMinor,
-      intendedCampaignAmountMinor: args.intendedCampaignAmountMinor,
-      createdAt: Date.now(),
-    });
-  },
-});
 
 async function allocateFundDonation(
   ctx: MutationCtx,

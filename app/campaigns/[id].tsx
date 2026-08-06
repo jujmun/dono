@@ -85,6 +85,7 @@ export default function CampaignDetailPage() {
   const [donorEmail, setDonorEmail] = useState("");
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [ageAttested, setAgeAttested] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -605,6 +606,8 @@ export default function CampaignDetailPage() {
         onAnonymousChange={setIsAnonymous}
         legalAccepted={legalAccepted}
         onLegalAcceptedChange={setLegalAccepted}
+        ageAttested={ageAttested}
+        onAgeAttestedChange={setAgeAttested}
         onClose={() => setDonateSheetOpen(false)}
         onSuccess={(amount, options) => {
           const matchedAmount = computeMatchCredit(amount, activeMatch ?? null);

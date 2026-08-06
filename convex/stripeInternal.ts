@@ -348,6 +348,7 @@ export const createPendingDonation = internalMutation({
     intendedCampaignAmountMinor: v.optional(v.number()),
     estimatedStripeFeeMinor: v.optional(v.number()),
     ageAttested: v.optional(v.boolean()),
+    ageAttestedAt: v.optional(v.number()),
     legalAcceptedAt: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
@@ -380,6 +381,7 @@ export const createPendingDonation = internalMutation({
       intendedCampaignAmountMinor: args.intendedCampaignAmountMinor,
       estimatedStripeFeeMinor: args.estimatedStripeFeeMinor,
       ageAttested: args.ageAttested,
+      ageAttestedAt: args.ageAttestedAt,
       legalAcceptedAt: args.legalAcceptedAt,
       createdAt: Date.now(),
     });

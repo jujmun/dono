@@ -10,6 +10,8 @@ export type DonateSheetProps = {
   onAnonymousChange: (value: boolean) => void;
   legalAccepted: boolean;
   onLegalAcceptedChange: (value: boolean) => void;
+  ageAttested: boolean;
+  onAgeAttestedChange: (value: boolean) => void;
   onClose: () => void;
   onSuccess: (
     amount: number,
