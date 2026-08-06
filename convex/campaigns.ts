@@ -739,7 +739,7 @@ export const create = mutation({
   handler: async (ctx, args) => {
     const communitySlug = args.communitySlug.trim();
     const { profile } = await requireStudentCreator(ctx);
-    const { userId, community, membership } = await requireSocietyMember(
+    const { userId, community } = await requireSocietyMember(
       ctx,
       communitySlug,
     );
@@ -833,8 +833,6 @@ export const create = mutation({
       .join("")
       .slice(0, 2)
       .toUpperCase();
-    const isLeader = membership.role === "leader";
-    const now = Date.now();
 
     let baseSlug = slugify(title);
     let slug = baseSlug;
@@ -862,9 +860,11 @@ export const create = mutation({
     const plannedUpdateSchedule = args.plannedUpdateSchedule?.trim();
     const ownershipStatement = args.ownershipStatement?.trim();
 
+    // societyApprovalStatus stays unset until the owner finishes the create
+    // wizard (submitForReview). Identity runs mid-wizard against this row.
     const initialVerifications = buildCampaignVerifications({
       stripeVerificationStatus: undefined,
-      societyApprovalStatus: isLeader ? "approved" : "pending",
+      societyApprovalStatus: undefined,
       verifications: [],
       institutionallyEndorsed: false,
     });
@@ -904,10 +904,6 @@ export const create = mutation({
       ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
       ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
       ...(ownershipStatement ? { ownershipStatement } : {}),
-      societyApprovalStatus: isLeader ? ("approved" as const) : ("pending" as const),
-      ...(isLeader
-        ? { societyApprovedAt: now, societyApprovedBy: userId }
-        : {}),
     });
 
     // No relatedEntityId here: a "pending" campaign isn't public
@@ -919,32 +915,6 @@ export const create = mutation({
       type: "campaign_pending",
       message: buildCampaignPendingMessage(title),
     });
-
-    if (!isLeader) {
-      const leaders = await ctx.db
-        .query("societyMembers")
-        .withIndex("by_community_status", (q) =>
-          q.eq("communitySlug", communitySlug).eq("status", "approved"),
-        )
-        .collect();
-      for (const leader of leaders.filter((m) => m.role === "leader")) {
-        const profile = await ctx.db
-          .query("profiles")
-          .withIndex("by_userId", (q) => q.eq("userId", leader.userId))
-          .unique();
-        if (profile?.email) {
-          await ctx.scheduler.runAfter(
-            0,
-            internal.emails.sendSocietyCampaignPending,
-            {
-              leaderEmail: profile.email,
-              societyName: creatorName,
-              campaignTitle: title,
-            },
-          );
-        }
-      }
-    }
 
     return { slug, campaignId };
   },
@@ -1027,6 +997,20 @@ export const updateVerificationFromWebhook = internalMutation({
       stripeVerificationLastErrorReason:
         args.status === "requires_input" ? args.lastErrorReason : undefined,
     });
+
+    // Society / admin queues open only when the owner finishes the create
+    // wizard (campaignCreator.submitForReview) — Identity alone must not release.
+    if (args.status === "verified") {
+      const patched = {
+        ...campaign,
+        stripeVerificationStatus: "verified" as const,
+        verifiedName: args.verifiedName ?? campaign.verifiedName,
+      };
+      await ctx.db.patch(campaign._id, {
+        verifications: buildCampaignVerifications(patched),
+      });
+    }
+
     return { updated: true };
   },
 });

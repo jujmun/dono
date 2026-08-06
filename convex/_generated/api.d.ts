@@ -65,6 +65,7 @@ import type * as lib_notifications from "../lib/notifications.js";
 import type * as lib_pagination from "../lib/pagination.js";
 import type * as lib_platformFee from "../lib/platformFee.js";
 import type * as lib_redirect from "../lib/redirect.js";
+import type * as lib_societyCampaignNotify from "../lib/societyCampaignNotify.js";
 import type * as lib_societyDonationLedger from "../lib/societyDonationLedger.js";
 import type * as lib_societySubscriptionSplit from "../lib/societySubscriptionSplit.js";
 import type * as lib_stripeConnectErrors from "../lib/stripeConnectErrors.js";
@@ -167,6 +168,7 @@ declare const fullApi: ApiFromModules<{
   "lib/pagination": typeof lib_pagination;
   "lib/platformFee": typeof lib_platformFee;
   "lib/redirect": typeof lib_redirect;
+  "lib/societyCampaignNotify": typeof lib_societyCampaignNotify;
   "lib/societyDonationLedger": typeof lib_societyDonationLedger;
   "lib/societySubscriptionSplit": typeof lib_societySubscriptionSplit;
   "lib/stripeConnectErrors": typeof lib_stripeConnectErrors;

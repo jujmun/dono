@@ -51,8 +51,8 @@ type ApprovalCampaign = {
 
 /**
  * Human-readable approval stage for a non-live campaign, or null if it's already
- * public (active/funded/completed). Society-created campaigns must clear a society
- * leader review before admin review; other creator types skip straight to admin.
+ * public (active/funded/completed). Society-created campaigns must clear identity
+ * verification then society leader review before admin review.
  */
 export function getCampaignApprovalStage(
   campaign: ApprovalCampaign,
@@ -69,11 +69,13 @@ export function getCampaignApprovalStage(
   if (campaign.status !== "pending" && campaign.status !== "changes_requested") {
     return null;
   }
-  if (
-    campaign.creator.type === "society" &&
-    campaign.societyApprovalStatus !== "approved"
-  ) {
-    return { label: "Awaiting society leader approval" };
+  if (campaign.creator.type === "society") {
+    if (campaign.societyApprovalStatus === undefined) {
+      return { label: "Not yet submitted for review" };
+    }
+    if (campaign.societyApprovalStatus !== "approved") {
+      return { label: "Awaiting society leader approval" };
+    }
   }
   return { label: "Awaiting admin approval" };
 }

@@ -191,6 +191,7 @@ export default function CreateCampaignPage() {
   const proposeCampaignEdit = useMutation(api.campaignEditRequests.propose);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
+  const submitForReview = useMutation(api.campaignCreator.submitForReview);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
   const setCampaignImage = useMutation(api.campaignCreator.setImage);
   const setCampaignImages = useMutation(api.campaignCreator.setImages);
@@ -573,7 +574,7 @@ export default function CreateCampaignPage() {
       <View className="flex-row items-center gap-2 self-start rounded-xl bg-amber-50 px-3 py-2">
         <VerifyingIndicator size={14} color="#b45309" />
         <Text className="text-xs text-amber-800">
-          Verifying your identity... you can keep going
+          Verifying your identity... please wait until this completes
         </Text>
       </View>
     );
@@ -1752,6 +1753,8 @@ export default function CreateCampaignPage() {
 
                       if (isEditMode && !requiresApproval) {
                         await resubmitCampaign({ slug });
+                      } else if (!isEditMode && !requiresApproval) {
+                        await submitForReview({ slug });
                       }
 
                       posthog?.capture(
