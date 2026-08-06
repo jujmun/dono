@@ -13,10 +13,12 @@ import {
 import { Link, useLocalSearchParams } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
+import * as DocumentPicker from "expo-document-picker";
 import * as ExpoLinking from "expo-linking";
 import {
   CheckCircle2,
   ArrowRight,
+  FileText,
   ImagePlus,
   Paperclip,
   Globe,
@@ -57,6 +59,7 @@ const STEPS = [
 const DEFAULT_UNIVERSITY = "University of Oxford";
 const MAX_DOCUMENTS = 5;
 const MAX_FILE_BYTES = 5 * 1024 * 1024;
+const DOCUMENT_MIME_TYPES = ["application/pdf", "image/*"];
 
 function slugStorageKey(orgType: OrgType) {
   return orgType === "college"
@@ -124,6 +127,11 @@ function isValidOptionalUrl(value: string): boolean {
 
 function fileNameFromAsset(asset: ImagePicker.ImagePickerAsset): string {
   return asset.fileName ?? asset.uri.split("/").pop() ?? "file";
+}
+
+function isImageFile(file: PickedFile): boolean {
+  if (file.mimeType) return file.mimeType.startsWith("image/");
+  return /\.(png|jpe?g|gif|webp|heic|heif)$/i.test(file.name);
 }
 
 export type CreateOrgWizardProps = {
@@ -235,11 +243,15 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
   // Fallback to the webhook: directly poll Stripe every few seconds while
   // unverified, in case the webhook is delayed, misconfigured, or hasn't
   // reached this deployment. Stops as soon as the query reflects "verified".
+  // Wait until a session has actually been created — otherwise the poll
+  // spam-fails with INVALID_STATE between society create and Verify click.
   useEffect(() => {
+    const status = verification?.stripeVerificationStatus;
     if (
       !isStripeIdentityEnabled() ||
       !societySlug ||
-      verification?.stripeVerificationStatus === "verified"
+      !status ||
+      status === "verified"
     ) {
       return;
     }
@@ -300,37 +312,35 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
     }
 
     setError(null);
-    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (!permission.granted) {
-      setError("Photo library permission is required to add supporting documents.");
-      return;
-    }
-
     setPickingDocs(true);
     try {
-      const remaining = MAX_DOCUMENTS - supportingDocs.length;
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ["images"],
-        allowsMultipleSelection: true,
-        selectionLimit: remaining,
-        quality: 0.85,
+      const result = await DocumentPicker.getDocumentAsync({
+        type: DOCUMENT_MIME_TYPES,
+        multiple: true,
+        copyToCacheDirectory: true,
       });
 
       if (result.canceled || result.assets.length === 0) {
         return;
       }
 
+      const remaining = MAX_DOCUMENTS - supportingDocs.length;
+      if (result.assets.length > remaining) {
+        setError(`You can add up to ${MAX_DOCUMENTS} supporting documents.`);
+        return;
+      }
+
       const nextDocs: PickedFile[] = [];
       for (const asset of result.assets) {
-        if (asset.fileSize && asset.fileSize > MAX_FILE_BYTES) {
+        if (asset.size && asset.size > MAX_FILE_BYTES) {
           setError("Each supporting document must be 5MB or smaller.");
           return;
         }
         nextDocs.push({
           uri: asset.uri,
-          name: fileNameFromAsset(asset),
+          name: asset.name || asset.uri.split("/").pop() || "document",
           mimeType: asset.mimeType,
-          fileSize: asset.fileSize,
+          fileSize: asset.size,
         });
       }
 
@@ -538,6 +548,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
   const stripeVerified = stripeStatus === "verified";
+  const stripeProcessing = stripeStatus === "processing";
   const dobLoading = isAuthenticated && myProfile === undefined;
   const hasDateOfBirth = Boolean(myProfile?.dateOfBirth);
   // requires_input is Stripe's status both for "awaiting your first
@@ -825,8 +836,8 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
               </View>
               <Text className="font-retro-mono text-xs text-retro-ink/60">
                 {isCollege
-                  ? "Upload proof of official university recognition or another document that confirms you represent this college. Optional — but approval is less likely without supporting documentation."
-                  : "Upload your society's constitution or proof of official university recognition. Optional — but approval is less likely without supporting documentation."}
+                  ? "Upload proof of official university recognition or another document that confirms you represent this college. PDF or image, up to 5MB each. Optional — but approval is less likely without supporting documentation."
+                  : "Upload your society's constitution or proof of official university recognition. PDF or image, up to 5MB each. Optional — but approval is less likely without supporting documentation."}
               </Text>
 
               {supportingDocs.length > 0 ? (
@@ -836,12 +847,18 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                       key={`${doc.uri}-${index}`}
                       className="flex-row items-center gap-3 rounded-lg border-2 border-retro-ink/20 bg-white p-2"
                     >
-                      <Image
-                        source={{ uri: doc.uri }}
-                        style={{ width: 40, height: 40, borderRadius: 8 }}
-                        resizeMode="cover"
-                        accessibilityLabel="Supporting document thumbnail"
-                      />
+                      {isImageFile(doc) ? (
+                        <Image
+                          source={{ uri: doc.uri }}
+                          style={{ width: 40, height: 40, borderRadius: 8 }}
+                          resizeMode="cover"
+                          accessibilityLabel="Supporting document thumbnail"
+                        />
+                      ) : (
+                        <View className="h-10 w-10 items-center justify-center rounded-lg bg-retro-cream">
+                          <FileText size={18} color="#17211B" />
+                        </View>
+                      )}
                       <Text
                         className="flex-1 font-retro-mono text-sm text-retro-ink"
                         numberOfLines={1}
@@ -872,7 +889,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
               >
                 <Paperclip size={16} color="#17211B" />
                 <Text className="font-retro-mono text-xs text-retro-ink">
-                  {pickingDocs ? "Opening library..." : "Add document"}
+                  {pickingDocs ? "Opening picker..." : "Add document"}
                 </Text>
               </Pressable>
             </View>
@@ -997,6 +1014,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   !manualFieldsValid ||
                   verifying ||
                   stripeVerified ||
+                  stripeProcessing ||
                   !legalAccepted ||
                   !hasDateOfBirth
                 }
@@ -1004,6 +1022,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   !manualFieldsValid ||
                   verifying ||
                   stripeVerified ||
+                  stripeProcessing ||
                   !legalAccepted ||
                   !hasDateOfBirth
                     ? "opacity-50"
@@ -1014,7 +1033,9 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   <ActivityIndicator color="#fff" />
                 ) : (
                   <Text className="font-retro-mono text-sm text-white">
-                    Verify your identity
+                    {stripeProcessing
+                      ? "Verification in progress..."
+                      : "Verify your identity"}
                   </Text>
                 )}
               </Pressable>

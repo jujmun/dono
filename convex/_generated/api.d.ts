@@ -71,6 +71,7 @@ import type * as lib_stripeConnectErrors from "../lib/stripeConnectErrors.js";
 import type * as lib_stripeConnectMerchant from "../lib/stripeConnectMerchant.js";
 import type * as lib_stripeIdentityEnabled from "../lib/stripeIdentityEnabled.js";
 import type * as lib_stripeIdentityOutputs from "../lib/stripeIdentityOutputs.js";
+import type * as lib_stripeIdentitySession from "../lib/stripeIdentitySession.js";
 import type * as lib_stripeOwnership from "../lib/stripeOwnership.js";
 import type * as lib_unsubscribeToken from "../lib/unsubscribeToken.js";
 import type * as lib_verificationBadges from "../lib/verificationBadges.js";
@@ -172,6 +173,7 @@ declare const fullApi: ApiFromModules<{
   "lib/stripeConnectMerchant": typeof lib_stripeConnectMerchant;
   "lib/stripeIdentityEnabled": typeof lib_stripeIdentityEnabled;
   "lib/stripeIdentityOutputs": typeof lib_stripeIdentityOutputs;
+  "lib/stripeIdentitySession": typeof lib_stripeIdentitySession;
   "lib/stripeOwnership": typeof lib_stripeOwnership;
   "lib/unsubscribeToken": typeof lib_unsubscribeToken;
   "lib/verificationBadges": typeof lib_verificationBadges;

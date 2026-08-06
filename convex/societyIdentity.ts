@@ -7,6 +7,10 @@ import { internal } from "./_generated/api";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import { formatDob, fullName } from "./lib/stripeIdentityOutputs";
 import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
+import {
+  retrieveReusableSession,
+  throwStripeIdentityError,
+} from "./lib/stripeIdentitySession";
 
 function assertIdentityEnabled() {
   if (!isStripeIdentityEnabled()) {
@@ -88,10 +92,11 @@ export const createVerificationSession = action({
     // identity" clicks (e.g. while the user is still deciding, or retrying)
     // don't need a new session each time.
     if (society.stripeVerificationSessionId) {
-      const existing = await stripe.identity.verificationSessions.retrieve(
+      const existing = await retrieveReusableSession(
+        stripe,
         society.stripeVerificationSessionId,
       );
-      if (existing.status !== "canceled") {
+      if (existing) {
         return {
           verificationSessionId: existing.id,
           clientSecret: existing.client_secret,
@@ -105,25 +110,30 @@ export const createVerificationSession = action({
       ...IDENTITY_CREATE_LIMIT,
     });
 
-    const session = await stripe.identity.verificationSessions.create({
-      type: "document",
-      // require_matching_selfie is what actually makes Stripe run the
-      // selfie-vs-ID comparison check (and produce selfie_* last_error
-      // codes on mismatch) — without it, admin can't show a real selfie
-      // match result since Stripe never performs that specific check.
-      options: {
-        document: {
-          require_matching_selfie: true,
+    let session: Stripe.Identity.VerificationSession;
+    try {
+      session = await stripe.identity.verificationSessions.create({
+        type: "document",
+        // require_matching_selfie is what actually makes Stripe run the
+        // selfie-vs-ID comparison check (and produce selfie_* last_error
+        // codes on mismatch) — without it, admin can't show a real selfie
+        // match result since Stripe never performs that specific check.
+        options: {
+          document: {
+            require_matching_selfie: true,
+          },
         },
-      },
-      metadata: {
-        societySlug: society.slug,
-        userId,
-      },
-      ...(userContext.email
-        ? { provided_details: { email: userContext.email } }
-        : {}),
-    });
+        metadata: {
+          societySlug: society.slug,
+          userId,
+        },
+        ...(userContext.email
+          ? { provided_details: { email: userContext.email } }
+          : {}),
+      });
+    } catch (error) {
+      throwStripeIdentityError(error);
+    }
 
     await ctx.runMutation(internal.societies.recordVerificationSessionCreated, {
       slug: society.slug,
@@ -200,10 +210,15 @@ export const refreshVerificationStatus = action({
     });
 
     const stripe = getStripeClient();
-    const session = await stripe.identity.verificationSessions.retrieve(
-      society.stripeVerificationSessionId,
-      { expand: ["verified_outputs"] },
-    );
+    let session: Stripe.Identity.VerificationSession;
+    try {
+      session = await stripe.identity.verificationSessions.retrieve(
+        society.stripeVerificationSessionId,
+        { expand: ["verified_outputs"] },
+      );
+    } catch (error) {
+      throwStripeIdentityError(error);
+    }
 
     await ctx.runMutation(internal.societies.updateVerificationFromWebhook, {
       stripeVerificationSessionId: session.id,

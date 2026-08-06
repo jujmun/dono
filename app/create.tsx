@@ -292,11 +292,15 @@ export default function CreateCampaignPage() {
   // Fallback to the webhook: directly poll Stripe every few seconds while
   // unverified, in case the webhook is delayed, misconfigured, or hasn't
   // reached this deployment. Stops as soon as the query reflects "verified".
+  // Wait until a session has actually been created — otherwise the poll
+  // spam-fails with INVALID_STATE between campaign create and Verify click.
   useEffect(() => {
+    const status = verification?.stripeVerificationStatus;
     if (
       !isStripeIdentityEnabled() ||
       !campaignSlug ||
-      verification?.stripeVerificationStatus === "verified"
+      !status ||
+      status === "verified"
     ) {
       return;
     }
@@ -543,6 +547,7 @@ export default function CreateCampaignPage() {
 
   const stripeStatus = verification?.stripeVerificationStatus ?? null;
   const stripeVerified = stripeStatus === "verified";
+  const stripeProcessing = stripeStatus === "processing";
   // requires_input is Stripe's status both for "awaiting your first
   // submission" (its normal initial state) and "a check ran and failed" —
   // only the presence of a real last_error means an actual attempt failed.
@@ -1493,12 +1498,14 @@ export default function CreateCampaignPage() {
                     disabled={
                       verifying ||
                       stripeVerified ||
+                      stripeProcessing ||
                       !legalAccepted ||
                       !hasDateOfBirth
                     }
                     className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
                       verifying ||
                       stripeVerified ||
+                      stripeProcessing ||
                       !legalAccepted ||
                       !hasDateOfBirth
                         ? "opacity-50"
@@ -1509,7 +1516,9 @@ export default function CreateCampaignPage() {
                       <ActivityIndicator color="#fff" />
                     ) : (
                       <Text className="font-retro-bold text-sm text-retro-paper">
-                        Verify your identity
+                        {stripeProcessing
+                          ? "Verification in progress..."
+                          : "Verify your identity"}
                       </Text>
                     )}
                   </Pressable>
