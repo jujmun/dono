@@ -94,7 +94,7 @@ export function RetroDonateSidebar({
             </View>
           ) : null}
 
-          <View className="mb-3 flex-row flex-wrap gap-2 pt-2">
+          <View className="mb-3 w-full flex-row flex-wrap gap-2 pt-2">
             {DETAIL_DONATION_PRESETS.map((amount) => {
               const on = activePreset === amount;
               const isRecommended = amount === RECOMMENDED_DONATION_AMOUNT;
@@ -103,9 +103,15 @@ export function RetroDonateSidebar({
                   key={amount}
                   onPress={() => onSelectPreset(amount)}
                   className={cn(
-                    "retro-key relative mb-1 w-[30%] min-w-[72px] flex-grow items-center rounded-xl border-2 border-retro-ink py-2.5",
+                    "retro-key relative mb-1 items-center rounded-xl border-2 border-retro-ink py-2.5",
                     on ? "bg-retro-sky" : "bg-white",
                   )}
+                  style={{
+                    flexGrow: 1,
+                    flexBasis: "30%",
+                    maxWidth: "32%",
+                    minWidth: 0,
+                  }}
                 >
                   {isRecommended ? (
                     <View className="absolute -top-2.5 z-10 flex-row items-center gap-1 rounded-full border-2 border-retro-ink bg-retro-marigold px-1.5 py-0.5">
@@ -131,12 +137,12 @@ export function RetroDonateSidebar({
           {/* Hero amount field — £ / GBP left, large value right */}
           <View
             className={cn(
-              "mb-2 flex-row items-center rounded-2xl border-[3px] bg-white px-4 py-3",
+              "mb-2 w-full flex-row items-center rounded-2xl border-[3px] bg-white px-3 py-3",
               amountFocused ? "border-retro-sky" : "border-retro-ink",
             )}
           >
-            <View className="mr-3 items-center pr-3 border-r border-retro-ink/20">
-              <Text className="font-retro-bold text-2xl leading-none text-retro-ink">
+            <View className="mr-2 shrink-0 items-center border-r border-retro-ink/20 pr-2">
+              <Text className="font-retro-bold text-xl leading-none text-retro-ink">
                 £
               </Text>
               <Text className="mt-0.5 font-retro-mono-bold text-[10px] uppercase tracking-wide text-[#5c574f]">
@@ -154,7 +160,7 @@ export function RetroDonateSidebar({
               keyboardType="numeric"
               placeholder="0"
               placeholderTextColor="#5c574f"
-              className="min-w-0 flex-1 text-right font-retro-mono-bold text-[32px] leading-9 text-retro-ink outline-none"
+              className="min-w-0 flex-1 text-right font-retro-mono-bold text-[26px] leading-8 text-retro-ink outline-none"
             />
           </View>
 
