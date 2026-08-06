@@ -38,7 +38,9 @@ function CampaignCardLedger({
       {goalLines.map((line) => (
         <ReceiptLineRow key={line.label} {...line} size={size} />
       ))}
-      <ReceiptDivider className={dividerClass} />
+      {goalLines.length > 0 ? (
+        <ReceiptDivider className={dividerClass} />
+      ) : null}
       <ReceiptLineRow {...footer} emphasis size={size} />
     </>
   );

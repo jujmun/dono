@@ -78,14 +78,25 @@ export function CampaignPreview({
     </View>
   );
 
+  const hasImpactLines = (impactLines?.length ?? 0) > 0;
   const breakdownBlock =
-    impactLines && impactLines.length > 0 ? (
-      <FundBreakdownSection key="breakdown" className="mb-8">
+    goal > 0 ? (
+      <FundBreakdownSection
+        key="breakdown"
+        className="mb-8"
+        title={hasImpactLines ? "What your donation funds" : "Funding goal"}
+      >
         <ReceiptLedger>
-          {impactLines.map((line) => (
-            <ReceiptLineRow key={line.label} label={line.label} amount={line.amount} />
-          ))}
-          <ReceiptDivider />
+          {hasImpactLines
+            ? impactLines!.map((line) => (
+                <ReceiptLineRow
+                  key={line.label}
+                  label={line.label}
+                  amount={line.amount}
+                />
+              ))
+            : null}
+          {hasImpactLines ? <ReceiptDivider /> : null}
           <ReceiptTotalRow label="Total goal" amount={goal} />
         </ReceiptLedger>
       </FundBreakdownSection>
