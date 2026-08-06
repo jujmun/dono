@@ -20,4 +20,5 @@ export {
 } from "./campaign-media-hero";
 export { StoryWithCostBreakdown } from "./story-with-cost-breakdown";
 export { DraggableHeroCard } from "./draggable-hero-card";
+export { CampaignHeroProgressStrip } from "./campaign-hero-progress-strip";
 export type { RetroPanelAccent } from "./retro-panel";

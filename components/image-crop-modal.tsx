@@ -14,9 +14,9 @@ import {
 import * as ImageManipulator from "expo-image-manipulator";
 import { Minus, Plus } from "lucide-react-native";
 import { retroKeyClass } from "@/lib/retro-key";
+import { CAMPAIGN_IMAGE_ASPECT } from "@/lib/campaign-images";
 
-/** Matches campaign card / photo-grid framing (wide landscape). */
-export const CAMPAIGN_IMAGE_ASPECT = 16 / 9;
+export { CAMPAIGN_IMAGE_ASPECT };
 
 export type CropSourceImage = {
   uri: string;
@@ -244,8 +244,8 @@ export function ImageCropModal({
             Frame your photo
           </Text>
           <Text className="mt-1 text-sm text-[#5c574f]">
-            Drag to reposition, zoom to choose how much shows on the campaign
-            card.
+            Drag to reposition, zoom to choose what shows on the campaign
+            page (16:9, same as the hero photo).
             {progressLabel ? ` (${progressLabel})` : ""}
           </Text>
 

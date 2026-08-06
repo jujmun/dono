@@ -6,6 +6,12 @@ const PHOTO_URI_PATTERN = /^(https?|file|blob|data):/;
 export const MIN_CAMPAIGN_IMAGES = 1;
 export const MAX_CAMPAIGN_IMAGES = 10;
 
+/**
+ * Canonical campaign photo frame — create-flow crop, campaign hero, and
+ * list cards all use this landscape ratio so uploads match display.
+ */
+export const CAMPAIGN_IMAGE_ASPECT = 16 / 9;
+
 export function isCampaignPhotoSource(image: string): boolean {
   return PHOTO_URI_PATTERN.test(image);
 }

@@ -11,7 +11,7 @@ import {
 } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import { Camera, Gift, GraduationCap, Heart, MessageCircle, X } from "lucide-react-native";
+import { Camera, Gift, GraduationCap, HeartHandshake, X } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { formatCurrency } from "@/lib/constants";
@@ -68,6 +68,40 @@ type UpdateStreamItem = {
 };
 
 type StreamItem = DonationStreamItem | UpdateStreamItem;
+
+function isAnonymousName(name: string): boolean {
+  return !name.trim() || /^anonymous$/i.test(name.trim());
+}
+
+function initialFromName(name: string): string {
+  if (isAnonymousName(name)) return "";
+  return name.trim().charAt(0).toUpperCase();
+}
+
+function StreamAvatar({
+  name,
+  fallback,
+}: {
+  name: string;
+  fallback: "gift" | "cap";
+}) {
+  const initial = initialFromName(name);
+  const anonymous = isAnonymousName(name);
+
+  return (
+    <View className="h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
+      {anonymous ? (
+        <HeartHandshake size={16} color="#211E1A" />
+      ) : initial ? (
+        <Text className="font-retro-bold text-base text-retro-ink">{initial}</Text>
+      ) : fallback === "gift" ? (
+        <Gift size={16} color="#211E1A" />
+      ) : (
+        <GraduationCap size={16} color="#211E1A" />
+      )}
+    </View>
+  );
+}
 
 const OVERLAY_OMBRE_STYLE =
   Platform.OS === "web"
@@ -227,74 +261,71 @@ function UpdatesComposer({
   );
 }
 
-function DonationPost({ item }: { item: DonationStreamItem }) {
-  const matched =
-    item.matchedAmountPounds && item.matchedAmountPounds > 0
-      ? ` (+${formatCurrency(item.matchedAmountPounds)} matched)`
-      : "";
+function DonationPost({
+  item,
+  isTop,
+}: {
+  item: DonationStreamItem;
+  isTop?: boolean;
+}) {
+  const when = formatRelativeTime(item.createdAt);
+  const status = isTop ? "Top donation" : "Recent donation";
 
   return (
-    <View className="border-b-[3px] border-retro-ink bg-retro-cream">
-      <View className="flex-row items-center gap-3 px-4 py-3">
-        <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint">
-          <Gift size={16} color="#211E1A" />
-        </View>
-        <Text className="min-w-0 flex-1 font-retro-bold text-sm text-retro-ink" numberOfLines={1}>
+    <View className="flex-row items-start gap-3 px-4 py-3">
+      <StreamAvatar name={item.displayName} fallback="gift" />
+      <View className="min-w-0 flex-1">
+        <Text
+          className="font-retro-bold text-[14px] text-retro-ink"
+          numberOfLines={1}
+        >
           {item.displayName}
         </Text>
-        <Text className="font-retro-mono text-xs text-[#5c574f]">
-          {formatRelativeTime(item.createdAt)}
+        <Text className="mt-0.5 font-retro-mono text-[12px] text-[#5c574f]" numberOfLines={1}>
+          <Text className="font-retro-mono-bold text-retro-ink">
+            {formatCurrency(item.amount)}
+          </Text>
+          {" · "}
+          {status}
+          {" · "}
+          {when}
         </Text>
       </View>
-      <View className="border-t border-retro-ink" />
-      <Text className="px-4 py-3 text-sm leading-5 text-retro-ink">
-        Donated {formatCurrency(item.amount)}
-        {matched ? <Text className="text-[#5c574f]">{matched}</Text> : null}
-        {" "}— thank you for supporting this campaign!
-      </Text>
     </View>
   );
 }
 
 function UpdatePost({ item }: { item: UpdateStreamItem }) {
+  const when = formatRelativeTime(item.createdAt);
+  const preview = item.content?.trim() || item.title?.trim() || "Posted an update";
+
   return (
-    <View className="border-b-[3px] border-retro-ink bg-retro-cream">
-      <View className="flex-row items-center gap-3 px-4 py-3">
-        <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-marigold">
-          <GraduationCap size={16} color="#211E1A" />
-        </View>
-        <Text className="min-w-0 flex-1 font-retro-bold text-sm text-retro-ink" numberOfLines={1}>
+    <View className="flex-row items-start gap-3 px-4 py-3">
+      <StreamAvatar
+        name={item.authorName || item.authorInitial}
+        fallback="cap"
+      />
+      <View className="min-w-0 flex-1">
+        <Text
+          className="font-retro-bold text-[14px] text-retro-ink"
+          numberOfLines={1}
+        >
           {item.authorName}
         </Text>
-        <Text className="font-retro-mono text-xs text-[#5c574f]">
-          {formatRelativeTime(item.createdAt)}
+        <Text className="mt-0.5 font-retro-mono text-[12px] text-[#5c574f]" numberOfLines={2}>
+          <Text className="font-retro-mono-bold text-retro-ink">Update</Text>
+          {" · "}
+          {when}
+          {" · "}
+          {preview}
         </Text>
-      </View>
-
-      {item.imageUrl ? (
-        <Image
-          source={{ uri: item.imageUrl }}
-          className="h-44 w-full bg-white"
-          resizeMode="cover"
-        />
-      ) : null}
-
-      {item.content ? (
-        <>
-          <View className="border-t border-retro-ink" />
-          <Text className="px-4 py-3 text-sm leading-5 text-retro-ink">{item.content}</Text>
-        </>
-      ) : null}
-
-      <View className="flex-row gap-5 border-t border-dashed border-retro-ink/40 px-4 py-2.5">
-        <Pressable className="flex-row items-center gap-1.5">
-          <Heart size={14} color="#5c574f" />
-          <Text className="font-retro-mono text-xs text-[#5c574f]">Like</Text>
-        </Pressable>
-        <Pressable className="flex-row items-center gap-1.5">
-          <MessageCircle size={14} color="#5c574f" />
-          <Text className="font-retro-mono text-xs text-[#5c574f]">Comment</Text>
-        </Pressable>
+        {item.imageUrl ? (
+          <Image
+            source={{ uri: item.imageUrl }}
+            className="mt-2 h-28 w-full rounded-lg border-2 border-retro-ink bg-white"
+            resizeMode="cover"
+          />
+        ) : null}
       </View>
     </View>
   );
@@ -305,18 +336,19 @@ function OverlayDonationPost({ item }: { item: DonationStreamItem }) {
     item.matchedAmountPounds && item.matchedAmountPounds > 0
       ? ` (+${formatCurrency(item.matchedAmountPounds)} matched)`
       : "";
+  const when = formatRelativeTime(item.createdAt);
 
   return (
     <View className="mb-2.5">
       <View className="mb-0.5 flex-row items-center gap-2">
-        <View className="h-6 w-6 items-center justify-center rounded-full border border-retro-paper/50 bg-retro-mint">
+        <View className="h-6 w-6 shrink-0 items-center justify-center rounded-full border border-retro-paper/50 bg-retro-mint">
           <Gift size={11} color="#211E1A" />
         </View>
-        <Text className="min-w-0 flex-1 font-retro-bold text-sm text-retro-paper" numberOfLines={1}>
+        <Text className="font-retro-bold text-sm text-retro-paper" numberOfLines={1}>
           {item.displayName}
         </Text>
-        <Text className="font-retro-mono text-[10px] text-retro-paper/65">
-          {formatRelativeTime(item.createdAt)}
+        <Text className="shrink-0 font-retro-mono text-[10px] text-retro-paper/65">
+          · {when}
         </Text>
       </View>
       <Text className="pl-8 text-sm leading-5 text-retro-paper/90" numberOfLines={2}>
@@ -329,17 +361,19 @@ function OverlayDonationPost({ item }: { item: DonationStreamItem }) {
 }
 
 function OverlayUpdatePost({ item }: { item: UpdateStreamItem }) {
+  const when = formatRelativeTime(item.createdAt);
+
   return (
     <View className="mb-2.5">
       <View className="mb-0.5 flex-row items-center gap-2">
-        <View className="h-6 w-6 items-center justify-center rounded-full border border-retro-paper/50 bg-retro-marigold">
+        <View className="h-6 w-6 shrink-0 items-center justify-center rounded-full border border-retro-paper/50 bg-retro-marigold">
           <GraduationCap size={11} color="#211E1A" />
         </View>
-        <Text className="min-w-0 flex-1 font-retro-bold text-sm text-retro-paper" numberOfLines={1}>
+        <Text className="font-retro-bold text-sm text-retro-paper" numberOfLines={1}>
           {item.authorName}
         </Text>
-        <Text className="font-retro-mono text-[10px] text-retro-paper/65">
-          {formatRelativeTime(item.createdAt)}
+        <Text className="shrink-0 font-retro-mono text-[10px] text-retro-paper/65">
+          · {when}
         </Text>
       </View>
       {item.content ? (
@@ -371,17 +405,29 @@ function UpdatesFeed({ items }: { items: StreamItem[] | undefined }) {
   }
 
   const newestFirst = [...items].reverse();
+  let topDonationId: string | null = null;
+  let topAmount = -1;
+  for (const item of newestFirst) {
+    if (item.type === "donation" && item.amount > topAmount) {
+      topAmount = item.amount;
+      topDonationId = item.id;
+    }
+  }
 
   return (
-    <>
+    <View className="bg-retro-cream py-1">
       {newestFirst.map((item) =>
         item.type === "donation" ? (
-          <DonationPost key={item.id} item={item} />
+          <DonationPost
+            key={item.id}
+            item={item}
+            isTop={item.id === topDonationId}
+          />
         ) : (
           <UpdatePost key={item.id} item={item} />
         ),
       )}
-    </>
+    </View>
   );
 }
 
@@ -538,7 +584,7 @@ export function CampaignLiveStream({
         <OverlayUpdatesHeader postCount={postCount} />
         {composer}
         <ScrollView
-          className="max-h-40"
+          className="no-scrollbar max-h-40"
           showsVerticalScrollIndicator={false}
           nestedScrollEnabled
         >
@@ -552,14 +598,13 @@ export function CampaignLiveStream({
     <View
       className={cn(
         "w-full bg-retro-cream",
-        connected ? "h-full" : "overflow-hidden rounded-[14px] border-[3px] border-retro-ink",
+        !connected && "overflow-hidden rounded-[14px] border-[3px] border-retro-ink",
+        connected && matchHeight != null && "h-full",
       )}
       style={
         matchHeight != null
           ? { height: matchHeight, flexDirection: "column" }
-          : connected
-            ? { flexDirection: "column", flex: 1 }
-            : undefined
+          : undefined
       }
     >
       <UpdatesHeader postCount={postCount} />
@@ -567,10 +612,13 @@ export function CampaignLiveStream({
       {composer}
 
       <ScrollView
-        className={cn("bg-retro-cream", matchHeight != null ? "min-h-0 flex-1" : "max-h-[420px]")}
+        className={cn(
+          "no-scrollbar bg-retro-cream",
+          matchHeight != null ? "min-h-0 flex-1" : "max-h-[420px]",
+        )}
         style={matchHeight != null ? { flex: 1 } : undefined}
         contentContainerStyle={{ flexGrow: 1 }}
-        showsVerticalScrollIndicator
+        showsVerticalScrollIndicator={false}
       >
         <UpdatesFeed items={items} />
       </ScrollView>

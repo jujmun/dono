@@ -204,7 +204,6 @@ export function DonateSheet({
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showBreakdown, setShowBreakdown] = useState(false);
   const paymentCompletedRef = useRef(false);
   const activePaymentIntentIdRef = useRef<string | null>(null);
   const donorEmailRef = useRef(donorEmail);
@@ -238,7 +237,6 @@ export function DonateSheet({
       setStripeAccountId(null);
       setError(null);
       setLoading(false);
-      setShowBreakdown(false);
       return;
     }
 
@@ -346,16 +344,7 @@ export function DonateSheet({
             <Text className="mt-5 font-retro-mono-bold text-4xl text-dono-primary">
               {feeTotalLabel}
             </Text>
-            <Pressable
-              onPress={() => setShowBreakdown((prev) => !prev)}
-              className="mt-1 flex-row flex-wrap items-center gap-1"
-              accessibilityRole="button"
-            >
-              <Text className="text-sm text-dono-muted">One-time donation ·</Text>
-              <Text className="text-sm text-dono-primary underline">
-                {showBreakdown ? "Hide breakdown" : "See breakdown"}
-              </Text>
-            </Pressable>
+            <Text className="mt-1 text-sm text-dono-muted">One-time donation</Text>
 
             {!isAuthenticated ? (
               <TextInput
@@ -392,25 +381,23 @@ export function DonateSheet({
               ) : null}
             </View>
 
-            {showBreakdown ? (
-              <ReceiptLedger className="mt-4">
-                <ReceiptLineRow
-                  label="Your donation"
-                  amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
-                />
-                <ReceiptLineRow
-                  label="Estimated processing fee (typical UK card)"
-                  amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
-                  muted
-                />
-                <ReceiptDivider />
-                <ReceiptLineRow
-                  label="Estimated amount reaching the campaign"
-                  amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
-                  emphasis
-                />
-              </ReceiptLedger>
-            ) : null}
+            <ReceiptLedger className="mt-4">
+              <ReceiptLineRow
+                label="Your donation"
+                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
+              />
+              <ReceiptLineRow
+                label="Estimated processing fee (typical UK card)"
+                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
+                muted
+              />
+              <ReceiptDivider />
+              <ReceiptLineRow
+                label="Estimated amount reaching the campaign"
+                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
+                emphasis
+              />
+            </ReceiptLedger>
 
             <Pressable
               onPress={() => onAnonymousChange(!isAnonymous)}

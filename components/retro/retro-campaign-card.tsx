@@ -10,7 +10,7 @@ import {
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { retroKeyClass, retroKeyMintClass } from "@/lib/retro-key";
-import { getPrimaryCampaignImage } from "@/lib/campaign-images";
+import { getPrimaryCampaignImage, CAMPAIGN_IMAGE_ASPECT } from "@/lib/campaign-images";
 import {
   buildGoalLineItems,
   buildReceiptFooter,
@@ -74,9 +74,10 @@ export function RetroCampaignCard({
             image={imageSource}
             zoomOnHover
             className={cn(
-              "h-[170px] border-b-[3px] border-retro-ink",
+              "w-full border-b-[3px] border-retro-ink",
               accent === "tan" ? "bg-retro-tan" : "bg-retro-indigo",
             )}
+            style={{ aspectRatio: CAMPAIGN_IMAGE_ASPECT }}
           >
             <View
               className={cn(

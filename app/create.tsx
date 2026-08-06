@@ -40,6 +40,7 @@ import { ALLOWED_CAMPAIGN_CATEGORIES } from "@/lib/campaign-categories";
 import {
   getCampaignImages,
   MAX_CAMPAIGN_IMAGES,
+  CAMPAIGN_IMAGE_ASPECT,
 } from "@/lib/campaign-images";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
@@ -125,7 +126,11 @@ function PhotoThumbnailPicker({
                 disabled={!onRecrop}
                 accessibilityLabel="Adjust crop"
               >
-                <CampaignImage image={image.uri} className="h-16 w-28 rounded-lg" />
+                <CampaignImage
+                  image={image.uri}
+                  className="w-28 rounded-lg"
+                  style={{ aspectRatio: CAMPAIGN_IMAGE_ASPECT }}
+                />
               </Pressable>
               <Pressable
                 onPress={() => onRemove(index)}
@@ -164,8 +169,8 @@ function PhotoThumbnailPicker({
         ) : null}
       </View>
       <Text className="mt-1.5 text-xs text-[#5c574f]">
-        Optional. Up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each). Tap a
-        photo to adjust the crop.
+        Up to {MAX_CAMPAIGN_IMAGES} photos (JPG or PNG, 5MB each). Crops to 16:9
+        to match the campaign page hero — tap a photo to adjust.
       </Text>
     </View>
   );
