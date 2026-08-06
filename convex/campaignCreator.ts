@@ -587,6 +587,9 @@ export const setImage = mutation({
       imageStorageId: args.storageId,
       image: url ?? "default",
     });
+    await ctx.scheduler.runAfter(0, internal.campaignOgImageActions.generate, {
+      slug: args.slug,
+    });
     return null;
   },
 });
@@ -716,6 +719,9 @@ export const setImages = mutation({
       images: urls,
       imageStorageId: args.storageIds[0],
       image: urls[0] ?? "default",
+    });
+    await ctx.scheduler.runAfter(0, internal.campaignOgImageActions.generate, {
+      slug: args.slug,
     });
     return null;
   },
