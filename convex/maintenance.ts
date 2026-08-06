@@ -1,5 +1,9 @@
 import { internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import {
+  VERIFICATION_RETENTION_MS,
+  clearVerificationPatch,
+} from "./lib/verificationRetention";
 
 const STALE_PENDING_MS = 60 * 60 * 1000;
 
@@ -41,5 +45,36 @@ export const completeExpiredCampaigns = internalMutation({
     }
 
     return { completed };
+  },
+});
+
+/**
+ * Retention expiry for Stripe Identity data — clears verifiedName/verifiedDob
+ * (and resets verification status) once older than the retention window, so
+ * government-ID-derived PII doesn't sit indefinitely. See
+ * convex/lib/verificationRetention.ts.
+ */
+export const expireVerifiedIdentityPii = internalMutation({
+  args: { olderThanMs: v.optional(v.number()) },
+  handler: async (ctx, args) => {
+    const cutoff = Date.now() - (args.olderThanMs ?? VERIFICATION_RETENTION_MS);
+
+    let campaignsCleared = 0;
+    for (const campaign of await ctx.db.query("campaigns").collect()) {
+      if (campaign.verifiedAt !== undefined && campaign.verifiedAt < cutoff) {
+        await ctx.db.patch(campaign._id, clearVerificationPatch);
+        campaignsCleared += 1;
+      }
+    }
+
+    let societiesCleared = 0;
+    for (const society of await ctx.db.query("societies").collect()) {
+      if (society.verifiedAt !== undefined && society.verifiedAt < cutoff) {
+        await ctx.db.patch(society._id, clearVerificationPatch);
+        societiesCleared += 1;
+      }
+    }
+
+    return { campaignsCleared, societiesCleared };
   },
 });

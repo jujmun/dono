@@ -1350,6 +1350,9 @@ export const updateVerificationFromWebhook = internalMutation({
       stripeVerificationStatus: args.status,
       ...(args.verifiedName !== undefined ? { verifiedName: args.verifiedName } : {}),
       ...(args.verifiedDob !== undefined ? { verifiedDob: args.verifiedDob } : {}),
+      ...(args.verifiedName !== undefined || args.verifiedDob !== undefined
+        ? { verifiedAt: Date.now() }
+        : {}),
       // Only meaningful on requires_input — clear it on every other status so a
       // stale error message can't linger after a later successful attempt.
       stripeVerificationLastErrorCode:

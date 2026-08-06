@@ -209,4 +209,76 @@ describe("account deletion severs the email from the account", () => {
     const optIn = await t.run(async (ctx) => await ctx.db.get(optInId));
     expect(optIn?.unsubscribedAt).toBeGreaterThan(0);
   });
+
+  it("clears verifiedName/verifiedDob on campaigns and societies the user created", async () => {
+    const t = newTestConvex();
+    const { userId } = await seedSignedUpUser(t);
+
+    const { campaignId, societyId } = await t.run(async (ctx) => {
+      const campaignId = await ctx.db.insert("campaigns", {
+        slug: "test-campaign",
+        title: "Test Campaign",
+        description: "desc",
+        story: "story",
+        category: "academic",
+        goal: 1000,
+        raised: 0,
+        donors: 0,
+        likes: 0,
+        followers: 0,
+        comments: 0,
+        creator: {
+          name: "Test Society",
+          type: "society",
+          avatar: "",
+          communityId: "test-society",
+        },
+        verifications: [],
+        university: "University of Oxford",
+        image: "",
+        createdAt: new Date().toISOString(),
+        deadline: new Date(Date.now() + 86_400_000).toISOString(),
+        status: "active",
+        updates: [],
+        createdBy: userId,
+        stripeVerificationStatus: "verified",
+        verifiedName: "Real Name",
+        verifiedDob: "2000-01-01",
+        verifiedAt: Date.now(),
+      });
+      const societyId = await ctx.db.insert("societies", {
+        slug: "test-society",
+        name: "Test Society",
+        description: "desc",
+        story: "story",
+        websiteUrl: "https://example.com",
+        supportingDocumentStorageIds: [],
+        creatorId: userId,
+        status: "active",
+        createdAt: Date.now(),
+        stripeVerificationStatus: "verified",
+        verifiedName: "Real Name",
+        verifiedDob: "2000-01-01",
+        verifiedAt: Date.now(),
+      });
+      return { campaignId, societyId };
+    });
+
+    await t.mutation(internal.users.severAccountIdentity, { userId });
+
+    const [campaign, society] = await t.run(async (ctx) => [
+      await ctx.db.get(campaignId),
+      await ctx.db.get(societyId),
+    ]);
+
+    expect(campaign?.verifiedName).toBeUndefined();
+    expect(campaign?.verifiedDob).toBeUndefined();
+    expect(campaign?.verifiedAt).toBeUndefined();
+    expect(campaign?.stripeVerificationStatus).toBeUndefined();
+
+    expect(society?.verifiedName).toBeUndefined();
+    expect(society?.verifiedDob).toBeUndefined();
+    expect(society?.verifiedAt).toBeUndefined();
+    expect(society?.stripeVerificationStatus).toBeUndefined();
+  });
 });
