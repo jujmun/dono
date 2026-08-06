@@ -152,9 +152,14 @@ export default defineSchema({
     .index("by_user", ["userId"]),
   contentReports: defineTable({
     reporterUserId: v.id("users"),
-    targetType: v.union(v.literal("comment"), v.literal("campaign")),
+    targetType: v.union(
+      v.literal("comment"),
+      v.literal("campaign"),
+      v.literal("society"),
+    ),
     campaignSlug: v.optional(v.string()),
     commentId: v.optional(v.id("campaignComments")),
+    societySlug: v.optional(v.string()),
     reason: v.string(),
     status: v.union(
       v.literal("open"),

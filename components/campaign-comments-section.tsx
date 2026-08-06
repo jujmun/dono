@@ -13,6 +13,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { ReportContentModal } from "@/components/report-content-modal";
 import { cn } from "@/lib/utils";
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -69,6 +70,9 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
     const [editingId, setEditingId] = useState<Id<"campaignComments"> | null>(null);
     const [editBody, setEditBody] = useState("");
     const [busyId, setBusyId] = useState<Id<"campaignComments"> | null>(null);
+    const [reportingId, setReportingId] = useState<Id<"campaignComments"> | null>(
+      null,
+    );
 
     const handlePost = async () => {
       const trimmed = body.trim();
@@ -119,21 +123,16 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
       }
     };
 
-    const handleReport = async (commentId: Id<"campaignComments">) => {
-      setBusyId(commentId);
-      setError(null);
-      try {
-        await createReport({
-          targetType: "comment",
-          commentId,
-          campaignSlug,
-          reason: "Reported via campaign comments",
-        });
-      } catch (err) {
-        setError(getFriendlyAuthError(err));
-      } finally {
-        setBusyId(null);
-      }
+    const handleSubmitReport = async (
+      commentId: Id<"campaignComments">,
+      reason: string,
+    ) => {
+      await createReport({
+        targetType: "comment",
+        commentId,
+        campaignSlug,
+        reason,
+      });
     };
 
     const handleHide = async (commentId: Id<"campaignComments">) => {
@@ -327,8 +326,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                         ) : null}
                         {isAuthenticated && !isOwn ? (
                           <Pressable
-                            onPress={() => void handleReport(comment.id)}
-                            disabled={busyId === comment.id}
+                            onPress={() => setReportingId(comment.id)}
                             className="p-1"
                             accessibilityLabel="Report comment"
                           >
@@ -401,6 +399,15 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
             })}
           </View>
         )}
+
+        <ReportContentModal
+          visible={reportingId !== null}
+          label="comment"
+          onClose={() => setReportingId(null)}
+          onSubmit={async (reason) => {
+            if (reportingId) await handleSubmitReport(reportingId, reason);
+          }}
+        />
       </View>
     );
   },

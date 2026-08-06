@@ -11,7 +11,7 @@ import {
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { usePostHog } from "posthog-react-native";
-import { Pencil, Heart, Share2, UserPlus } from "lucide-react-native";
+import { Pencil, Heart, Share2, UserPlus, Flag } from "lucide-react-native";
 import {
   CampaignMediaHero,
   DraggableHeroCard,
@@ -23,6 +23,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
+import { ReportContentModal } from "@/components/report-content-modal";
 import { CampaignLiveStream } from "@/components/campaign-live-stream";
 import { buildGoalLineItems } from "@/lib/receipt";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
@@ -57,6 +58,7 @@ export default function CampaignDetailPage() {
   const unlikeCampaign = useMutation(api.engagement.unlikeCampaign);
   const followCampaign = useMutation(api.engagement.followCampaign);
   const unfollowCampaign = useMutation(api.engagement.unfollowCampaign);
+  const createReport = useMutation(api.reports.createReport);
   const engagement = useQuery(
     api.engagement.isFollowing,
     id ? { campaignSlug: id } : "skip",
@@ -78,6 +80,7 @@ export default function CampaignDetailPage() {
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const commentsSectionRef = useRef<View>(null);
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
@@ -517,6 +520,15 @@ export default function CampaignDetailPage() {
           >
             <Share2 size={14} color="#211E1A" />
           </Pressable>
+          <Pressable
+            onPress={() =>
+              isAuthenticated ? setReportOpen(true) : router.push("/signin")
+            }
+            accessibilityLabel="Report campaign"
+            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
+          >
+            <Flag size={14} color="#211E1A" />
+          </Pressable>
         </View>
       </View>
 
@@ -581,6 +593,19 @@ export default function CampaignDetailPage() {
         pendingConfirmation={thankYou?.pendingConfirmation}
         paymentIntentId={thankYou?.paymentIntentId}
         onClose={() => setThankYou(null)}
+      />
+
+      <ReportContentModal
+        visible={reportOpen}
+        label="campaign"
+        onClose={() => setReportOpen(false)}
+        onSubmit={async (reason) => {
+          await createReport({
+            targetType: "campaign",
+            campaignSlug: campaign.id,
+            reason,
+          });
+        }}
       />
     </AppShell>
   );

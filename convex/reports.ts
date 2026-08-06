@@ -7,10 +7,15 @@ const MAX_REASON = 2000;
 
 export const createReport = mutation({
   args: {
-    targetType: v.union(v.literal("comment"), v.literal("campaign")),
+    targetType: v.union(
+      v.literal("comment"),
+      v.literal("campaign"),
+      v.literal("society"),
+    ),
     reason: v.string(),
     campaignSlug: v.optional(v.string()),
     commentId: v.optional(v.id("campaignComments")),
+    societySlug: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
@@ -58,11 +63,38 @@ export const createReport = mutation({
       }
     }
 
+    if (args.targetType === "society") {
+      const slug = args.societySlug?.trim();
+      if (!slug) {
+        throw new ConvexError({
+          code: "INVALID_INPUT",
+          message: "societySlug is required when reporting a society.",
+        });
+      }
+      const society = await ctx.db
+        .query("societies")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+      if (!society) {
+        const community = await ctx.db
+          .query("communities")
+          .withIndex("by_slug", (q) => q.eq("slug", slug))
+          .unique();
+        if (!community) {
+          throw new ConvexError({
+            code: "NOT_FOUND",
+            message: "Society not found.",
+          });
+        }
+      }
+    }
+
     const reportId = await ctx.db.insert("contentReports", {
       reporterUserId: userId,
       targetType: args.targetType,
       campaignSlug: args.campaignSlug?.trim(),
       commentId: args.commentId,
+      societySlug: args.societySlug?.trim(),
       reason,
       status: "open",
       createdAt: Date.now(),
@@ -71,6 +103,8 @@ export const createReport = mutation({
     return { reportId };
   },
 });
+
+const COMMENT_SNIPPET_LENGTH = 140;
 
 export const listOpenForAdmin = query({
   args: { limit: v.optional(v.number()) },
@@ -81,19 +115,72 @@ export const listOpenForAdmin = query({
       .query("contentReports")
       .withIndex("by_status", (q) => q.eq("status", "open"))
       .collect();
-    return rows
-      .sort((a, b) => b.createdAt - a.createdAt)
-      .slice(0, limit)
-      .map((r) => ({
-        id: r._id,
-        reporterUserId: r.reporterUserId,
-        targetType: r.targetType,
-        campaignSlug: r.campaignSlug,
-        commentId: r.commentId,
-        reason: r.reason,
-        status: r.status,
-        createdAt: r.createdAt,
-      }));
+    const page = rows.sort((a, b) => b.createdAt - a.createdAt).slice(0, limit);
+
+    return Promise.all(
+      page.map(async (r) => {
+        const reporterProfile = await ctx.db
+          .query("profiles")
+          .withIndex("by_userId", (q) => q.eq("userId", r.reporterUserId))
+          .unique();
+
+        let targetTitle: string | null = null;
+        let targetCampaignSlug = r.campaignSlug;
+        let commentSnippet: string | null = null;
+
+        if (r.targetType === "campaign" && r.campaignSlug) {
+          const campaign = await ctx.db
+            .query("campaigns")
+            .withIndex("by_slug", (q) => q.eq("slug", r.campaignSlug as string))
+            .unique();
+          targetTitle = campaign?.title ?? null;
+        } else if (r.targetType === "comment" && r.commentId) {
+          const comment = await ctx.db.get(r.commentId);
+          if (comment) {
+            targetCampaignSlug = comment.campaignSlug;
+            commentSnippet =
+              comment.body.length > COMMENT_SNIPPET_LENGTH
+                ? `${comment.body.slice(0, COMMENT_SNIPPET_LENGTH)}…`
+                : comment.body;
+            const campaign = await ctx.db
+              .query("campaigns")
+              .withIndex("by_slug", (q) => q.eq("slug", comment.campaignSlug))
+              .unique();
+            targetTitle = campaign?.title ?? null;
+          }
+        } else if (r.targetType === "society" && r.societySlug) {
+          const society = await ctx.db
+            .query("societies")
+            .withIndex("by_slug", (q) => q.eq("slug", r.societySlug as string))
+            .unique();
+          if (society) {
+            targetTitle = society.name;
+          } else {
+            const community = await ctx.db
+              .query("communities")
+              .withIndex("by_slug", (q) => q.eq("slug", r.societySlug as string))
+              .unique();
+            targetTitle = community?.name ?? null;
+          }
+        }
+
+        return {
+          id: r._id,
+          reporterUserId: r.reporterUserId,
+          reporterName: reporterProfile?.name ?? null,
+          reporterEmail: reporterProfile?.email ?? null,
+          targetType: r.targetType,
+          campaignSlug: targetCampaignSlug,
+          commentId: r.commentId,
+          commentSnippet,
+          societySlug: r.societySlug,
+          targetTitle,
+          reason: r.reason,
+          status: r.status,
+          createdAt: r.createdAt,
+        };
+      }),
+    );
   },
 });
 
