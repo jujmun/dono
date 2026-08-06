@@ -1,27 +1,59 @@
-import { Link } from "expo-router";
 import {
   View,
   Text,
-  Pressable,
   ActivityIndicator,
-  useWindowDimensions,
 } from "react-native";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useMemo } from "react";
-import { ArrowRight } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
-import { RetroDinoHero, RetroPanel } from "@/components/retro";
-import { ReceiptDivider, ReceiptLedger, ReceiptLineRow } from "@/components/ui/receipt-lines";
+import {
+  RetroDinoHero,
+  LandingHeroActions,
+  LandingHowItWorks,
+  LandingAudienceSplit,
+  LandingWhyDono,
+  LandingFinalCta,
+} from "@/components/retro";
 import { api } from "@convex/_generated/api";
 import type { Campaign } from "@/lib/types";
-import { formatCurrency } from "@/lib/constants";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { canCreate } from "@/lib/auth/user-type";
+
+function CampaignSection({
+  title,
+  subtitle,
+  campaigns,
+  getBadges,
+  loading,
+}: {
+  title: string;
+  subtitle: string;
+  campaigns: Campaign[];
+  getBadges: (campaign: Campaign) => {
+    matched?: boolean;
+    matchMultiplier?: number;
+    collegeMatch?: boolean;
+  };
+  loading?: boolean;
+}) {
+  return (
+    <View className="mb-16">
+      <View className="mb-6 items-center">
+        <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
+        {subtitle ? (
+          <Text className="mt-1 text-center text-dono-muted">{subtitle}</Text>
+        ) : null}
+      </View>
+      {loading ? (
+        <ActivityIndicator color="#211E1A" />
+      ) : (
+        <CampaignCardGrid campaigns={campaigns} featured getBadges={getBadges} />
+      )}
+    </View>
+  );
+}
 
 export default function HomePage() {
-  const { width } = useWindowDimensions();
-  const isWide = width >= 768;
   const { isAuthenticated } = useConvexAuth();
   const profile = useCurrentProfile();
   const trendingCampaigns = (useQuery(api.campaigns.listTrending, {
@@ -35,13 +67,9 @@ export default function HomePage() {
     isAuthenticated ? { limit: 3 } : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const activeMatches = useQuery(api.campaignMatches.listActive) ?? [];
-  const allCampaigns = (useQuery(api.campaigns.list) ?? []) as Campaign[];
 
   const matchBySlug = useMemo(() => {
-    const map = new Map<
-      string,
-      { multiplier: number }
-    >();
+    const map = new Map<string, { multiplier: number }>();
     for (const match of activeMatches) {
       map.set(match.campaignSlug, { multiplier: match.multiplier });
     }
@@ -61,8 +89,6 @@ export default function HomePage() {
   };
 
   const loading = trendingCampaigns === undefined;
-  const totalRaised = allCampaigns.reduce((sum, c) => sum + c.raised, 0);
-  const campaignCount = allCampaigns.length;
   const showForYou =
     isAuthenticated &&
     Boolean(profileCollege) &&
@@ -72,121 +98,42 @@ export default function HomePage() {
   return (
     <AppShell>
       <RetroDinoHero />
+      <LandingHeroActions profile={profile} />
+      {/* TODO(stats): re-add <LandingTrustStrip totalRaised={…} campaignCount={…} />
+          once there are enough live campaigns for the receipt strip to feel credible. */}
 
-      <View className="mb-10">
-        <View className="mb-6 items-center">
-          <Text className="font-retro-bold text-2xl text-retro-ink">
-            Trending Campaigns
-          </Text>
-          <Text className="mt-1 text-center text-dono-muted">
-            Tangible projects with clear, specific outcomes so you can see exactly what your donation does
-          </Text>
-        </View>
-        {loading ? (
-          <ActivityIndicator color="#211E1A" />
-        ) : (
-          <CampaignCardGrid
-            campaigns={trendingCampaigns!}
-            featured
-            getBadges={getBadges}
-          />
-        )}
-      </View>
+      {/* Live proof early: marketplace LPs put discovery before feature grids */}
+      <CampaignSection
+        title="Trending Campaigns"
+        subtitle=""
+        campaigns={trendingCampaigns ?? []}
+        getBadges={getBadges}
+        loading={loading}
+      />
+
+      <LandingHowItWorks />
+      <LandingAudienceSplit profile={profile} />
 
       {nearGoalCampaigns && nearGoalCampaigns.length > 0 ? (
-        <View className="mb-10">
-          <View className="mb-6 items-center">
-            <Text className="font-retro-bold text-2xl text-retro-ink">
-              Almost there
-            </Text>
-            <Text className="mt-1 text-center text-dono-muted">
-              Campaigns close to their goal — your gift can tip them over
-            </Text>
-          </View>
-          <CampaignCardGrid
-            campaigns={nearGoalCampaigns}
-            featured
-            getBadges={getBadges}
-          />
-        </View>
+        <CampaignSection
+          title="Almost there"
+          subtitle="Campaigns close to their goal. Your gift can tip them over."
+          campaigns={nearGoalCampaigns}
+          getBadges={getBadges}
+        />
       ) : null}
 
       {showForYou ? (
-        <View className="mb-10">
-          <View className="mb-6 items-center">
-            <Text className="font-retro-bold text-2xl text-retro-ink">
-              From your college
-            </Text>
-            <Text className="mt-1 text-center text-dono-muted">
-              Campaigns connected to {profile?.college}
-            </Text>
-          </View>
-          <CampaignCardGrid
-            campaigns={forYouCampaigns!}
-            featured
-            getBadges={getBadges}
-          />
-        </View>
+        <CampaignSection
+          title="From your college"
+          subtitle={`Campaigns connected to ${profile?.college}`}
+          campaigns={forYouCampaigns!}
+          getBadges={getBadges}
+        />
       ) : null}
 
-      <RetroPanel title="IMPACT.dat" accent="coral" className="mb-0">
-        <Text className="text-center font-retro-bold text-2xl text-retro-ink">
-          Ready to make a difference?
-        </Text>
-        <Text className="mx-auto mt-3 max-w-lg text-center text-dono-muted">
-          Join young alumni building lifelong communities of generosity. Every
-          donation deserves a visible outcome.
-        </Text>
-
-        <ReceiptLedger className="mx-auto mt-8 max-w-md">
-          <ReceiptLineRow label="Given on Dono" amount={totalRaised} />
-          <ReceiptDivider />
-          <ReceiptLineRow
-            label="Campaigns funded"
-            amount={campaignCount.toString()}
-          />
-          <ReceiptDivider />
-          <ReceiptLineRow label="Platform fee" amount="0%" />
-        </ReceiptLedger>
-
-        <Text className="mt-2 text-center font-retro-mono text-xs text-[#5c574f]">
-          {formatCurrency(totalRaised)} raised across {campaignCount} campaigns
-        </Text>
-
-        <View
-          className={
-            isWide
-              ? "mx-auto mt-8 flex-row justify-center gap-3"
-              : "mt-8 gap-3"
-          }
-        >
-          <Link href="/campaigns" asChild>
-            <Pressable
-              className={`retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-mint px-6 py-3 ${
-                isWide ? "" : "w-full"
-              }`}
-            >
-              <Text className="font-retro-bold text-sm text-retro-paper">
-                Find a Campaign
-              </Text>
-              <ArrowRight size={16} color="#F7F3E8" />
-            </Pressable>
-          </Link>
-          {canCreate(profile) ? (
-            <Link href="/create" asChild>
-              <Pressable
-                className={`retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper px-6 py-3 ${
-                  isWide ? "" : "w-full"
-                }`}
-              >
-                <Text className="font-retro-bold text-sm text-retro-ink">
-                  Start a Campaign
-                </Text>
-              </Pressable>
-            </Link>
-          ) : null}
-        </View>
-      </RetroPanel>
+      <LandingWhyDono />
+      <LandingFinalCta profile={profile} />
     </AppShell>
   );
 }

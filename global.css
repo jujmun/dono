@@ -41,7 +41,8 @@
   }
 }
 
-/* Flat at rest; hard shadow + lift on hover; press flattens (retro keyboard key). */
+/* Flat at rest; hard shadow + lift on hover; press flattens (retro keyboard key).
+   [data-retro-flat] / :focus keep the key flat after click — no hover spring-back. */
 .retro-key {
   box-shadow: none;
   transition:
@@ -49,16 +50,24 @@
     box-shadow 150ms ease-out;
 }
 
+.retro-key:focus {
+  outline: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .retro-key:hover:not(:disabled):not([aria-disabled="true"]) {
+  .retro-key:hover:not(:disabled):not([aria-disabled="true"]):not(:active):not(:focus):not(:focus-within):not([data-retro-flat="true"]) {
     transform: translate(-4px, -4px);
     box-shadow: 5px 5px 0 #211e1a;
   }
 }
 
-.retro-key:active:not(:disabled):not([aria-disabled="true"]) {
-  transform: translate(0, 0);
-  box-shadow: none;
+.retro-key:active:not(:disabled):not([aria-disabled="true"]),
+.retro-key:focus:not(:disabled):not([aria-disabled="true"]),
+.retro-key:focus-within:not(:disabled):not([aria-disabled="true"]),
+.retro-key[data-retro-flat="true"]:not(:disabled):not([aria-disabled="true"]) {
+  transform: translate(0, 0) !important;
+  box-shadow: none !important;
+  transition: none;
 }
 
 .retro-key-mint {
@@ -68,16 +77,24 @@
     box-shadow 150ms ease-out;
 }
 
+.retro-key-mint:focus {
+  outline: none;
+}
+
 @media (hover: hover) and (pointer: fine) {
-  .retro-key-mint:hover:not(:disabled):not([aria-disabled="true"]) {
+  .retro-key-mint:hover:not(:disabled):not([aria-disabled="true"]):not(:active):not(:focus):not(:focus-within):not([data-retro-flat="true"]) {
     transform: translate(-4px, -4px);
     box-shadow: 5px 5px 0 #159e88;
   }
 }
 
-.retro-key-mint:active:not(:disabled):not([aria-disabled="true"]) {
-  transform: translate(0, 0);
-  box-shadow: none;
+.retro-key-mint:active:not(:disabled):not([aria-disabled="true"]),
+.retro-key-mint:focus:not(:disabled):not([aria-disabled="true"]),
+.retro-key-mint:focus-within:not(:disabled):not([aria-disabled="true"]),
+.retro-key-mint[data-retro-flat="true"]:not(:disabled):not([aria-disabled="true"]) {
+  transform: translate(0, 0) !important;
+  box-shadow: none !important;
+  transition: none;
 }
 
 @keyframes retro-ticker {
@@ -93,4 +110,50 @@
   display: inline-flex;
   white-space: nowrap;
   animation: retro-ticker 28s linear infinite;
+}
+
+/* Hero speech: bubble + tail lift as one; hard shadow lives on the panel. */
+.retro-hero-speech {
+  transition: transform 180ms ease-out;
+}
+
+.retro-hero-bubble {
+  box-shadow: 6px 6px 0 #211e1a;
+  transition: box-shadow 180ms ease-out;
+}
+
+.retro-hero-dino {
+  transition: transform 220ms ease-out;
+  transform-origin: 30% 70%;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .retro-hero-speech:hover {
+    transform: translate(-3px, -3px);
+  }
+
+  .retro-hero-speech:hover .retro-hero-bubble {
+    box-shadow: 9px 9px 0 #211e1a;
+  }
+
+  .retro-hero-dino:hover {
+    transform: rotate(-4deg) translateY(-4px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .retro-hero-speech,
+  .retro-hero-bubble,
+  .retro-hero-dino {
+    transition: none;
+  }
+
+  .retro-hero-speech:hover,
+  .retro-hero-dino:hover {
+    transform: none;
+  }
+
+  .retro-hero-speech:hover .retro-hero-bubble {
+    box-shadow: 6px 6px 0 #211e1a;
+  }
 }

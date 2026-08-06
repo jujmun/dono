@@ -57,11 +57,14 @@ export function RetroCampaignCard({
   return (
     <Link href={destination} asChild>
       <Pressable
-        className={cn("group active:opacity-90", approvalStage && "opacity-60")}
+        className={cn(
+          "group h-full active:opacity-90",
+          approvalStage && "opacity-60",
+        )}
       >
         <View
           className={cn(
-            "overflow-hidden rounded-[14px] border-[3px] bg-retro-paper",
+            "h-full overflow-hidden rounded-[14px] border-[3px] bg-retro-paper",
             owned
               ? cn("border-retro-mint", retroKeyMintClass)
               : cn("border-retro-ink", retroKeyClass),
@@ -125,52 +128,54 @@ export function RetroCampaignCard({
             )}
           </CampaignImage>
 
-          <View className="px-[18px] pb-[18px] pt-4">
-            <View className="mb-0.5 flex-row items-start justify-between gap-2">
-              <Text
-                className="min-w-0 flex-1 font-retro-bold text-[19px] text-retro-ink"
-                numberOfLines={2}
-              >
-                {campaign.title}
-              </Text>
-              <View className="rounded-lg border-2 border-retro-ink bg-retro-cream px-2 py-0.5">
-                <Text className="font-retro-mono-bold text-[11.5px] text-retro-ink">
-                  {fundedLabel}
-                </Text>
-              </View>
-            </View>
-
-            <Text className="mb-3 text-[12.5px] text-[#5c574f]">
-              {campaign.university} · {creatorType}
-            </Text>
-
-            <View className="mb-3 rounded-sm border border-dashed border-retro-ink bg-white px-3 py-2.5">
-              {goalLines.map((line) => (
-                <View
-                  key={line.label}
-                  className="flex-row items-end gap-2 py-0.5"
+          <View className="flex-1 justify-between px-[18px] pb-[18px] pt-4">
+            <View>
+              <View className="mb-0.5 min-h-[52px] flex-row items-start justify-between gap-2">
+                <Text
+                  className="min-w-0 flex-1 font-retro-bold text-[19px] leading-[26px] text-retro-ink"
+                  numberOfLines={2}
                 >
-                  <Text
-                    className="max-w-[55%] shrink font-retro-mono text-[12.5px] text-retro-ink"
-                    numberOfLines={1}
-                  >
-                    {line.label}
-                  </Text>
-                  <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
-                  <Text className="shrink-0 font-retro-mono text-[12.5px] text-retro-ink">
-                    {formatCurrency(line.amount)}
+                  {campaign.title}
+                </Text>
+                <View className="rounded-lg border-2 border-retro-ink bg-retro-cream px-2 py-0.5">
+                  <Text className="font-retro-mono-bold text-[11.5px] text-retro-ink">
+                    {fundedLabel}
                   </Text>
                 </View>
-              ))}
-              <View className="my-1.5 border-t border-dashed border-retro-ink" />
-              <View className="flex-row items-end gap-2 py-0.5">
-                <Text className="shrink font-retro-mono-bold text-[12.5px] text-retro-ink">
-                  {footer.label}
-                </Text>
-                <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
-                <Text className="shrink-0 font-retro-mono-bold text-[12.5px] text-retro-ink">
-                  {formatCurrency(footer.amount)}
-                </Text>
+              </View>
+
+              <Text className="mb-3 text-[12.5px] text-[#5c574f]">
+                {campaign.university} · {creatorType}
+              </Text>
+
+              <View className="mb-3 min-h-[108px] rounded-sm border border-dashed border-retro-ink bg-white px-3 py-2.5">
+                {goalLines.map((line) => (
+                  <View
+                    key={line.label}
+                    className="flex-row items-end gap-2 py-0.5"
+                  >
+                    <Text
+                      className="max-w-[55%] shrink font-retro-mono text-[12.5px] text-retro-ink"
+                      numberOfLines={1}
+                    >
+                      {line.label}
+                    </Text>
+                    <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
+                    <Text className="shrink-0 font-retro-mono text-[12.5px] text-retro-ink">
+                      {formatCurrency(line.amount)}
+                    </Text>
+                  </View>
+                ))}
+                <View className="my-1.5 border-t border-dashed border-retro-ink" />
+                <View className="flex-row items-end gap-2 py-0.5">
+                  <Text className="shrink font-retro-mono-bold text-[12.5px] text-retro-ink">
+                    {footer.label}
+                  </Text>
+                  <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
+                  <Text className="shrink-0 font-retro-mono-bold text-[12.5px] text-retro-ink">
+                    {formatCurrency(footer.amount)}
+                  </Text>
+                </View>
               </View>
             </View>
 
