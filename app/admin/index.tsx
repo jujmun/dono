@@ -61,19 +61,26 @@ export default function AdminPortalPage() {
 
   const pendingCampaigns = useQuery(
     api.campaigns.listPendingForAdmin,
-    adminUser && reviewType === "campaigns"
-      ? trimmedSearch
-        ? { search: trimmedSearch }
-        : {}
-      : "skip",
+    adminUser ? {} : "skip",
   ) as
     | (Campaign & { stripeVerificationStatus: StripeVerificationStatus })[]
     | undefined;
 
   const pendingSocieties = useQuery(
     api.societies.listPendingForAdmin,
-    adminUser && reviewType === "societies" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as AdminSociety[] | undefined;
+
+  const filteredCampaigns = (pendingCampaigns ?? []).filter((c) => {
+    if (!trimmedSearch) return true;
+    const q = trimmedSearch.toLowerCase();
+    return (
+      c.title.toLowerCase().includes(q) ||
+      c.university.toLowerCase().includes(q) ||
+      c.creator.name.toLowerCase().includes(q) ||
+      c.description.toLowerCase().includes(q)
+    );
+  });
 
   const filteredSocieties = (pendingSocieties ?? []).filter((s) =>
     trimmedSearch ? s.name.toLowerCase().includes(trimmedSearch.toLowerCase()) : true,
@@ -176,7 +183,14 @@ export default function AdminPortalPage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="pending" />
 
-        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+        <ReviewTypeToggle
+          value={reviewType}
+          onChange={setReviewType}
+          counts={{
+            campaigns: pendingCampaigns?.length,
+            societies: pendingSocieties?.length,
+          }}
+        />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />
@@ -206,17 +220,24 @@ export default function AdminPortalPage() {
             ) : pendingCampaigns.length === 0 ? (
             <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
               <Text className="font-retro-bold text-base text-dono-text">
-                {trimmedSearch ? "No matches" : "No new submissions"}
+                No new submissions
               </Text>
               <Text className="mt-2 text-sm text-dono-muted">
-                {trimmedSearch
-                  ? "Try a different name or title."
-                  : "New student posts will show up here."}
+                New student posts will show up here.
+              </Text>
+            </View>
+          ) : filteredCampaigns.length === 0 ? (
+            <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
+              <Text className="font-retro-bold text-base text-dono-text">
+                No matches
+              </Text>
+              <Text className="mt-2 text-sm text-dono-muted">
+                Try a different name or title.
               </Text>
             </View>
           ) : (
             <View className="gap-4">
-              {pendingCampaigns.map((campaign) => (
+              {filteredCampaigns.map((campaign) => (
                 <Pressable
                   key={campaign.id}
                   onPress={() =>

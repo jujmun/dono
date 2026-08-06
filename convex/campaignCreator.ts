@@ -16,9 +16,10 @@ import {
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
-import { isEditableByOwner, isPublicStatus } from "./lib/campaignVisibility";
+import { isEditableByOwner, isPublicStatus, requiresSocietyApproval } from "./lib/campaignVisibility";
 import {
   buildCampaignEditedMessage,
+  buildCampaignReadyForAdminMessage,
   buildCampaignResubmittedMessage,
   createNotification,
 } from "./lib/notifications";
@@ -293,30 +294,63 @@ export const resubmit = mutation({
     }
     await requireRecordOwner(ctx, campaign.createdBy);
 
+    const needsSocietyReapproval = requiresSocietyApproval(campaign.creator.type);
+
     await ctx.db.patch(campaign._id, {
       status: "pending",
       moderationNote: undefined,
       moderatedAt: undefined,
       moderatedBy: undefined,
       moderationAction: undefined,
-      ...(campaign.creator.type === "society"
+      ...(needsSocietyReapproval
         ? { societyApprovalStatus: "pending" as const }
         : {}),
     });
 
-    const admins = await ctx.db
-      .query("profiles")
-      .withIndex("by_role", (q) => q.eq("role", "admin"))
-      .collect();
-    const message = buildCampaignResubmittedMessage(campaign.title);
-    for (const admin of admins) {
-      await createNotification(ctx, {
-        userId: admin.userId,
-        type: "campaign_resubmitted",
-        message,
-        relatedEntityType: "campaign",
-        relatedEntityId: campaign.slug,
-      });
+    if (needsSocietyReapproval) {
+      // Admins only see society campaigns after leader approval — notify
+      // leaders here and ping admins from approveBySociety instead.
+      const communitySlug = campaign.creator.communityId;
+      if (communitySlug) {
+        const leaders = await ctx.db
+          .query("societyMembers")
+          .withIndex("by_community_status", (q) =>
+            q.eq("communitySlug", communitySlug).eq("status", "approved"),
+          )
+          .collect();
+        for (const leader of leaders.filter((m) => m.role === "leader")) {
+          const profile = await ctx.db
+            .query("profiles")
+            .withIndex("by_userId", (q) => q.eq("userId", leader.userId))
+            .unique();
+          if (profile?.email) {
+            await ctx.scheduler.runAfter(
+              0,
+              internal.emails.sendSocietyCampaignPending,
+              {
+                leaderEmail: profile.email,
+                societyName: campaign.creator.name,
+                campaignTitle: campaign.title,
+              },
+            );
+          }
+        }
+      }
+    } else {
+      const admins = await ctx.db
+        .query("profiles")
+        .withIndex("by_role", (q) => q.eq("role", "admin"))
+        .collect();
+      const message = buildCampaignResubmittedMessage(campaign.title);
+      for (const admin of admins) {
+        await createNotification(ctx, {
+          userId: admin.userId,
+          type: "campaign_resubmitted",
+          message,
+          relatedEntityType: "campaign",
+          relatedEntityId: campaign.slug,
+        });
+      }
     }
 
     return null;
@@ -716,6 +750,25 @@ export const approveBySociety = mutation({
       societyApprovedBy: userId,
       societyRejectionNote: undefined,
     });
+
+    // Campaign enters the admin pending queue once society-approved.
+    if (campaign.status === "pending") {
+      const admins = await ctx.db
+        .query("profiles")
+        .withIndex("by_role", (q) => q.eq("role", "admin"))
+        .collect();
+      const message = buildCampaignReadyForAdminMessage(campaign.title);
+      for (const admin of admins) {
+        await createNotification(ctx, {
+          userId: admin.userId,
+          type: "campaign_resubmitted",
+          message,
+          relatedEntityType: "campaign",
+          relatedEntityId: campaign.slug,
+        });
+      }
+    }
+
     return null;
   },
 });

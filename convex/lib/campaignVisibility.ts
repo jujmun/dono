@@ -21,6 +21,16 @@ export function requiresSocietyApproval(creatorType: string) {
   return creatorType === "society";
 }
 
+/** True when a pending campaign should appear in the admin review queue —
+ * society-created campaigns must already have leader approval. */
+export function isReadyForAdminReview(campaign: CampaignDoc) {
+  if (campaign.status !== "pending") return false;
+  if (requiresSocietyApproval(campaign.creator.type)) {
+    return campaign.societyApprovalStatus === "approved";
+  }
+  return true;
+}
+
 /** True while a campaign is awaiting an admin decision — either freshly
  * submitted or sent back for edits. approve/reject both operate on either. */
 export function isUnderReview(status: string) {

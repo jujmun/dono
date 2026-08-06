@@ -27,9 +27,14 @@ function formatMemberSince(emailVerifiedAt: number | null | undefined) {
   return `MEMBER SINCE ${new Date(emailVerifiedAt).getFullYear()}`;
 }
 
-function formatRole(role: "user" | "admin") {
+function formatRole(
+  role: "user" | "admin",
+  userType?: "student" | "alumni" | null,
+) {
   if (role === "admin") return "Admin";
-  return "Donor";
+  if (userType === "alumni") return "Alumni";
+  if (userType === "student") return "Student";
+  return "User";
 }
 
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
@@ -297,7 +302,10 @@ export default function AccountPage() {
           </View>
 
           <InfoRow label="Email" value={profile?.email ?? ""} mono />
-          <InfoRow label="Role" value={formatRole(profile?.role ?? "user")} />
+          <InfoRow
+            label="Role"
+            value={formatRole(profile?.role ?? "user", profile?.userType)}
+          />
           {profile?.phone ? <InfoRow label="Phone" value={profile.phone} mono /> : null}
           {profile?.college ? <InfoRow label="College" value={profile.college} /> : null}
           {profile?.degree ? <InfoRow label="Degree" value={profile.degree} /> : null}

@@ -102,33 +102,50 @@ export default function SocietiesPage() {
       </View>
 
       <View className="mb-4 flex-row flex-wrap items-center gap-2">
-        {tabs.map((t) => (
-          <Pressable
-            key={t.id}
-            onPress={() => setTab(t.id)}
-            className={cn("retro-key", 
-              "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
-              tab === t.id
-                ? "bg-retro-mint"
-                : "bg-retro-paper",
-            )}
-          >
-            <Text
+        {tabs.map((t) => {
+          const count =
+            t.id === "discover" ? discoverItems?.length : mySocieties?.length;
+          const label =
+            typeof count === "number" ? `${t.label} (${count})` : t.label;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setTab(t.id)}
               className={cn(
-                "font-retro-bold text-[12.5px]",
-                tab === t.id ? "text-retro-paper" : "text-retro-ink",
+                "retro-key",
+                "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
+                tab === t.id ? "bg-retro-mint" : "bg-retro-paper",
               )}
+              accessibilityRole="button"
+              accessibilityState={{ selected: tab === t.id }}
+              accessibilityLabel={label}
             >
-              {t.label}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                className={cn(
+                  "font-retro-bold text-[12.5px]",
+                  tab === t.id ? "text-retro-paper" : "text-retro-ink",
+                )}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {tab === "discover" ? (
         <View className="mb-6 flex-row flex-wrap items-center justify-between gap-2">
           <View className="flex-row flex-wrap items-center gap-2">
-            {orgTypeFilters.map((f) => (
+            {orgTypeFilters.map((f) => {
+              const filterCount =
+                f.id === "all"
+                  ? discoverItems?.length
+                  : discoverItems?.filter((s) => s.orgType === f.id).length;
+              const label =
+                typeof filterCount === "number"
+                  ? `${f.label} (${filterCount})`
+                  : f.label;
+              return (
               <Pressable
                 key={f.id}
                 onPress={() => setOrgTypeFilter(f.id)}
@@ -138,12 +155,16 @@ export default function SocietiesPage() {
                     ? "bg-retro-marigold"
                     : "bg-retro-cream",
                 )}
+                accessibilityRole="button"
+                accessibilityState={{ selected: orgTypeFilter === f.id }}
+                accessibilityLabel={label}
               >
                 <Text className="font-retro-bold text-[11.5px] text-retro-ink">
-                  {f.label}
+                  {label}
                 </Text>
               </Pressable>
-            ))}
+              );
+            })}
           </View>
           {orgTypeFilter === "society" && canCreateSociety ? (
             <Link href="/create-society" asChild>

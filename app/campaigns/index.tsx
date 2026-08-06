@@ -58,11 +58,11 @@ export default function CampaignsPage() {
     | undefined;
   const trending = (useQuery(
     api.campaigns.listTrending,
-    tab === "discover" && discoverSort === "trending" ? { limit: 30 } : "skip",
+    tab === "discover" ? { limit: 30 } : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const nearGoal = (useQuery(
     api.campaigns.listNearGoal,
-    tab === "discover" && discoverSort === "near_goal" ? { limit: 30 } : "skip",
+    tab === "discover" ? { limit: 30 } : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const activeMatches = useQuery(api.campaignMatches.listActive) ?? [];
   const myCampaignsRaw = (useQuery(
@@ -140,32 +140,54 @@ export default function CampaignsPage() {
       </View>
 
       <View className="mb-5 flex-row flex-wrap gap-2">
-        {tabs.map((t) => (
-          <Pressable
-            key={t.id}
-            onPress={() => setTab(t.id)}
-            className={cn("retro-key", 
-              "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
-              tab === t.id
-                ? "bg-retro-mint"
-                : "bg-retro-paper",
-            )}
-          >
-            <Text
+        {tabs.map((t) => {
+          const count =
+            t.id === "discover"
+              ? campaigns?.length
+              : myCampaigns?.length;
+          const label =
+            typeof count === "number" ? `${t.label} (${count})` : t.label;
+          return (
+            <Pressable
+              key={t.id}
+              onPress={() => setTab(t.id)}
               className={cn(
-                "font-retro-bold text-[12.5px]",
-                tab === t.id ? "text-retro-paper" : "text-retro-ink",
+                "retro-key",
+                "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
+                tab === t.id ? "bg-retro-mint" : "bg-retro-paper",
               )}
+              accessibilityRole="button"
+              accessibilityState={{ selected: tab === t.id }}
+              accessibilityLabel={label}
             >
-              {t.label}
-            </Text>
-          </Pressable>
-        ))}
+              <Text
+                className={cn(
+                  "font-retro-bold text-[12.5px]",
+                  tab === t.id ? "text-retro-paper" : "text-retro-ink",
+                )}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
       {tab === "discover" ? (
         <View className="mb-4 flex-row flex-wrap gap-2">
-          {sortChips.map((chip) => (
+          {sortChips.map((chip) => {
+            const chipCount =
+              chip.id === "all"
+                ? campaigns?.length
+                : chip.id === "trending"
+                  ? trending?.length
+                  : nearGoal?.length;
+            // Always query chip sources for counts when on discover
+            const label =
+              typeof chipCount === "number"
+                ? `${chip.label} (${chipCount})`
+                : chip.label;
+            return (
             <Pressable
               key={chip.id}
               onPress={() => setDiscoverSort(chip.id)}
@@ -175,6 +197,9 @@ export default function CampaignsPage() {
                   ? "bg-retro-sky"
                   : "bg-retro-cream",
               )}
+              accessibilityRole="button"
+              accessibilityState={{ selected: discoverSort === chip.id }}
+              accessibilityLabel={label}
             >
               <Text
                 className={cn(
@@ -182,10 +207,11 @@ export default function CampaignsPage() {
                   discoverSort === chip.id ? "text-retro-paper" : "text-retro-ink",
                 )}
               >
-                {chip.label}
+                {label}
               </Text>
             </Pressable>
-          ))}
+            );
+          })}
         </View>
       ) : null}
 
