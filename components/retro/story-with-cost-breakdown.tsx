@@ -6,7 +6,6 @@ import {
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
-import { formatCurrency } from "@/lib/constants";
 import type { ReceiptLine } from "@/lib/receipt";
 import { cn } from "@/lib/utils";
 import { RetroPanel, type RetroPanelAccent } from "./retro-panel";
@@ -17,7 +16,6 @@ interface StoryWithCostBreakdownProps {
   story: string;
   goalLines: ReceiptLine[];
   goal: number;
-  raised: number;
   /** Accent for the outer Why? panel. */
   accent?: RetroPanelAccent;
   className?: string;
@@ -26,11 +24,9 @@ interface StoryWithCostBreakdownProps {
 function CostCard({
   goalLines,
   goal,
-  raised,
 }: {
   goalLines: ReceiptLine[];
   goal: number;
-  raised: number;
 }) {
   const hasCostBreakdown = goalLines.length > 0;
 
@@ -48,9 +44,6 @@ function CostCard({
         {hasCostBreakdown ? <ReceiptDivider /> : null}
         <ReceiptTotalRow label="Total goal" amount={goal} />
       </ReceiptLedger>
-      <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
-        Raised {formatCurrency(raised)} of {formatCurrency(goal)}
-      </Text>
     </RetroPanel>
   );
 }
@@ -179,7 +172,6 @@ export function StoryWithCostBreakdown({
   story,
   goalLines,
   goal,
-  raised,
   accent = "marigold",
   className,
 }: StoryWithCostBreakdownProps) {
@@ -188,7 +180,7 @@ export function StoryWithCostBreakdown({
   const displayStory = stripLeadingDescriptionLabel(story);
 
   const cost = (
-    <CostCard goalLines={goalLines} goal={goal} raised={raised} />
+    <CostCard goalLines={goalLines} goal={goal} />
   );
 
   return (

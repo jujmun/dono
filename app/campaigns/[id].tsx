@@ -14,7 +14,7 @@ import { usePostHog } from "posthog-react-native";
 import { Pencil, Heart, Share2, UserPlus, Flag } from "lucide-react-native";
 import {
   CampaignMediaHero,
-  DraggableHeroCard,
+  CampaignHeroProgressStrip,
   RECOMMENDED_DONATION_AMOUNT,
   RetroDonateSidebar,
   RetroPanel,
@@ -50,7 +50,6 @@ export default function CampaignDetailPage() {
   }>();
   const { width } = useWindowDimensions();
   const isWide = width >= 820;
-  const [heroFrameSize, setHeroFrameSize] = useState({ width: 0, height: 0 });
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
@@ -310,107 +309,106 @@ export default function CampaignDetailPage() {
     setDonateSheetOpen(true);
   };
 
-  const donateSidebar = (
+  const donateAndUpdatesCard = (
     <View className="gap-4">
       <SocietyPayoutSetupBanner
         slug={campaign.creator.communityId}
         returnPath={`/campaigns/${encodeURIComponent(campaign.id)}`}
       />
-      <RetroDonateSidebar
-      campaign={campaign}
-      selectedAmount={selectedAmount}
-      customAmount={customAmount}
-      activeMatch={activeMatch ?? null}
-      donationsDisabled={donationsDisabled}
-      donationsDisabledReason={donationsDisabledReason}
-      onSelectPreset={(amount) => {
-        setCustomAmount("");
-        setSelectedAmount(amount);
-        posthog?.capture("donation_amount_selected", {
-          campaign_id: campaign.id,
-          campaign_title: campaign.title,
-          amount,
-        });
-      }}
-      onCustomAmountChange={setCustomAmount}
-      onDonate={openDonateSheet}
-      />
-    </View>
-  );
-
-  const heroSection = (
-    <View key="hero" className="mb-6 gap-5">
-      <View
-        className="relative overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream"
-        onLayout={(event) => {
-          const { width: w, height: h } = event.nativeEvent.layout;
-          setHeroFrameSize((current) =>
-            current.width === w && current.height === h
-              ? current
-              : { width: w, height: h },
-          );
-        }}
-      >
-        <CampaignMediaHero
+      <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper">
+        <RetroDonateSidebar
           campaign={campaign}
-          accent={accent}
+          selectedAmount={selectedAmount}
+          customAmount={customAmount}
+          activeMatch={activeMatch ?? null}
+          donationsDisabled={donationsDisabled}
+          donationsDisabledReason={donationsDisabledReason}
           embedded
-          thumbnailsAlign="start"
-          className="w-full"
+          onSelectPreset={(amount) => {
+            setCustomAmount("");
+            setSelectedAmount(amount);
+            posthog?.capture("donation_amount_selected", {
+              campaign_id: campaign.id,
+              campaign_title: campaign.title,
+              amount,
+            });
+          }}
+          onCustomAmountChange={setCustomAmount}
+          onDonate={openDonateSheet}
         />
         {id ? (
-          <View
-            className="absolute inset-x-0 bottom-0 z-[5]"
-            pointerEvents="box-none"
-          >
+          <View className="border-t-[3px] border-retro-ink">
             <CampaignLiveStream
               campaignSlug={id}
-              variant="overlay"
-              contentInsetRight={isWide ? 340 : undefined}
+              variant="panel"
+              connected
             />
           </View>
         ) : null}
-        {isWide ? (
-          Platform.OS === "web" ? (
-            <DraggableHeroCard
-              containerWidth={heroFrameSize.width}
-              containerHeight={heroFrameSize.height}
-            >
-              {donateSidebar}
-            </DraggableHeroCard>
-          ) : (
-            <View className="absolute right-4 top-4 z-10 w-80 max-w-[42%]">
-              {donateSidebar}
-            </View>
-          )
-        ) : null}
       </View>
-      {!isWide ? donateSidebar : null}
     </View>
   );
 
-  const mergedWhySection = (
-    <View key="why" className="mb-6">
-      <StoryWithCostBreakdown
-        story={campaign.story}
-        goalLines={goalLines}
-        goal={campaign.goal}
-        raised={campaign.raised}
+  const mediaBlock = (
+    <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream">
+      <CampaignMediaHero
+        campaign={campaign}
         accent={accent}
+        embedded
+        thumbnailsAlign="end"
+        className="w-full"
+      />
+      <CampaignHeroProgressStrip
+        raised={campaign.raised}
+        goal={campaign.goal}
       />
     </View>
   );
 
-  const pageSections = (() => {
-    switch (heroLayout) {
-      case "text-first":
-      case "ledger-first":
-        return [mergedWhySection, heroSection];
-      case "gallery-grid":
-      default:
-        return [heroSection, mergedWhySection];
-    }
-  })();
+  const whyBlock = (
+    <StoryWithCostBreakdown
+      story={campaign.story}
+      goalLines={goalLines}
+      goal={campaign.goal}
+      accent={accent}
+    />
+  );
+
+  // GoFundMe-style: left = media + story; right = linked donate + updates card.
+  const mainColumn =
+    heroLayout === "text-first" || heroLayout === "ledger-first" ? (
+      <View className="min-w-0 flex-1 gap-5">
+        {whyBlock}
+        {mediaBlock}
+      </View>
+    ) : (
+      <View className="min-w-0 flex-1 gap-5">
+        {mediaBlock}
+        {whyBlock}
+      </View>
+    );
+
+  const pageSections = isWide ? (
+    <View key="gfm-layout" className="mb-6 flex-row items-start gap-6">
+      {mainColumn}
+      <View
+        className="w-80 shrink-0 self-start"
+        style={
+          Platform.OS === "web"
+            ? ({ position: "sticky", top: 16, zIndex: 20 } as const)
+            : undefined
+        }
+      >
+        {donateAndUpdatesCard}
+      </View>
+    </View>
+  ) : (
+    <View key="gfm-layout-narrow" className="mb-6 gap-5">
+      {mediaBlock}
+      {donateAndUpdatesCard}
+      {whyBlock}
+    </View>
+  );
 
   return (
     <AppShell>

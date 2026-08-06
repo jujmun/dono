@@ -61,7 +61,7 @@ export function RetroDinoHero() {
         Where did my last donation{"\u00A0"}go?
       </Text>
       <Text className="text-center font-retro-mono text-[14px] leading-7 text-retro-forest md:text-lg md:leading-8">
-        Most alumni giving disappears into a black box. Dono is built around{" "}
+        Most alumni giving disappears into a void. Dono is built around{" "}
         <Text className="font-retro-mono-bold">visible</Text>,{" "}
         <Text className="font-retro-mono-bold">specific</Text> Oxford campaigns,
         so you know <Text className="font-retro-mono-bold">exactly</Text> what

@@ -1,10 +1,11 @@
 import { useEffect, useState } from "react";
 import { View, Pressable, Text, Platform, Linking } from "react-native";
-import { Play } from "lucide-react-native";
+import { ChevronLeft, ChevronRight, Play } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import {
   getCampaignImages,
   getPrimaryCampaignImage,
+  CAMPAIGN_IMAGE_ASPECT,
 } from "@/lib/campaign-images";
 import { parseCampaignVideoUrl } from "@/lib/video-url";
 import type { Campaign } from "@/lib/types";
@@ -22,9 +23,8 @@ const accentFrameClasses: Record<RetroPanelAccent, string> = {
 
 const AUTO_ADVANCE_MS = 5000;
 
-/** Landscape hero — matches campaign crop (16:9) so the frame fits a laptop viewport. */
-const HERO_FRAME_STYLE = { aspectRatio: 16 / 9 } as const;
-const DETAIL_HERO_FRAME_STYLE = { aspectRatio: 16 / 9, maxHeight: 200 } as const;
+/** Landscape hero — same ratio as create-flow crop (`CAMPAIGN_IMAGE_ASPECT`). */
+const HERO_FRAME_STYLE = { aspectRatio: CAMPAIGN_IMAGE_ASPECT } as const;
 
 interface CampaignMediaHeroProps {
   campaign: Campaign;
@@ -65,68 +65,94 @@ export function CampaignMediaHero({
   const activeIndex = Math.min(selectedIndex, galleryImages.length - 1);
   const activeImage = galleryImages[activeIndex];
   const imageCount = galleryImages.length;
+  const canBrowseImages = !parsedVideo && imageCount > 1;
 
   useEffect(() => {
-    if (parsedVideo || imageCount <= 1) return;
+    if (!canBrowseImages) return;
     const timer = setInterval(() => {
       setSelectedIndex((current) => (current + 1) % imageCount);
     }, AUTO_ADVANCE_MS);
     return () => clearInterval(timer);
-  }, [parsedVideo, imageCount, activeIndex]);
+  }, [canBrowseImages, imageCount, activeIndex]);
+
+  const goToPrev = () => {
+    setSelectedIndex((current) => (current - 1 + imageCount) % imageCount);
+  };
+
+  const goToNext = () => {
+    setSelectedIndex((current) => (current + 1) % imageCount);
+  };
 
   const openExternalVideo = () => {
     if (!parsedVideo) return;
     void Linking.openURL(parsedVideo.watchUrl);
   };
 
-  // Fill a definite parent height only when explicitly matched/compact.
-  // Otherwise pin a fixed aspect ratio so the image box never stretches with
-  // sidebar / updates content (and thumbnail count doesn't change size).
   const fillParent = matchHeight != null || compact;
-  const frameStyle = fillParent
-    ? undefined
-    : size === "detail"
-      ? DETAIL_HERO_FRAME_STYLE
-      : HERO_FRAME_STYLE;
+  const frameStyle = fillParent ? undefined : HERO_FRAME_STYLE;
   const frameClassName = fillParent ? "h-full w-full" : "w-full";
   // Overlay thumbs whenever the frame height is locked (parent fill OR aspect).
   const overlayThumbnails = fillParent || embedded;
   // Embedded heroes default to start so thumbs clear a floating donate card.
   const thumbsAlign = thumbnailsAlign ?? (embedded ? "start" : "end");
 
-  const thumbnailStrip =
-    !parsedVideo && galleryImages.length > 1 ? (
-      <View
-        className={cn(
-          "flex-row flex-wrap gap-2",
-          overlayThumbnails
-            ? cn(
-                "absolute left-3",
-                // Start = clear of floating donate (top-right) and bottom ombre updates.
-                thumbsAlign === "start"
-                  ? "top-3 justify-start"
-                  : "bottom-3 right-3 justify-end",
-              )
-            : "mt-3",
-        )}
+  const navArrows = canBrowseImages ? (
+    <>
+      <Pressable
+        onPress={goToPrev}
+        accessibilityLabel="Previous photo"
+        accessibilityRole="button"
+        className="absolute bottom-0 left-2 top-0 z-10 w-10 items-center justify-center"
       >
-        {galleryImages.map((uri, index) => (
-          <Pressable
-            key={`${uri}-${index}`}
-            onPress={() => setSelectedIndex(index)}
-            className={cn(
-              "h-14 w-20 overflow-hidden rounded-lg border-2",
-              index === activeIndex
-                ? "border-retro-ink"
-                : "border-retro-ink/40",
-              overlayThumbnails && "border-retro-paper",
-            )}
-          >
-            <CampaignImage image={uri} className="h-full w-full" />
-          </Pressable>
-        ))}
-      </View>
-    ) : null;
+        <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-white/70 bg-black/40">
+          <ChevronLeft size={22} color="#FFF9EF" strokeWidth={2.5} />
+        </View>
+      </Pressable>
+      <Pressable
+        onPress={goToNext}
+        accessibilityLabel="Next photo"
+        accessibilityRole="button"
+        className="absolute bottom-0 right-2 top-0 z-10 w-10 items-center justify-center"
+      >
+        <View className="h-10 w-10 items-center justify-center rounded-full border-2 border-white/70 bg-black/40">
+          <ChevronRight size={22} color="#FFF9EF" strokeWidth={2.5} />
+        </View>
+      </Pressable>
+    </>
+  ) : null;
+
+  const thumbnailStrip = canBrowseImages ? (
+    <View
+      className={cn(
+        "flex-row flex-wrap gap-2",
+        overlayThumbnails
+          ? cn(
+              "absolute left-3",
+              // Start = clear of floating donate (top-right) and bottom ombre updates.
+              thumbsAlign === "start"
+                ? "top-3 justify-start"
+                : "bottom-3 right-3 justify-end",
+            )
+          : "mt-3",
+      )}
+    >
+      {galleryImages.map((uri, index) => (
+        <Pressable
+          key={`${uri}-${index}`}
+          onPress={() => setSelectedIndex(index)}
+          className={cn(
+            "h-14 w-20 overflow-hidden rounded-lg border-2",
+            index === activeIndex
+              ? "border-retro-ink"
+              : "border-retro-ink/40",
+            overlayThumbnails && "border-retro-paper",
+          )}
+        >
+          <CampaignImage image={uri} className="h-full w-full" />
+        </Pressable>
+      ))}
+    </View>
+  ) : null;
 
   return (
     <View
@@ -196,6 +222,7 @@ export function CampaignMediaHero({
             ) : null}
           </CampaignImage>
         )}
+        {navArrows}
         {overlayThumbnails ? thumbnailStrip : null}
       </View>
 
