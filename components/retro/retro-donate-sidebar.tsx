@@ -3,9 +3,8 @@ import {
   Text,
   TextInput,
   Pressable,
-  ActivityIndicator,
 } from "react-native";
-import { Flag, Gift, Heart, Share2, UserPlus } from "lucide-react-native";
+import { Gift } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -27,19 +26,11 @@ interface RetroDonateSidebarProps {
   selectedAmount: number;
   customAmount: string;
   activeMatch?: ActiveMatchSummary | null;
-  liked: boolean;
-  following: boolean;
-  likeLoading: boolean;
-  followLoading: boolean;
   donationsDisabled?: boolean;
   donationsDisabledReason?: string;
   onSelectPreset: (amount: number) => void;
   onCustomAmountChange: (value: string) => void;
   onDonate: () => void;
-  onToggleLike: () => void;
-  onToggleFollow: () => void;
-  onShare: () => void;
-  onReport?: () => void;
 }
 
 export function RetroDonateSidebar({
@@ -47,19 +38,11 @@ export function RetroDonateSidebar({
   selectedAmount,
   customAmount,
   activeMatch = null,
-  liked,
-  following,
-  likeLoading,
-  followLoading,
   donationsDisabled = false,
   donationsDisabledReason,
   onSelectPreset,
   onCustomAmountChange,
   onDonate,
-  onToggleLike,
-  onToggleFollow,
-  onShare,
-  onReport,
 }: RetroDonateSidebarProps) {
   const progress = getProgress(campaign.raised, campaign.goal);
   const isFunded = campaign.status === "funded";
@@ -124,11 +107,10 @@ export function RetroDonateSidebar({
                 <Pressable
                   key={amount}
                   onPress={() => onSelectPreset(amount)}
-                  className={cn("retro-key", 
+                  className={cn(
+                    "retro-key",
                     "relative flex-1 items-center rounded-lg border-2 border-retro-ink py-2.5",
-                    on
-                      ? "bg-retro-sky"
-                      : "bg-retro-cream",
+                    on ? "bg-retro-sky" : "bg-retro-cream",
                   )}
                 >
                   {isRecommended ? (
@@ -190,86 +172,27 @@ export function RetroDonateSidebar({
           <Pressable
             onPress={onDonate}
             disabled={donationsDisabled}
-            className={`retro-key mb-3 flex-row items-center justify-center gap-2 rounded-[10px] border-2 border-retro-ink py-3.5 ${
-              donationsDisabled ? "bg-retro-cream opacity-60" : "bg-retro-marigold"
+            className={`retro-key flex-row items-center justify-center gap-2 rounded-[10px] border-2 border-retro-ink py-3.5 ${
+              donationsDisabled ? "bg-retro-cream opacity-60" : "bg-retro-mint"
             }`}
           >
-            <Gift size={18} color="#211E1A" />
-            <Text className="font-retro-bold text-[15px] text-retro-ink">Donate</Text>
+            <Gift size={18} color="#FFFFFF" />
+            <Text className="font-retro-bold text-[15px] text-white">Donate</Text>
           </Pressable>
 
           {donationsDisabled && donationsDisabledReason ? (
-            <Text className="mb-4 text-center text-xs leading-relaxed text-[#5c574f]">
+            <Text className="mt-3 text-center text-xs leading-relaxed text-[#5c574f]">
               {donationsDisabledReason}
             </Text>
           ) : null}
         </>
       ) : (
-        <View className="mb-4 rounded-lg border-2 border-dashed border-retro-ink bg-retro-cream px-3 py-3">
+        <View className="rounded-lg border-2 border-dashed border-retro-ink bg-retro-cream px-3 py-3">
           <Text className="text-center font-retro-mono text-xs text-[#5c574f]">
             This campaign is fully funded.
           </Text>
         </View>
       )}
-
-      <View className="flex-row gap-2">
-        <Pressable
-          onPress={onToggleLike}
-          disabled={likeLoading}
-          className={cn("retro-key", "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
-            liked ? "bg-retro-cream" : "bg-retro-paper",
-          )}
-        >
-          {likeLoading ? (
-            <ActivityIndicator size="small" color="#211E1A" />
-          ) : (
-            <View className="flex-row items-center gap-1">
-              <Heart
-                size={12}
-                color="#211E1A"
-                fill={liked ? "#F2542D" : "transparent"}
-              />
-              <Text className="font-retro-mono-bold text-[11px] text-retro-ink">
-                {liked ? "Liked" : "Like"}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-        <Pressable
-          onPress={onToggleFollow}
-          disabled={followLoading}
-          className={cn("retro-key", "flex-1 items-center rounded-lg border-2 border-retro-ink py-2",
-            following ? "bg-retro-cream" : "bg-retro-paper",
-          )}
-        >
-          {followLoading ? (
-            <ActivityIndicator size="small" color="#211E1A" />
-          ) : (
-            <View className="flex-row items-center gap-1">
-              <UserPlus size={12} color="#211E1A" />
-              <Text className="font-retro-mono-bold text-[11px] text-retro-ink">
-                {following ? "Following" : "Follow"}
-              </Text>
-            </View>
-          )}
-        </Pressable>
-        <Pressable
-          onPress={onShare}
-          accessibilityLabel="Share campaign"
-          className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
-        >
-          <Share2 size={14} color="#211E1A" />
-        </Pressable>
-        {onReport ? (
-          <Pressable
-            onPress={onReport}
-            accessibilityLabel="Report campaign"
-            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
-          >
-            <Flag size={14} color="#211E1A" />
-          </Pressable>
-        ) : null}
-      </View>
     </View>
   );
 }

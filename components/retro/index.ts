@@ -18,3 +18,6 @@ export {
   CampaignMediaHero,
   CampaignPhotoGrid,
 } from "./campaign-media-hero";
+export { StoryWithCostBreakdown } from "./story-with-cost-breakdown";
+export { DraggableHeroCard } from "./draggable-hero-card";
+export type { RetroPanelAccent } from "./retro-panel";

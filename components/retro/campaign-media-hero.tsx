@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { View, Pressable, Text, Platform, Linking } from "react-native";
 import { Play } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
@@ -20,8 +20,10 @@ const accentFrameClasses: Record<RetroPanelAccent, string> = {
   indigo: "bg-retro-indigo",
 };
 
-/** Keeps the hero from stretching into a wide, shallow banner on large screens. */
-const HERO_FRAME_STYLE = { aspectRatio: 4 / 3 } as const;
+const AUTO_ADVANCE_MS = 5000;
+
+/** Landscape hero — matches campaign crop (16:9) so the frame fits a laptop viewport. */
+const HERO_FRAME_STYLE = { aspectRatio: 16 / 9 } as const;
 const DETAIL_HERO_FRAME_STYLE = { aspectRatio: 16 / 9, maxHeight: 200 } as const;
 
 interface CampaignMediaHeroProps {
@@ -29,14 +31,16 @@ interface CampaignMediaHeroProps {
   className?: string;
   /** Campaign template accent — defaults to indigo (the original hardcoded look). */
   accent?: RetroPanelAccent;
-  /** Pin main frame to this height (e.g. matched to donate sidebar via onLayout). */
+  /** Pin main frame to this height (legacy fill mode — prefer fixed aspect). */
   matchHeight?: number;
   /** When true, omits outer chrome so a parent card can wrap media + chat as one unit. */
   embedded?: boolean;
-  /** When true, fills a flex parent instead of using the default 4:3 aspect ratio. */
+  /** When true, fills a flex parent instead of using the default 16:9 aspect ratio. */
   compact?: boolean;
   /** Smaller hero for campaign detail pages with updates below. */
   size?: "default" | "detail";
+  /** Where overlay thumbnails sit — `start` keeps them clear of a right-side donate float. */
+  thumbnailsAlign?: "start" | "end";
 }
 
 export function CampaignMediaHero({
@@ -47,6 +51,7 @@ export function CampaignMediaHero({
   embedded = false,
   compact = false,
   size = "default",
+  thumbnailsAlign,
 }: CampaignMediaHeroProps) {
   const parsedVideo = parseCampaignVideoUrl(campaign.videoUrl);
 
@@ -59,27 +64,49 @@ export function CampaignMediaHero({
   const [selectedIndex, setSelectedIndex] = useState(0);
   const activeIndex = Math.min(selectedIndex, galleryImages.length - 1);
   const activeImage = galleryImages[activeIndex];
+  const imageCount = galleryImages.length;
+
+  useEffect(() => {
+    if (parsedVideo || imageCount <= 1) return;
+    const timer = setInterval(() => {
+      setSelectedIndex((current) => (current + 1) % imageCount);
+    }, AUTO_ADVANCE_MS);
+    return () => clearInterval(timer);
+  }, [parsedVideo, imageCount, activeIndex]);
 
   const openExternalVideo = () => {
     if (!parsedVideo) return;
     void Linking.openURL(parsedVideo.watchUrl);
   };
 
-  const matchedFrame = matchHeight != null || compact;
-  const frameStyle = matchedFrame
+  // Fill a definite parent height only when explicitly matched/compact.
+  // Otherwise pin a fixed aspect ratio so the image box never stretches with
+  // sidebar / updates content (and thumbnail count doesn't change size).
+  const fillParent = matchHeight != null || compact;
+  const frameStyle = fillParent
     ? undefined
     : size === "detail"
       ? DETAIL_HERO_FRAME_STYLE
       : HERO_FRAME_STYLE;
-  const frameClassName = matchedFrame ? "h-full w-full" : "w-full";
+  const frameClassName = fillParent ? "h-full w-full" : "w-full";
+  // Overlay thumbs whenever the frame height is locked (parent fill OR aspect).
+  const overlayThumbnails = fillParent || embedded;
+  // Embedded heroes default to start so thumbs clear a floating donate card.
+  const thumbsAlign = thumbnailsAlign ?? (embedded ? "start" : "end");
 
   const thumbnailStrip =
     !parsedVideo && galleryImages.length > 1 ? (
       <View
         className={cn(
           "flex-row flex-wrap gap-2",
-          matchedFrame
-            ? "absolute bottom-3 left-3 right-3 justify-end"
+          overlayThumbnails
+            ? cn(
+                "absolute left-3",
+                // Start = clear of floating donate (top-right) and bottom ombre updates.
+                thumbsAlign === "start"
+                  ? "top-3 justify-start"
+                  : "bottom-3 right-3 justify-end",
+              )
             : "mt-3",
         )}
       >
@@ -92,7 +119,7 @@ export function CampaignMediaHero({
               index === activeIndex
                 ? "border-retro-ink"
                 : "border-retro-ink/40",
-              matchedFrame && "border-retro-paper",
+              overlayThumbnails && "border-retro-paper",
             )}
           >
             <CampaignImage image={uri} className="h-full w-full" />
@@ -169,13 +196,10 @@ export function CampaignMediaHero({
             ) : null}
           </CampaignImage>
         )}
-        {matchedFrame ? thumbnailStrip : null}
+        {overlayThumbnails ? thumbnailStrip : null}
       </View>
 
-      {!matchedFrame && !embedded ? thumbnailStrip : null}
-      {embedded && !matchedFrame && !compact && thumbnailStrip ? (
-        <View className="px-3 pb-3">{thumbnailStrip}</View>
-      ) : null}
+      {!overlayThumbnails ? thumbnailStrip : null}
     </View>
   );
 }

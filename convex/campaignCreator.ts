@@ -727,7 +727,7 @@ export const setImages = mutation({
   },
 });
 
-const MIN_IMPACT_ITEMS = 2;
+const MIN_IMPACT_ITEMS = 1;
 const MAX_IMPACT_ITEMS = 5;
 const IMPACT_ITEM_DELIMITER = "::";
 

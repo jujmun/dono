@@ -11,26 +11,20 @@ import {
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { usePostHog } from "posthog-react-native";
-import { Pencil } from "lucide-react-native";
+import { Pencil, Heart, Share2, UserPlus, Flag } from "lucide-react-native";
 import {
   CampaignMediaHero,
-  CampaignPhotoGrid,
+  DraggableHeroCard,
   RECOMMENDED_DONATION_AMOUNT,
   RetroDonateSidebar,
   RetroPanel,
+  StoryWithCostBreakdown,
 } from "@/components/retro";
 import { AppShell } from "@/components/app-shell";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
 import { ReportContentModal } from "@/components/report-content-modal";
 import { CampaignLiveStream } from "@/components/campaign-live-stream";
-import {
-  ReceiptDivider,
-  ReceiptLedger,
-  ReceiptLineRow,
-  ReceiptTotalRow,
-} from "@/components/ui/receipt-lines";
-import { formatCurrency } from "@/lib/constants";
 import { buildGoalLineItems } from "@/lib/receipt";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
@@ -56,13 +50,7 @@ export default function CampaignDetailPage() {
   }>();
   const { width } = useWindowDimensions();
   const isWide = width >= 820;
-  const [donatePanelHeight, setDonatePanelHeight] = useState<number | undefined>();
-
-  useEffect(() => {
-    if (!isWide) {
-      setDonatePanelHeight(undefined);
-    }
-  }, [isWide]);
+  const [heroFrameSize, setHeroFrameSize] = useState({ width: 0, height: 0 });
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
@@ -333,10 +321,6 @@ export default function CampaignDetailPage() {
       selectedAmount={selectedAmount}
       customAmount={customAmount}
       activeMatch={activeMatch ?? null}
-      liked={liked}
-      following={following}
-      likeLoading={likeLoading}
-      followLoading={followLoading}
       donationsDisabled={donationsDisabled}
       donationsDisabledReason={donationsDisabledReason}
       onSelectPreset={(amount) => {
@@ -350,165 +334,81 @@ export default function CampaignDetailPage() {
       }}
       onCustomAmountChange={setCustomAmount}
       onDonate={openDonateSheet}
-      onToggleLike={() => void handleToggleLike()}
-      onToggleFollow={() => void handleToggleFollow()}
-      onShare={() => void handleShare()}
-      onReport={
-        isAuthenticated ? () => setReportOpen(true) : () => router.push("/signin")
-      }
       />
     </View>
   );
 
-  const heroColumnStyle = isWide
-    ? ({ flex: 1, flexBasis: 0, minWidth: 0 } as const)
-    : undefined;
-
-  const connectedMediaUpdatesStyle =
-    isWide && donatePanelHeight != null
-      ? { flex: 2, flexBasis: 0, minWidth: 0, height: donatePanelHeight }
-      : isWide
-        ? { flex: 2, flexBasis: 0, minWidth: 0 }
-        : undefined;
-
-  const heroSection = isWide ? (
-    <View
-      key="hero"
-      className="mb-6 flex-row flex-nowrap gap-5"
-      style={{ alignItems: "flex-start" }}
-    >
+  const heroSection = (
+    <View key="hero" className="mb-6 gap-5">
       <View
-        style={connectedMediaUpdatesStyle}
-        className="flex-row overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream"
+        className="relative overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream"
+        onLayout={(event) => {
+          const { width: w, height: h } = event.nativeEvent.layout;
+          setHeroFrameSize((current) =>
+            current.width === w && current.height === h
+              ? current
+              : { width: w, height: h },
+          );
+        }}
       >
-        <View className="min-w-0 flex-1 border-r-[3px] border-retro-ink">
-          <CampaignMediaHero
-            campaign={campaign}
-            accent={accent}
-            embedded
-            matchHeight={donatePanelHeight}
-            compact={donatePanelHeight != null}
-            className="h-full w-full"
-          />
-        </View>
+        <CampaignMediaHero
+          campaign={campaign}
+          accent={accent}
+          embedded
+          thumbnailsAlign="start"
+          className="w-full"
+        />
         {id ? (
-          <View className="min-w-0 flex-1">
+          <View
+            className="absolute inset-x-0 bottom-0 z-[5]"
+            pointerEvents="box-none"
+          >
             <CampaignLiveStream
               campaignSlug={id}
-              matchHeight={donatePanelHeight}
-              connected
+              variant="overlay"
+              contentInsetRight={isWide ? 340 : undefined}
             />
           </View>
         ) : null}
-      </View>
-
-      <View
-        style={heroColumnStyle}
-        className="lg:sticky lg:top-4"
-        onLayout={(event) => {
-          const { height } = event.nativeEvent.layout;
-          setDonatePanelHeight((current) => (current === height ? current : height));
-        }}
-      >
-        {donateSidebar}
-      </View>
-    </View>
-  ) : (
-    <View key="hero" className="mb-6 gap-5">
-      <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream">
-        <CampaignMediaHero campaign={campaign} accent={accent} embedded />
-        {id ? (
-          <View className="border-t-[3px] border-retro-ink">
-            <CampaignLiveStream campaignSlug={id} connected />
-          </View>
+        {isWide ? (
+          Platform.OS === "web" ? (
+            <DraggableHeroCard
+              containerWidth={heroFrameSize.width}
+              containerHeight={heroFrameSize.height}
+            >
+              {donateSidebar}
+            </DraggableHeroCard>
+          ) : (
+            <View className="absolute right-4 top-4 z-10 w-80 max-w-[42%]">
+              {donateSidebar}
+            </View>
+          )
         ) : null}
       </View>
-      {donateSidebar}
+      {!isWide ? donateSidebar : null}
     </View>
   );
 
-  const storyPanel = (
-    <RetroPanel title="Why?" accent={accent} className="mb-0 h-full">
-      <Text className="text-sm leading-6 text-retro-ink">{campaign.story}</Text>
-    </RetroPanel>
-  );
-
-  const breakdownPanel = (
-    <RetroPanel title="Cost breakdown" accent="sky" className="mb-0 h-full">
-      <ReceiptLedger>
-        {goalLines.map((line) => (
-          <ReceiptLineRow key={line.label} {...line} />
-        ))}
-        <ReceiptDivider />
-        <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
-      </ReceiptLedger>
-      <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
-        Raised {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
-      </Text>
-    </RetroPanel>
-  );
-
-  const storyAndBreakdownSection = (
-    <View
-      key="story-breakdown"
-      className="mb-6 flex-row flex-wrap gap-5"
-      style={{ alignItems: "stretch" }}
-    >
-      <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "48%" : "100%",
-          maxWidth: isWide ? "50%" : "100%",
-        }}
-      >
-        {storyPanel}
-      </View>
-      <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "45%" : "100%",
-          maxWidth: isWide ? "48%" : "100%",
-        }}
-      >
-        {breakdownPanel}
-      </View>
-    </View>
-  );
-
-  const galleryGridSection = (
-    <View key="gallery" className="mb-6">
-      <CampaignPhotoGrid campaign={campaign} accent={accent} />
+  const mergedWhySection = (
+    <View key="why" className="mb-6">
+      <StoryWithCostBreakdown
+        story={campaign.story}
+        goalLines={goalLines}
+        goal={campaign.goal}
+        raised={campaign.raised}
+        accent={accent}
+      />
     </View>
   );
 
   const pageSections = (() => {
     switch (heroLayout) {
-      case "gallery-grid":
-        return [heroSection, galleryGridSection, storyAndBreakdownSection];
       case "text-first":
-        return [
-          <View key="story" className="mb-6">
-            {storyPanel}
-          </View>,
-          heroSection,
-          <View key="breakdown" className="mb-6">
-            {breakdownPanel}
-          </View>,
-          galleryGridSection,
-        ];
       case "ledger-first":
-        return [
-          <View key="breakdown" className="mb-6">
-            {breakdownPanel}
-          </View>,
-          heroSection,
-          <View key="story" className="mb-6">
-            {storyPanel}
-          </View>,
-          galleryGridSection,
-        ];
+        return [mergedWhySection, heroSection];
+      case "gallery-grid":
       default:
-        return [heroSection, storyAndBreakdownSection, galleryGridSection];
+        return [heroSection, mergedWhySection];
     }
   })();
 
@@ -553,13 +453,13 @@ export default function CampaignDetailPage() {
         ) : null}
       </View>
 
-      <View className="mb-6 flex-row items-center gap-2.5">
+      <View className="mb-6 flex-row flex-wrap items-center gap-2.5">
         <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
           <Text className="font-retro-bold text-sm text-retro-ink">
             {creatorInitial}
           </Text>
         </View>
-        <View className="flex-1">
+        <View className="min-w-0 flex-1">
           <Text className="font-retro-bold text-sm text-retro-ink">
             {campaign.creator.name}
           </Text>
@@ -571,6 +471,64 @@ export default function CampaignDetailPage() {
               Ownership: {campaign.ownershipStatement}
             </Text>
           ) : null}
+        </View>
+        <View className="flex-row gap-2">
+          <Pressable
+            onPress={() => void handleToggleLike()}
+            disabled={likeLoading}
+            className={`retro-key flex-row items-center gap-1 rounded-lg border-2 border-retro-ink px-3 py-2 ${
+              liked ? "bg-retro-cream" : "bg-retro-paper"
+            }`}
+          >
+            {likeLoading ? (
+              <ActivityIndicator size="small" color="#211E1A" />
+            ) : (
+              <>
+                <Heart
+                  size={12}
+                  color="#211E1A"
+                  fill={liked ? "#F2542D" : "transparent"}
+                />
+                <Text className="font-retro-mono-bold text-[11px] text-retro-ink">
+                  {liked ? "Liked" : "Like"}
+                </Text>
+              </>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => void handleToggleFollow()}
+            disabled={followLoading}
+            className={`retro-key flex-row items-center gap-1 rounded-lg border-2 border-retro-ink px-3 py-2 ${
+              following ? "bg-retro-cream" : "bg-retro-paper"
+            }`}
+          >
+            {followLoading ? (
+              <ActivityIndicator size="small" color="#211E1A" />
+            ) : (
+              <>
+                <UserPlus size={12} color="#211E1A" />
+                <Text className="font-retro-mono-bold text-[11px] text-retro-ink">
+                  {following ? "Following" : "Follow"}
+                </Text>
+              </>
+            )}
+          </Pressable>
+          <Pressable
+            onPress={() => void handleShare()}
+            accessibilityLabel="Share campaign"
+            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
+          >
+            <Share2 size={14} color="#211E1A" />
+          </Pressable>
+          <Pressable
+            onPress={() =>
+              isAuthenticated ? setReportOpen(true) : router.push("/signin")
+            }
+            accessibilityLabel="Report campaign"
+            className="retro-key items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper px-3 py-2"
+          >
+            <Flag size={14} color="#211E1A" />
+          </Pressable>
         </View>
       </View>
 

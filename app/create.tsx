@@ -66,7 +66,7 @@ const DEFAULT_UNIVERSITY = "University of Oxford";
 
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024;
 const MAX_ADDITIONAL_NOTES_LENGTH = 2000;
-const MIN_FUND_LINES = 2;
+const MIN_FUND_LINES = 1;
 const MAX_FUND_LINES = 5;
 
 interface FundLine {
@@ -76,11 +76,7 @@ interface FundLine {
 
 const emptyFundLine = (): FundLine => ({ label: "", amount: "" });
 
-const initialFundLines = (): FundLine[] => [
-  emptyFundLine(),
-  emptyFundLine(),
-  emptyFundLine(),
-];
+const initialFundLines = (): FundLine[] => [emptyFundLine()];
 
 interface PickedImage {
   uri: string;
@@ -1172,8 +1168,9 @@ export default function CreateCampaignPage() {
                   />
                   {fundLinesStarted && goalAmount > 0 && missingLineItems ? (
                     <Text className="mt-2 text-xs text-rose-700">
-                      Add at least {MIN_FUND_LINES} line items, each with a label and
-                      an amount.
+                      Add at least {MIN_FUND_LINES} line item
+                      {MIN_FUND_LINES === 1 ? "" : "s"}, each with a label and an
+                      amount.
                     </Text>
                   ) : fundLinesStarted && goalAmount > 0 && lineAmountMissing ? (
                     <Text className="mt-2 text-xs text-rose-700">
