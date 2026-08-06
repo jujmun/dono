@@ -12,8 +12,24 @@ import {
 import { toCampaign } from "./lib/mappers";
 import { clampLimit } from "./lib/pagination";
 import { toActivityItem } from "./lib/mappers";
+import { containsProfanity, containsUrl } from "./lib/commentModeration";
 
 const MAX_COMMENT_LENGTH = 2000;
+
+function assertCommentAllowed(body: string) {
+  if (containsUrl(body)) {
+    throw new ConvexError({
+      code: "COMMENT_URL_NOT_ALLOWED",
+      message: "Links aren't allowed in comments.",
+    });
+  }
+  if (containsProfanity(body)) {
+    throw new ConvexError({
+      code: "COMMENT_PROFANITY",
+      message: "That comment contains language that isn't allowed here.",
+    });
+  }
+}
 
 function isCommentHiddenByOwner(comment: Doc<"campaignComments">) {
   if (!comment.hiddenByOwnerAt) return false;
@@ -282,6 +298,7 @@ export const addComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
+    assertCommentAllowed(body);
 
     const commentId = await ctx.db.insert("campaignComments", {
       campaignSlug: args.campaignSlug,
@@ -361,6 +378,7 @@ export const editComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
+    assertCommentAllowed(body);
 
     await ctx.db.patch(args.commentId, {
       body,
