@@ -25,7 +25,7 @@ Four statements in the previous version were factually wrong and would have unde
 | "Dono generally holds donor funds and pays out to the recipient, with a fallback to direct transfer" | **Dono does not receive, hold, safeguard or control donor funds.** Payments are made through Stripe Connect using direct charges to the Campaign Owner's connected account. The Campaign Owner legally receives the payment. Dono provides the software interface and acts as the Campaign Owner's contractual agent for presenting the campaign and receiving donation offers. **Dono cannot independently release or redirect funds** |
 | Provider is "Dono (UK Ltd — incorporation not yet started)" and Amrit reports "to the company's most senior governing body once incorporated" | The provider is **Amrit Kaur Rooprai, a sole trader.** There is no company and no separate governing body. Amrit is accountable as the operator |
 | The service offers "replies", "profiles, usernames and photographs" and "user-generated content search" | The product has **public comments only** — no replies, no profile photographs beyond an optional avatar, and no user-generated-content search. The assessment must describe the service as operated |
-| Section 2A treats general age access as an open question with three options | **The question is resolved.** 18+ (by declared date of birth) is required for accounts, campaigns and comments; **browsing and donating are open to everyone.** See section 2A as rewritten |
+| Section 2A treats general age access as an open question with three options | **The question is resolved.** 18+ (by declared date of birth) is required for campaigns and acting for a society only — not for accounts or comments, which have no age gate at all; **browsing and donating are open to everyone.** See section 2A as rewritten |
 
 ## 1. Purpose and scope
 
@@ -70,14 +70,16 @@ This draft reflects the following confirmed launch design:
 
 The age position is settled and is no longer an open question. It is:
 
-- **18 or over is required to create an account**, and therefore to create a campaign, act for a society, or post a comment.
+- **There is no minimum age to create an account or to post a comment.** 18 or over is required only to create a campaign or act for a society, checked at that specific step.
 - **Browsing and donating are open to everyone, at any age.** No account is needed to donate.
-- **Age is established by a declared date of birth.** Stripe Identity does not reliably return a date of birth in every flow and **is not used as Dono's age gate**. A declared date of birth is **not** highly effective age assurance under Ofcom's children's access assessment tool.
-- Checkout asks a donor to confirm they are 18 or over or have a parent or guardian's permission — again a declaration, not a check.
+- **Age is established by a declared date of birth**, where it is checked at all. Stripe Identity does not reliably return a date of birth in every flow and **is not used as Dono's age gate**. A declared date of birth is **not** highly effective age assurance under Ofcom's children's access assessment tool.
+- Checkout asks a donor to confirm they are 18 or over — a declaration, not a check, and with no parent-or-guardian-permission alternative.
+
+**[COMPLIANCE — 6 Aug 2026: revised from "18+ to create an account, and therefore to comment" (see TRUTH.md, Age section). Any severity/likelihood rating elsewhere in this document that assumed a declared-DOB gate on account creation or commenting was assessing a control that will not be built and needs re-scoring against no gate at all — Amrit/counsel to re-assess.]**
 
 **Consequence: children are likely to access the service**, and Dono has completed a separate Children's Risk Assessment on that footing. Dono operates **child-safe by default** rather than deploying age assurance to exclude under-18s; the decision and its reasoning are recorded in the Online Safety Act Procedures section 3.3.
 
-**Effect on the ratings below.** Because commenting is gated only by a declared date of birth, a determined under-18 could hold an account and comment. The CSEA grooming, harassment and intimate-image ratings are therefore given on the basis that minors may in practice be present as viewers, as donors, and — despite the rule — as comment authors. They are **not** reduced on the strength of the 18+ rule, because that rule is not enforced by an effective check.
+**Effect on the ratings below.** Commenting has no age gate at all — not even a self-declaration — so any under-18 visitor, not only a determined one, could hold an account and comment. The CSEA grooming, harassment and intimate-image ratings are therefore given on the basis that minors may in practice be present as viewers, as donors, and as comment authors. They are **not** reduced on the strength of any age rule, because no age rule applies to commenting.
 
 Note that Dono does **not** recognise schools or any institution whose students are predominantly under 18, so there is no route by which a school-age person becomes a campaign creator or beneficiary.
 

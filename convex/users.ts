@@ -25,6 +25,7 @@ import {
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
 import { assertAdultOrThrow } from "./lib/ageGate";
+import { clearVerificationPatch } from "./lib/verificationRetention";
 
 const userTypeValidator = v.union(v.literal("student"), v.literal("alumni"));
 
@@ -777,6 +778,31 @@ export const severAccountIdentity = internalMutation({
     for (const optIn of optIns) {
       if (optIn.unsubscribedAt) continue;
       await ctx.db.patch(optIn._id, { unsubscribedAt: now });
+    }
+
+    // Stripe-Identity-verified name/DOB is government-ID PII — release it
+    // immediately rather than leaving it to the retention-expiry cron, for
+    // every campaign/society this user directly created.
+    const ownedCampaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
+      .collect();
+    for (const campaign of ownedCampaigns) {
+      if (campaign.verifiedName === undefined && campaign.verifiedDob === undefined) {
+        continue;
+      }
+      await ctx.db.patch(campaign._id, clearVerificationPatch);
+    }
+
+    const ownedSocieties = await ctx.db
+      .query("societies")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", userId))
+      .collect();
+    for (const society of ownedSocieties) {
+      if (society.verifiedName === undefined && society.verifiedDob === undefined) {
+        continue;
+      }
+      await ctx.db.patch(society._id, clearVerificationPatch);
     }
 
     return { deletedAt: now };

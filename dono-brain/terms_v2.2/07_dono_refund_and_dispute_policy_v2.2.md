@@ -3,7 +3,7 @@
 **Version:** Working draft v2.2 — 31 July 2026
 **Status:** DRAFT — NOT FOR PUBLICATION. Applies the counsel review, the founder's amendments and the engineering configuration answers of 31 July 2026. Requires final UK solicitor sign-off. Open items marked **[SOLICITOR SIGN-OFF]** or **[ENGINEERING — BUILD REQUIRED]**. This is a contractual document.
 
-> **What changed from v2.1:** refund grounds are split into **objective grounds** (which do not require materiality or causation) and **conduct grounds** (which do), and the internal decision checklist is rewritten to match; the power to **withhold payouts is removed** because Dono does not have it; the **dispute-evidence and dispute-fee position** is stated as configured; **retention** points at the field-level schedule rather than a blanket six years; the **de minimis** rule is split between over-funding and under-spend, with a rule on where any residue goes; a **parent or guardian ground** is added because donating is open to all ages; the **complaints address** is standardised; response periods move to **ten Working Days**.
+> **What changed from v2.1:** refund grounds are split into **objective grounds** (which do not require materiality or causation) and **conduct grounds** (which do), and the internal decision checklist is rewritten to match; the power to **withhold payouts is removed** because Dono does not have it; the **dispute-evidence and dispute-fee position** is stated as configured; **retention** points at the field-level schedule rather than a blanket six years; the **de minimis** rule is split between over-funding and under-spend, with a rule on where any residue goes; a donation made by a child without a parent or guardian's permission is confirmed as falling under the existing **unauthorised payment** ground, rather than a separate parental-permission mechanism (decided against building, 6 Aug 2026 — see TRUTH.md, Age section); the **complaints address** is standardised; response periods move to **ten Working Days**.
 
 ---
 
@@ -34,10 +34,11 @@ Refund grounds fall into two classes, and the test that applies depends on the c
 (a) duplicate payment;
 (b) payment error, including a charge for the wrong amount;
 (c) unauthorised payment;
-(d) **a Donation made by a child without the permission of a parent or guardian** (Donor Terms clause 2.2);
-(e) cancellation of the Campaign before the money is spent;
-(f) failure or withdrawal of the Campaign Owner's student-status check, where the Campaign should not have been published; and
-(g) Surplus Funds falling to be refunded under clause 10.
+(d) cancellation of the Campaign before the money is spent;
+(e) failure or withdrawal of the Campaign Owner's student-status check, where the Campaign should not have been published; and
+(f) Surplus Funds falling to be refunded under clause 10.
+
+*(A donation made by a child without a parent or guardian's permission is no longer a separate ground — there is no parental-permission checkout mechanism to have been bypassed. It falls under (c), unauthorised payment, on the same footing as any other unauthorised card use. Revised 6 Aug 2026 — see TRUTH.md, Age section.)*
 
 3.2 **Conduct grounds.** These depend on something the Campaign Owner did or failed to do, and the test in clause 4.2 applies. They are:
 

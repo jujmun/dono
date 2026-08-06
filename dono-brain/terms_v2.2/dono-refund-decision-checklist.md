@@ -14,7 +14,7 @@ The previous checklist **contradicted the published Refund and Dispute Policy** 
 - it instructed the reviewer to **pick a single ground**, where several may apply at once; and
 - it applied **materiality and causation to every ground**, which would defeat a duplicate payment, an unauthorised payment or a cancelled campaign — none of which depends on the donor's state of mind.
 
-All three are fixed. **Every ground in the Policy is in this checklist, and the two-class structure now matches clauses 3 and 4 of the Policy exactly.** A new objective ground has also been added for a donation made by a child without a parent or guardian's permission, since donating is open to all ages.
+All three are fixed. **Every ground in the Policy is in this checklist, and the two-class structure now matches clauses 3 and 4 of the Policy exactly.**
 
 ---
 
@@ -47,8 +47,7 @@ If any apply, record the recusal — who handed the case to whom, and why — al
 |---|---|
 | Duplicate payment | The same donor paid the same campaign twice in circumstances indicating one was unintended |
 | Payment error | The amount charged differs from the amount confirmed, or a technical fault caused the charge |
-| Unauthorised payment | The donor did not authorise the payment. **Tell the donor immediately to contact their card issuer** — their statutory claim is against the issuer and may require a refund by the end of the next business day. Dono's process does not replace or delay that |
-| **Donation by a child without permission** | A parent or guardian says a child in their care donated without their permission. Donating is open to all ages, so this will happen. Do not require proof of the child's age beyond a plausible account; do not interrogate the family |
+| Unauthorised payment | The donor did not authorise the payment — including a parent or guardian reporting that a child in their care donated without permission; treat it the same as any other unauthorised card use, and do not require proof of the child's age beyond a plausible account or interrogate the family. **Tell the donor immediately to contact their card issuer** — their statutory claim is against the issuer and may require a refund by the end of the next business day. Dono's process does not replace or delay that |
 | Campaign cancellation | The Campaign was cancelled before the money was spent |
 | Verification failure | The Campaign Owner's student-status check failed or was withdrawn, and the Campaign should not have been published |
 | Surplus | The amount falls to be refunded as Surplus Funds under clause 10 of the Policy |

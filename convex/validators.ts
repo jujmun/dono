@@ -89,6 +89,9 @@ export const campaignFields = {
   ),
   verifiedName: v.optional(v.string()),
   verifiedDob: v.optional(v.string()),
+  /** When verifiedName/verifiedDob were captured — drives the retention-expiry
+   * cron (see convex/lib/verificationRetention.ts) and is cleared alongside them. */
+  verifiedAt: v.optional(v.number()),
   /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
   stripeVerificationLastErrorCode: v.optional(v.string()),
   stripeVerificationLastErrorReason: v.optional(v.string()),
@@ -209,6 +212,9 @@ export const societyFields = {
   ),
   verifiedName: v.optional(v.string()),
   verifiedDob: v.optional(v.string()),
+  /** When verifiedName/verifiedDob were captured — drives the retention-expiry
+   * cron (see convex/lib/verificationRetention.ts) and is cleared alongside them. */
+  verifiedAt: v.optional(v.number()),
   /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
   stripeVerificationLastErrorCode: v.optional(v.string()),
   stripeVerificationLastErrorReason: v.optional(v.string()),

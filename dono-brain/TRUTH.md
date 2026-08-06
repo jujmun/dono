@@ -8,7 +8,7 @@
 
 **How to use it.** Read this before drafting anything. Update it the day a decision is made, not later. Every entry carries the date it was settled, so a stale entry is visible.
 
-**Last updated:** 31 July 2026
+**Last updated:** 6 August 2026
 
 ---
 
@@ -29,11 +29,12 @@
 
 | Decision | Settled |
 |---|---|
-| **You must be 18 or over to create an account**, and therefore to create a campaign, act for a society, or post a comment | 31 Jul 2026 |
+| **There is no age gate on creating an account or on posting a comment.** Signup collects no date of birth, and commenting checks only that you are signed in. No document may claim otherwise | 6 Aug 2026 |
+| **Creating a campaign, and acting for a society, each require you to declare a date of birth of 18 or over at that step** — enforced server-side (`assertAdultOrThrow`). This is a per-action gate, not a consequence of account creation | 6 Aug 2026 |
 | **Browsing is open to everyone, at any age** | 31 Jul 2026 |
 | **Donating is open to everyone, at any age**, with or without an account | 31 Jul 2026 |
-| **Age is declared, not verified.** Dono asks for a date of birth and relies on the answer. This is **not** highly effective age assurance and no document may imply that it is. Stripe Identity does not reliably return a date of birth and is not used as an age gate | 31 Jul 2026 |
-| Checkout asks the donor to confirm they are 18 or over **or** have a parent or guardian's permission. This is a confirmation, not a check. There is **no** cap on guest donations | 31 Jul 2026 |
+| **Age is declared, not verified.** Dono asks for a date of birth and relies on the answer. This is **not** highly effective age assurance and no document may imply that it is. Stripe Identity does not reliably return a date of birth and is not used as an age gate — self-declaration is the intended model, not a gap to be closed | 31 Jul 2026 |
+| Checkout asks the donor to confirm they are 18 or over. **There is no parent-or-guardian-permission alternative** — that branch was never built and will not be; no document may offer it. There is **no** cap on guest donations | 6 Aug 2026 |
 | **Children are likely to access the service.** Dono operates child-safe by default rather than deploying age assurance to exclude them | 31 Jul 2026 |
 | Dono recognises UK **higher-education** institutions only. It does not recognise schools | 31 Jul 2026 |
 

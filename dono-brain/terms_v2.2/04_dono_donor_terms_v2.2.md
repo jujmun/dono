@@ -3,7 +3,7 @@
 **Version:** Working draft v2.2 — 31 July 2026
 **Status:** DRAFT — NOT FOR PUBLICATION. Applies the counsel review, the founder's amendments and the engineering configuration answers of 31 July 2026. Requires final UK solicitor sign-off on the consumer-law analysis. Open items marked **[SOLICITOR SIGN-OFF]** or **[ENGINEERING — BUILD REQUIRED]**.
 
-> **What changed from v2.1:** **anyone may donate, at any age**, with an age confirmation at checkout and a route for a parent or guardian; contract **formation** is rebuilt around a standing offer and Dono's agency; the **£100 liability cap is removed**; the **fee rate table is corrected**; both **fee structures** are explained, including who is buying Dono's service in each; **"hide my name" is narrowed** to public display, with the Stripe limitation stated; **Recurring Donations and Match Windows** are added; the claim that Dono can withhold a Campaign Owner's payouts is removed.
+> **What changed from v2.1:** **anyone may donate, at any age**, with a flat 18-or-over age confirmation at checkout (no parent-or-guardian-permission alternative — decided against, 6 Aug 2026); contract **formation** is rebuilt around a standing offer and Dono's agency; the **£100 liability cap is removed**; the **fee rate table is corrected**; both **fee structures** are explained, including who is buying Dono's service in each; **"hide my name" is narrowed** to public display, with the Stripe limitation stated; **Recurring Donations and Match Windows** are added; the claim that Dono can withhold a Campaign Owner's payouts is removed.
 
 ---
 
@@ -19,7 +19,7 @@
 
 2.1 **Anyone may donate.** You do not need a Dono account, and there is no minimum age to make a Donation. You must be legally capable of authorising the payment and must be using a payment method you are entitled to use. You may be located anywhere, subject to Payment Provider availability, supported cards, sanctions, anti-fraud controls, local restrictions and any restrictions Dono adopts (clause 4.4 of the Terms of Service).
 
-2.2 **Age at checkout.** Because donating is open to everyone, checkout asks you to confirm that **you are 18 or over, or that you have the permission of a parent or guardian to make the donation**. This is a confirmation, not a verified age check, and we do not pretend otherwise. If you are a parent or guardian and a child in your care made a donation without your permission, contact us at clause 15.2 and we will treat it as a refund request under clause 11 and the Refund and Dispute Policy. Note that **you must be 18 to create a Dono account**, and therefore to post a comment.
+2.2 **Age at checkout.** Because donating is open to everyone, checkout asks you to confirm that **you are 18 or over**. This is a confirmation, not a verified age check, and we do not pretend otherwise. There is no parent-or-guardian-permission alternative to this confirmation. Note that **there is no minimum age to create a Dono account or to post a comment** — the 18-or-over declaration applies only to creating a Campaign, acting for a Society, and this checkout confirmation.
 
 2.3 All Campaigns and Donations are in pounds sterling. If your card was issued outside the UK, your card issuer converts the amount at its own rate and may charge its own fees; Dono does not perform the conversion and does not receive any issuer charge. If you are refunded later, the refund is made in sterling for the amount you gave, and your issuer converts it back at the rate applying on the refund day, so the amount in your currency may differ slightly. This is outside Dono's and the Campaign Owner's control.
 
@@ -99,7 +99,7 @@ The 2% conversion charge applies only where the Payment Provider actually perfor
 
 ### 11. Refunds
 
-11.1 **Grounds** include: duplicate payment; payment error; unauthorised payment; **a donation made by a child without the permission of a parent or guardian**; campaign cancellation; material misrepresentation, including an untrue statement about matched funding; fraud; misuse of funds; failure to provide required evidence; a material unauthorised change; inability to use the money meaningfully; failure to proceed where funds should be returned; or verification failure. Mere dissatisfaction is insufficient.
+11.1 **Grounds** include: duplicate payment; payment error; unauthorised payment; campaign cancellation; material misrepresentation, including an untrue statement about matched funding; fraud; misuse of funds; failure to provide required evidence; a material unauthorised change; inability to use the money meaningfully; failure to proceed where funds should be returned; or verification failure. Mere dissatisfaction is insufficient.
 
 11.2 **Unauthorised payments — act fast.** If your payment was unauthorised, contact your card issuer or payment provider **at once**: your claim is against them and may require a refund by the end of the next business day, subject to statutory exceptions. Dono will preserve evidence and notify the Payment Provider, but Dono's internal process is optional and does not replace or delay your statutory rights.
 
@@ -131,7 +131,7 @@ The 2% conversion charge applies only where the Payment Provider actually perfor
 
 ### 14. Comments; your responsibilities
 
-14.1 To post a comment you need an account, and you must be 18 or over. If you post comments, the Community Guidelines apply; comments always display a name.
+14.1 To post a comment you need an account. **There is no age requirement to create an account or to post a comment.** If you post comments, the Community Guidelines apply; comments always display a name.
 
 14.2 You are responsible for reviewing campaign information before donating, understanding that outcomes are not guaranteed, providing correct payment information, paying any fee-cover amount you select, cancelling a Recurring Donation you no longer want, and using refund and chargeback procedures honestly.
 

@@ -13,7 +13,7 @@ The previous version overstated Dono's controls in four material ways. Because a
 
 | Previous statement | Correct position |
 |---|---|
-| Publishing is gated by "an actual verification mechanism (Stripe Identity), not a checkbox", which confirms 18+ | **Stripe Identity does not reliably return a date of birth and is not used as Dono's age gate.** The gate for accounts, campaigns and comments is a **declared date of birth** — a checkbox in substance. Under Ofcom's children's access assessment tool that is **not** highly effective age assurance |
+| Publishing is gated by "an actual verification mechanism (Stripe Identity), not a checkbox", which confirms 18+ | **Stripe Identity does not reliably return a date of birth and is not used as Dono's age gate.** The gate for campaigns and acting for a society is a **declared date of birth** — a checkbox in substance. Accounts and comments have no age gate at all. Under Ofcom's children's access assessment tool a declared date of birth is **not** highly effective age assurance |
 | "Stripe Identity verification for all campaign creators **and commenters**" | **Stripe Identity applies to campaign and society creation only.** Commenting requires an account, which requires a declared date of birth — nothing more |
 | Beneficiaries are "verified as affiliated with the university **or school** named in the campaign" | **Dono does not perform institution verification at all**, and **does not recognise schools.** Only UK higher-education institutions participate. There are no under-18 beneficiaries because the Beneficiary is the Campaign Owner, who must be 18+ |
 | "Ask Stripe to hold payouts" is a confirmed existing safety measure | **Dono cannot hold or delay a payout.** This is not a control and has been removed from every document |
@@ -27,11 +27,11 @@ The consequence is that Dono's position on children is **weaker than the previou
 
 Dono lets students run public fundraising campaigns for university-related costs and lets others donate to them.
 
-- **Campaign creators:** must hold an account (18+ by **declared date of birth**), pass a manual student-card and university-email check by a Dono administrator, and complete Stripe Connect onboarding including Stripe Identity, before they can publish.
+- **Campaign creators:** must hold an account, declare a date of birth of **18 or over** to publish, pass a manual student-card and university-email check by a Dono administrator, and complete Stripe Connect onboarding including Stripe Identity.
 - **Content in a campaign:** text, images and video.
-- **Comments:** account holders (18+ by declared date of birth) may post public comments. Comments are **post-moderated** — they go live immediately and are removed on report. **Links and attachments are not permitted in comments.**
+- **Comments:** any account holder may post public comments — **there is no age requirement to create an account or to post a comment.** Comments are **post-moderated** — they go live immediately and are removed on report. **Links and attachments are not permitted in comments.**
 - **Beneficiaries:** the Beneficiary of a campaign **is** its Campaign Owner. Dono does not permit third-party beneficiaries, and does not verify affiliation with any institution beyond the student-card check it performs itself.
-- **Donors:** may donate with or without an account, **at any age**. Checkout asks the donor to confirm they are 18 or over or have a parent or guardian's permission — a declaration, not a check.
+- **Donors:** may donate with or without an account, **at any age**. Checkout asks the donor to confirm they are 18 or over — a declaration, not a check, with no parent-or-guardian-permission alternative.
 - **Viewers:** campaigns are public and browsable without logging in.
 - **Absent by design:** no direct messaging, no livestreaming, no private groups, no disappearing content, no recommendation or engagement-ranked feed. The product surface is a public campaign list plus campaign pages.
 - **Moderation:** every campaign is reviewed by a person before publication. Comments are post-moderated.
@@ -45,17 +45,17 @@ Dono lets students run public fundraising campaigns for university-related costs
 
 **Can they donate?** **Yes.** No account is required and there is no age gate. The only control is a self-declaration at checkout.
 
-**Can they comment?** Not without an account, and accounts require a declared date of birth of 18 or over. **A child who states a false date of birth can create an account and comment.** They can in any event **read** every comment as an unauthenticated visitor.
+**Can they comment?** **Yes.** Commenting needs an account, but account creation asks for no date of birth and has no age gate of any kind — not even a self-declaration to state falsely. **[COMPLIANCE — 6 Aug 2026: the account-creation/comment age gate this section previously assumed will not be built (see TRUTH.md, Age section). The paragraph above and the Conclusion below need re-scoring against "no barrier at all" rather than "gameable self-declaration" — Amrit/counsel to re-assess.]** They can in any event **read** every comment as an unauthenticated visitor.
 
 **Can they publish campaigns?** Not without an account, and additionally not without passing a manual student-card check and Stripe Identity. **The student-card check is the meaningful barrier here** — a child would need a plausible university student card and a working university email address, which is a real obstacle in a way that a declared date of birth is not.
 
-**Conclusion.** **Children are likely to access the service.** Dono cannot conclude otherwise on the strength of a self-declared date of birth. Children are effectively excluded from **publishing campaigns** by the student-card and university-email requirement, but only nominally excluded from **commenting**, and not excluded at all from **viewing** or **donating**. Those last three are where the risk sits.
+**Conclusion.** **Children are likely to access the service.** Dono cannot conclude otherwise on the strength of a self-declared date of birth. Children are effectively excluded from **publishing campaigns** by the student-card and university-email requirement, but only nominally excluded from **commenting**, and not excluded at all from **viewing** or **donating**. Those last three are where the risk sits. **[COMPLIANCE — this conclusion still describes commenting as "only nominally excluded," which assumed a gameable declared-DOB gate at account creation. That gate does not exist and will not be built; commenting has no age-related barrier at all. Needs re-scoring, not just a wording fix.]**
 
 ## 3. User journeys
 
 **Child visitor.** Arrives via search, link or social share, with no login. Browses or searches public campaigns. Views campaign text, images, video and updates. Reads public comments. **Can donate as a guest** — no account, no verified age check, no parental visibility, one self-declaration.
 
-**Child who states a false age.** Creates an account. Can post public comments. Cannot publish a campaign, because the student-card and university-email check would fail.
+**Child using their real age.** Creates an account — no age is asked or checked. Can post public comments. Cannot publish a campaign, because that step declares a date of birth and the student-card and university-email check would fail regardless.
 
 **Adult campaign creator.** Creates an account, declares a date of birth of 18 or over, submits a student card and university email for manual review, completes Stripe Connect and Stripe Identity, builds a campaign, submits it for human review, and on approval goes live.
 
@@ -67,11 +67,11 @@ Assessed on: can a child encounter it, how, how likely, what controls exist, and
 
 ### Illegal content — fraud, scams, terrorist fundraising, CSAM, hate
 
-A child could encounter this as a **viewer** of a published campaign or comment, and could in principle author a comment if they falsified their age.
+A child could encounter this as a **viewer** of a published campaign or comment, and could in principle author a comment directly — there is no age check on commenting to get past.
 
 - *Campaigns:* every campaign is reviewed by a person before publication. This is a genuine pre-publication gate and the single strongest control in this assessment.
-- *Comments:* post-moderated, so illegal content could be visible for a window before removal. The author pool is people who hold accounts, which is a weaker constraint than the previous draft assumed, since the only barrier is a declared date of birth. Links and attachments are not permitted, which removes the most common vector.
-- **Residual risk: Low** (campaigns) / **Medium** (comments — raised from Low–Medium, because the author pool is not identity-verified as previously claimed).
+- *Comments:* post-moderated, so illegal content could be visible for a window before removal. The author pool is anyone who holds an account, with no age barrier of any kind — weaker than a previous draft's "declared date of birth" assumption, since even that self-declaration will not be built for account creation or commenting (6 Aug 2026, see TRUTH.md, Age section). Links and attachments are not permitted, which removes the most common vector.
+- **Residual risk: Low** (campaigns) / **Medium** (comments — this Medium rating was itself set on the assumption of a declared-DOB barrier that no longer applies; it should be re-scored, not carried forward unchanged). **[COMPLIANCE — Amrit/counsel to re-assess.]**
 
 ### Bullying and abuse via comments
 
@@ -104,8 +104,8 @@ This is the category where nothing upstream helps, because the harm does not req
 
 - A campaign creator is identity-verified by Stripe, but identity verification confirms *who they are*, not that their campaign's framing is appropriate for a young reader. A verified adult can write a campaign or update that emotionally pressures someone into donating.
 - **Donating has no age gate and no account requirement.** A child can donate as a guest.
-- The **checkout confirmation** — "you are 18 or over, or have a parent or guardian's permission" — is the only control that sits at the point of payment. It is a declaration, not a check, and Dono does not pretend otherwise. It is nonetheless a meaningfully stronger signal than silence: it makes the position explicit at the moment of decision, it gives a parent or guardian a clear basis to say the donation was unauthorised, and it costs nothing to implement.
-- The **Refund and Dispute Policy makes a donation by a child without a parent or guardian's permission an objective refund ground** — one that does not require the family to prove materiality or causation. That is a genuine remedy, not a paper one.
+- The **checkout confirmation** — "you are 18 or over" — is the only control that sits at the point of payment. There is no parent-or-guardian-permission alternative; that branch was decided against building, not deferred (6 Aug 2026, see TRUTH.md, Age section). It is a declaration, not a check, and Dono does not pretend otherwise. It is nonetheless a meaningfully stronger signal than silence: it makes the position explicit at the moment of decision, and it costs nothing to implement.
+- A donation made by a child without a parent or guardian's permission is handled as an **unauthorised payment** — an objective refund ground under the Refund and Dispute Policy that does not require the family to prove materiality or causation. That is a genuine remedy, not a paper one, even without a dedicated parental-permission ground.
 - **Residual risk: Medium.** Reduced from Medium–High because there is now a control at the point of payment and a real remedy afterwards — but not to Low, because neither prevents the donation happening.
 
 ## 5. Risk factors — why Dono is lower risk than a typical social platform
@@ -170,4 +170,4 @@ This is the category where nothing upstream helps, because the harm does not req
 5. **Comment pre-screening** — automated keyword or pattern detection — to shrink the post-moderation window, which is the basis of four Medium ratings.
 6. **Repeat-offender detection** for comment authors.
 7. **Confirm links and attachments are technically disabled in comments**, not merely prohibited by policy.
-8. **Review after six months of operating data**, particularly on: whether under-18 donations are actually occurring and at what volume; whether any account has been created by someone who falsified their date of birth; and the time from comment publication to removal on report.
+8. **Review after six months of operating data**, particularly on: whether under-18 donations are actually occurring and at what volume; whether any Campaign or Society has been created by someone who falsified their date of birth; the volume of comments from account holders who are, or may be, under 18; and the time from comment publication to removal on report.

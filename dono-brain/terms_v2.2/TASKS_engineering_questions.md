@@ -52,16 +52,16 @@ The whole Society model assumes a Society-held connected account. There is no ev
 
 ## B. Accounts, age and identity
 
-**B1. Where exactly is the 18+ declared-date-of-birth gate enforced?**
-v2.2 says 18+ for account creation, campaign creation, society creation and commenting. Confirm the gate is on all four, and confirm **there is no gate on donating** — which is now the intended behaviour, not an oversight.
+**B1. Where exactly is the 18+ declared-date-of-birth gate enforced?** **ANSWERED 6 Aug 2026.**
+Confirmed in code: the gate is enforced (server-side, `assertAdultOrThrow`) on campaign creation and society creation/leadership only. There is no gate on account creation, on commenting, or on donating. v2.2 previously said the gate also covered account creation and commenting; that was wrong, and the documents (ToS 1.8, 5.1, 17.1; Verification 4.3; Donor 2.2, 14.1; Community Guidelines 6.1; Privacy 14.2; RoPA; Children's RA; Illegal-Content RA; OSA Procedures) have been corrected to match rather than the gate being built — see TRUTH.md, Age section.
 *Source: ToS 1.8, 5.1, 17.1; Verification 4.3.*
 
 **B2. What happens to the existing `DonateDobGate`?** **BLOCKING**
 Donating is now open to all ages, so the donate age gate must be removed and replaced with the confirmation in `TASKS_engineering_features.md` F1. Confirm what removing it affects, and whether `ageAttested` should be repurposed to store the new confirmation.
 *Source: ToS 11.4; Donor 2.2.*
 
-**B3. Does Stripe Identity return `verifiedDob` reliably enough to be worth storing at all?**
-v2.2 says Dono records a verified name or date of birth **where Stripe returns them**, and does not rely on it for age. If it is returned rarely, is storing it justified under data minimisation, or should we stop?
+**B3. Does Stripe Identity return `verifiedDob` reliably enough to be worth storing at all?** **ANSWERED 6 Aug 2026.**
+Decision: keep storing it where Stripe returns it, but do not wire it into the age check (`assertAdultOrThrow`) — self-declared date of birth remains the sole age-gate model, as v2.2 already states. Data-minimisation concern addressed separately: `verifiedName`/`verifiedDob` are now cleared automatically 90 days after capture, and immediately on account deletion for campaigns/societies the deleted user created, rather than retained indefinitely (see `convex/lib/verificationRetention.ts`).
 *Source: Verification 4.1; Privacy 3.2; ROPA row 4.*
 
 **B4. Is the `ox.ac.uk` restriction the only institution gate, and how is a new institution added?**

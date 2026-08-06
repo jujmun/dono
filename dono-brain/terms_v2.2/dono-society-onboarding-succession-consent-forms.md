@@ -112,9 +112,9 @@ Each of the following is a **separate, specific choice**. None may be bundled wi
 
 **1. Age confirmation.** *(New in v2.2 — donating is open to all ages.)*
 
-> *"I am 18 or over, or I have the permission of a parent or guardian to make this donation."*
+> *"I am 18 or over."*
 
-Must be actively confirmed. This is a **declaration, not a verified check**, and no Dono document may describe it as age verification. It is a required step for every donation, including guest donations. Where a parent or guardian later says a child donated without permission, that is an **objective refund ground** requiring no proof of materiality — see the Refund and Dispute Policy clause 3.1(d). **[ENGINEERING — BUILD REQUIRED.]**
+Must be actively confirmed. This is a **declaration, not a verified check**, and no Dono document may describe it as age verification. It is a required step for every donation, including guest donations. **There is no parent-or-guardian-permission alternative — that branch was decided against building, not merely deferred (6 Aug 2026, see TRUTH.md, Age section).** Where a parent or guardian later says a child donated without permission, that is handled as an ordinary unauthorised-payment refund ground — see the Refund and Dispute Policy clause 3.1(c). **[ENGINEERING — BUILD REQUIRED: the flat 18+ confirmation above still needs building; only the parent/guardian alternative has been dropped.]**
 
 **2. Fee cover.**
 
