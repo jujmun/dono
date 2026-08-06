@@ -42,6 +42,11 @@ export const campaignFields = {
   imageStorageId: v.optional(v.id("_storage")),
   images: v.optional(v.array(v.string())),
   imageStorageIds: v.optional(v.array(v.id("_storage"))),
+  /** Precomputed 1200x630 center-cropped JPEG derivative of the cover image,
+   * used for og:image/twitter:image previews. Generated asynchronously by
+   * campaignOgImageActions.generate after the cover image is set — see
+   * convex/campaignOg.ts. Unset until generation finishes or if it fails. */
+  ogImageStorageId: v.optional(v.id("_storage")),
   /** YouTube or Vimeo watch URL for the campaign media hero. */
   videoUrl: v.optional(v.string()),
   createdAt: v.string(),

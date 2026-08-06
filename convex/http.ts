@@ -3,6 +3,7 @@ import { auth } from "./auth";
 import { stripeWebhook } from "./stripeWebhook";
 import { identityWebhook } from "./societyIdentityWebhook";
 import { unsubscribeFromCampaignUpdates } from "./campaignUpdateUnsubscribe";
+import { campaignOgPage } from "./campaignOg";
 
 const http = httpRouter();
 
@@ -24,6 +25,12 @@ http.route({
   path: "/campaign-updates/unsubscribe",
   method: "GET",
   handler: unsubscribeFromCampaignUpdates,
+});
+
+http.route({
+  pathPrefix: "/og/campaigns/",
+  method: "GET",
+  handler: campaignOgPage,
 });
 
 export default http;
