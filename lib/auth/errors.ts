@@ -36,8 +36,35 @@ export function getFriendlyAuthError(error: unknown) {
 
   const message = rawMessage;
 
-  if (/STRIPE_IDENTITY_DISABLED/i.test(message)) {
+  if (convexPayload?.code === "IDENTITY_PROCESSING") {
+    return (
+      convexPayload.message ??
+      "Your identity check is already being reviewed — this usually takes about a minute."
+    );
+  }
+  if (convexPayload?.code === "IDENTITY_ALREADY_VERIFIED") {
+    return convexPayload.message ?? "Your identity is already verified.";
+  }
+  if (
+    convexPayload?.code === "STRIPE_IDENTITY_API_ERROR" ||
+    convexPayload?.code === "STRIPE_IDENTITY_FAILED"
+  ) {
+    return (
+      convexPayload.message ??
+      "Could not start identity verification. Please try again."
+    );
+  }
+  if (
+    /STRIPE_IDENTITY_DISABLED/i.test(message) ||
+    convexPayload?.code === "STRIPE_IDENTITY_DISABLED"
+  ) {
     return "Identity verification is temporarily unavailable.";
+  }
+  if (
+    /STRIPE_NOT_CONFIGURED/i.test(message) ||
+    convexPayload?.code === "STRIPE_NOT_CONFIGURED"
+  ) {
+    return "Payments are not configured on this deployment yet.";
   }
   if (/InvalidAccountId/i.test(message)) {
     return "No password is set for this email yet. We'll send a sign-in code so you can create one.";
