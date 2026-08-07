@@ -65,7 +65,7 @@ The current legal source is v3.0 in [`legal/suites/v3.0/`](legal/suites/v3.0/).
 Its wording is content-ready. The remaining document task is to render the
 Markdown source into accessible in-product HTML and formal PDF files, record
 their hashes, and place those exact publication artifacts in
-[`legal/live-versions/`](legal/live-versions/). Content readiness does not by
+[`legal/live-terms/`](legal/live-terms/). Content readiness does not by
 itself mean that the product release has passed its engineering controls.
 
 ## Repository conventions

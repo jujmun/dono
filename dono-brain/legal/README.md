@@ -21,8 +21,10 @@ also does not prove that the product implements the behaviour it describes.
 
 | Folder | Contents |
 |---|---|
-| [`live-versions/`](live-versions/) | Empty handoff location for exact, approved documents that the product may serve; not a drafting folder |
+| [`live-terms/`](live-terms/) | **Public-facing documents only** — the exact Markdown, HTML and PDF the product may serve, plus `manifest.json`. Generated output; never edit by hand, never put anything internal here |
+| [`publication-handoff/`](publication-handoff/) | Internal controls for what `live-terms/` may serve: the blockers record and the pipeline rules |
 | [`suites/`](suites/) | Versioned legal suites and immutable historical versions |
+| [`bin/`](bin/) | Staged for deletion, pending review. Not in use |
 | [`analysis/`](analysis/) | Topic-specific legal analysis and context handoffs |
 | [`reviews/`](reviews/) | Point-in-time suite and repository reviews |
 | [`engineering-inputs/`](engineering-inputs/) | Questionnaires and evidence requests sent to engineering |
@@ -32,7 +34,8 @@ also does not prove that the product implements the behaviour it describes.
 ## Rules
 
 - Keep historical suites immutable.
-- Put only approved, publication-ready bytes in `live-versions/`; never copy a working draft there.
+- Put only public-facing bytes in `live-terms/`; never copy a working draft, an internal record or a control document there.
+- **Never render straight from `suites/` to a servable location.** Source files carry approval blocks, signature tables and solicitor-review notes. Rendering must strip them and a verification gate must confirm it, across Markdown, HTML and the text layer of every PDF.
 - Record draft, review, approval, publication and supersession as distinct states.
 - Put new legal versions in a new suite directory; never silently overwrite a
   published version.

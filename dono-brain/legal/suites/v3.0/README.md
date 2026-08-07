@@ -24,7 +24,7 @@ The substantive v3.0 wording is ready. The files in this suite are canonical
 Markdown source, not user-facing publication artifacts. Render the operative
 public documents to accessible HTML for in-product display and formal PDF for
 durable download, then place and hash the exact artifacts through
-[`../../live-versions/`](../../live-versions/).
+[`../../live-terms/`](../../live-terms/).
 
 The approval register continues to control release of the rendered artifacts
 and the engineering implementation. Its open gates do not mean the v3.0 wording

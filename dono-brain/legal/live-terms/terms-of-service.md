@@ -4,7 +4,7 @@
 **Document type:** Contractual
 Supersedes version 2.3 (6 August 2026) and all earlier versions.
 
-**Beta scope:** **Society Campaigns only.** Individual Student Campaigns are a future release and are disabled at the API boundary.
+**Beta scope:** **Society Campaigns only.** Individual Student Campaigns are a future release and cannot currently be created or donated to.
 
 ---
 
@@ -22,7 +22,7 @@ Supersedes version 2.3 (6 August 2026) and all earlier versions.
 
 (a) create an account → the **Community Guidelines** apply to your account, content and conduct;
 (b) make or attempt to make a Donation → the **Donor Terms** and the **Refund and Dispute Policy** apply to that Donation, whether or not you hold an account;
-(c) submit or operate an individual Campaign → the **Student Campaign Terms**, the **Refund and Dispute Policy** and the **Community Guidelines** apply;
+(c) submit or operate an individual Campaign → the **Student Campaign Terms**, the **Refund and Dispute Policy** and the **Community Guidelines** apply. **Individual Campaigns are not available at present and the Student Campaign Terms are not operative — see clause 4.8;**
 (d) submit or operate a Campaign for a Society → the **Society Campaign Terms**, the **Refund and Dispute Policy** and the **Community Guidelines** apply to the Society and to its Responsible Representative.
 
 Roles are cumulative. A Campaign Owner who donates to another Campaign also accepts the Donor Terms for that Donation.
@@ -109,7 +109,7 @@ Where a subject-specific document expressly governs an issue, it prevails over t
 
 4.7 **Institutions currently recognised.** Dono recognises the **University of Oxford**. **An account used to create or operate a Campaign, or to act for a Society, must be verified against an `ox.ac.uk` address or a recognised college subdomain. A donor account may be opened with any email address** (clause 5.1A). We update this clause as the recognised list changes.
 
-4.8 **Campaign types available during beta.** Beta supports **Society Campaigns only**. An eligible Society member creates the Campaign under the Society's approval and Responsible Representative process, and Donations go to the applicable Society Connected Account. Individual Campaigns are a planned later release; their routes are disabled and the Student Campaign Terms are not presented as operative beta terms. The Student Campaign Terms continue to govern the personal conduct obligations expressly incorporated by the Society Campaign Terms.
+4.8 **Campaign types available during beta.** Beta supports **Society Campaigns only**. An eligible Society member creates the Campaign under the Society's approval and Responsible Representative process, and Donations go to the applicable Society Connected Account. Individual Campaigns are a planned later release; they cannot currently be created, published or donated to, and the Student Campaign Terms are not presented as operative beta terms. The Student Campaign Terms continue to govern the personal conduct obligations expressly incorporated by the Society Campaign Terms.
 
 ---
 

@@ -217,7 +217,7 @@ These packages consolidate the privacy/DPIA build. The master checklist remains 
 ### DP-ENG-10 — Contract and release evidence
 
 - Implement events A, B and C from the Acceptance Matrix, preserving which items are actively accepted, shown/acknowledged or separately optional.
-- Build one configurable live-document registry using `legal/live-versions/` as the handoff placeholder; fail closed until the required approved files, versions and hashes are supplied.
+- Build one configurable live-document registry using `legal/live-terms/` as the handoff placeholder; fail closed until the required approved files, versions and hashes are supplied.
 - Immutable legal manifest, separate source/HTML/PDF hashes and historical routes; never serve raw Markdown or the draft stub as a fallback.
 - Link every user/guest acceptance to its event and account/donation/campaign context.
 - Provide on-screen and durable-copy confirmation.

@@ -6,7 +6,7 @@
 **Document type:** Notice — information, not contract
 **Supersedes:** v2.3 (6 August 2026) and all earlier versions, retained unaltered in the version archive at `../../v2.3/`, `../../v2.2/`, `../../v2.1/`, `../../v2.0/` and `../../v1.0/`
 
-> **This is a Notice, not a contract.** It explains what Dono checks and what it does not. It creates no contractual rights or obligations. The operative obligations sit in the Student and Society Campaign Terms.
+> **This is a Notice, not a contract.** It explains what Dono checks and what it does not. It creates no contractual rights or obligations. The operative obligations sit in the Society Campaign Terms.
 
 > **The short version.** Two different things are checked before anyone can raise money on Dono, by two different people.
 >

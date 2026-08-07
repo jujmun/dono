@@ -33,7 +33,7 @@ Engineering must implement the three-event [`ACCEPTANCE_MATRIX.md`](../../legal/
 
 The distinction between **accept**, **show/acknowledge** and **separate optional consent** is part of the build specification. Do not collapse the events into a generic legal tick box. Student Campaign Terms are a future document and must never be presented during the Society-only beta.
 
-The correct wording is the current v3.0 source. It still needs to be rendered into accessible in-product HTML and formal PDF files. Build a configurable document registry and permanent version routes against the empty [`legal/live-versions/`](../../legal/live-versions/) handoff location. Do not serve raw Markdown or the current product draft stub. A required acceptance must fail closed if its release-authorised document ID, version, rendered bytes or publication hash is unavailable.
+The correct wording is the current v3.0 source. It still needs to be rendered into accessible in-product HTML and formal PDF files. Build a configurable document registry and permanent version routes against the empty [`legal/live-terms/`](../../legal/live-terms/) handoff location. Do not serve raw Markdown or the current product draft stub. A required acceptance must fail closed if its release-authorised document ID, version, rendered bytes or publication hash is unavailable.
 
 ## Legacy engineering material
 
@@ -70,7 +70,7 @@ These are the remaining external dependencies. They should not be converted into
 | CSEA portal access | NCA response confirming registration and eligible users; training and test completion | Build restricted case handling and evidence/retention controls; do not claim portal readiness yet |
 | Insurance interaction | Insurer/broker confirms the crowdfunding/payment activity is accurately disclosed and covered | Do not treat insurance as a substitute for product controls or legal compliance |
 | Contributor/IP position | Execute the Team and Contributor Agreement with every contributor and confirm worker-status advice if required | Block production access for anyone not recorded as authorised |
-| Display-ready legal publication set | Render the current v3.0 Society-only beta source into accessible HTML and formal PDF, verify it, and place the exact artifacts and hashes in `legal/live-versions/` | Build the registry and routes now; serve only release-authorised immutable artifacts; fail closed while a required document is missing |
+| Display-ready legal publication set | Render the current v3.0 Society-only beta source into accessible HTML and formal PDF, verify it, and place the exact artifacts and hashes in `legal/live-terms/` | Build the registry and routes now; serve only release-authorised immutable artifacts; fail closed while a required document is missing |
 | ICO fee registration | Complete the ICO self-assessment and record the outcome | No product choice required |
 
 ## Completion rule
