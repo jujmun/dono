@@ -266,6 +266,14 @@
 
 ---
 
+## Brand & Visual Identity
+
+| Decision | Status | Settled |
+|---|---|---|
+| **Dinosaur colour:** `#2b7b54` | CURRENT | 7 Aug 2026 |
+| **Dinosaur scales colour (accent colour):** `#e98oa3` | CURRENT | 7 Aug 2026 |
+| **Background colour:** `#f7f1eo` | CURRENT | 7 Aug 2026 |
+
 ## Changing an entry
 
 1. Make the decision.
