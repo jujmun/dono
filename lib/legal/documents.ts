@@ -15,6 +15,7 @@ export {
   type LegalAcceptanceEvent,
   legalHref,
   legalCurrentHref,
+  legalVersionedHref,
   resolveLiveDocument,
   getLiveDocumentBody,
   assertRegistryDocuments,

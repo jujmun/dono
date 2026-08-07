@@ -20,7 +20,11 @@ import {
   RetroPanel,
   StoryWithCostBreakdown,
 } from "@/components/retro";
-import { LEGAL_DOCUMENT_TITLES, LEGAL_SUITE_VERSION, legalHref } from "@/lib/legal/documents";
+import {
+  LEGAL_DOCUMENT_TITLES,
+  LEGAL_SUITE_VERSION,
+  legalVersionedHref,
+} from "@/lib/legal/documents";
 import type { LegalDocumentId } from "@/lib/legal/documents";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
@@ -601,7 +605,7 @@ export default function CampaignDetailPage() {
         ).map((id) => ({
           title: LEGAL_DOCUMENT_TITLES[id],
           version: LEGAL_SUITE_VERSION,
-          href: legalHref(id),
+          href: legalVersionedHref(id),
         }))}
         onClose={() => setThankYou(null)}
       />

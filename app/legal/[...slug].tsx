@@ -13,6 +13,8 @@ import {
 function parseSlug(slug: string | string[] | undefined): {
   docId: string;
   version: string;
+  /** True when the URL pins an explicit version (durable / archive link). */
+  versionPinned: boolean;
 } | null {
   const parts = Array.isArray(slug)
     ? slug
@@ -20,12 +22,26 @@ function parseSlug(slug: string | string[] | undefined): {
       ? slug.split("/").filter(Boolean)
       : [];
   if (parts.length === 1) {
-    return { docId: parts[0], version: LEGAL_SUITE_VERSION };
+    return {
+      docId: parts[0],
+      version: LEGAL_SUITE_VERSION,
+      versionPinned: false,
+    };
   }
   if (parts.length === 2) {
-    return { docId: parts[0], version: parts[1] };
+    return { docId: parts[0], version: parts[1], versionPinned: true };
   }
   return null;
+}
+
+function statusLabel(version: string, versionPinned: boolean): string {
+  if (!versionPinned) {
+    return `Current live terms · Version ${version}`;
+  }
+  if (version === LEGAL_SUITE_VERSION) {
+    return `Version ${version} · pinned copy of the current live terms`;
+  }
+  return `Version ${version} · archived copy`;
 }
 
 export default function LegalDocumentPage() {
@@ -33,7 +49,11 @@ export default function LegalDocumentPage() {
   const parsed =
     parseSlug(params.slug) ??
     (typeof params.doc === "string"
-      ? { docId: params.doc, version: LEGAL_SUITE_VERSION }
+      ? {
+          docId: params.doc,
+          version: LEGAL_SUITE_VERSION,
+          versionPinned: false,
+        }
       : null);
 
   const doc = parsed
@@ -43,7 +63,7 @@ export default function LegalDocumentPage() {
     ? getLiveDocumentBody(parsed.docId, parsed.version)
     : null;
 
-  if (!doc || body == null) {
+  if (!doc || body == null || !parsed) {
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-3xl px-4 py-10">
@@ -66,7 +86,7 @@ export default function LegalDocumentPage() {
         <View className="mx-auto w-full max-w-3xl">
           <RetroPanel title={doc.title} bodyClassName="px-5 py-5">
             <Text className="text-xs text-[#5c574f]">
-              Version {doc.version} · archived copy
+              {statusLabel(doc.version, parsed.versionPinned)}
             </Text>
             <LegalMarkdownBody
               source={body}
