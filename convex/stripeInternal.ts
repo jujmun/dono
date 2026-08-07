@@ -146,6 +146,23 @@ export const resolveCampaignMerchantAccount = internalQuery({
       });
     }
 
+    // CR-00: Society-only beta — refuse donations to individual/student campaigns.
+    if (campaign.creator.type !== "society") {
+      throw new ConvexError({
+        code: "FEATURE_REMOVED",
+        message:
+          "Individual campaigns are not available during the Society-only beta.",
+      });
+    }
+
+    const remaining = Math.max(0, campaign.goal - campaign.raised);
+    if (remaining <= 0) {
+      throw new ConvexError({
+        code: "CAMPAIGN_FUNDED",
+        message: "This campaign has already reached its funding target.",
+      });
+    }
+
     const connectAccount = await ctx.db
       .query("stripeConnectAccounts")
       .withIndex("by_community", (q) =>
@@ -180,6 +197,9 @@ export const resolveCampaignMerchantAccount = internalQuery({
       title: campaign.title,
       communitySlug: campaign.creator.communityId,
       stripeAccountId: connectAccount.stripeAccountId,
+      goal: campaign.goal,
+      raised: campaign.raised,
+      remaining,
     };
   },
 });

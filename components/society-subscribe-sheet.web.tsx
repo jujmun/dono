@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -8,7 +8,6 @@ import {
   View,
 } from "react-native";
 import { Link } from "expo-router";
-import { useAction, useMutation } from "convex/react";
 import {
   Elements,
   PaymentElement,
@@ -17,7 +16,6 @@ import {
 } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
 import { usePostHog } from "posthog-react-native";
-import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import {
@@ -134,8 +132,6 @@ export function SocietySubscribeSheet({
   onClose,
   onSuccess,
 }: SocietySubscribeSheetProps) {
-  const createSocietySubscription = useAction(api.stripe.createSocietySubscription);
-  const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const [selectedAmount, setSelectedAmount] = useState<number>(
     SOCIETY_SUBSCRIBE_PRESET_AMOUNTS[1],
   );
@@ -144,7 +140,6 @@ export function SocietySubscribeSheet({
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const requestIdRef = useRef(0);
 
   const stripeConfigured = Boolean(publishableKey);
 
@@ -159,44 +154,27 @@ export function SocietySubscribeSheet({
       return;
     }
 
-    if (!isAuthenticated || !legalAccepted || !stripeConfigured) {
-      setClientSecret(null);
-      setSubscriptionId(null);
-      setStripeAccountId(null);
-      setLoading(false);
-      return;
-    }
-
-    const requestId = ++requestIdRef.current;
-    setLoading(true);
-    setError(null);
-
-    const createSubscription = async () => {
-      await acceptDocuments({ context: "donate" });
-      return createSocietySubscription({ communitySlug, amount: selectedAmount });
-    };
-
-    void createSubscription()
-      .then((result) => {
-        if (requestIdRef.current !== requestId) return;
-        setClientSecret(result.clientSecret);
-        setSubscriptionId(result.subscriptionId);
-        setStripeAccountId(result.stripeAccountId);
-      })
-      .catch((err) => {
-        if (requestIdRef.current !== requestId) return;
-        setError(getFriendlyPaymentError(err));
-        setClientSecret(null);
-        setSubscriptionId(null);
-        setStripeAccountId(null);
-      })
-      .finally(() => {
-        if (requestIdRef.current === requestId) {
-          setLoading(false);
-        }
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional
-  }, [visible, communitySlug, selectedAmount, isAuthenticated, legalAccepted, stripeConfigured]);
+    setLoading(false);
+    setClientSecret(null);
+    setSubscriptionId(null);
+    setStripeAccountId(null);
+    setError(
+      "Recurring donations are not available. Monthly society subscriptions have been removed for beta.",
+    );
+    void communitySlug;
+    void isAuthenticated;
+    void legalAccepted;
+    void stripeConfigured;
+    void onSuccess;
+  }, [
+    visible,
+    communitySlug,
+    selectedAmount,
+    isAuthenticated,
+    legalAccepted,
+    stripeConfigured,
+    onSuccess,
+  ]);
 
   const paymentReady = Boolean(clientSecret && subscriptionId && stripeAccountId);
 

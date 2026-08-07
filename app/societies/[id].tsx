@@ -31,7 +31,6 @@ import { SocietyFollowButton } from "@/components/society-follow-button";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { LeaderDonationLedger } from "@/components/leader-donation-ledger";
 import { CampaignImage } from "@/components/ui/campaign-image";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency } from "@/lib/constants";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -41,7 +40,7 @@ import {
   uploadCampaignUpdateMedia,
   type CampaignUpdateMediaUpload,
 } from "@/lib/upload-campaign-update-media";
-import type { Campaign, Community, Society, VerificationType } from "@/lib/types";
+import type { Campaign, Community, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -306,14 +305,6 @@ function CommunityDetail({
                 <Text className="font-retro-bold text-2xl leading-tight text-dono-text">
                   {community.name}
                 </Text>
-                {community.verified && community.verificationType ? (
-                  <VerificationBadge
-                    verification={{
-                      type: community.verificationType as VerificationType,
-                      label: "Verified",
-                    }}
-                  />
-                ) : null}
               </View>
               <Text className="text-sm text-dono-muted">{community.university}</Text>
               <Text className="mt-1 font-retro-mono text-xs text-dono-muted">

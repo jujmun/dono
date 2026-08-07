@@ -249,35 +249,15 @@ export const generateUploadUrl = mutation({
   },
 });
 
-/** Mint a short-lived student-card URL and audit the access. */
+/** EL-01/EL-07: Identity-document / student-card viewing removed from Dono. */
 export const getIdDocumentUrlForAdmin = mutation({
   args: { slug: v.string() },
-  handler: async (ctx, args) => {
-    const { userId: adminUserId } = await requireAdmin(ctx);
-    const society = await ctx.db
-      .query("societies")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .unique();
-    if (!society?.idDocumentStorageId) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "No student card on file for this society.",
-      });
-    }
-    await logAdminAction(ctx, {
-      adminUserId,
-      action: "society.viewIdDocument",
-      targetType: "society",
-      targetId: args.slug,
+  handler: async () => {
+    throw new ConvexError({
+      code: "FEATURE_REMOVED",
+      message:
+        "Identity documents are not stored or served by Dono. Verification is performed by the Payment Provider.",
     });
-    const url = await ctx.storage.getUrl(society.idDocumentStorageId);
-    if (!url) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Student card file could not be loaded.",
-      });
-    }
-    return { url };
   },
 });
 
@@ -370,8 +350,13 @@ export const create = mutation({
     for (const storageId of args.supportingDocumentStorageIds) {
       await claimStorageId(ctx, userId, storageId);
     }
+    // EL-01/EL-07: Dono does not accept identity-document uploads.
     if (args.idDocumentStorageId) {
-      await claimStorageId(ctx, userId, args.idDocumentStorageId);
+      throw new ConvexError({
+        code: "FEATURE_REMOVED",
+        message:
+          "Identity documents are not accepted by Dono. Verification is performed by the Payment Provider.",
+      });
     }
 
     const slug = await allocateUniqueSlug(ctx, name, "society");
@@ -385,9 +370,6 @@ export const create = mutation({
       websiteUrl,
       secondaryLink: secondaryLink || undefined,
       supportingDocumentStorageIds: args.supportingDocumentStorageIds,
-      ...(args.idDocumentStorageId
-        ? { idDocumentStorageId: args.idDocumentStorageId }
-        : {}),
       creatorId: userId,
       responsibleIndividualUserId,
       orgType,

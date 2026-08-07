@@ -232,7 +232,7 @@ describe("creation mutations without student card", () => {
     expect(result.slug).toBeDefined();
   });
 
-  it("societies.create still accepts an optional idDocumentStorageId", async () => {
+  it("societies.create rejects idDocumentStorageId uploads", async () => {
     const t = newTestConvex();
     const studentId = await seedUser(t, {
       email: "stu2@ox.ac.uk",
@@ -248,15 +248,16 @@ describe("creation mutations without student card", () => {
     });
     const asStudent = t.withIdentity({ subject: studentId });
 
-    const result = await asStudent.mutation(api.societies.create, {
-      name: "Legacy Card Society",
-      description: "desc",
-      story: "story",
-      websiteUrl: "https://example.com",
-      supportingDocumentStorageIds: [],
-      idDocumentStorageId: storageId,
-    });
-    expect(result.slug).toBeDefined();
+    await expect(
+      asStudent.mutation(api.societies.create, {
+        name: "Legacy Card Society",
+        description: "desc",
+        story: "story",
+        websiteUrl: "https://example.com",
+        supportingDocumentStorageIds: [],
+        idDocumentStorageId: storageId,
+      }),
+    ).rejects.toThrow(/Identity documents are not accepted/);
   });
 
   it("campaigns.create succeeds without idDocumentStorageId", async () => {

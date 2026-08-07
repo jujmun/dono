@@ -67,6 +67,8 @@ export default function CampaignDetailPage() {
     api.campaignMatches.getActiveForCampaign,
     id ? { campaignSlug: id } : "skip",
   );
+  // activeMatch is always null after CR-02a; query retained so types stay wired.
+  void activeMatch;
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState<number>(
     RECOMMENDED_DONATION_AMOUNT,
@@ -447,21 +449,7 @@ export default function CampaignDetailPage() {
             </Pressable>
           </Link>
         ) : null}
-        {activeMatch ? (
-          <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2.5 py-0.5">
-            <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
-              MATCHED {activeMatch.multiplier}×
-            </Text>
-          </View>
-        ) : null}
-        {campaign.verifications.length > 0 ? (
-          <View
-            className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint"
-            accessibilityLabel="Verified campaign"
-          >
-            <Text className="text-[11px] font-bold text-white">✓</Text>
-          </View>
-        ) : null}
+        {/* CR-02a: match window badge removed */}
       </View>
 
       <View className="mb-6 w-full gap-2">

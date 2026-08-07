@@ -17,7 +17,6 @@ import {
   Globe,
   Link2,
   Paperclip,
-  IdCard,
   RefreshCw,
 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
@@ -88,9 +87,6 @@ export default function AdminPortalPage() {
 
   const approveSociety = useMutation(api.societies.approve);
   const rejectSociety = useMutation(api.societies.reject);
-  const getSocietyIdDocumentUrl = useMutation(
-    api.societies.getIdDocumentUrlForAdmin,
-  );
   const refreshVerificationStatus = useAction(
     api.societyIdentity.refreshVerificationStatus,
   );
@@ -400,32 +396,9 @@ export default function AdminPortalPage() {
                           </View>
                         )}
                         <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
-                          {society.hasIdDocument ? (
-                            <Pressable
-                              onPress={() => {
-                                void (async () => {
-                                  try {
-                                    const { url } = await getSocietyIdDocumentUrl({
-                                      slug: society.slug,
-                                    });
-                                    await Linking.openURL(url);
-                                  } catch (err) {
-                                    setSocietyError(getFriendlyAuthError(err));
-                                  }
-                                })();
-                              }}
-                              className="flex-row items-center gap-2"
-                            >
-                              <IdCard size={14} color="#17211B" />
-                              <Text className="text-sm text-dono-primary">
-                                View ID document
-                              </Text>
-                            </Pressable>
-                          ) : (
-                            <Text className="text-sm text-dono-muted">
-                              ID document unavailable.
-                            </Text>
-                          )}
+                          <Text className="text-sm text-dono-muted">
+                            Identity documents are verified by the Payment Provider; Dono does not store them.
+                          </Text>
                           <View className="flex-row items-center gap-2">
                             {identityEnabled ? (
                               <>

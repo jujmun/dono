@@ -243,21 +243,20 @@ export const stripeWebhook = httpAction(async (ctx, request) => {
   switch (event.type) {
     case "payment_intent.succeeded": {
       const paymentIntent = event.data.object as Stripe.PaymentIntent;
+      // CF-01: fund_one_time / platform-account settlement is removed. Ignore
+      // any legacy fund metadata rather than charging or allocating on Dono's account.
       if (paymentIntent.metadata?.donationType === "fund_one_time") {
-        await ctx.runMutation(internal.stripeFunds.markFundDonationSucceeded, {
-          stripePaymentIntentId: paymentIntent.id,
-        });
-      } else {
-        const latestCharge =
-          typeof paymentIntent.latest_charge === "string"
-            ? paymentIntent.latest_charge
-            : paymentIntent.latest_charge?.id;
-        await ctx.runMutation(internal.stripeInternal.markDonationSucceeded, {
-          stripePaymentIntentId: paymentIntent.id,
-          stripeChargeId: latestCharge,
-          stripeConnectedAccountId: connectedAccountId,
-        });
+        break;
       }
+      const latestCharge =
+        typeof paymentIntent.latest_charge === "string"
+          ? paymentIntent.latest_charge
+          : paymentIntent.latest_charge?.id;
+      await ctx.runMutation(internal.stripeInternal.markDonationSucceeded, {
+        stripePaymentIntentId: paymentIntent.id,
+        stripeChargeId: latestCharge,
+        stripeConnectedAccountId: connectedAccountId,
+      });
       break;
     }
     case "payment_intent.payment_failed": {

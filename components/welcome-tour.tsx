@@ -67,7 +67,7 @@ const studentSlides: WelcomeTourSlide[] = [
   {
     title: "Your account",
     description:
-      "Update your profile, manage recurring donations, and review feedback on campaigns you run — all from Account settings.",
+      "Update your profile and review feedback on campaigns you run — all from Account settings.",
     icon: User,
     href: "/account",
     navLabel: "You",
@@ -126,7 +126,7 @@ const alumniSlides: WelcomeTourSlide[] = [
   {
     title: "Your account",
     description:
-      "Update your profile and manage your recurring donations — all from Account settings.",
+      "Update your profile from Account settings.",
     icon: User,
     href: "/account",
     navLabel: "You",

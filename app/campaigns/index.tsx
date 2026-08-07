@@ -65,6 +65,8 @@ export default function CampaignsPage() {
     tab === "discover" ? { limit: 30 } : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const activeMatches = useQuery(api.campaignMatches.listActive) ?? [];
+  // CR-02a: match windows removed; listActive always returns [].
+  void activeMatches;
   const myCampaignsRaw = (useQuery(
     api.campaignCreator.listMine,
     isAuthenticated ? {} : "skip",
@@ -77,12 +79,8 @@ export default function CampaignsPage() {
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
 
   const matchBySlug = useMemo(() => {
-    const map = new Map<string, { multiplier: number }>();
-    for (const match of activeMatches) {
-      map.set(match.campaignSlug, { multiplier: match.multiplier });
-    }
-    return map;
-  }, [activeMatches]);
+    return new Map<string, { multiplier: number }>();
+  }, []);
 
   const profileCollege = profile?.college?.trim().toLowerCase() ?? "";
 

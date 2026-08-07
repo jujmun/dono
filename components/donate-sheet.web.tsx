@@ -387,7 +387,7 @@ export function DonateSheet({
                 amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
               />
               <ReceiptLineRow
-                label="Estimated processing fee (typical UK card)"
+                label="Required by Stripe to process your donation"
                 amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
                 muted
               />

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, TextInput, Linking } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { type Href, Link, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Globe, IdCard, Link2, Paperclip, RotateCcw, Trash2 } from "lucide-react-native";
+import { ArrowLeft, Globe, Link2, Paperclip, RotateCcw, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
@@ -58,7 +58,6 @@ export default function AdminSocietyReviewPage() {
   const takeDown = useMutation(api.societies.takeDown);
   const restore = useMutation(api.societies.restore);
   const hardDelete = useMutation(api.societies.hardDelete);
-  const getIdDocumentUrl = useMutation(api.societies.getIdDocumentUrlForAdmin);
 
   const [reason, setReason] = useState("");
   const [reasonMode, setReasonMode] = useState(false);
@@ -265,28 +264,9 @@ export default function AdminSocietyReviewPage() {
             </View>
           )}
           <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
-            {society.hasIdDocument ? (
-              <Pressable
-                onPress={() => {
-                  void (async () => {
-                    try {
-                      const { url } = await getIdDocumentUrl({
-                        slug: society.slug,
-                      });
-                      await Linking.openURL(url);
-                    } catch (err) {
-                      setError(getFriendlyAuthError(err));
-                    }
-                  })();
-                }}
-                className="flex-row items-center gap-2"
-              >
-                <IdCard size={14} color="#17211B" />
-                <Text className="text-sm text-dono-primary">View ID document</Text>
-              </Pressable>
-            ) : (
-              <Text className="text-sm text-dono-muted">ID document unavailable.</Text>
-            )}
+            <Text className="text-sm text-dono-muted">
+              Identity documents are verified by the Payment Provider; Dono does not store them.
+            </Text>
             {identityEnabled ? (
             <AdminStatusChip
               label={stripeStatusChip(society.stripeVerificationStatus).label}

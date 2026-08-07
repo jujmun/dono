@@ -4,7 +4,6 @@ import { Users, Target } from "lucide-react-native";
 import type { Community } from "@/lib/types";
 import { formatCurrency } from "@/lib/constants";
 import { CampaignImage } from "./ui/campaign-image";
-import { VerificationBadge } from "./ui/verification-badge";
 
 interface CommunityCardProps {
   community: Community;
@@ -24,14 +23,6 @@ export function CommunityCard({ community }: CommunityCardProps) {
           <View className="pt-9">
             <View className="mb-1 flex-row items-start justify-between gap-2">
               <Text className="flex-1 font-retro-bold text-dono-text">{community.name}</Text>
-              {community.verified && community.verificationType && (
-                <VerificationBadge
-                  verification={{
-                    type: community.verificationType,
-                    label: "Verified",
-                  }}
-                />
-              )}
             </View>
 
             <Text className="mb-3 text-xs text-dono-muted">{community.university}</Text>

@@ -21,7 +21,6 @@ import {
 import { api } from "@convex/_generated/api";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminHardDeleteDialog } from "@/components/admin-hard-delete-dialog";
-import { AdminMatchPanel } from "@/components/admin-match-panel";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import {
   AdminStatusChip,
@@ -286,10 +285,6 @@ export default function AdminCampaignReviewPage() {
           Goal {formatCurrency(campaign.goal)} · Submitted {campaign.createdAt} ·{" "}
           {campaign.university}
         </Text>
-
-        {isLive ? (
-          <AdminMatchPanel campaignSlug={campaign.id} enabled={adminUser} />
-        ) : null}
 
         {moderated && campaign.moderationNote ? (
           <View className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5">
