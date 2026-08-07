@@ -1,0 +1,385 @@
+%PDF-1.4
+1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
+2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj
+3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj
+4 0 obj<< /Length 9399 >>stream
+BT
+/F1 9 Tf
+11 TL
+40 750 Td
+(Society Campaign Terms) Tj
+T*
+() Tj
+T*
+(# Dono Society Campaign Terms) Tj
+T*
+() Tj
+T*
+(**Version:** 3.0) Tj
+T*
+(**Version date:** 7 August 2026) Tj
+T*
+(**Effective from:** on publication approval \(see approval block\)) Tj
+T*
+(**Document type:** Contractual) Tj
+T*
+(**Supersedes:** v2.3 \(6 August 2026\) and all earlier versions, retained unaltered in the versio) Tj
+T*
+(**Relationship to other documents:** These Terms supplement the Terms of Service and govern Soc) Tj
+T*
+() Tj
+T*
+(> **Read this first if you are a student officer.** Most student societies are unincorporated a) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(### 1. Who contracts with Dono, and who is liable) Tj
+T*
+() Tj
+T*
+(1.1 These Terms apply to Campaigns run for a Society, to the Society, to its **Responsible Repr) Tj
+T*
+() Tj
+T*
+(1.2 **One Responsible Representative.** Every Society Campaign has one Responsible Representati) Tj
+T*
+() Tj
+T*
+(1.3 **Authority warranty.** The Responsible Representative **warrants** that they are authorise) Tj
+T*
+() Tj
+T*
+(1.4 **Who the contracting party is.**) Tj
+T*
+() Tj
+T*
+(\(a\) **If the Society is incorporated** \(for example a company or a charitable incorporated orga) Tj
+T*
+() Tj
+T*
+(\(b\) **If the Society is unincorporated**, it has no separate legal personality and cannot be a ) Tj
+T*
+() Tj
+T*
+(\(c\) **The Responsible Representative acts in a representative capacity.** Donations, and anythi) Tj
+T*
+() Tj
+T*
+(1.4A **How the account is actually opened ? please read this carefully.** Where the Society is ) Tj
+T*
+() Tj
+T*
+(\(i\) the Connected Account is **legally theirs**, and they alone can operate it, refund from it ) Tj
+T*
+(\(ii\) they must nevertheless hold it, and everything in it, **for the Society** \(clause 1.4\(c\)\);) Tj
+T*
+(\(iii\) the Payment Provider's terms for that account apply to them personally;) Tj
+T*
+(\(iv\) they may have their own reporting obligations to HM Revenue & Customs arising from being r) Tj
+T*
+(\(v\) clause 1.6 limits what Dono may recover from them personally, precisely because the account) Tj
+T*
+() Tj
+T*
+(Dono will explain this at onboarding before the Responsible Representative accepts these Terms.) Tj
+T*
+() Tj
+T*
+(1.5 **Ordinary obligations remain the Society's in substance.** As between the Society and its ) Tj
+T*
+() Tj
+T*
+(1.6 **Limited recourse ? what you are actually exposed to.** This clause limits, and does not e) Tj
+T*
+() Tj
+T*
+(\(a\) **Dono's recourse against a Responsible Representative personally for any ordinary obligati) Tj
+T*
+() Tj
+T*
+(\(b\) **Paragraph \(a\) does not apply, and the Responsible Representative is personally liable wit) Tj
+T*
+() Tj
+T*
+(\(c\) **This clause does not affect the rights of a Donor**, an Institution, a regulator or any o) Tj
+T*
+() Tj
+T*
+(\(d\) **This clause is not a guarantee.** Dono does not ask a Responsible Representative to guara) Tj
+T*
+() Tj
+T*
+(1.7 **Evidence of authority.** Dono may at any time ask the Responsible Representative for reas) Tj
+T*
+() Tj
+T*
+(1.8 **Indemnity for lack of authority.** If the Responsible Representative did not in fact have) Tj
+T*
+() Tj
+T*
+(1.9 **A Society is not a business user.** For the purposes of clauses 27 and 28 of the Terms of) Tj
+T*
+() Tj
+T*
+(1.10 **The Society is the beneficiary.** Funds are raised for the Society and the funded proper) Tj
+T*
+() Tj
+T*
+(### 2. Creating and approving a Society Campaign) Tj
+T*
+() Tj
+T*
+(2.1 A Society Campaign must be approved through the relevant society page before it is presente) Tj
+T*
+() Tj
+T*
+(2.2 **Authority declaration.** On approval the Responsible Representative actively confirms:) Tj
+T*
+() Tj
+T*
+(> *"I confirm that I am authorised to create this Campaign, to authorise the receipt of Donatio) Tj
+T*
+() Tj
+T*
+(2.3 **One approver is sufficient for Dono to publish.** Dono does not require a second person t) Tj
+T*
+() Tj
+T*
+(2.4 **No public status indicators.** Dono displays no "Society approved" badge, verification ti) Tj
+T*
+() Tj
+T*
+(2.5 Society Campaigns must comply with clause 8 of the Terms of Service. Their primary purpose ) Tj
+T*
+() Tj
+T*
+(### 3. Recipient, ownership and split roles) Tj
+T*
+() Tj
+T*
+(3.1 **The expected structure.** The Society is the Campaign Owner and the beneficiary; the Conn) Tj
+T*
+() Tj
+T*
+(3.2 **Ownership Statement.** At setup the Campaign records who will legally own the funded prop) Tj
+T*
+() Tj
+T*
+(3.3 **Split roles are exceptional.** Where there is a genuine operational need for the Campaign) Tj
+T*
+() Tj
+T*
+(3.4 Whether a given Society or representative can in practice open the required Stripe connecte) Tj
+T*
+() Tj
+T*
+(### 4. Responsibilities and refunds) Tj
+T*
+() Tj
+T*
+(4.1 The Responsible Representative must: maintain and privately submit evidence within 14 days ) Tj
+T*
+() Tj
+T*
+(4.2 **Refund execution and Dono's mandate.** The Connected Account holder must execute promptly) Tj
+T*
+() Tj
+T*
+(4.3 The Connected Account is charged the Payment Provider's processing and dispute fees, **owns) Tj
+T*
+() Tj
+T*
+(4.4 Receipts and evidence are held privately and never shown to Donors; the campaign page shows) Tj
+T*
+() Tj
+T*
+(4.4A **Comments on a Society Campaign may be posted only by approved members of that Society** ) Tj
+T*
+() Tj
+T*
+(4.5 **Donor identity** is not disclosed by Dono to the Recipient or the Society as a dispute-re) Tj
+T*
+() Tj
+T*
+(4.6 **Fees and tax records.** **The Society is Dono's customer for the platform service in ever) Tj
+T*
+() Tj
+T*
+(### 5. Resale and disposal) Tj
+T*
+() Tj
+T*
+(5.1 Clause 8 of the Student Campaign Terms applies: no acquisition intended for immediate resal) Tj
+T*
+() Tj
+T*
+(### 6. Succession ? changing the Responsible Representative) Tj
+T*
+() Tj
+T*
+(6.1 **The rule is simple: a Society must always have a current Responsible Representative.** Wh) Tj
+T*
+() Tj
+T*
+(6.2 **What must happen.** The incoming representative verifies control of a university email ad) Tj
+T*
+() Tj
+T*
+(6.2A **How a change is made.** A Society starts a change of Responsible Representative through ) Tj
+T*
+() Tj
+T*
+(6.3 **Cooperation by the outgoing representative.** A Connected Account held personally is not ) Tj
+T*
+() Tj
+T*
+(6.4 **Dono's controls during a handover.** Until the transition is complete, **Dono may prevent) Tj
+T*
+() Tj
+T*
+(6.5 **Responsibility during and after a handover.**) Tj
+T*
+() Tj
+T*
+(\(a\) New Donations are suspended from the verified change or authority dispute until the incomin) Tj
+T*
+(\(b\) **The outgoing representative remains responsible for everything that happened before the c) Tj
+T*
+(\(c\) **Refund obligations do not move with the office.** A refund arising from a Donation receiv) Tj
+T*
+(\(d\) **Compliance obligations** ? evidence, updates, the Closure Statement and cooperation with ) Tj
+T*
+() Tj
+T*
+(6.6 **Replacement-account rule and non-cooperation.** The incoming representative opens and com) Tj
+T*
+() Tj
+T*
+(6.7 A change of Responsible Representative, of the Society, or of the Connected Account is a Ma) Tj
+T*
+() Tj
+T*
+(### 7. Failed recovery and enforcement) Tj
+T*
+() Tj
+T*
+(7.1 If a refund a Donor is entitled to is not executed, the Connected Account holder remains co) Tj
+T*
+() Tj
+T*
+(7.2 Dono may warn, restrict, suspend, remove or ban the Campaign, the Society's presence, the R) Tj
+T*
+() Tj
+T*
+(### 8. General) Tj
+T*
+() Tj
+T*
+(8.1 The changes, termination, governing-law, complaints and general provisions of the Terms of ) Tj
+T*
+() Tj
+T*
+(8.2 Everything: **joindono.team@gmail.com**.) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Approval block ? SIGNATURE REQUIRED) Tj
+T*
+() Tj
+T*
+(> **This block is unsigned. This document is prepared for approval and is not approved.**) Tj
+T*
+() Tj
+T*
+(**I confirm that I have reviewed this document in its consolidated v3.0 form, that it states th) Tj
+T*
+() Tj
+T*
+(| Field | Entry |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Approver name | Amrit Kaur Rooprai |) Tj
+T*
+(| Role | Controller, sole trader and accountable owner |) Tj
+T*
+(| Document version approved | 3.0 |) Tj
+T*
+(| Approved for publication | ? Yes, on ____________ ? ? **No** ? publication is gated on the it) Tj
+T*
+(| Signature | ______________________ |) Tj
+T*
+(| Date of approval | ______________________ |) Tj
+T*
+() Tj
+T*
+(**Reviewed by:** Sashank \(deputy\) ? Signature ______________________  Date ______________) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Version control) Tj
+T*
+() Tj
+T*
+(| Field | Entry |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Document | Dono Society Campaign Terms |) Tj
+T*
+(| Document type | Contractual |) Tj
+T*
+(| Version | 3.0 |) Tj
+T*
+(| Version date | 7 August 2026 |) Tj
+T*
+(| Effective from | On publication approval |) Tj
+T*
+(| Accountable owner | Amrit Kaur Rooprai, sole trader trading as Dono |) Tj
+T*
+(| Prepared by | Legal consolidation, 7 August 2026 |) Tj
+T*
+(| Reviewed by | *\(signature required ? approval block above\)* |) Tj
+T*
+(| Approved by | *\(signature required ? approval block above\)* |) Tj
+T*
+(| Status | **Not approved.** Clean consolidated document prepared for signature |) Tj
+T*
+(| Solicitor review outstanding on | Enforceability and fairness of the limited-recourse structu) Tj
+T*
+(| Supersedes | v2.3 \(6 August 2026\) and all earlier versions, retained unaltered in the version) Tj
+T*
+(| Next scheduled review | 7 February 2027, or on any material change to the Platform, the law, ) Tj
+T*
+(| Archive rule | Published versions are never overwritten or deleted. The version in force at t) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000111 00000 n 
+0000000235 00000 n 
+0000009684 00000 n 
+trailer<< /Size 6 /Root 1 0 R >>
+startxref
+9752
+%%EOF

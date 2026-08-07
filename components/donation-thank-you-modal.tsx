@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Modal, Platform, Pressable, Share, Text, View } from "react-native";
+import { Link } from "expo-router";
 import Animated, {
   Easing,
   FadeIn,
@@ -36,6 +37,8 @@ type DonationThankYouModalProps = {
   campaignSlug?: string;
   pendingConfirmation?: boolean;
   paymentIntentId?: string;
+  /** CH-07: document versions accepted at checkout */
+  legalVersions?: { title: string; href: string; version: string }[];
   onClose: () => void;
 };
 
@@ -95,6 +98,7 @@ export function DonationThankYouModal({
   campaignSlug,
   pendingConfirmation = false,
   paymentIntentId,
+  legalVersions,
   onClose,
 }: DonationThankYouModalProps) {
   const iconScale = useSharedValue(0.4);
@@ -294,6 +298,23 @@ export function DonationThankYouModal({
                 <Text className="mt-1 text-center font-retro-bold text-base text-dono-text">
                   {campaignTitle}
                 </Text>
+
+                {legalVersions && legalVersions.length > 0 ? (
+                  <View className="mt-4 w-full rounded-xl border border-dono-border bg-white px-3 py-3">
+                    <Text className="text-xs font-semibold text-dono-text">
+                      Documents accepted
+                    </Text>
+                    {legalVersions.map((doc) => (
+                      <Link key={doc.href} href={doc.href as `/legal/${string}`} asChild>
+                        <Pressable className="mt-1.5">
+                          <Text className="text-xs text-dono-primary underline">
+                            {doc.title} v{doc.version}
+                          </Text>
+                        </Pressable>
+                      </Link>
+                    ))}
+                  </View>
+                ) : null}
               </Animated.View>
 
               {paymentIntentId ? (

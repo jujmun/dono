@@ -367,9 +367,35 @@ export const createPendingDonation = internalMutation({
     coverFees: v.optional(v.boolean()),
     intendedCampaignAmountMinor: v.optional(v.number()),
     estimatedStripeFeeMinor: v.optional(v.number()),
+    platformFeeMinor: v.optional(v.number()),
+    amountToCampaignMinor: v.optional(v.number()),
     ageAttested: v.optional(v.boolean()),
     ageAttestedAt: v.optional(v.number()),
     legalAcceptedAt: v.optional(v.number()),
+    guestKey: v.optional(v.string()),
+    legalAcceptanceIds: v.optional(v.array(v.id("legalAcceptances"))),
+    legalDocumentVersions: v.optional(
+      v.array(
+        v.object({
+          documentId: v.string(),
+          version: v.string(),
+          contentHash: v.string(),
+        }),
+      ),
+    ),
+    recipientPanel: v.optional(v.any()),
+    feeBreakdownSnapshot: v.optional(v.any()),
+    acceptanceWordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
+    marketingOptIn: v.optional(v.boolean()),
+    showSupportPublicly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const amountValidation = validateDonationAmount(args.amount);
@@ -400,9 +426,19 @@ export const createPendingDonation = internalMutation({
       coverFees: args.coverFees,
       intendedCampaignAmountMinor: args.intendedCampaignAmountMinor,
       estimatedStripeFeeMinor: args.estimatedStripeFeeMinor,
+      platformFeeMinor: args.platformFeeMinor,
+      amountToCampaignMinor: args.amountToCampaignMinor,
       ageAttested: args.ageAttested,
       ageAttestedAt: args.ageAttestedAt,
       legalAcceptedAt: args.legalAcceptedAt,
+      guestKey: args.guestKey,
+      legalAcceptanceIds: args.legalAcceptanceIds,
+      legalDocumentVersions: args.legalDocumentVersions,
+      recipientPanel: args.recipientPanel,
+      feeBreakdownSnapshot: args.feeBreakdownSnapshot,
+      acceptanceWordings: args.acceptanceWordings,
+      marketingOptIn: args.marketingOptIn,
+      showSupportPublicly: args.showSupportPublicly,
       createdAt: Date.now(),
     });
   },
@@ -573,11 +609,79 @@ export const markDonationSucceeded = internalMutation({
         ? (await getProfileByUserId(ctx, donation.userId))?.email
         : undefined);
     if (receiptEmail) {
+      const panel = donation.recipientPanel as
+        | { connectedAccountHolder?: string }
+        | undefined;
+      const feeSnap = donation.feeBreakdownSnapshot as
+        | {
+            intendedCampaignAmountMinor?: number;
+            platformFeeMinor?: number;
+            estimatedStripeFeeMinor?: number;
+            totalChargedMinor?: number;
+            amountToCampaignMinor?: number;
+            donoFeeLabel?: string;
+            coverFees?: boolean;
+          }
+        | undefined;
+      const formatMinor = (minor: number | undefined) =>
+        minor == null ? null : `GBP ${(minor / 100).toFixed(2)}`;
+      const feeLines = [
+        feeSnap?.intendedCampaignAmountMinor != null
+          ? {
+              label: "Campaign contribution",
+              amount: formatMinor(feeSnap.intendedCampaignAmountMinor)!,
+            }
+          : null,
+        feeSnap?.platformFeeMinor != null
+          ? {
+              label: feeSnap.donoFeeLabel ?? "Dono fee",
+              amount: formatMinor(feeSnap.platformFeeMinor)!,
+            }
+          : null,
+        feeSnap?.estimatedStripeFeeMinor != null
+          ? {
+              label: "Stripe processing cost (paid by the campaign)",
+              amount: formatMinor(feeSnap.estimatedStripeFeeMinor)!,
+            }
+          : null,
+        feeSnap?.totalChargedMinor != null
+          ? {
+              label: "Total you paid",
+              amount: formatMinor(feeSnap.totalChargedMinor)!,
+            }
+          : null,
+        feeSnap?.amountToCampaignMinor != null
+          ? {
+              label: "Expected proceeds to the campaign",
+              amount: formatMinor(feeSnap.amountToCampaignMinor)!,
+            }
+          : null,
+      ].filter(Boolean) as { label: string; amount: string }[];
+
+      const documentLinks = (donation.legalDocumentVersions ?? []).map((d) => ({
+        title: d.documentId.replace(/_/g, " "),
+        version: d.version,
+        hash: d.contentHash,
+        url: `/legal/${d.documentId}/${d.version}`,
+      }));
+
+      const choices: string[] = [];
+      if (donation.ageAttested) choices.push("Confirmed 18+ and capacity (W-AGE-1)");
+      if (donation.coverFees) choices.push("Covered Dono fee");
+      if (donation.isAnonymous) choices.push("Hide my name");
+      if (donation.marketingOptIn) choices.push("Marketing emails opted in");
+      if (donation.showSupportPublicly) choices.push("Show support publicly");
+
       await ctx.scheduler.runAfter(0, internal.emails.sendDonationReceipt, {
         email: receiptEmail,
         campaignTitle: campaign.title,
         amount: donation.amount,
         currency: donation.currency,
+        donationId: donation._id,
+        connectedAccountHolder: panel?.connectedAccountHolder,
+        feeLines,
+        documentLinks,
+        choices,
       });
     }
 

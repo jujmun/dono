@@ -1,18 +1,49 @@
 /**
- * Client-side fee breakdown (mirrors convex/lib/platformFee.ts for donate UI).
- * Keep in sync with the Convex module.
- *
- * Pilot override: donor pays estimated Stripe processing only (1.5% + 20p).
- * No Dono platform fee. Legal-launch production/demo schedules (5%+20p / 2%+20p)
- * remain NOT YET IMPLEMENTED per founder pilot decision.
+ * Client-side fee breakdown — keep in sync with convex/lib/platformFee.ts.
  */
 
-/** @deprecated No Dono platform fee during pilot; kept at 0 for callers. */
-export const PLATFORM_FEE_RATE = 0;
-/** @deprecated No Dono platform fee during pilot; kept at 0 for callers. */
-export const PLATFORM_FEE_FIXED_MINOR = 0;
+export const DEMO_DONO_FEE_RATE = 0.02;
+export const PROD_DONO_FEE_RATE = 0.05;
+export const DONO_FEE_FIXED_MINOR = 20;
+
 export const ESTIMATED_STRIPE_PERCENT = 0.015;
 export const ESTIMATED_STRIPE_FIXED_MINOR = 20;
+
+/** @deprecated */
+export const PLATFORM_FEE_RATE = PROD_DONO_FEE_RATE;
+/** @deprecated */
+export const PLATFORM_FEE_FIXED_MINOR = DONO_FEE_FIXED_MINOR;
+
+export type FeeSchedule = "demo" | "production";
+
+export function resolveFeeSchedule(
+  explicit?: FeeSchedule | null,
+): FeeSchedule {
+  if (explicit === "demo" || explicit === "production") return explicit;
+  if (process.env.EXPO_PUBLIC_DONO_FEE_SCHEDULE === "demo") return "demo";
+  if (process.env.EXPO_PUBLIC_DEMO_OPEN_ADMIN === "true") return "demo";
+  return "production";
+}
+
+export function getDonoFeeRate(schedule: FeeSchedule = "production") {
+  return schedule === "demo" ? DEMO_DONO_FEE_RATE : PROD_DONO_FEE_RATE;
+}
+
+export function donoFeeLabel(schedule: FeeSchedule = "production") {
+  return schedule === "demo"
+    ? "Payment processing fee (Dono)"
+    : "Dono fee";
+}
+
+export function calculateDonoFeeMinor(
+  contributionMinor: number,
+  schedule: FeeSchedule = "production",
+) {
+  return (
+    Math.round(contributionMinor * getDonoFeeRate(schedule)) +
+    DONO_FEE_FIXED_MINOR
+  );
+}
 
 export function estimateStripeFeeMinor(chargeAmountMinor: number) {
   return (
@@ -22,11 +53,11 @@ export function estimateStripeFeeMinor(chargeAmountMinor: number) {
 }
 
 export function calculateFeeEnvelopeMinor(amountMinor: number) {
-  return estimateStripeFeeMinor(amountMinor);
+  return calculateDonoFeeMinor(amountMinor, resolveFeeSchedule());
 }
 
-export function calculateApplicationFeeMinor(_amountMinor: number) {
-  return 0;
+export function calculateApplicationFeeMinor(amountMinor: number) {
+  return calculateDonoFeeMinor(amountMinor, resolveFeeSchedule());
 }
 
 export type DonationFeeBreakdown = {
@@ -39,30 +70,44 @@ export type DonationFeeBreakdown = {
   amountToCampaignMinor: number;
   applicationFeeAmountMinor: number;
   coverFees: boolean;
+  schedule: FeeSchedule;
+  donoFeeLabel: string;
 };
 
 export function calculateDonationFeeBreakdown(
   intendedCampaignAmount: number,
+  coverFees = false,
+  schedule: FeeSchedule = resolveFeeSchedule(),
 ): DonationFeeBreakdown {
   const intendedCampaignAmountMinor = Math.round(intendedCampaignAmount * 100);
+  const platformFeeMinor = calculateDonoFeeMinor(
+    intendedCampaignAmountMinor,
+    schedule,
+  );
   const estimatedStripeFeeMinor = estimateStripeFeeMinor(
     intendedCampaignAmountMinor,
   );
-  const feeEnvelopeMinor = estimatedStripeFeeMinor;
-  const platformFeeMinor = 0;
   const totalChargedMinor =
-    intendedCampaignAmountMinor + estimatedStripeFeeMinor;
+    intendedCampaignAmountMinor + (coverFees ? platformFeeMinor : 0);
+  const amountToCampaignMinor = Math.max(
+    0,
+    intendedCampaignAmountMinor -
+      (coverFees ? 0 : platformFeeMinor) -
+      estimatedStripeFeeMinor,
+  );
 
   return {
     intendedCampaignAmount,
     intendedCampaignAmountMinor,
-    feeEnvelopeMinor,
+    feeEnvelopeMinor: platformFeeMinor,
     platformFeeMinor,
     estimatedStripeFeeMinor,
     totalChargedMinor,
-    amountToCampaignMinor: intendedCampaignAmountMinor,
-    applicationFeeAmountMinor: 0,
-    coverFees: true,
+    amountToCampaignMinor,
+    applicationFeeAmountMinor: platformFeeMinor,
+    coverFees,
+    schedule,
+    donoFeeLabel: donoFeeLabel(schedule),
   };
 }
 

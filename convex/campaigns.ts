@@ -725,7 +725,7 @@ export const create = mutation({
     );
     await assertLegalAcceptedForContext(ctx, {
       userId,
-      context: "create_campaign",
+      context: "create_society",
     });
     assertAdultOrThrow(
       profile?.dateOfBirth,
@@ -1275,6 +1275,95 @@ export const removePlaceholderCampaigns = mutation({
     return {
       deleted,
       slugs: placeholderCampaignSlugs,
+    };
+  },
+});
+
+/**
+ * CH-01 checkout disclosures for a campaign. Payment must be blocked if any
+ * mandatory recipient-panel field is missing.
+ */
+export const getDonateDisclosures = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign || !isPublicCampaign(campaign)) {
+      return null;
+    }
+
+    const society = await ctx.db
+      .query("societies")
+      .withIndex("by_slug", (q) => q.eq("slug", campaign.creator.communityId))
+      .unique();
+
+    const community = await ctx.db
+      .query("communities")
+      .withIndex("by_slug", (q) => q.eq("slug", campaign.creator.communityId))
+      .unique();
+
+    const responsibleUserId =
+      campaign.responsibleIndividualUserId ??
+      society?.responsibleIndividualUserId ??
+      null;
+
+    let representativeName = "";
+    if (responsibleUserId) {
+      const profile = await ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", responsibleUserId))
+        .unique();
+      representativeName =
+        profile?.name?.trim() ||
+        society?.verifiedName?.trim() ||
+        campaign.verifiedName?.trim() ||
+        "";
+    } else {
+      representativeName =
+        society?.verifiedName?.trim() || campaign.verifiedName?.trim() || "";
+    }
+
+    const ownerLegalName =
+      society?.name?.trim() ||
+      community?.name?.trim() ||
+      campaign.creator.name?.trim() ||
+      "";
+
+    const legalStatus = "an unincorporated student society";
+    const connectedAccountHolder =
+      society?.verifiedName?.trim() ||
+      ownerLegalName ||
+      representativeName ||
+      "";
+    const propertyOwner =
+      campaign.ownershipStatement?.trim() ||
+      ownerLegalName ||
+      "";
+
+    const recipientPanel = {
+      ownerLegalName,
+      legalStatus,
+      representativeName,
+      connectedAccountHolder,
+      propertyOwner,
+    };
+
+    const complete = Boolean(
+      recipientPanel.ownerLegalName &&
+        recipientPanel.legalStatus &&
+        recipientPanel.representativeName &&
+        recipientPanel.connectedAccountHolder &&
+        recipientPanel.propertyOwner,
+    );
+
+    return {
+      recipientPanel,
+      panelComplete: complete,
+      mayExceedTarget: true,
+      goal: campaign.goal,
+      raised: campaign.raised,
     };
   },
 });

@@ -345,6 +345,48 @@ export const generateAvatarUploadUrl = mutation({
   },
 });
 
+/** Event A — persist declared DOB at account creation (AG-02). */
+export const setDateOfBirth = mutation({
+  args: { dateOfBirth: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "Sign in to continue.",
+      });
+    }
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be found.",
+      });
+    }
+    // ICO Children's Code S13: no immediate retry with a different date after
+    // an under-18 failure in the same session is enforced client-side; server
+    // still rejects under-18 DOBs.
+    if (profile.dateOfBirth && profile.ageAttestedAt) {
+      // Already locked in — do not silently overwrite.
+      return { ok: true as const, alreadySet: true as const };
+    }
+    assertAdultOrThrow(
+      args.dateOfBirth.trim(),
+      "You must be at least 18 years old.",
+    );
+    const now = Date.now();
+    await ctx.db.patch(profile._id, {
+      dateOfBirth: args.dateOfBirth.trim(),
+      ageAttestedAt: now,
+      updatedAt: now,
+    });
+    return { ok: true as const, alreadySet: false as const };
+  },
+});
+
 export const updateProfile = mutation({
   args: {
     name: v.string(),

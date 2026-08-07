@@ -14,9 +14,11 @@ import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import {
-  AgeAttestationCheckbox,
-  LegalAcceptanceCheckbox,
+  AgeCapacityCheckbox,
+  DonateAcceptanceCheckbox,
+  LegalCheckboxRow,
 } from "@/components/legal-acceptance-checkbox";
+import { DonateRecipientPanel } from "@/components/donate-recipient-panel";
 import {
   DonateDobGateForm,
   useDonateDobGate,
@@ -25,6 +27,7 @@ import {
   calculateDonationFeeBreakdown,
   formatMinorGbp,
 } from "@/lib/platform-fee";
+import { LEGAL_WORDINGS, wordingRecord } from "@/lib/legal/wordings";
 import {
   ReceiptDivider,
   ReceiptLedger,
@@ -168,6 +171,15 @@ export function DonateSheet({
   onLegalAcceptedChange,
   ageAttested,
   onAgeAttestedChange,
+  coverFees,
+  onCoverFeesChange,
+  marketingOptIn,
+  onMarketingOptInChange,
+  showSupportPublicly,
+  onShowSupportPubliclyChange,
+  recipientPanel,
+  panelComplete,
+  mayExceedTarget = true,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
@@ -195,7 +207,7 @@ export function DonateSheet({
 
   donorEmailRef.current = donorEmail;
 
-  const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount);
+  const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount, coverFees);
   const feeTotalLabel = formatMinorGbp(feeBreakdown.totalChargedMinor);
   const stripeConfigured = Boolean(publishableKey);
 
@@ -223,7 +235,14 @@ export function DonateSheet({
       return;
     }
 
-    if (!legalAccepted || !ageAttested || !stripeConfigured || !dobReady) {
+    if (
+      !legalAccepted ||
+      !ageAttested ||
+      !stripeConfigured ||
+      !dobReady ||
+      !panelComplete ||
+      !recipientPanel
+    ) {
       setClientSecret(null);
       setPaymentIntentId(null);
       setStripeAccountId(null);
@@ -240,18 +259,37 @@ export function DonateSheet({
     setError(null);
 
     const createPayment = async () => {
-      await acceptDocuments({
-        context: "donate",
+      const context = isAuthenticated ? "donate" : "donate_guest";
+      const wordings = [
+        wordingRecord("W-AGE-1", ageAttested),
+        wordingRecord("W-ACCEPT-1", legalAccepted),
+        wordingRecord("W-COVER-1", coverFees),
+        wordingRecord("W-HIDE-1", isAnonymous),
+        wordingRecord("W-HIDE-DISCLOSURE-1", isAnonymous),
+        wordingRecord("W-MKT-1", marketingOptIn),
+        wordingRecord("W-DISPLAY-1", showSupportPublicly),
+      ];
+      const accepted = await acceptDocuments({
+        context,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
+        role: isAuthenticated ? "donor" : "guest_donor",
+        wordings,
+        recipientPanel,
+        feeBreakdown,
       });
       return createPaymentIntent({
         campaignSlug: campaignId,
         amount: selectedAmount,
         donorEmail: donorEmailRef.current.trim() || undefined,
         anonymous: isAnonymous,
-        coverFees: true,
+        coverFees,
         ageAttested,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
+        legalAcceptanceIds: accepted.acceptanceIds,
+        recipientPanel,
+        acceptanceWordings: wordings,
+        marketingOptIn,
+        showSupportPublicly,
       });
     };
 
@@ -298,6 +336,10 @@ export function DonateSheet({
     isAnonymous,
     legalAccepted,
     ageAttested,
+    coverFees,
+    marketingOptIn,
+    showSupportPublicly,
+    panelComplete,
     stripeConfigured,
     isAuthenticated,
     dobReady,
@@ -310,6 +352,7 @@ export function DonateSheet({
           <ScrollView
             keyboardShouldPersistTaps="handled"
             showsVerticalScrollIndicator={false}
+            contentContainerStyle={{ paddingBottom: 8 }}
           >
             <Text className="font-retro-bold text-2xl text-dono-text">Donate</Text>
             <Text className="mt-1 text-sm text-dono-muted" numberOfLines={2}>
@@ -319,7 +362,7 @@ export function DonateSheet({
             <Text className="mt-5 font-retro-mono-bold text-4xl text-dono-primary">
               {feeTotalLabel}
             </Text>
-            <Text className="mt-1 text-sm text-dono-muted">One-time donation</Text>
+            <Text className="mt-1 text-sm text-dono-muted">Total you will pay</Text>
 
             {!isAuthenticated ? (
               <TextInput
@@ -333,17 +376,109 @@ export function DonateSheet({
               />
             ) : null}
 
+            {recipientPanel && panelComplete ? (
+              <DonateRecipientPanel panel={recipientPanel} className="mt-4" />
+            ) : (
+              <Text className="mt-4 text-sm text-red-600">
+                Donation recipient details are incomplete. Payment is blocked until
+                the campaign owner finishes required disclosures.
+              </Text>
+            )}
+
+            <ReceiptLedger className="mt-4">
+              <ReceiptLineRow
+                label="Campaign contribution"
+                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
+              />
+              <ReceiptLineRow
+                label={feeBreakdown.donoFeeLabel}
+                amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+                muted={!coverFees}
+              />
+              {coverFees ? (
+                <ReceiptLineRow
+                  label="Fee cover (selected)"
+                  amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+                />
+              ) : null}
+              <ReceiptLineRow
+                label="Stripe processing cost (paid by the campaign)"
+                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
+                muted
+              />
+              <ReceiptDivider />
+              <ReceiptLineRow
+                label="Total you will pay"
+                amount={feeTotalLabel}
+                emphasis
+              />
+              <ReceiptLineRow
+                label="Expected proceeds to the campaign"
+                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
+              />
+            </ReceiptLedger>
+
+            <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
+              {LEGAL_WORDINGS["W-DEADLINE-1"]}
+            </Text>
+            {mayExceedTarget ? (
+              <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
+                {LEGAL_WORDINGS["W-SURPLUS-1"]}
+              </Text>
+            ) : null}
+
             <View className="mt-4 gap-2">
-              <AgeAttestationCheckbox
+              <AgeCapacityCheckbox
+                wordingId="W-AGE-1"
                 accepted={ageAttested}
                 onAcceptedChange={onAgeAttestedChange}
               />
-              <LegalAcceptanceCheckbox
-                context="donate"
+              <DonateAcceptanceCheckbox
                 accepted={legalAccepted}
                 onAcceptedChange={onLegalAcceptedChange}
-                showAgeAttestation={false}
               />
+              <LegalCheckboxRow
+                accepted={coverFees}
+                onAcceptedChange={onCoverFeesChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-COVER-1"]}
+              >
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-COVER-1"]} (
+                  {formatMinorGbp(feeBreakdown.platformFeeMinor)})
+                </Text>
+              </LegalCheckboxRow>
+              <LegalCheckboxRow
+                accepted={isAnonymous}
+                onAcceptedChange={onAnonymousChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-HIDE-1"]}
+              >
+                <View>
+                  <Text className="text-sm leading-5 text-dono-text">
+                    {LEGAL_WORDINGS["W-HIDE-1"]}
+                  </Text>
+                  <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
+                    {LEGAL_WORDINGS["W-HIDE-DISCLOSURE-1"]}
+                  </Text>
+                </View>
+              </LegalCheckboxRow>
+              <LegalCheckboxRow
+                accepted={marketingOptIn}
+                onAcceptedChange={onMarketingOptInChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-MKT-1"]}
+              >
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-MKT-1"]}
+                </Text>
+              </LegalCheckboxRow>
+              <LegalCheckboxRow
+                accepted={showSupportPublicly}
+                onAcceptedChange={onShowSupportPubliclyChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-DISPLAY-1"]}
+              >
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-DISPLAY-1"]}
+                </Text>
+              </LegalCheckboxRow>
 
               {needsDob ? (
                 <DonateDobGateForm
@@ -356,62 +491,18 @@ export function DonateSheet({
               ) : null}
             </View>
 
-            <ReceiptLedger className="mt-4">
-              <ReceiptLineRow
-                label="Your donation"
-                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
-              />
-              <ReceiptLineRow
-                label="Required by Stripe to process your donation"
-                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
-                muted
-              />
-              <ReceiptDivider />
-              <ReceiptLineRow
-                label="Estimated amount reaching the campaign"
-                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
-                emphasis
-              />
-            </ReceiptLedger>
-
-            <Pressable
-              onPress={() => onAnonymousChange(!isAnonymous)}
-              className="mt-3 flex-row items-center gap-2 py-1"
-              accessibilityRole="checkbox"
-              accessibilityState={{ checked: isAnonymous }}
-            >
-              <View
-                className={`h-3 w-3 items-center justify-center rounded border ${
-                  isAnonymous
-                    ? "border-dono-primary bg-dono-primary"
-                    : "border-dono-border bg-white"
-                }`}
-              >
-                {isAnonymous ? (
-                  <Text className="text-[8px] font-bold leading-none text-white">✓</Text>
-                ) : null}
-              </View>
-              <Text className="min-w-0 flex-1 text-sm text-dono-text">
-                Make this donation anonymous
-              </Text>
-            </Pressable>
-
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-              Donations are paid to this society&apos;s Stripe Connected Account,
-              which is the Merchant of Record. The processing fee shown is an
-              estimate based on a typical UK card; your card&apos;s actual fee may
-              be higher or lower, so the amount the campaign receives may differ
-              slightly from the estimate above. Not Gift Aid. Dono does not
-              issue charitable tax receipts.
-              {stripeConfigured && !needsDob && !ageAttested
-                ? " Confirm you are at least 18 above to continue to payment."
-                : null}
+              Not Gift Aid. Dono does not issue charitable tax receipts.
             </Text>
 
             {!stripeConfigured ? (
               <Text className="mt-6 text-sm text-red-600">
                 Stripe is not configured for this environment. Set
                 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY and restart the app.
+              </Text>
+            ) : !panelComplete ? (
+              <Text className="mt-6 text-sm text-dono-muted">
+                Recipient disclosures must be complete before payment.
               </Text>
             ) : needsDob ? (
               <Text className="mt-6 text-sm text-dono-muted">

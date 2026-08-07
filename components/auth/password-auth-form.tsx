@@ -10,7 +10,12 @@ import { AppShell } from "@/components/app-shell";
 import { RetroPanel } from "@/components/retro";
 import { SetPasswordFields } from "@/components/auth/set-password-fields";
 import { PasswordInput } from "@/components/auth/password-input";
-import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
+import {
+  AccountAcceptanceCheckbox,
+  AgeCapacityCheckbox,
+} from "@/components/legal-acceptance-checkbox";
+import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
+import { wordingRecord } from "@/lib/legal/wordings";
 import {
   getAuthProviderId,
   isAdminOtpLoginEmail,
@@ -64,6 +69,7 @@ function PasswordAuthFormInner({
   const posthog = usePostHog();
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const setUserType = useMutation(api.users.setUserType);
+  const setDateOfBirthProfile = useMutation(api.users.setDateOfBirth);
   const [step, setStep] = useState<"role" | "credentials" | "verify">(
     mode === "signUp" ? "role" : "credentials",
   );
@@ -74,6 +80,9 @@ function PasswordAuthFormInner({
   const [confirmPassword, setConfirmPassword] = useState("");
   const [code, setCode] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [ageAttested, setAgeAttested] = useState(false);
+  const [dateOfBirth, setDateOfBirth] = useState("");
+  const [under18Locked, setUnder18Locked] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -103,11 +112,27 @@ function PasswordAuthFormInner({
 
   const finishSignUpAuth = async () => {
     posthog?.capture("user_signed_up");
-    if (acceptedLegal) {
+    if (acceptedLegal && ageAttested) {
       try {
-        await acceptDocuments({ context: "signup" });
+        await acceptDocuments({
+          context: "signup",
+          role: "account_holder",
+          wordings: [
+            wordingRecord("W-ACCT-ACCEPT-1", acceptedLegal),
+            wordingRecord("W-ACCT-AGE-1", ageAttested),
+          ],
+        });
       } catch {
         // Acceptance can be re-completed from gated flows if this fails.
+      }
+    }
+    const trimmedDob = dateOfBirth.trim();
+    if (trimmedDob) {
+      try {
+        await setDateOfBirthProfile({ dateOfBirth: trimmedDob });
+      } catch (err) {
+        setError(getFriendlyAuthError(err));
+        return;
       }
     }
     try {
@@ -146,8 +171,30 @@ function PasswordAuthFormInner({
         setError(parsed.error.issues[0]?.message ?? "Please check your input.");
         return;
       }
+      if (under18Locked) {
+        setError(
+          "You must be at least 18 years old to create an account. You cannot change your date of birth and try again in this session.",
+        );
+        return;
+      }
+      const trimmedDob = dateOfBirth.trim();
+      if (!parseIsoDateOnly(trimmedDob)) {
+        setError("Enter your date of birth as YYYY-MM-DD.");
+        return;
+      }
+      if (!isAtLeastAge(trimmedDob)) {
+        setUnder18Locked(true);
+        setError(
+          "You must be at least 18 years old to create an account. You cannot change your date of birth and try again in this session.",
+        );
+        return;
+      }
       if (!acceptedLegal) {
         setError("Please accept the Terms, Privacy Policy and Community Guidelines.");
+        return;
+      }
+      if (!ageAttested) {
+        setError("Please confirm you are 18 years of age or older.");
         return;
       }
     } else {
@@ -379,11 +426,46 @@ function PasswordAuthFormInner({
               )}
 
               {mode === "signUp" ? (
-                <LegalAcceptanceCheckbox
-                  context="signup"
-                  accepted={acceptedLegal}
-                  onAcceptedChange={setAcceptedLegal}
-                />
+                <View className="gap-3">
+                  <View>
+                    <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                      Date of birth
+                    </Text>
+                    <TextInput
+                      value={dateOfBirth}
+                      onChangeText={(value) => {
+                        if (under18Locked) return;
+                        setDateOfBirth(value);
+                      }}
+                      editable={!under18Locked}
+                      autoCapitalize="none"
+                      autoComplete="birthdate-full"
+                      placeholder="YYYY-MM-DD"
+                      placeholderTextColor="#56615A"
+                      className={`${inputClassName}${under18Locked ? " opacity-50" : ""}`}
+                      {...({ "ph-no-capture": true } as object)}
+                    />
+                    {under18Locked ? (
+                      <Text className="mt-1.5 text-xs text-rose-700">
+                        You must be at least 18 years old to create an account. You
+                        cannot change your date of birth and try again in this session.
+                      </Text>
+                    ) : (
+                      <Text className="mt-1 text-xs text-dono-muted">
+                        You must be 18 or older to use Dono.
+                      </Text>
+                    )}
+                  </View>
+                  <AccountAcceptanceCheckbox
+                    accepted={acceptedLegal}
+                    onAcceptedChange={setAcceptedLegal}
+                  />
+                  <AgeCapacityCheckbox
+                    wordingId="W-ACCT-AGE-1"
+                    accepted={ageAttested}
+                    onAcceptedChange={setAgeAttested}
+                  />
+                </View>
               ) : null}
 
               {error ? (
@@ -397,12 +479,22 @@ function PasswordAuthFormInner({
                 disabled={
                   loading ||
                   normalizedEmail.length === 0 ||
-                  (mode === "signUp" && !acceptedLegal)
+                  (mode === "signUp" &&
+                    (under18Locked ||
+                      !acceptedLegal ||
+                      !ageAttested ||
+                      !parseIsoDateOnly(dateOfBirth.trim()) ||
+                      !isAtLeastAge(dateOfBirth.trim())))
                 }
                 className={`retro-key items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 ${
                   loading ||
                   normalizedEmail.length === 0 ||
-                  (mode === "signUp" && !acceptedLegal)
+                  (mode === "signUp" &&
+                    (under18Locked ||
+                      !acceptedLegal ||
+                      !ageAttested ||
+                      !parseIsoDateOnly(dateOfBirth.trim()) ||
+                      !isAtLeastAge(dateOfBirth.trim())))
                     ? "opacity-50"
                     : ""
                 }`}

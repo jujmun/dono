@@ -1,0 +1,105 @@
+{
+  "version": "3.0",
+  "versionDate": "2026-08-07",
+  "documents": {
+    "terms_of_service": {
+      "id": "terms_of_service",
+      "title": "Terms of Service",
+      "version": "3.0",
+      "sourceFile": "01_dono_terms_of_service_v3.0.md",
+      "sourceHash": "cc818552ddb1be407a8dd1af5825b50959cba0dea8d7d09869c144017f428bda",
+      "htmlHash": "71c5d0818589f09c85e4ab28da4a6b8e5a1f5f331efe893db0760d7633ad392e",
+      "pdfHash": "a4e0d0edc54070aae739216028eea7ea118a9a208e54baae0c4b74e1a8a13ad1",
+      "htmlPath": "terms_of_service/document.html",
+      "pdfPath": "terms_of_service/document.pdf"
+    },
+    "society_campaign_terms": {
+      "id": "society_campaign_terms",
+      "title": "Society Campaign Terms",
+      "version": "3.0",
+      "sourceFile": "03_dono_society_campaign_terms_v3.0.md",
+      "sourceHash": "75607b402c151a2f3b33989d52c20d0083be20a361908955202f652890208530",
+      "htmlHash": "6148820c28906ac8defdd5c6a801ca4c676e402df80a5cc9b566fb56821a0897",
+      "pdfHash": "8d6146dbf312616416513f798a0aa6a60f8369c3612ab272fe1fa0961dddd477",
+      "htmlPath": "society_campaign_terms/document.html",
+      "pdfPath": "society_campaign_terms/document.pdf"
+    },
+    "donor_terms": {
+      "id": "donor_terms",
+      "title": "Donor Terms",
+      "version": "3.0",
+      "sourceFile": "04_dono_donor_terms_v3.0.md",
+      "sourceHash": "efe48e3a0abc008e2a6f4dc6299efe53a60353bc3450bf9c33d2cf555759f74b",
+      "htmlHash": "c43b7df249d8183a0cb0710ed7adbc4611102527c688654b6512b27fd57a957d",
+      "pdfHash": "7b8be59b1a4758ab7a50f57648069ba580df83786b456a075435b469fa227eac",
+      "htmlPath": "donor_terms/document.html",
+      "pdfPath": "donor_terms/document.pdf"
+    },
+    "community_guidelines": {
+      "id": "community_guidelines",
+      "title": "Community Guidelines",
+      "version": "3.0",
+      "sourceFile": "05_dono_community_guidelines_v3.0.md",
+      "sourceHash": "92c00f4465f11385c7470b42952b79cff3b7ffc1095639c1c0803315ac1149e1",
+      "htmlHash": "5cbaad4f70e0a53105d21fd4689d8839c0ecba4af19019bbf6bc5e441bf420b0",
+      "pdfHash": "8a670c14c239a9ca933dca6e55b36eb0deff277e2ab9b8c6c39cee76f4c1a046",
+      "htmlPath": "community_guidelines/document.html",
+      "pdfPath": "community_guidelines/document.pdf"
+    },
+    "verification": {
+      "id": "verification",
+      "title": "Verification Notice",
+      "version": "3.0",
+      "sourceFile": "06_dono_verification_notice_v3.0.md",
+      "sourceHash": "10b71d0efc30c5c7b012275e274f69173bc900ac7f617ff949511871be822f11",
+      "htmlHash": "ce91ecd68dfccf32296325f334da9c1eb9693de4ff34609741fcbac8a082294a",
+      "pdfHash": "f516103465e24affb16cda4d97334a9028dd21faf94d01ace45d5df16dd6df48",
+      "htmlPath": "verification/document.html",
+      "pdfPath": "verification/document.pdf"
+    },
+    "refund_dispute": {
+      "id": "refund_dispute",
+      "title": "Refund and Dispute Policy",
+      "version": "3.0",
+      "sourceFile": "07_dono_refund_and_dispute_policy_v3.0.md",
+      "sourceHash": "1237eba717eee26b2e89122dc4e61fc89ebb866184b4c86f3e97976a415428fa",
+      "htmlHash": "f0abf49ea33201abff4892be3c0ba139512e17361283ea25c1e8e7a90d93a95f",
+      "pdfHash": "949596f3de99536513c752907cf9df25ba76f61edcbb9cf7cf76c76dbb288051",
+      "htmlPath": "refund_dispute/document.html",
+      "pdfPath": "refund_dispute/document.pdf"
+    },
+    "privacy": {
+      "id": "privacy",
+      "title": "Privacy Notice",
+      "version": "3.0",
+      "sourceFile": "08_dono_privacy_notice_v3.0.md",
+      "sourceHash": "4cdf37035558f7727a3450a90506e0193c0e1978ba8a771d56b32e2825e116ff",
+      "htmlHash": "b40630a13f35e3d8ea84c600b40747585b64d497feffff0077e2202d85336c9f",
+      "pdfHash": "facd0923704cb6debd420c10e6f0581829419e4c7732d8a9f0ebcdc11e783be6",
+      "htmlPath": "privacy/document.html",
+      "pdfPath": "privacy/document.pdf"
+    },
+    "cookie": {
+      "id": "cookie",
+      "title": "Cookie Notice",
+      "version": "3.0",
+      "sourceFile": "09_dono_cookie_notice_v3.0.md",
+      "sourceHash": "42e80d52b73728d51fa22bd1376e903eb93f9f28a9f7660ab1f921eecc83331e",
+      "htmlHash": "1ef4efd8b7ea68c11fe66dcb46c6f60fcf341d584b291ea5c96127c9f921a2a7",
+      "pdfHash": "e5af256115b44c9542067580899ebb2dd8182b7579d03c0b38964b3b445ca1cf",
+      "htmlPath": "cookie/document.html",
+      "pdfPath": "cookie/document.pdf"
+    },
+    "complaints": {
+      "id": "complaints",
+      "title": "Complaints Policy",
+      "version": "3.0",
+      "sourceFile": "dono-complaints-policy-v3.0.md",
+      "sourceHash": "ee96e212927b8a73c9bd8c4c93f2ca02440218e4e7895ba6c35ef37eb19eccdb",
+      "htmlHash": "3cee21a9791f2de3c423a0523bb517e4ea5acf3d80a909075266bae39a1727c0",
+      "pdfHash": "9ab6a7b3f507aa99cb1b2d41381564967f38329e609851453e623c38fc84a5df",
+      "htmlPath": "complaints/document.html",
+      "pdfPath": "complaints/document.pdf"
+    }
+  }
+}

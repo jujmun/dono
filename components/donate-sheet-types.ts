@@ -1,3 +1,5 @@
+import type { RecipientPanelData } from "@/components/donate-recipient-panel";
+
 export type DonateSheetProps = {
   visible: boolean;
   campaignId: string;
@@ -12,10 +14,26 @@ export type DonateSheetProps = {
   onLegalAcceptedChange: (value: boolean) => void;
   ageAttested: boolean;
   onAgeAttestedChange: (value: boolean) => void;
+  coverFees: boolean;
+  onCoverFeesChange: (value: boolean) => void;
+  marketingOptIn: boolean;
+  onMarketingOptInChange: (value: boolean) => void;
+  showSupportPublicly: boolean;
+  onShowSupportPubliclyChange: (value: boolean) => void;
+  recipientPanel: RecipientPanelData | null;
+  panelComplete: boolean;
+  mayExceedTarget?: boolean;
   onClose: () => void;
   onSuccess: (
     amount: number,
-    options?: { pendingConfirmation?: boolean; paymentIntentId?: string },
+    options?: {
+      pendingConfirmation?: boolean;
+      paymentIntentId?: string;
+      donationId?: string;
+      legalVersions?: { documentId: string; version: string }[];
+      feeBreakdown?: unknown;
+      recipientPanel?: RecipientPanelData | null;
+    },
   ) => void;
 };
 

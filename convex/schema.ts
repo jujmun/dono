@@ -60,17 +60,40 @@ export default defineSchema({
     guestKey: v.optional(v.string()),
     documentId: v.string(),
     version: v.string(),
+    /** HTML artifact SHA-256 of the accepted bytes (CH-11). */
+    contentHash: v.optional(v.string()),
     context: v.union(
       v.literal("signup"),
-      v.literal("create_campaign"),
+      v.literal("create_campaign"), // legacy — no longer written
       v.literal("create_society"),
       v.literal("donate"),
+      v.literal("donate_guest"),
     ),
+    /** Acceptance Matrix event (CH-05). */
+    event: v.optional(
+      v.union(v.literal("A"), v.literal("B"), v.literal("C")),
+    ),
+    role: v.optional(v.string()),
+    campaignId: v.optional(v.id("campaigns")),
+    donationId: v.optional(v.id("donations")),
+    mechanism: v.optional(v.string()),
+    wordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
+    recipientPanel: v.optional(v.any()),
+    feeBreakdown: v.optional(v.any()),
     acceptedAt: v.number(),
   })
     .index("by_user_document", ["userId", "documentId"])
     .index("by_guest_document", ["guestKey", "documentId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_donation", ["donationId"]),
   appRateLimits: defineTable({
     key: v.string(),
     attempts: v.number(),
@@ -494,13 +517,40 @@ export default defineSchema({
     coverFees: v.optional(v.boolean()),
     intendedCampaignAmountMinor: v.optional(v.number()),
     estimatedStripeFeeMinor: v.optional(v.number()),
+    platformFeeMinor: v.optional(v.number()),
+    amountToCampaignMinor: v.optional(v.number()),
     matchedAmountPounds: v.optional(v.number()),
     matchWindowId: v.optional(v.id("campaignMatchWindows")),
     ageAttested: v.optional(v.boolean()),
     ageAttestedAt: v.optional(v.number()),
     legalAcceptedAt: v.optional(v.number()),
+    /** CH-14: guest key + acceptance row linkage. */
+    guestKey: v.optional(v.string()),
+    legalAcceptanceIds: v.optional(v.array(v.id("legalAcceptances"))),
+    legalDocumentVersions: v.optional(
+      v.array(
+        v.object({
+          documentId: v.string(),
+          version: v.string(),
+          contentHash: v.string(),
+        }),
+      ),
+    ),
+    recipientPanel: v.optional(v.any()),
+    feeBreakdownSnapshot: v.optional(v.any()),
+    acceptanceWordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
     emailUpdatesOptIn: v.optional(v.boolean()),
     emailUpdatesOptInAt: v.optional(v.number()),
+    marketingOptIn: v.optional(v.boolean()),
+    showSupportPublicly: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -508,7 +558,8 @@ export default defineSchema({
     .index("by_invoice", ["stripeInvoiceId"])
     .index("by_donorEmail", ["donorEmail"])
     .index("by_fund", ["fundId"])
-    .index("by_campaign", ["campaignId"]),
+    .index("by_campaign", ["campaignId"])
+    .index("by_guestKey", ["guestKey"]),
   /** Per-campaign email-update subscriptions captured from the donation
    * thank-you step. Only opted-in rows are stored — a donor's decision not
    * to opt in lives solely on the donation row (see `donations.emailUpdatesOptIn`). */

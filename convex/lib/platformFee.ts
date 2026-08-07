@@ -1,22 +1,55 @@
 /**
- * Pilot fee model (temporary override of legal-launch PF-00/01):
- * estimated Stripe processing only (UK card 1.5% + 20p). Dono application fee
- * is 0 — founders confirmed for pilot that Dono takes no cut. Production
- * schedule in TRUTH.md (5%+20p / demo 2%+20p) remains NOT YET IMPLEMENTED.
- * Processing is always added on top so the intended amount reaches the campaign.
+ * Locked fee schedules (PF-01):
+ * - production: 5% + 20p Dono fee
+ * - demo: 2% + 20p Dono fee (labelled "Payment processing fee (Dono)" in UI)
+ *
+ * Stripe processing cost is shown for transparency and borne by the campaign;
+ * it is never added to the donor total. Optional fee cover adds only the Dono fee.
  */
 
-/** @deprecated No Dono platform fee; kept at 0 for callers that still reference it. */
-export const PLATFORM_FEE_RATE = 0;
-/** @deprecated No Dono platform fee; kept at 0 for callers that still reference it. */
-export const PLATFORM_FEE_FIXED_MINOR = 0;
+export const DEMO_DONO_FEE_RATE = 0.02;
+export const PROD_DONO_FEE_RATE = 0.05;
+export const DONO_FEE_FIXED_MINOR = 20;
 
-/**
- * Estimated Stripe UK card fee for checkout display and donor pass-through.
- * Actual Stripe fees vary by card; this is an estimate only (1.5% + £0.20).
- */
+/** Estimated Stripe UK card fee for transparency display only. */
 export const ESTIMATED_STRIPE_PERCENT = 0.015;
 export const ESTIMATED_STRIPE_FIXED_MINOR = 20;
+
+/** @deprecated Use getDonoFeeRate / calculateDonoFeeMinor */
+export const PLATFORM_FEE_RATE = PROD_DONO_FEE_RATE;
+/** @deprecated Use DONO_FEE_FIXED_MINOR */
+export const PLATFORM_FEE_FIXED_MINOR = DONO_FEE_FIXED_MINOR;
+
+export type FeeSchedule = "demo" | "production";
+
+export function resolveFeeSchedule(
+  explicit?: FeeSchedule | null,
+): FeeSchedule {
+  if (explicit === "demo" || explicit === "production") return explicit;
+  if (process.env.DONO_FEE_SCHEDULE === "demo") return "demo";
+  if (process.env.DEMO_OPEN_ADMIN === "true") return "demo";
+  return "production";
+}
+
+export function getDonoFeeRate(schedule: FeeSchedule = "production") {
+  return schedule === "demo" ? DEMO_DONO_FEE_RATE : PROD_DONO_FEE_RATE;
+}
+
+export function donoFeeLabel(schedule: FeeSchedule = "production") {
+  return schedule === "demo"
+    ? "Payment processing fee (Dono)"
+    : "Dono fee";
+}
+
+export function calculateDonoFeeMinor(
+  contributionMinor: number,
+  schedule: FeeSchedule = "production",
+) {
+  return (
+    Math.round(contributionMinor * getDonoFeeRate(schedule)) +
+    DONO_FEE_FIXED_MINOR
+  );
+}
 
 export function estimateStripeFeeMinor(chargeAmountMinor: number) {
   return (
@@ -25,21 +58,18 @@ export function estimateStripeFeeMinor(chargeAmountMinor: number) {
   );
 }
 
-/** Fee passed through to the donor — estimated Stripe processing only. */
+/** @deprecated Prefer calculateDonationFeeBreakdown with coverFees */
 export function calculateFeeEnvelopeMinor(amountMinor: number) {
-  return estimateStripeFeeMinor(amountMinor);
+  return calculateDonoFeeMinor(amountMinor, resolveFeeSchedule());
 }
 
-/** Dono application fee — always zero (no platform cut). */
-export function calculateApplicationFeeMinor(_amountMinor: number) {
-  return 0;
+export function calculateApplicationFeeMinor(
+  amountMinor: number,
+  schedule: FeeSchedule = resolveFeeSchedule(),
+) {
+  return calculateDonoFeeMinor(amountMinor, schedule);
 }
 
-/**
- * Proportional application-fee refund from the originally stored Dono fee.
- * Prefer this over re-deriving from the refunded gross alone.
- * Returns 0 when the original fee was 0.
- */
 export function calculateApplicationFeeRefundMinor(args: {
   originalApplicationFeeMinor: number;
   originalGrossMinor: number;
@@ -58,50 +88,57 @@ export function calculateApplicationFeeRefundMinor(args: {
 }
 
 export type DonationFeeBreakdown = {
-  /** Amount the donor intends for the campaign (major units GBP). */
   intendedCampaignAmount: number;
   intendedCampaignAmountMinor: number;
-  /** Estimated Stripe processing fee (minor units). */
   feeEnvelopeMinor: number;
-  /** Always 0 — Dono takes no platform fee. */
   platformFeeMinor: number;
-  /** Estimated Stripe processing fee (minor units). */
   estimatedStripeFeeMinor: number;
-  /** Total charged to the donor (minor units). */
   totalChargedMinor: number;
-  /** Expected amount reaching the campaign after fees (minor units). */
   amountToCampaignMinor: number;
-  /** Application fee taken by Dono on the PaymentIntent (always 0). */
   applicationFeeAmountMinor: number;
-  /** Always true — processing is added on top of the intended gift. */
   coverFees: boolean;
+  schedule: FeeSchedule;
+  donoFeeLabel: string;
 };
 
 /**
- * Checkout math: donor pays intended + estimated Stripe processing so the
- * intended amount reaches the campaign. No Dono platform fee.
+ * Donor total = contribution + (coverFees ? Dono fee : 0).
+ * Stripe cost is never added to the donor total; campaign bears it.
+ * Application fee collected by Dono = Dono fee (from campaign or donor cover).
  */
 export function calculateDonationFeeBreakdown(
   intendedCampaignAmount: number,
+  coverFees = false,
+  schedule: FeeSchedule = resolveFeeSchedule(),
 ): DonationFeeBreakdown {
   const intendedCampaignAmountMinor = Math.round(intendedCampaignAmount * 100);
+  const platformFeeMinor = calculateDonoFeeMinor(
+    intendedCampaignAmountMinor,
+    schedule,
+  );
   const estimatedStripeFeeMinor = estimateStripeFeeMinor(
     intendedCampaignAmountMinor,
   );
-  const feeEnvelopeMinor = estimatedStripeFeeMinor;
-  const platformFeeMinor = 0;
   const totalChargedMinor =
-    intendedCampaignAmountMinor + estimatedStripeFeeMinor;
+    intendedCampaignAmountMinor + (coverFees ? platformFeeMinor : 0);
+  const amountToCampaignMinor = Math.max(
+    0,
+    intendedCampaignAmountMinor -
+      (coverFees ? 0 : platformFeeMinor) -
+      estimatedStripeFeeMinor,
+  );
 
   return {
     intendedCampaignAmount,
     intendedCampaignAmountMinor,
-    feeEnvelopeMinor,
+    feeEnvelopeMinor: platformFeeMinor,
     platformFeeMinor,
     estimatedStripeFeeMinor,
     totalChargedMinor,
-    amountToCampaignMinor: intendedCampaignAmountMinor,
-    applicationFeeAmountMinor: 0,
-    coverFees: true,
+    amountToCampaignMinor,
+    applicationFeeAmountMinor: platformFeeMinor,
+    coverFees,
+    schedule,
+    donoFeeLabel: donoFeeLabel(schedule),
   };
 }
