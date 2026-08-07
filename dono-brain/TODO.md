@@ -4,7 +4,7 @@ A single, living list of open tasks across the company. `TRUTH.md` holds what is
 **settled**; this file holds what is **pending**. Together they are the skeleton
 that organises everything else in `dono-brain/`.
 
-**Last reviewed: 7 August 2026** (revision 5: governance and legal-suite paths updated and the v2.3 counsel/open-question material flagged for reconciliation with v3.0; no task was closed by the repository migration).
+**Last reviewed: 7 August 2026** (revision 6: added Roger-presentation, pilot-outreach, IP-chain-of-title and trademark follow-ups from the 7 August meeting notes; no task was closed).
 
 > ### Do these first
 >
@@ -78,6 +78,8 @@ Everything else in the five gates is an implementation, evidence or external-con
 - [ ] **Insurance follow-up:** policy is in force from 4 August 2026 with technology PI, cyber/data, cyber-crime, legal-protection and crisis cover. Ask the broker/insurer to confirm that the exact crowdfunding, Stripe Connect, refund-mandate and fee activity is accurately disclosed. Record the important exclusions (including chargebacks, FCA-regulated activity, tax, government enforcement and most fines) and decide separately whether public-liability or cyber business-interruption cover is needed
 - [ ] Confirm founder roles, intended ownership and vesting internally
 - [ ] Incorporation, founder agreements, option agreements and a shareholders' agreement — deferred; the v2.3 suite is drafted so incorporation later needs no redraft
+- [ ] Document a complete, traceable chain of title for the website, platform, data and all contributor-created IP; execute the Team and Contributor Agreements before access to production systems or personal data
+- [ ] Obtain current UK trademark clearance advice for **Dono** and, when brand and funding permit, decide whether to file in Classes 9, 35, 36 and 42. Do not approach a potentially conflicting rights holder or represent clearance before advice
 
 ## Design / Product — outstanding
 
@@ -103,6 +105,15 @@ Everything else in the five gates is an implementation, evidence or external-con
 - [ ] Meet Damian (treasury) on disbursement and audit trail for item-level wish-list donations
 - [ ] Decide product and timing to avoid competing with the October/November giving day
 - [ ] When pitching to colleges, lead with their concerns — content control, competition with college funds, donor data access
+- [ ] Follow up with students who agreed to further research contact in the survey, using the recorded consent scope
+- [ ] Continue Ultimate Frisbee onboarding with its treasurer; convert bank-account readiness into confirmed next steps
+- [ ] Follow up with Oxford India Society if it remains unresponsive
+- [ ] Follow up with Reuben Boat Club after Cath's introduction; response is pending
+- [ ] Find the appropriate Brasenose contact, following the Development Office's positive lead
+- [ ] Sashank: contact Harleen about DPhil and postgraduate communities
+- [ ] Prepare for Roger's Tuesday presentation: complete final deck polish, decide presenters and Q&A lead, and rehearse
+- [ ] Ask counsel for a targeted T&C review brief covering data ownership, user-content/image licensing, marketing use, alumni-data handling and the intended platform objectives
+- [ ] Before using any institutional alumni dataset, obtain written institutional permission and legal/data-protection advice; prefer an institution-sent opt-in link where appropriate
 
 ---
 
