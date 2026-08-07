@@ -61,28 +61,29 @@ Not served to users. Hashed so that the approved version of each record is fixed
 | `../dono-article-14-assessment-v3.0.md` | `a445c96197c94f44e7989522db8a202e42bbd21f87ba03a2e1d823a37541c6e0` | 9,444 |
 | `../dono-childrens-risk-assessment-v3.0.md` | `0e743f3c8e8d593254f743a4abef46374841d2e16da7c38bf8eb9d03e89f3e8f` | 24,767 |
 | `../dono-csea-legal-readiness-checklist-v3.0.md` | `e75ba3dff16816b79b94d38009a778a0958f594ca0073aa48bcea4c010a392d5` | 13,059 |
-| `../dono-csea-reporting-procedure-v3.0.md` | `7f649ff2bdbdb7f2694d7486c0be3ebc0d308293858a9aaf4cf4f83b956b7130` | 12,657 |
+| `../dono-csea-reporting-procedure-v3.0.md` | `9d03f664a102d48eceed3d0865128b8cfb9f50c01e27275da9c2630ca11ec6dd` | 12,767 |
 | `../dono-dp-complaints-workflow-v3.0.md` | `a8f76512852090a573736db0bec37acff80ad90e1b5400fee78f7e4510353754` | 8,282 |
 | `../dono-dpa-register-v3.0.md` | `c5f3b0d387280c1562ef9381680be6540578c4c7f4fceda816d11c40595e4c40` | 23,179 |
 | `../dono-dpia-v3.0.md` | `cc692a0898be3b959671b1cffdc05447856299556e7a648b2a521811fcfbc8ff` | 39,054 |
 | `../dono-evidence-review-and-closure-procedure-v3.0.md` | `87501fe6874b7c3019ea0361765c5da5d0ff6a04a8d51e5befd3beff4db9409a` | 16,935 |
 | `../dono-fee-and-processing-cost-reference-v3.0.md` | `934e61f64b8e59581be3abd5afbfd4c54547525f1308bb480b58603319be55db` | 7,195 |
-| `../dono-financial-crime-sanctions-policy-v3.0.md` | `6b27ec0e1ae4a96f303baf2ab18150128b8d3daea488c1cdf076ed45577ec1fd` | 15,260 |
+| `../dono-financial-crime-sanctions-policy-v3.0.md` | `6d3f9bb4548cf571421e6fe4996c2d65157ae261dfbf03625ac73808c8bdaaff` | 15,269 |
 | `../dono-geographic-scope-risk-assessment-v3.0.md` | `77c91732497d861c771d9eaf699ec770f334d6dd568381a337bdcd90b500f81b` | 10,933 |
 | `../dono-ico-childrens-code-assessment-v3.0.md` | `2d2603ae4329804dd5dc1be6ab7c8cceedcd3637f27ac087d0c8539a819d96e8` | 32,255 |
-| `../dono-ico-fee-self-assessment-v3.0.md` | `5290097dbebefc2f73baad16d6e04e59f39208b7e84e7d779a69f38d39b2b86b` | 11,513 |
+| `../dono-ico-fee-self-assessment-v3.0.md` | `e7b24f71d4e4522eac54860a01e325d17c31947bb12aa8195bdd23dedffd1431` | 11,547 |
 | `../dono-illegal-content-risk-assessment-v3.0.md` | `7aae0bb3dc9d6b1b9cbec38f3af4d717dee72c49ab19b85ed29b174f4c089b19` | 30,666 |
 | `../dono-incident-response-plan-v3.0.md` | `1b0effebf1e02defdbe8b0749a931e9894dac965094b5d4911c9773e3fcafd53` | 14,177 |
 | `../dono-institutional-referral-protocol-v3.0.md` | `57ab235ab2caad4c9d60090c73f05c95b733c74474df4ff6241293a4d9b61670` | 12,265 |
 | `../dono-international-transfer-assessment-v3.0.md` | `0ef04d962bfe83eed18a278ddb80ba319a1158660e47f895e3f6ad5de2f3bcb9` | 22,641 |
 | `../dono-legitimate-interests-assessments-v3.0.md` | `d31242b8c54ceaecd8aecb5dc3c70dac4a033753fa1f4ae765d14ff0e765c039` | 21,210 |
 | `../dono-notice-and-action-procedure-v3.0.md` | `886984941246844466663cb2d7b774ab29e6c693cabd64009058220cd6549763` | 10,108 |
-| `../dono-online-safety-procedures-v3.0.md` | `47e53023fe73088790c746f08de85914639e5d90ce741d28deabbaa155a71500` | 29,555 |
+| `../dono-online-safety-procedures-v3.0.md` | `801e4f831a2d29db1e7c712723642b9b6f92cc8b0b3de10f5f96040ff810bada` | 29,623 |
 | `../dono-refund-decision-checklist-v3.0.md` | `88e07c45f948a72fa8fb72d392878684f37584e96eed27b4872a6cba585e620d` | 12,487 |
 | `../dono-ropa-v3.0.md` | `70d81ec986be402762105ef52724d6ac66a09867b9fb2cb440d60127b389c465` | 32,075 |
 | `../dono-society-onboarding-succession-forms-v3.0.md` | `6384349915365b139a93d834c4e52eafe83af6e9a0c445393d6410f9ee489bbe` | 20,193 |
 | `../dono-team-and-contributor-agreement-v3.0.md` | `84171b9e3e08ceb2872b957f52accf895faf7aa327d9c88c76c43eaf4d9489b4` | 16,345 |
-| `../dono-wind-down-plan-v3.0.md` | `563ed85fc9408cabc0b607faab41635aeb45a5b45f6d1ab99ecda812a6311570` | 12,537 |
+| `../dono-wind-down-plan-v3.0.md` | `9f39c6d568ecaeb6310c8d8888238ffa071a934049a901579db3a9d4b802c549` | 12,539 |
+| `../00_v3.0_change_log.md` | `5cc7f96cc10271d526b4188517149940adb6a2e2681934b0cfb00c6ef13c8e56` | 9,885 |
 | `../dono-apd-activity-mapping-v3.0.xlsx` | `3afd99bb5dcdf8ffe8d1dcd8403063466237e1ba31c1a67b8b3e46e275976212` | 10,576 |
 
 ---
@@ -109,7 +110,7 @@ Compare against the values above. **Any difference means the file has changed si
 | Approver name | Amrit Kaur Rooprai |
 | Role | Controller and accountable owner |
 | Hash set version | 3.0 (provisional) |
-| Computed on | 7 August 2026 |
+| Computed on | 7 August 2026 (final, post-consolidation) |
 | Recomputed and verified at publication? | ☐ Yes, on ____________ · ☑ **No** |
 | Signature | ______________________ |
 | Date | ______________________ |
