@@ -13,10 +13,10 @@
 | **CURRENT** | True of the product and the business today |
 | **APPROVED — NOT YET IMPLEMENTED** | Decided and reflected in the legal documents, but the product does not do it yet. **The corresponding clause may not be published where publishing it would be inaccurate** — see `engineering/legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md` |
 | **FUTURE** | Intended, not decided in detail, not drafted |
-| **AWAITING DECISION** | Open — see `terms_v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md` |
+| **AWAITING DECISION** | Open — see the applicable legal register and [`TODO.md`](TODO.md) |
 | **SUPERSEDED** | Was true, is not. Kept so the change is visible |
 
-**Last updated:** 6 August 2026 (revision 4: demo fee, zero-payment confirmation, creator age gate, eligibility, Society campaign scope and succession)
+**Last updated:** 7 August 2026 (revision 5: repository authority and legal-suite status clarified; no substantive product decision changed)
 
 ---
 
@@ -33,7 +33,7 @@
 | **Joe** is the second backup | CURRENT | 31 Jul 2026 |
 | **One contact address for everything: `joindono.team@gmail.com`.** Dono operates a **single public support email** at launch and early-stage operations. No multiple inboxes, ticketing systems, role-based queues, shared mailboxes or category-specific infrastructure. No document may claim otherwise. Dedicated tooling may be introduced later; it is not a launch requirement | CURRENT | 6 Aug 2026 |
 | Registered address: 37 St Giles', Oxford OX1 3LD | CURRENT | 30 Jul 2026 |
-| **Every founder, contributor, volunteer and contractor must accept the Team and Contributor Agreement** (`terms_v2.3/dono-team-and-contributor-agreement-v2.3.md`) before accessing production systems or personal data. It covers IP assignment, confidentiality, data protection and authorised access, security, decision authority, conflicts, and exit and offboarding with immediate access removal | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
+| **Every founder, contributor, volunteer and contractor must accept the Team and Contributor Agreement** (`legal/suites/v2.3/dono-team-and-contributor-agreement-v2.3.md`) before accessing production systems or personal data. It covers IP assignment, confidentiality, data protection and authorised access, security, decision authority, conflicts, and exit and offboarding with immediate access removal | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **There is no code review gate, no code-owners file and no branch protection.** Anyone with commit access can change legal copy, a document version constant, the fee calculation or a feature flag and ship it — and **bumping a version constant invalidates every prior acceptance and forces global re-acceptance.** The legally accountable person holds roughly 4% of commits. **A review gate on the files that carry legal effect is a launch blocker** (item GV-09) | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **No engineering release owner, backup or version-identifier convention exists.** One must be named, with a sign-off statement pinning the deployment, the payment account and mode, and the commit (item GV-10) | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **A demonstration mode can grant full unauthenticated administrative access on a non-production deployment.** The production gate is sound, but it must be confirmed in writing that the flag is not set on any deployment holding real data (item SE-09) | AWAITING CONFIRMATION | 6 Aug 2026 |
@@ -99,7 +99,7 @@
 | **Payment methods currently enabled go well beyond cards** and include several country-specific local methods. They should be restricted to card, Link and mainstream wallets for beta, because enabling local methods for specific countries weakens the "not targeting any market" position | APPROVED — NOT YET IMPLEMENTED (item PF-15) | 6 Aug 2026 |
 | **The card statement descriptor currently reads `DONO DONATOIN`** and must be corrected | **DEFECT — FIX REQUIRED** (item PF-14) | verified 5 Aug 2026 |
 | ~~Dono's fee is the Payment Provider's applicable cost plus 3.5 percentage points~~ | **SUPERSEDED** 6 Aug 2026 — card-dependent, risked being a prohibited surcharge under reg 6A of the Consumer Rights (Payment Surcharges) Regulations 2012, and the code charged 5% + 20p anyway | was 31 Jul 2026 |
-| **No hard-coded processing-cost table appears in any contractual document.** A dated, expressly non-contractual internal copy lives at `terms_v2.3/dono-fee-and-processing-cost-reference-v2.3.md` | CURRENT | 6 Aug 2026 |
+| **No hard-coded processing-cost table appears in any contractual document.** A dated, expressly non-contractual internal copy lives at `legal/suites/v2.3/dono-fee-and-processing-cost-reference-v2.3.md` | CURRENT | 6 Aug 2026 |
 | **Stripe's processing cost is borne by the Connected Account and is never charged to the donor.** It is shown at checkout as a deduction from the amount reaching the campaign | CURRENT | 6 Aug 2026 |
 | **Fee cover is limited to Dono's fee.** It never includes Stripe's cost, and **no document may say that fee cover makes the full intended amount reach the campaign — it does not** | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **The Campaign Owner is Dono's customer for the platform service in every case**, whether or not a donor covers the fee | CURRENT | 6 Aug 2026 |
@@ -230,9 +230,9 @@
 | **All public user-generated content is launch-blocked** until the eight mandatory acceptance tests in the Online Safety Procedures pass, each with dated evidence and an accountable approver. **Demonstrations before then use synthetic or staff-authored content only** | CURRENT | 6 Aug 2026 |
 | **"Hide my name" hides the name from Dono's public pages only.** The amount is still shown. Dono cannot guarantee the name is hidden from the connected-account holder, and says so | CURRENT | 31 Jul 2026 |
 | **Administrative closure replaces deemed acceptance.** It records only that Dono missed its own 30-day deadline, must be labelled prominently as procedural, and must never be styled as approval | CURRENT | 31 Jul 2026 |
-| **The evidence lifecycle is defined end to end** in `terms_v2.3/dono-evidence-review-and-closure-procedure-v2.3.md`: deadlines and reminders, reviewer assignment and conflict rules, a 14-item checklist, one cure cycle, determination, closure, donor notifications, appeal, and nine categories of immutable evidence | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
+| **The evidence lifecycle is defined end to end** in `legal/suites/v2.3/dono-evidence-review-and-closure-procedure-v2.3.md`: deadlines and reminders, reviewer assignment and conflict rules, a 14-item checklist, one cure cycle, determination, closure, donor notifications, appeal, and nine categories of immutable evidence | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | Dono is **not treated as being in the regulated sector** for anti-money-laundering purposes unless legal advice concludes otherwise. **UK sanctions apply to Dono independently of Stripe** | CURRENT | 31 Jul 2026 |
-| **Financial-crime controls are trigger-based, not universal:** an Unsupported Countries List reviewed quarterly; payments from listed countries declined; screening on defined triggers rather than every donor; documented red flags; a defined escalation route with an OFSI reporting duty; and reviewer training. See `terms_v2.3/dono-financial-crime-sanctions-policy-v2.3.md` | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
+| **Financial-crime controls are trigger-based, not universal:** an Unsupported Countries List reviewed quarterly; payments from listed countries declined; screening on defined triggers rather than every donor; documented red flags; a defined escalation route with an OFSI reporting duty; and reviewer training. See `legal/suites/v2.3/dono-financial-crime-sanctions-policy-v2.3.md` | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | Response deadlines for users are **ten Working Days**, extendable on reasonable request | CURRENT | 31 Jul 2026 |
 | **Geographic scope:** Campaign creators must be currently enrolled at a Recognised Institution but need not be physically present in the UK. A Connected Account holder must provide a valid UK address and satisfy the Payment Provider's UK onboarding requirements. **Donors may be international** where Stripe supports the payment and sanctions and legal restrictions permit. **No document may imply Dono has assessed or supports any particular jurisdiction. No geo-blocking beyond what law or the Payment Provider requires.** Expansion into a specific country only after legal and commercial review | CURRENT | 6 Aug 2026 |
 | **A wind-down plan exists** and states honestly that funds already paid to campaign owners via Stripe are outside Dono's control and cannot be recovered or redistributed by Dono | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
@@ -246,7 +246,7 @@
 | **Every legal document has a permanent version number. Once published, a version is never overwritten or deleted. The version in force at the time of acceptance governs the transaction** | CURRENT | 6 Aug 2026 |
 | **Every acceptance is recorded** with: user or guest ID, role, campaign ID where applicable, the accepted document versions, the timestamp and the acceptance event. **Guests are recorded on the same basis as registered users** | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **What exists today, and what does not.** Acceptance records **are** insert-only and immutable, and the correct documents **are** required for each action, enforced server-side. But the record stores only a **version string** — not the text or a hash; the text lives in a **mutable file with no historical route**; the version map is **duplicated in two files** that can silently desync; **a guest's acceptance is not linked to their donation at all**; there is **no acceptance receipt email**; and there is **no way for a user to see what they accepted** | verified 5 Aug 2026 | — |
-| **The legal text currently served by the product is a draft stub, not the approved suite.** It must be replaced before launch (item CH-15) | **DEFECT — FIX REQUIRED** | verified 5 Aug 2026 |
+| **The legal text currently served by the product is a draft stub, not a rendered v3.0 publication artifact.** It must be replaced before launch with the current wording in display-ready form (item CH-15) | **DEFECT — FIX REQUIRED** | verified 5 Aug 2026 |
 | **An on-screen confirmation is shown after acceptance or payment**, and a **confirmation email** sent, containing the transaction details and either the applicable documents attached or a permanent link to those exact archived versions | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **Material changes require explicit re-acceptance.** Affected features are unavailable until the user accepts. **Continued use is never relied on for a material change.** Each campaign and donation stays bound to the versions in force when it was created | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
 | **The checkout legal identity panel is mandatory.** Before payment, checkout must show the Campaign Owner's legal name, their legal status, any representative, the Connected Account holder, the owner of any purchased property, and Dono's role. **Payment is blocked if any mandatory field is missing. The exact information displayed is persisted with the transaction and the acceptance record** | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |
@@ -257,69 +257,11 @@
 
 | Decision | Status | Settled |
 |---|---|---|
-| **`terms_v2.3/` is the current suite.** `terms_v2.2/`, `terms_v2.1/`, `terms_v2/`, `terms_v1/` and `terms/` are historical and must not be edited | CURRENT | 6 Aug 2026 |
-| **Nothing in `terms_v2.3/` is published yet.** Each document's approval block states whether it may be published and what blocks it | CURRENT | 6 Aug 2026 |
+| **`legal/suites/v3.0/` is the current, content-ready legal source for the Society-only beta.** Its substantive wording is ready to go. Earlier suites are historical evidence and must not be edited as though they govern the beta | CURRENT — CONTENT READY | 7 Aug 2026 |
+| **The remaining legal-document task is format and publication packaging, not further drafting.** The v3.0 Markdown source must be rendered into accessible in-product HTML and formal PDF files, with the exact rendered artifacts and their hashes stored through `legal/live-versions/`. The product still serves a draft stub that must be replaced before launch. Engineering and operational launch gates remain separate | CURRENT — FORMAT/IMPLEMENTATION PENDING | 7 Aug 2026 |
 | Six contractual documents (Terms of Service, Student Campaign Terms, Society Campaign Terms, Donor Terms, Community Guidelines, Refund and Dispute Policy); three notices (Privacy, Cookie, Verification). **The notices are information, not contract** | CURRENT | 30 Jul 2026 |
-| **`TODO.md` holds what is pending; `TRUTH.md` holds what is settled.** Together they are the skeleton that organises everything else | CURRENT | 6 Aug 2026 |
-
----
-
-## Release Control Matrix
-
-**This section is normative. RFC 2119 keywords — MUST, MUST NOT, SHOULD, MAY — carry their usual meaning.**
-
-### Purpose and rationale
-
-The Release Control Matrix is the governance mechanism linking engineering, legal, compliance and operational documentation. Its purpose is to make it structurally impossible to release a feature whose product behaviour, published documentation, compliance records and operational controls are out of step with one another. Dono's central historical failure has been that documents described a service the product did not deliver. **The matrix is the single place where that is checked, and it is authoritative.**
-
-### Principles
-
-- Every user-facing feature **MUST** have exactly one entry in the Release Control Matrix.
-- The matrix **MUST** be the authoritative record of whether a feature may be released. Where any other document, ticket or conversation disagrees with the matrix, the matrix governs.
-- No feature **MUST** move to production unless every required control is complete.
-- If any required item is incomplete, the feature **MUST** remain blocked, **regardless of engineering completion**.
-- Any change to a feature that affects legal, privacy, payments, moderation, security, safety or data processing **MUST** update the relevant documentation **before** release.
-
-### Columns
-
-Every feature entry **MUST** carry each of the following:
-
-| Column | Content |
-|---|---|
-| **Feature name** | The user-facing feature, named as users would recognise it |
-| **Feature flag (On / Off)** | The current production state of the flag |
-| **Engineering status** | Not started / In progress / Complete / Deployed to staging |
-| **Public documentation updated** | Terms of Service, Privacy Notice, Cookie Notice, Help Centre and FAQs, where applicable |
-| **Data flow reviewed** | Whether the personal-data flow has been mapped and reviewed |
-| **DPIA updated (if required)** | Updated / Not required |
-| **Risk assessments updated** | Illegal Content, Children's, Financial Crime, Online Safety, Geographic Scope or other applicable assessments |
-| **Moderation / operational procedures updated (if applicable)** | Updated / Not applicable |
-| **Test evidence completed** | Reference to the dated evidence |
-| **Accountable owner** | A named person, not a team |
-| **Launch state (Blocked / Ready / Live)** | The decision |
-| **Notes** | Anything a reader needs in order to understand the entry |
-
-### Release rules
-
-- A feature **MUST NOT** be marked **Ready** unless every applicable column is complete.
-- A feature **MUST NOT** be enabled in production while its Launch State is **Blocked**.
-- A feature that does not affect a particular control **MUST** be marked **Not Applicable (N/A)** explicitly. A column **MUST NOT** be left blank.
-- The matrix **MUST** be reviewed before every production deployment.
-- Every production release **MUST** reference the relevant Release Control Matrix entries.
-- Where a feature is released and a control is subsequently found to be incomplete, the feature flag **MUST** be turned off until the control is completed.
-- The accountable owner named for a feature **MUST** be the person who confirms each column, and **MUST NOT** be the same person for both the engineering status and the legal documentation columns where more than one person is available.
-- The matrix **SHOULD** be reviewed in full at least monthly, independently of any deployment.
-- A feature **MAY** be enabled in a staging or synthetic-data environment while **Blocked**, provided no real user, real payment or real personal data is involved.
-
-### The matrix
-
-> **To be populated.** Every user-facing feature requires an entry before launch. At minimum: account registration; university email verification; campaign creation; campaign review and publication; campaign pages; donations and checkout; the checkout identity panel; fee cover; refunds and the refund mandate; the dispute state; evidence upload; closure statements; comments; comment reporting; the logged-out reporting route; the moderation dashboard; appeals; analytics and the consent banner; campaign archival; data export; and the platform kill switches.
->
-> Population is tracked as **RM-01** in `engineering/legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md`.
-
-| Feature | Flag | Eng. status | Public docs | Data flow | DPIA | Risk assessments | Moderation / ops | Test evidence | Owner | Launch state | Notes |
-|---|---|---|---|---|---|---|---|---|---|---|---|
-| *(to be populated)* | | | | | | | | | | Blocked | |
+| **There is one root `TRUTH.md` and one root `TODO.md`.** `TRUTH.md` holds what is settled; `TODO.md` holds what is pending. `STATUS.md` only routes readers to authoritative material and must not become another source of truth | CURRENT | 7 Aug 2026 |
+| **The operational Release Control Matrix lives at `governance/releases/release-control-matrix.md`.** It decides whether implementation and evidence permit a release; it does not override or amend facts and decisions recorded here | CURRENT | 7 Aug 2026 |
 
 ---
 
@@ -329,5 +271,5 @@ Every feature entry **MUST** carry each of the following:
 2. Change it here first, with today's date and a status.
 3. **Mark the old entry SUPERSEDED rather than deleting it**, so the change is visible.
 4. Correct every document that depended on it. A change to one of these entries typically touches five to nine documents.
-5. Update `terms_v2.3/00_v2.3_change_log.md` and, where a build is needed, `engineering/legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md`.
+5. Update the latest legal-suite change log and, where a build is needed, the authoritative engineering launch checklist.
 6. If the change makes a published document untrue, **unpublish it before changing the product**.

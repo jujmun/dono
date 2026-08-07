@@ -1,126 +1,95 @@
 # Dono Brain
 
-The **knowledge base for Dono** — the community infrastructure for transparent
-university giving. This repository is the single source of truth for how Dono is
-conceived, designed, built, governed, and researched. It holds context documents
-and handoffs rather than application code; think of it as the company's shared
-long-term memory.
+Dono Brain is Dono's shared company knowledge base. It contains the decisions,
+requirements, research, legal material and operating context used to build and
+govern Dono. It does not contain the application code.
 
-> **Dono in one sentence:** a mobile-first platform that lets young alumni and
-> students collectively fund tangible, transparent improvements to student life —
-> campaigns are the content, communities are the product.
+## Start here
 
----
+Read these files in this order:
 
-## How this repository is organised
+1. [`STATUS.md`](STATUS.md) — a short dashboard showing which material is latest,
+   approved, published or blocked.
+2. [`TRUTH.md`](TRUTH.md) — the **single authoritative record** of settled facts
+   and decisions.
+3. [`TODO.md`](TODO.md) — the **single, visible company action register** and
+   launch-gate summary.
+4. [`governance/releases/release-control-matrix.md`](governance/releases/release-control-matrix.md)
+   — the operational release gate connecting product behaviour, legal documents,
+   evidence and approval.
 
-Documents are grouped by **domain**. Each top-level folder owns one area of the
-business, so you can go straight to the context you need without reading
-everything.
+If another document contradicts `TRUTH.md`, correct that document. Do not create
+another truth file.
 
-| Folder | Domain | What lives here |
+## What each authoritative file does
+
+| File | Answers | Must not become |
 |---|---|---|
-| [company/](company/) | **Vision & strategy** | Mission, problem, core insight, product philosophy, business model, long-term vision |
-| [product/](product/) | **Product** | The comprehensive product & repository overview: user journeys, product areas, data model, technical architecture |
-| [design/](design/) | **Design & UX** | Psychological, community and donation design strategy; brand, IA, flows, gamification, copy, accessibility |
-| [engineering/](engineering/) | **Engineering** | Payments/disputes/risk architecture and engineering change handoffs |
-| [legal/](legal/) | **Legal & policy** | Terms of Service structure, eligibility, use-of-funds rules, verification, fee model, IP/branding, and data handling |
-| [corporate/](corporate/) | **Corporate & founders** | Incorporation, cap table, founder equity, vesting, immigration constraints, required documents |
-| [research/](research/) | **Research** | Student survey instrument and responses; market research; college development-office and advisor meeting notes |
-| [pitch/](pitch/) | **Investor pitch** | Competition pitch decks, speaker script, traction evidence and the pitch handoff. **Start at [pitch/HANDOFF.md](pitch/HANDOFF.md)** — it carries the whole extracted fact base so pitch work never needs to re-read the meeting notes or survey data |
+| `TRUTH.md` | What is true, settled, approved, blocked or superseded? | A task list or implementation guide |
+| `TODO.md` | What remains to be done, by whom, and with what priority? | A second source of settled facts |
+| `STATUS.md` | Where should a reader start today? | A detailed duplicate of the other files |
+| Release Control Matrix | May this feature be released, and what evidence supports that decision? | A general company backlog |
+| Legal suite manifest | Which exact legal documents may be served? | Evidence that the product implements them |
 
----
+## Repository map
 
-## Folder contents
+| Folder | Purpose | Start here |
+|---|---|---|
+| [`governance/`](governance/) | Repository governance, counsel questions and release control | [`governance/README.md`](governance/README.md) |
+| [`company/`](company/) | Mission, strategy, business model and company history | [`company/README.md`](company/README.md) |
+| [`product/`](product/) | Product model, user journeys, architecture and feature areas | [`product/README.md`](product/README.md) |
+| [`design/`](design/) | Product design, community psychology and UX guidance | [`design/README.md`](design/README.md) |
+| [`engineering/`](engineering/) | Current legal-launch requirements plus clearly labelled historical engineering material | [`engineering/README.md`](engineering/README.md) |
+| [`legal/`](legal/) | Legal suites, reviews, assessments, policies and regulatory references | [`legal/README.md`](legal/README.md) |
+| [`corporate/`](corporate/) | Founder, corporate and insurance-risk records | [`corporate/README.md`](corporate/README.md) |
+| [`research/`](research/) | Survey data, interviews and market synthesis | [`research/README.md`](research/README.md) |
+| [`pitch/`](pitch/) | Pitch decks, scripts and fundraising evidence | [`pitch/README.md`](pitch/README.md) |
 
-### [company/](company/) — Vision & strategy
-- [company-context.md](company/company-context.md) — Foundational company context (v2.0): vision, mission, the problem, core insight, trust model, community model, business model, and guiding beliefs.
-- [history/](company/history/) — Prior iterations of the product concept:
-  - [alma-matters-v1-product-overview.pdf](company/history/alma-matters-v1-product-overview.pdf) — **Alma Matters**, the v1.0 (March 2026) product overview and first iteration of what became Dono. Originally framed as a three-sided platform (students, alumni, institutions) built around student requests, peer upvoting, and alumni funding. Kept for historical context on how the product concept evolved into Dono's current campaign/community model.
+The last two legacy folders will be handled in later migration batches. Their
+presence here does not make them authoritative.
 
-### [product/](product/) — Product
-- [comprehensive-product-overview.md](product/comprehensive-product-overview.md) — The master product document: user personas and journeys, all main product areas (homepage, campaigns, communities, funds, Dono Wrapped, admin), trust & verification, payments model, data model, and technical architecture.
+## Legal document states
 
-### [design/](design/) — Design & UX
-- [design-psychology-and-community-guide.md](design/design-psychology-and-community-guide.md) — Design strategy grounded in donation psychology and research: brand and visual identity, information architecture, campaign cards/pages, donation flow, post-donation experience, community features, gamification, notifications, copy/tone, accessibility, metrics, and a design-review checklist.
+The word **current** is not precise enough for legal documents. Use these states:
 
-### [engineering/](engineering/) — Engineering
-- [legal-launch/](engineering/legal-launch/) — **Current engineering source for legal launch:** master implementation checklist, privacy/DPIA narrative, moderation specification and Online Safety traceability.
-- [payments-architecture.md](engineering/payments-architecture.md) — Superseded July 2026 payment-architecture brief, retained as historical reasoning only.
-- [product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md) — Superseded July 2026 roadmap, retained as historical context only.
-- [engineering-change-handoff.docx](engineering/engineering-change-handoff.docx) — Engineering change handoff (binary doc).
+1. **Draft** — being prepared; not approved for publication.
+2. **In review** — awaiting internal or professional approval.
+3. **Content-ready source** — the substantive wording is current and ready, but
+   publication files may still need to be rendered.
+4. **Release-authorised** — the exact display files and required release controls
+   are approved.
+5. **Published** — the exact version served to users.
+6. **Superseded** — retained as immutable history and not edited.
 
-### [legal/](legal/) — Legal & policy
-- [legal-terms-context-handoff.md](legal/legal-terms-context-handoff.md) — Legal terms & policy context: operator identity, geographic scope and eligibility, document architecture, proposed Terms of Service structure, verification, use-of-funds and surplus rules, society campaigns, and the fee model.
-- [ip-branding-and-data-notes.md](legal/ip-branding-and-data-notes.md) — Informal legal guidance on trademark/branding protection, confidentiality, GDPR-safe data handling, and tax.
+The current legal source is v3.0 in [`legal/suites/v3.0/`](legal/suites/v3.0/).
+Its wording is content-ready. The remaining document task is to render the
+Markdown source into accessible in-product HTML and formal PDF files, record
+their hashes, and place those exact publication artifacts in
+[`legal/live-versions/`](legal/live-versions/). Content readiness does not by
+itself mean that the product release has passed its engineering controls.
 
-### [corporate/](corporate/) — Corporate & founders
-- [founder-context-handoff.md](corporate/founder-context-handoff.md) — Founder structure & incorporation context: five-founder situation, UK Ltd structure, proposed cap table, founder option agreements for visa-holding founders, vesting, directors, required legal documents, and open immigration questions.
+## Repository conventions
 
-### [research/](research/) — Research
-- [student-survey.docx](research/student-survey.docx) — The student research survey instrument.
-- [responses/](research/responses/) — Raw survey response exports:
-  - [survey-responses-batch-1.csv](research/responses/survey-responses-batch-1.csv)
-  - [survey-responses-batch-2.csv](research/responses/survey-responses-batch-2.csv)
-- [market-research-notes.md](research/market-research-notes.md) — Market data behind the Dono pitch (UK giving decline, student cost pressures), the OxReach prior-art precedent, three-sided customer segmentation, full Fable student-survey analysis, and a note on US fraternity alumni giving.
-- [meetings/](research/meetings/) — Notes from calls with Oxford college development
-  offices and advisors, on existing fundraising models, channels, and go-to-market
-  advice (used to ground Dono's product against how colleges actually raise money
-  today):
-  - [lmh-development-strategy.md](research/meetings/lmh-development-strategy.md) — LMH's two-tier (mass + major gift) fundraising approach.
-  - [worcester-fundraising-model.md](research/meetings/worcester-fundraising-model.md) — Worcester's telethon, giving day, and regular giving program.
-  - [ben-wishlist-and-treasury-handover.md](research/meetings/ben-wishlist-and-treasury-handover.md) — Ben's feedback on the student "wish list" (item-level funding) concept, college treasury/disbursement/gift-aid logistics, and her September handover before leaving for RSPCA.
-  - [david-parker-st-hughs-development-fund.md](research/meetings/david-parker-st-hughs-development-fund.md) — St Hugh's Development Fund; Oxford fundraising landscape overview (09 Jul 26).
-  - [kate-gaffka-gtc-alumni-engagement.md](research/meetings/kate-gaffka-gtc-alumni-engagement.md) — GTC Alumni Engagement Team; international alumni and tax-effective giving (10 Jul 26).
-  - [tilly-hertford-development-fund.md](research/meetings/tilly-hertford-development-fund.md) — Hertford Development Fund overview (10 Jul 26).
-  - [murray-univ-development-office.md](research/meetings/murray-univ-development-office.md) — Univ Development Office; donation pipeline overview (15 Jul 26).
-  - [martha-univ-head-of-development.md](research/meetings/martha-univ-head-of-development.md) — Univ Head of Development; donation process and alumni relations (16 Jul 26).
-  - [olivia-tan-christ-church.md](research/meetings/olivia-tan-christ-church.md) — Christ Church; fundraising channels and effectiveness (21 Jul 26).
-  - [milos-martinez-st-cross-development-office.md](research/meetings/milos-martinez-st-cross-development-office.md) — St Cross Development Office fundraising overview (22 Jul 26).
-  - [sean-rainey-magdalen-development-fund.md](research/meetings/sean-rainey-magdalen-development-fund.md) — Magdalen's contrarian, major-gifts-only view: skeptical of small-donor pipelines and student-led platforms.
-  - [will-gregory-advisor-call.md](research/meetings/will-gregory-advisor-call.md) — Advisor call on UK vs US philanthropy culture, the difficulty of working with universities, and for-profit vs. fiscal-sponsorship structuring.
-  - [brasenose-college.md](research/meetings/brasenose-college.md) — Brasenose College pitch meeting: college concerns (content control, competition with college funds, donor data access), adoption dynamics across colleges, and comparison to Hubbub.
+- Keep exactly one root `TRUTH.md` and one root `TODO.md`.
+- Put a document in the domain that owns it; link to it elsewhere instead of
+  copying it.
+- Use lowercase kebab-case for new filenames.
+- Keep historical legal versions immutable.
+- Use Markdown by default. Important binary sources should have a readable
+  Markdown summary or manifest entry.
+- When adding or moving a file, update its domain index and any affected links.
+- Main domain folders should have a short `README.md`. Add a subfolder README
+  only when the folder is complex, actively used as an entry point, or controls
+  a high-risk process. Immutable historical legal suites are indexed from
+  `legal/suites/README.md` instead of being modified.
+- A legal statement is not evidence that the product behaves that way.
 
-### [pitch/](pitch/) — Investor pitch
-- [HANDOFF.md](pitch/HANDOFF.md) — **the routing document for all pitch work.** Task and judging criteria, settled decisions, the complete extracted fact base (survey figures, all 11 development-office interviews, external market data, quote bank), accuracy flags and anti-patterns. Written so an agent never has to re-read `research/meetings/` or `research/responses/` for a pitch task.
-- [Dono Pitch Deck v1.pptx](pitch/) — the team's own deck. **This is the base**; all pitch work targets it.
-- [Dono_v1_Deck_Fix_List.md](pitch/Dono_v1_Deck_Fix_List.md) — slide-by-slide fixes against v1: ship-blockers, restructure, paste-ready copy, distribution-chart build instructions, timing budget.
-- [Dono_Pitch_Script_and_Playbook.md](pitch/Dono_Pitch_Script_and_Playbook.md) — full speaker script, three narrative strands with opening scripts, demo storyboard, Q&A preparation, judging-criteria map.
-- [Dono_Traction_Evidence_Inventory.md](pitch/Dono_Traction_Evidence_Inventory.md) — every traction and validation signal graded by persuasive strength, with recommended slide selection and the gaps to close.
-- [Dono_Investor_Pitch.pptx](pitch/) / [.pdf](pitch/) — a reference deck built as an alternative structure. Parts bin for copy and narrative, not the shipping deck.
+## Migration status
 
----
-
-## [TODO.md](TODO.md) — the living task list
-
-Unlike everything else in this repo, [TODO.md](TODO.md) is meant to change
-constantly. It's the single cross-team task list, stratified by the team most
-responsible (Engineering/Software, Legal, Finance/Corporate, Design/Product,
-Research/Operations) — a task touching more than one team is listed under each.
-
-### Keeping TODO.md current
-
-- Whenever a domain document introduces new open work (a new handoff, a
-  roadmap, a legal review item), add or update the corresponding tasks in
-  TODO.md under the right team section(s), with a source link back to the
-  document.
-- Check items off as they're completed; don't let the list silently drift out
-  of sync with reality — remove or reword tasks that are no longer accurate
-  rather than leaving stale entries.
-- Update the "Last reviewed" line at the bottom whenever you do a pass over it.
-
----
-
-## Conventions
-
-- **One domain per top-level folder.** Add new documents to the folder that owns
-  the subject; create a new domain folder only when a document genuinely fits
-  none of the above.
-- **File names are lower-case kebab-case** and describe the content, not the date
-  or author. Where a document is a point-in-time handoff, keep the date inside the
-  document rather than in the filename.
-- **Markdown is the default format.** Binary sources (`.docx`, `.pdf`, `.csv`) are
-  kept alongside the relevant domain; prefer a Markdown summary in-repo when the
-  content is worth reading often.
-- **When you add or move a file, update this README** so the index stays the
-  single source of navigation.
+The navigation, governance, legal-information and engineering-history layers
+have been reorganised. Main domains and important operational areas contain
+README navigation. The actively used `engineering/legal-launch/` path remains
+unchanged to avoid disrupting the team. Insurance is under corporate risk and
+outdated engineering material is under `engineering/archive/`. Research,
+product/design and pitch remain separate because they are already coherent
+domains. Any further major migration requires explicit review.

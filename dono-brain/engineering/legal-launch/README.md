@@ -8,7 +8,7 @@ When files disagree, use this order:
 
 1. [`TRUTH.md`](../../TRUTH.md) — settled product and business decisions.
 2. This folder — the authoritative engineering specification and acceptance evidence requirements.
-3. `terms_v2.3/` — public and internal legal drafting. Legal text does not prove that a feature exists.
+3. [`../../legal/suites/v3.0/`](../../legal/suites/v3.0/README.md) — the current, content-ready legal source. Its Markdown files must be rendered before display. Legal text does not prove that a feature exists.
 
 Any contradiction must be raised before implementation. Engineers must not resolve a legal or commercial ambiguity by choosing a convenient implementation.
 
@@ -23,9 +23,21 @@ Any contradiction must be raised before implementation. Engineers must not resol
 
 The detailed moderation file remains separate because its feature and acceptance-test detail is too large to merge into the master checklist without making both documents harder to use. The privacy narrative is separate because it defines a cross-cutting data model used by payments, identity, content, evidence, moderation and deletion.
 
+## Acceptance and live legal documents
+
+Engineering must implement the three-event [`ACCEPTANCE_MATRIX.md`](../../legal/suites/v3.0/publication-package/ACCEPTANCE_MATRIX.md) as a launch requirement:
+
+- **A — account creation:** accept the Terms of Service and Community Guidelines; show or acknowledge the Privacy Notice; keep cookie consent separate.
+- **B — Society onboarding:** accept the Society Campaign Terms and Refund and Dispute Policy, plus the separate active declarations listed in the matrix.
+- **C — donation:** accept the Donor Terms and Refund and Dispute Policy; a guest must also accept the Terms of Service; keep optional choices unticked.
+
+The distinction between **accept**, **show/acknowledge** and **separate optional consent** is part of the build specification. Do not collapse the events into a generic legal tick box. Student Campaign Terms are a future document and must never be presented during the Society-only beta.
+
+The correct wording is the current v3.0 source. It still needs to be rendered into accessible in-product HTML and formal PDF files. Build a configurable document registry and permanent version routes against the empty [`legal/live-versions/`](../../legal/live-versions/) handoff location. Do not serve raw Markdown or the current product draft stub. A required acceptance must fail closed if its release-authorised document ID, version, rendered bytes or publication hash is unavailable.
+
 ## Legacy engineering material
 
-Older roadmaps, questionnaires, configuration reviews and engineering answers elsewhere in the repository are retained as **historical evidence only**. Their open actions have been absorbed into this folder. They are not competing backlogs and must not be used to revive superseded features or decisions. In particular, `engineering/product-legal-alignment-roadmap.md` and `engineering/payments-architecture.md` contain old positions on verification badges, individual campaigns, fee allocation and owner-only refunds that no longer govern.
+Older roadmaps, questionnaires, configuration reviews and engineering answers are retained in [`../archive/`](../archive/) as **historical material only**. Their open actions have been absorbed into this folder. They are not competing backlogs and must not be used to revive superseded features or decisions. In particular, [`../archive/superseded-architecture/product-legal-alignment-roadmap.md`](../archive/superseded-architecture/product-legal-alignment-roadmap.md) and [`../archive/superseded-architecture/payments-architecture.md`](../archive/superseded-architecture/payments-architecture.md) contain old positions on verification badges, individual campaigns, fee allocation and owner-only refunds that no longer govern.
 
 Do not create another legal-build list. Add a requirement to the master checklist, put cross-cutting privacy detail in the privacy narrative, and put detailed moderation behaviour in the moderation specification.
 
@@ -58,7 +70,7 @@ These are the remaining external dependencies. They should not be converted into
 | CSEA portal access | NCA response confirming registration and eligible users; training and test completion | Build restricted case handling and evidence/retention controls; do not claim portal readiness yet |
 | Insurance interaction | Insurer/broker confirms the crowdfunding/payment activity is accurately disclosed and covered | Do not treat insurance as a substitute for product controls or legal compliance |
 | Contributor/IP position | Execute the Team and Contributor Agreement with every contributor and confirm worker-status advice if required | Block production access for anyone not recorded as authorised |
-| Clean legal publication set | Legal owner consolidates amendment blocks and designates operative Society-only beta documents | Serve only the approved manifest and immutable versions |
+| Display-ready legal publication set | Render the current v3.0 Society-only beta source into accessible HTML and formal PDF, verify it, and place the exact artifacts and hashes in `legal/live-versions/` | Build the registry and routes now; serve only release-authorised immutable artifacts; fail closed while a required document is missing |
 | ICO fee registration | Complete the ICO self-assessment and record the outcome | No product choice required |
 
 ## Completion rule

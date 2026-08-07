@@ -4,7 +4,7 @@ A single, living list of open tasks across the company. `TRUTH.md` holds what is
 **settled**; this file holds what is **pending**. Together they are the skeleton
 that organises everything else in `dono-brain/`.
 
-**Last reviewed: 6 August 2026** (revision 4: demo fee settled; zero payments confirmed; succession, creator age, analytics, eligibility and Society-purpose rules closed).
+**Last reviewed: 7 August 2026** (revision 5: governance and legal-suite paths updated and the v2.3 counsel/open-question material flagged for reconciliation with v3.0; no task was closed by the repository migration).
 
 > ### Do these first
 >
@@ -39,14 +39,14 @@ Nothing goes live with real users, real money or real personal data until all fi
 
 ## Legal — outstanding
 
-- [ ] **Instruct a UK solicitor** on the 15 questions in [`QUESTIONS_FOR_LAWYER.md`](QUESTIONS_FOR_LAWYER.md). Q12/Q13 cover the existing payment-path and fee facts; Q1/Q2 seek confirmation of the intended direct-charge/refund and flat-fee model. The founders expect the intended payments/FCA model to be confirmatory rather than a major blocker, but no one should state that as a legal conclusion before advice
+- [ ] **Instruct a UK solicitor** on the 15 questions in [`governance/open-questions/questions-for-solicitor.md`](governance/open-questions/questions-for-solicitor.md). The pack was prepared against v2.3 and must be reconciled with v3.0 before sending. Q12/Q13 cover the existing payment-path and fee facts; Q1/Q2 seek confirmation of the intended direct-charge/refund and flat-fee model. The founders expect the intended payments/FCA model to be confirmatory rather than a major blocker, but no one should state that as a legal conclusion before advice
 - [x] **Demo fee settled:** **2% + 20p**, identical for every card/method/country, charged to the Campaign Owner unless the Donor actively covers it, and labelled **“Payment processing fee (Dono)”**. It is Dono revenue, not Stripe's actual processing charge. Production remains **5% + 20p**
-- [ ] **Re-perform the illegal-content risk assessment** on current controls, scoring likelihood and impact separately and mapping Ofcom Code measures — `terms_v2.3/dono-illegal-content-risk-assessment-v2.3.md`
+- [ ] **Re-perform the illegal-content risk assessment** on current controls, scoring likelihood and impact separately and mapping Ofcom Code measures — `legal/suites/v2.3/dono-illegal-content-risk-assessment-v2.3.md`
 - [ ] **Re-perform the children's risk assessment**, adding age bands (under 13 / 13–15 / 16–17 / adults), child user journeys, harms, likelihood, severity, the reasoning for each score, the control that reduces each risk, and the test evidence that the control works
 - [ ] **Complete the ICO Children's Code (Age Appropriate Design Code) assessment** — a separate statutory assessment, not satisfied by the OSA work
 - [ ] **Sign and date the DPIA** once the risk register is re-scored and mitigations are evidenced. Do not backdate
 - [ ] **Reconcile the Privacy Notice, Cookie Notice, DPIA, ROPA, APD, Article 14 assessment, provider register and transfer records to the single narrative in** [`engineering/legal-launch/PRIVACY_DPIA_ENGINEERING_NARRATIVE.md`](engineering/legal-launch/PRIVACY_DPIA_ENGINEERING_NARRATIVE.md). Remove stale amendment-overridden text; retain each record only for its distinct legal purpose
-- [ ] **Close the remaining open items in** [`terms_v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md`](terms_v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md). U6–U10 and U12 are now closed; U11 remains the launch-readiness decision, while U4 and the immigration component of U5 require external confirmation
+- [ ] **Reconcile the v2.3 unresolved-question register with v3.0, then close any questions still applicable.** The historical register is [`legal/suites/v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md`](legal/suites/v2.3/UNRESOLVED_QUESTIONS_REGISTER_v2.3.md). U6–U10 and U12 were closed in v2.3; U11 remained the launch-readiness decision, while U4 and the immigration component of U5 required external confirmation
 - [x] ~~Test Stripe Connect onboarding with a real unincorporated society~~ — **done. Confirmed working: the treasurer or principal officer onboards as a sole trader in their own name.** Society Terms clause 1.4A now states this and its consequences
 - [ ] **Decide whether a real-user beta may proceed on the current timetable** — register item U11. The legal position is set out there; the decision is a founder's
 - [ ] **Answer counsel questions Q12 to Q15** — removal of the unused platform-account/variable-fee paths on confirmed zero-payment facts; fee-label presentation; identity-data retention and creator age use; and what can presently be proved about acceptance
@@ -133,10 +133,10 @@ Recorded so nobody reopens them.
 | Stripe negative-balance and dispute-fee allocation | Recorded; verification of the live configuration is engineering item PF-07 |
 | UK geographical business address for legal notices | 37 St Giles', Oxford OX1 3LD |
 | Whether processor DPAs need wet signatures | **No**, where validly incorporated into the provider's online terms |
-| IP assignment agreements from founders and contributors | Drafted — `terms_v2.3/dono-team-and-contributor-agreement-v2.3.md`. **Execution is outstanding** |
+| IP assignment agreements from founders and contributors | Drafted — `legal/suites/v2.3/dono-team-and-contributor-agreement-v2.3.md`. **Execution is outstanding** |
 | Gift Aid capture | Not applicable — Dono claims no Gift Aid and issues no charitable tax receipts |
 | Development-office data-sharing consent language | Not applicable — no institutional data-sharing feature exists or will be offered without a named institution, an executed agreement and its privacy notice |
-| FCA / payment-services conclusion | Analysed in `terms_v2.3/00_v2.3_change_log.md` §5. Counsel confirmation sought as Q1 |
+| FCA / payment-services conclusion | Analysed in `legal/suites/v2.3/00_v2.3_change_log.md` §5. Counsel confirmation sought as Q1 |
 | Charity and fundraising law | Founder scope is settled under the Society primary-purpose/official-initiative rule. Counsel must confirm the charity/fundraising-law consequences without reopening that product choice |
 | Consumer law characterisation | Settled: conditional contribution, consumer status by facts, three-tier liability. Counsel confirmation sought as Q6 and Q7 |
 | Data protection specialist review | Addressed across the v2.3 suite; residual questions are Q8 and Q9 |
