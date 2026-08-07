@@ -1,6 +1,6 @@
 /**
  * Fail-closed live legal document registry (CH-18).
- * Source of truth: generated artifacts from dono-brain/legal/live-versions/3.0
+ * Source of truth: dono-brain/legal/live-terms (synced into artifacts/generated).
  */
 import {
   LIVE_LEGAL_BODIES,
@@ -93,15 +93,22 @@ export function getLiveDocumentBody(docId: string, version?: string): string | n
   return body ?? null;
 }
 
-export function legalHref(
+/** Current live document — always the operative wording. */
+export function legalCurrentHref(docId: LegalDocumentId): `/legal/${string}` {
+  return `/legal/${docId}`;
+}
+
+/** Immutable version address for receipts / acceptance history. */
+export function legalVersionedHref(
   docId: LegalDocumentId,
   version: string = LIVE_LEGAL_VERSION,
 ): `/legal/${string}` {
   return `/legal/${docId}/${version}`;
 }
 
-export function legalCurrentHref(docId: LegalDocumentId): `/legal/${string}` {
-  return `/legal/${docId}`;
+/** Everyday in-product links point at the live (changing) document. */
+export function legalHref(docId: LegalDocumentId): `/legal/${string}` {
+  return legalCurrentHref(docId);
 }
 
 export const LEGAL_DOCUMENT_TITLES: Record<LegalDocumentId, string> = Object.fromEntries(

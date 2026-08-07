@@ -16,7 +16,7 @@
     "lint": "eslint",
     "seed": "convex run seed:seed",
     "test": "vitest run",
-    "legal:render": "node scripts/render-legal-live-versions.mjs"
+    "legal:render": "node scripts/sync-legal-live-terms.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",

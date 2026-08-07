@@ -1,6 +1,7 @@
 /**
  * Convex-safe legal registry — must stay byte-identical to lib/legal/registry
- * for IDs, versions, and hashes (CH-13). Bodies live in legalArtifacts/generated.
+ * for IDs, versions, and hashes (CH-13). Bodies live in legalArtifacts/generated
+ * (synced from dono-brain/legal/live-terms).
  */
 import {
   LIVE_LEGAL_MANIFEST,
