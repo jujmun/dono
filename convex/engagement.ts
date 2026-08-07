@@ -388,7 +388,7 @@ export const editComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
-    await assertCommentAllowed(ctx, body, userId, "comment");
+    await assertCommentAllowed(body);
 
     await ctx.db.patch(args.commentId, {
       body,

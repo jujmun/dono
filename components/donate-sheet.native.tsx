@@ -8,7 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import { StripeProvider, useStripe } from "@stripe/stripe-react-native";
 import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
@@ -177,15 +177,25 @@ export function DonateSheet({
   onMarketingOptInChange,
   showSupportPublicly,
   onShowSupportPubliclyChange,
-  recipientPanel,
-  panelComplete,
-  mayExceedTarget = true,
+  recipientPanel: recipientPanelProp,
+  panelComplete: panelCompleteProp,
+  mayExceedTarget: mayExceedTargetProp,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
+  const disclosures = useQuery(
+    api.campaigns.getDonateDisclosures,
+    visible && campaignId ? { slug: campaignId } : "skip",
+  );
+  const recipientPanel =
+    recipientPanelProp ?? disclosures?.recipientPanel ?? null;
+  const panelComplete =
+    panelCompleteProp ?? disclosures?.panelComplete === true;
+  const mayExceedTarget =
+    mayExceedTargetProp ?? disclosures?.mayExceedTarget !== false;
   const {
     needsDob,
     dobReady,
