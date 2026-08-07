@@ -44,6 +44,11 @@ export default defineSchema({
      * historical donations/comments still resolve to "Deleted User" — never
      * patch a tombstoned profile back to a live one. */
     deletedAt: v.optional(v.number()),
+    /** Soft suspension — blocks verified-user actions until cleared. */
+    suspendedAt: v.optional(v.number()),
+    suspendedReason: v.optional(v.string()),
+    /** Epoch ms; commenting blocked while Date.now() < this value. */
+    commentingRestrictedUntil: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -151,16 +156,30 @@ export default defineSchema({
     .index("by_campaign", ["campaignSlug"])
     .index("by_user", ["userId"]),
   contentReports: defineTable({
-    reporterUserId: v.id("users"),
+    /** Optional so logged-out / guest reporters (OS-02) can submit. */
+    reporterUserId: v.optional(v.id("users")),
+    reporterEmail: v.optional(v.string()),
+    reporterName: v.optional(v.string()),
     targetType: v.union(
       v.literal("comment"),
       v.literal("campaign"),
       v.literal("society"),
+      v.literal("update"),
+      v.literal("image"),
     ),
     campaignSlug: v.optional(v.string()),
     commentId: v.optional(v.id("campaignComments")),
     societySlug: v.optional(v.string()),
+    updateId: v.optional(v.id("campaignUpdates")),
     reason: v.string(),
+    /** Structured reason — see convex/lib/moderationConstants.ts. Optional for
+     * rows created before OS-03; new reports always set it. */
+    reasonCode: v.optional(v.string()),
+    /** Snapshot of the reported content at report time (OS-01). */
+    contentVersionSnapshot: v.optional(v.string()),
+    /** P1-style triage flag (OS-04). Missing → treat as false. */
+    urgent: v.optional(v.boolean()),
+    evidenceNote: v.optional(v.string()),
     status: v.union(
       v.literal("open"),
       v.literal("resolved"),
@@ -173,7 +192,55 @@ export default defineSchema({
   })
     .index("by_status", ["status"])
     .index("by_reporter", ["reporterUserId"])
-    .index("by_campaign", ["campaignSlug"]),
+    .index("by_campaign", ["campaignSlug"])
+    .index("by_status_urgent", ["status", "urgent"]),
+  /** One-click moderator decisions linked to a report (OS-05, OS-06). */
+  moderationActions: defineTable({
+    reportId: v.id("contentReports"),
+    moderatorUserId: v.id("users"),
+    action: v.union(
+      v.literal("hide_content"),
+      v.literal("remove_content"),
+      v.literal("pause_campaign"),
+      v.literal("restrict_commenting"),
+      v.literal("suspend_account"),
+      v.literal("keep"),
+      v.literal("restore"),
+    ),
+    reasonCode: v.string(),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_report", ["reportId"]),
+  /** Appeal of a moderated report — must be assigned to a different reviewer (OS-07). */
+  moderationAppeals: defineTable({
+    reportId: v.id("contentReports"),
+    appellantUserId: v.id("users"),
+    originalModeratorUserId: v.id("users"),
+    assignedReviewerUserId: v.optional(v.id("users")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("upheld"),
+      v.literal("overturned"),
+      v.literal("withdrawn"),
+    ),
+    note: v.string(),
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_report", ["reportId"])
+    .index("by_status", ["status"])
+    .index("by_reviewer", ["assignedReviewerUserId"]),
+  /** Keyword/pattern filter blocks before publication (OS-09). */
+  moderationFilterEvents: defineTable({
+    userId: v.optional(v.id("users")),
+    source: v.union(
+      v.literal("comment"),
+      v.literal("campaign_story"),
+    ),
+    category: v.string(),
+    matchedPattern: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
   refundRequests: defineTable({
     donationId: v.id("donations"),
     requesterUserId: v.optional(v.id("users")),
@@ -514,6 +581,19 @@ export default defineSchema({
     metadata: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_admin", ["adminUserId"]),
+  /**
+   * Singleton kill-switch document (`key: "global"`). Missing row = all
+   * switches off. Write via platformSettings.setFlags only.
+   */
+  platformSettings: defineTable({
+    key: v.literal("global"),
+    disableNewCampaigns: v.boolean(),
+    disableDonations: v.boolean(),
+    disableRegistration: v.boolean(),
+    disableComments: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]),
   stripeConnectAccounts: defineTable({
     userId: v.id("users"),
     communitySlug: v.optional(v.string()),

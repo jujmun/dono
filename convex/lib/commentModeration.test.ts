@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { containsProfanity, containsUrl } from "./commentModeration";
+import {
+  containsBlockedContent,
+  containsProfanity,
+  containsUrl,
+  findBlockedContent,
+} from "./commentModeration";
 
 describe("containsProfanity", () => {
   it("flags common profanity", () => {
@@ -49,5 +54,38 @@ describe("containsUrl", () => {
 
   it("does not flag clean comments", () => {
     expect(containsUrl("This is a great cause, keep it up")).toBe(false);
+  });
+});
+
+describe("findBlockedContent", () => {
+  it("flags CSEA phrases", () => {
+    const match = findBlockedContent("looking for child porn links");
+    expect(match?.category).toBe("csea");
+  });
+
+  it("flags suicide encouragement", () => {
+    const match = findBlockedContent("just kill yourself already");
+    expect(match?.category).toBe("suicide");
+  });
+
+  it("flags spam phrases", () => {
+    const match = findBlockedContent("Click here to claim your free gift card");
+    expect(match?.category).toBe("spam");
+  });
+
+  it("flags slurs", () => {
+    const match = findBlockedContent("what a faggot");
+    expect(match?.category).toBe("slur");
+  });
+
+  it("flags urls as blocked", () => {
+    expect(containsBlockedContent("see https://evil.com")).toBe(true);
+    expect(findBlockedContent("see https://evil.com")?.category).toBe("url");
+  });
+
+  it("allows clean educational text", () => {
+    expect(
+      findBlockedContent("We support student mental health resources on campus"),
+    ).toBeNull();
   });
 });

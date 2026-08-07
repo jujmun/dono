@@ -1,5 +1,13 @@
-import { View, Text, Pressable, ActivityIndicator, Image } from "react-native";
-import { useQuery } from "convex/react";
+import { useState } from "react";
+import {
+  View,
+  Text,
+  Pressable,
+  ActivityIndicator,
+  Image,
+  TextInput,
+} from "react-native";
+import { useMutation, useQuery } from "convex/react";
 import { type Href, useLocalSearchParams, useRouter } from "expo-router";
 import { ArrowLeft, ChevronRight } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
@@ -13,6 +21,7 @@ import {
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
+import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { formatCurrency } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 
@@ -23,6 +32,9 @@ type StudentAdminPayload = {
   avatarUrl: string | null;
   role: "user" | "admin";
   emailVerifiedAt: number | null;
+  suspendedAt: number | null;
+  suspendedReason: string | null;
+  commentingRestrictedUntil: number | null;
   createdAt: number;
   campaigns: Campaign[];
 };
@@ -44,6 +56,32 @@ export default function AdminStudentProfilePage() {
     api.users.getStudentForAdmin,
     adminUser && userId ? { userId: userId as Id<"users"> } : "skip",
   ) as StudentAdminPayload | null | undefined;
+
+  const suspendAccount = useMutation(api.moderation.suspendAccount);
+  const unsuspendAccount = useMutation(api.moderation.unsuspendAccount);
+  const restrictCommenting = useMutation(api.moderation.restrictCommenting);
+  const clearCommentingRestriction = useMutation(
+    api.moderation.clearCommentingRestriction,
+  );
+
+  const [moderationBusy, setModerationBusy] = useState<string | null>(null);
+  const [moderationError, setModerationError] = useState<string | null>(null);
+  const [suspendReason, setSuspendReason] = useState("");
+
+  const runModeration = async (
+    key: string,
+    action: () => Promise<unknown>,
+  ) => {
+    setModerationError(null);
+    setModerationBusy(key);
+    try {
+      await action();
+    } catch (err) {
+      setModerationError(getFriendlyAuthError(err));
+    } finally {
+      setModerationBusy(null);
+    }
+  };
 
   if (profile === undefined || (adminUser && student === undefined)) {
     return (
@@ -90,6 +128,10 @@ export default function AdminStudentProfilePage() {
   const initials = (student.name || student.email || "?")
     .slice(0, 2)
     .toUpperCase();
+  const targetUserId = student.userId as Id<"users">;
+  const commentingRestricted =
+    student.commentingRestrictedUntil !== null &&
+    student.commentingRestrictedUntil > Date.now();
 
   return (
     <AdminShell>
@@ -124,9 +166,122 @@ export default function AdminStudentProfilePage() {
               <Text className="mt-2 text-sm text-dono-muted">
                 Member since {formatJoined(student.createdAt)}
               </Text>
+              {student.suspendedAt ? (
+                <Text className="mt-2 text-sm text-rose-700">
+                  Suspended
+                  {student.suspendedReason
+                    ? `: ${student.suspendedReason}`
+                    : ""}
+                </Text>
+              ) : null}
+              {commentingRestricted ? (
+                <Text className="mt-1 text-sm text-amber-700">
+                  Commenting restricted until{" "}
+                  {new Date(
+                    student.commentingRestrictedUntil!,
+                  ).toLocaleString("en-GB")}
+                </Text>
+              ) : null}
             </View>
           </View>
         </View>
+
+        {student.role !== "admin" ? (
+          <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
+            <Text className="font-retro-bold text-base text-dono-text">
+              Account moderation
+            </Text>
+            <Text className="mt-1 text-sm text-dono-muted">
+              Suspension blocks verified actions; commenting restriction is
+              time-limited.
+            </Text>
+            {moderationError ? (
+              <Text className="mt-3 text-sm text-rose-700">
+                {moderationError}
+              </Text>
+            ) : null}
+            <TextInput
+              value={suspendReason}
+              onChangeText={setSuspendReason}
+              placeholder="Optional reason"
+              className="mt-4 rounded-xl border border-dono-border px-3 py-2 text-sm text-dono-text"
+              placeholderTextColor="#9ca3af"
+            />
+            <View className="mt-4 flex-row flex-wrap gap-2">
+              {student.suspendedAt ? (
+                <Pressable
+                  onPress={() =>
+                    void runModeration("unsuspend", () =>
+                      unsuspendAccount({ userId: targetUserId }),
+                    )
+                  }
+                  disabled={moderationBusy !== null}
+                  className="rounded-full border border-dono-border px-4 py-2"
+                >
+                  <Text className="font-retro-bold text-sm text-dono-text">
+                    {moderationBusy === "unsuspend"
+                      ? "Working…"
+                      : "Unsuspend"}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() =>
+                    void runModeration("suspend", () =>
+                      suspendAccount({
+                        userId: targetUserId,
+                        reason: suspendReason.trim() || undefined,
+                      }),
+                    )
+                  }
+                  disabled={moderationBusy !== null}
+                  className="rounded-full border border-red-300 px-4 py-2"
+                >
+                  <Text className="font-retro-bold text-sm text-red-600">
+                    {moderationBusy === "suspend" ? "Working…" : "Suspend"}
+                  </Text>
+                </Pressable>
+              )}
+              {commentingRestricted ? (
+                <Pressable
+                  onPress={() =>
+                    void runModeration("clear-comment", () =>
+                      clearCommentingRestriction({ userId: targetUserId }),
+                    )
+                  }
+                  disabled={moderationBusy !== null}
+                  className="rounded-full border border-dono-border px-4 py-2"
+                >
+                  <Text className="font-retro-bold text-sm text-dono-text">
+                    {moderationBusy === "clear-comment"
+                      ? "Working…"
+                      : "Clear comment restriction"}
+                  </Text>
+                </Pressable>
+              ) : (
+                <Pressable
+                  onPress={() =>
+                    void runModeration("restrict-comment", () =>
+                      restrictCommenting({
+                        userId: targetUserId,
+                        until: Date.now() + 7 * 24 * 60 * 60 * 1000,
+                        reason: suspendReason.trim() || undefined,
+                      }),
+                    )
+                  }
+                  disabled={moderationBusy !== null}
+                  className="rounded-full border border-dono-border px-4 py-2"
+                >
+                  <Text className="font-retro-bold text-sm text-dono-text">
+                    {moderationBusy === "restrict-comment"
+                      ? "Working…"
+                      : "Restrict commenting (7 days)"}
+                  </Text>
+                </Pressable>
+              )}
+            </View>
+          </View>
+        ) : null}
 
         <View className="mt-8">
           <Text className="font-retro-bold text-base text-dono-text">

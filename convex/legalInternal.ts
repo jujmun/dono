@@ -2,6 +2,8 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
 import { assertAdultOrThrow } from "./lib/ageGate";
+import { assertNotSuspended } from "./lib/authz";
+import { assertPlatformFlagOff } from "./platformSettings";
 
 /** Gates for donate flow callable from Stripe actions. */
 export const assertDonateGates = internalMutation({
@@ -11,6 +13,11 @@ export const assertDonateGates = internalMutation({
     ageAttested: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await assertPlatformFlagOff(
+      ctx,
+      "disableDonations",
+      "Donations are temporarily disabled.",
+    );
     if (!args.ageAttested) {
       throw new ConvexError({
         code: "AGE_RESTRICTED",
@@ -33,6 +40,7 @@ export const assertDonateGates = internalMutation({
         .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
         .unique();
+      assertNotSuspended(profile);
       assertAdultOrThrow(
         profile?.dateOfBirth,
         "You must confirm you are at least 18 years old to donate. Add your date of birth in your account profile first.",

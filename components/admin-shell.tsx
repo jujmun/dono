@@ -45,6 +45,11 @@ const adminNavItems = [
     label: "Reports",
     match: (p: string) => p.startsWith("/admin/reports"),
   },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    match: (p: string) => p.startsWith("/admin/settings"),
+  },
 ] as const;
 
 function AdminSitehead() {
