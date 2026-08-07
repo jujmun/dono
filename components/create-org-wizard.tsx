@@ -30,7 +30,12 @@ import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { DonorCreateGate } from "@/components/donor-create-gate";
 import { isAlumni } from "@/lib/auth/user-type";
-import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
+import {
+  SocietyAcceptanceCheckbox,
+  SocietyDeclarationCheckbox,
+} from "@/components/legal-acceptance-checkbox";
+import { legalHref } from "@/lib/legal/documents";
+import { wordingRecord } from "@/lib/legal/wordings";
 import {
   DobSelect,
   RETRO_SELECT_TEXT_CLASS,
@@ -181,7 +186,14 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
   const [connectLoading, setConnectLoading] = useState(false);
   const [docsPopupVisible, setDocsPopupVisible] = useState(false);
   const [syncingMaterials, setSyncingMaterials] = useState(false);
-  const [legalAccepted, setLegalAccepted] = useState(false);
+  const [socAccept, setSocAccept] = useState(false);
+  const [socAuth, setSocAuth] = useState(false);
+  const [socApprove, setSocApprove] = useState(false);
+  const [socRecourse, setSocRecourse] = useState(false);
+  const [socRefund, setSocRefund] = useState(false);
+  const [socOwner, setSocOwner] = useState(false);
+  const allSocietyLegalAccepted =
+    socAccept && socAuth && socApprove && socRecourse && socRefund && socOwner;
   const [dobInput, setDobInput] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
   const [dobSaving, setDobSaving] = useState(false);
@@ -364,11 +376,22 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
   /** Creates the org record (once) so Stripe Identity has a record to attach to. */
   const ensureSocietyCreated = async (): Promise<string> => {
     if (societySlug) return societySlug;
-    if (!legalAccepted) {
+    if (!allSocietyLegalAccepted) {
       throw new Error(`Please accept the ${entityLabel} terms to continue.`);
     }
 
-    await acceptDocuments({ context: "create_society" });
+    await acceptDocuments({
+      context: "create_society",
+      role: "responsible_representative",
+      wordings: [
+        wordingRecord("W-SOC-ACCEPT-1", socAccept),
+        wordingRecord("W-SOC-AUTH-1", socAuth),
+        wordingRecord("W-SOC-APPROVE-1", socApprove),
+        wordingRecord("W-SOC-RECOURSE-1", socRecourse),
+        wordingRecord("W-SOC-REFUND-1", socRefund),
+        wordingRecord("W-SOC-OWNER-1", socOwner),
+      ],
+    });
 
     const coverImageStorageId = coverImage
       ? await uploadPickedFile(coverImage)
@@ -428,7 +451,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
       setError("Please confirm your date of birth before verifying your identity.");
       return;
     }
-    if (!legalAccepted) {
+    if (!allSocietyLegalAccepted) {
       setError(`Please accept the ${entityLabel} terms before verifying your identity.`);
       return;
     }
@@ -587,7 +610,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
       case 2:
         // DOB + legal + Stripe Identity verified.
         return (
-          legalAccepted &&
+          allSocietyLegalAccepted &&
           manualFieldsValid &&
           hasDateOfBirth &&
           stripeVerified
@@ -1000,11 +1023,47 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                 </View>
               ) : null}
 
-              <LegalAcceptanceCheckbox
-                context="create_society"
-                accepted={legalAccepted}
-                onAcceptedChange={setLegalAccepted}
-              />
+              <View className="gap-3 rounded-lg border-2 border-retro-ink/20 bg-retro-cream/40 p-3">
+                <Text className="font-retro-mono text-xs text-retro-ink/70">
+                  Dono performs limited checks — read our{" "}
+                  <Link href={legalHref("verification")} asChild>
+                    <Text className="text-dono-primary underline">
+                      Verification Notice
+                    </Text>
+                  </Link>{" "}
+                  to see what we do and don&apos;t verify before you continue.
+                </Text>
+                <SocietyAcceptanceCheckbox
+                  accepted={socAccept}
+                  onAcceptedChange={setSocAccept}
+                />
+                <SocietyDeclarationCheckbox
+                  wordingId="W-SOC-AUTH-1"
+                  accepted={socAuth}
+                  onAcceptedChange={setSocAuth}
+                />
+                <SocietyDeclarationCheckbox
+                  wordingId="W-SOC-APPROVE-1"
+                  accepted={socApprove}
+                  onAcceptedChange={setSocApprove}
+                />
+                <SocietyDeclarationCheckbox
+                  wordingId="W-SOC-RECOURSE-1"
+                  accepted={socRecourse}
+                  onAcceptedChange={setSocRecourse}
+                  prominent
+                />
+                <SocietyDeclarationCheckbox
+                  wordingId="W-SOC-REFUND-1"
+                  accepted={socRefund}
+                  onAcceptedChange={setSocRefund}
+                />
+                <SocietyDeclarationCheckbox
+                  wordingId="W-SOC-OWNER-1"
+                  accepted={socOwner}
+                  onAcceptedChange={setSocOwner}
+                />
+              </View>
 
               {renderVerificationStatus()}
 
@@ -1015,7 +1074,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   verifying ||
                   stripeVerified ||
                   stripeProcessing ||
-                  !legalAccepted ||
+                  !allSocietyLegalAccepted ||
                   !hasDateOfBirth
                 }
                 className={`${inkActionClass} self-start ${
@@ -1023,7 +1082,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   verifying ||
                   stripeVerified ||
                   stripeProcessing ||
-                  !legalAccepted ||
+                  !allSocietyLegalAccepted ||
                   !hasDateOfBirth
                     ? "opacity-50"
                     : ""
@@ -1044,9 +1103,9 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                   Confirm your date of birth above before starting identity
                   verification.
                 </Text>
-              ) : !legalAccepted ? (
+              ) : !allSocietyLegalAccepted ? (
                 <Text className="font-retro-mono text-xs text-retro-ink/60">
-                  Accept the terms above before starting identity verification.
+                  Complete all declarations above before starting identity verification.
                 </Text>
               ) : !manualFieldsValid ? (
                 <Text className="font-retro-mono text-xs text-retro-ink/60">

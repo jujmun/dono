@@ -13,6 +13,8 @@ import {
   validateDonationAmount,
 } from "./lib/donationAmounts";
 import { calculateDonationFeeBreakdown } from "./lib/platformFee";
+import { documentVersionBindings } from "./lib/legalAcceptance";
+import { requiredAcceptDocsForContext } from "./lib/legalDocuments";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -177,13 +179,25 @@ export const createPaymentIntent = action({
     coverFees: v.optional(v.boolean()),
     ageAttested: v.optional(v.boolean()),
     guestKey: v.optional(v.string()),
+    legalAcceptanceIds: v.optional(v.array(v.id("legalAcceptances"))),
+    recipientPanel: v.optional(v.any()),
+    acceptanceWordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
+    marketingOptIn: v.optional(v.boolean()),
+    showSupportPublicly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const amount = Number(args.amount);
     const donorEmail = normalizeDonorEmail(args.donorEmail);
     const anonymous = args.anonymous === true;
-    // Processing (estimated Stripe) is always added on top; no Dono platform fee.
-    const coverFees = true;
+    const coverFees = args.coverFees === true;
     const { campaign, amount: validAmount } = await validateCampaignAndAmount(
       ctx,
       args.campaignSlug,
@@ -200,6 +214,13 @@ export const createPaymentIntent = action({
       });
     }
     const ageAttested = args.ageAttested === true;
+
+    if (!args.recipientPanel) {
+      throw new ConvexError({
+        code: "RECIPIENT_PANEL_REQUIRED",
+        message: "Donation recipient details are incomplete.",
+      });
+    }
 
     await ctx.runMutation(internal.legalInternal.assertDonateGates, {
       userId: userId ?? undefined,
@@ -223,9 +244,14 @@ export const createPaymentIntent = action({
       receiptEmail = receiptEmail || userContext.email || undefined;
     }
 
-    const feeBreakdown = calculateDonationFeeBreakdown(validAmount);
+    const feeBreakdown = calculateDonationFeeBreakdown(validAmount, coverFees);
     const grossAmountMinor = feeBreakdown.totalChargedMinor;
     const applicationFeeAmountMinor = feeBreakdown.applicationFeeAmountMinor;
+
+    const donateContext = userId ? "donate" : "donate_guest";
+    const legalDocumentVersions = documentVersionBindings(
+      requiredAcceptDocsForContext(donateContext),
+    );
 
     const donationId = await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
       userId: userId ?? undefined,
@@ -239,16 +265,28 @@ export const createPaymentIntent = action({
       coverFees,
       intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
       estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+      platformFeeMinor: feeBreakdown.platformFeeMinor,
+      amountToCampaignMinor: feeBreakdown.amountToCampaignMinor,
       ageAttested,
       ageAttestedAt: Date.now(),
       legalAcceptedAt: Date.now(),
+      guestKey: args.guestKey,
+      legalAcceptanceIds: args.legalAcceptanceIds,
+      legalDocumentVersions,
+      recipientPanel: args.recipientPanel,
+      feeBreakdownSnapshot: feeBreakdown,
+      acceptanceWordings: args.acceptanceWordings,
+      marketingOptIn: args.marketingOptIn === true,
+      showSupportPublicly: args.showSupportPublicly === true,
     });
 
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: grossAmountMinor,
         currency: "gbp",
-        // No Dono platform fee — omit application_fee_amount entirely.
+        ...(applicationFeeAmountMinor > 0
+          ? { application_fee_amount: applicationFeeAmountMinor }
+          : {}),
         description: `Dono: ${campaign.title}`.slice(0, 1000),
         ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         automatic_payment_methods: { enabled: true },
@@ -257,7 +295,7 @@ export const createPaymentIntent = action({
           ...(userId ? { userId } : {}),
           ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
           ...(anonymous ? { anonymous: "true" } : {}),
-          coverFees: "true",
+          coverFees: coverFees ? "true" : "false",
           intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
@@ -269,7 +307,7 @@ export const createPaymentIntent = action({
       },
       {
         stripeAccount: campaign.stripeAccountId,
-        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:cover:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
+        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:cover:${coverFees}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
       },
     );
 
@@ -284,6 +322,13 @@ export const createPaymentIntent = action({
       donationId,
       stripePaymentIntentId: paymentIntent.id,
     });
+
+    if (args.legalAcceptanceIds && args.legalAcceptanceIds.length > 0) {
+      await ctx.runMutation(internal.legalInternal.linkAcceptancesToDonation, {
+        acceptanceIds: args.legalAcceptanceIds,
+        donationId,
+      });
+    }
 
     await resetStripeCreateQuota(ctx, quotaKey);
 

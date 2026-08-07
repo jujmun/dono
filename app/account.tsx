@@ -74,6 +74,49 @@ function SectionCard({
   );
 }
 
+function AcceptancesCard() {
+  const acceptances = useQuery(api.legal.listMyAcceptances, {});
+  return (
+    <SectionCard
+      title="Legal acceptances"
+      subtitle="Documents you have accepted and when (CH-17)."
+    >
+      {acceptances === undefined ? (
+        <View className="mt-4 items-center py-6">
+          <ActivityIndicator color="#17211B" />
+        </View>
+      ) : acceptances.length === 0 ? (
+        <Text className="mt-4 text-sm text-dono-muted">
+          No acceptance records yet.
+        </Text>
+      ) : (
+        <View className="mt-4 gap-3">
+          {acceptances.map((row) => (
+            <View
+              key={row.id}
+              className="rounded-xl border border-dono-border bg-dono-bg px-4 py-3"
+            >
+              <Link href={`/legal/${row.documentId}/${row.version}` as `/legal/${string}`} asChild>
+                <Pressable>
+                  <Text className="font-retro-bold text-sm text-dono-primary underline">
+                    {row.documentId.replace(/_/g, " ")}
+                  </Text>
+                </Pressable>
+              </Link>
+              <Text className="mt-1 text-xs text-dono-muted">
+                Version {row.version}
+                {row.event ? ` · Event ${row.event}` : ""}
+                {" · "}
+                {new Date(row.acceptedAt).toLocaleString("en-GB")}
+              </Text>
+            </View>
+          ))}
+        </View>
+      )}
+    </SectionCard>
+  );
+}
+
 export default function AccountPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const { signOut } = useAuthActions();
@@ -470,6 +513,8 @@ export default function AccountPage() {
             </Text>
           </Pressable>
         </View>
+
+        <AcceptancesCard />
 
         <SectionCard
           title="Society subscriptions"

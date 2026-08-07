@@ -64,8 +64,46 @@ export const sendDonationReceipt = internalAction({
     campaignTitle: v.string(),
     amount: v.number(),
     currency: v.string(),
+    donationId: v.optional(v.string()),
+    connectedAccountHolder: v.optional(v.string()),
+    feeLines: v.optional(
+      v.array(v.object({ label: v.string(), amount: v.string() })),
+    ),
+    documentLinks: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          version: v.string(),
+          hash: v.string(),
+          url: v.string(),
+        }),
+      ),
+    ),
+    choices: v.optional(v.array(v.string())),
+    siteOrigin: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
+    const origin = args.siteOrigin ?? "https://joindono.com";
+    const feeBlock =
+      args.feeLines && args.feeLines.length > 0
+        ? ["", "Fee breakdown:", ...args.feeLines.map((l) => `• ${l.label}: ${l.amount}`)]
+        : [];
+    const docBlock =
+      args.documentLinks && args.documentLinks.length > 0
+        ? [
+            "",
+            "Documents you accepted (permanent archive links):",
+            ...args.documentLinks.map(
+              (d) =>
+                `• ${d.title} v${d.version} (${d.hash.slice(0, 12)}…) — ${d.url.startsWith("http") ? d.url : `${origin}${d.url}`}`,
+            ),
+          ]
+        : [];
+    const choiceBlock =
+      args.choices && args.choices.length > 0
+        ? ["", "Your choices:", ...args.choices.map((c) => `• ${c}`)]
+        : [];
+
     await sendTransactionalEmail({
       to: args.email,
       subject: `Thank you for supporting ${args.campaignTitle}`,
@@ -74,8 +112,19 @@ export const sendDonationReceipt = internalAction({
         "",
         `Campaign: ${args.campaignTitle}`,
         `Amount: ${args.currency.toUpperCase()} ${args.amount.toFixed(2)}`,
+        ...(args.donationId ? [`Donation reference: ${args.donationId}`] : []),
+        ...(args.connectedAccountHolder
+          ? [`Paid to Connected Account holder: ${args.connectedAccountHolder}`]
+          : []),
+        ...feeBlock,
+        ...docBlock,
+        ...choiceBlock,
         "",
-        "Your support helps students bring their projects to life.",
+        "If something goes wrong with your donation, deadlines set by your card provider and by law run independently of Dono's process. Contacting us does not pause them.",
+        "",
+        "Questions or complaints: joindono.team@gmail.com",
+        "",
+        "This email is a durable copy of your donation confirmation. Contract formation does not depend on email delivery.",
       ].join("\n"),
     });
   },

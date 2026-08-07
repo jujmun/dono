@@ -3,25 +3,28 @@ import {
   calculateApplicationFeeMinor,
   calculateApplicationFeeRefundMinor,
   calculateDonationFeeBreakdown,
-  calculateFeeEnvelopeMinor,
+  calculateDonoFeeMinor,
+  DONO_FEE_FIXED_MINOR,
   estimateStripeFeeMinor,
-  PLATFORM_FEE_FIXED_MINOR,
-  PLATFORM_FEE_RATE,
+  PROD_DONO_FEE_RATE,
 } from "./platformFee";
 
 describe("platformFee", () => {
-  it("has no Dono platform fee", () => {
-    expect(PLATFORM_FEE_RATE).toBe(0);
-    expect(PLATFORM_FEE_FIXED_MINOR).toBe(0);
-    expect(calculateApplicationFeeMinor(10000)).toBe(0);
+  it("uses production Dono fee 5% + 20p by default", () => {
+    expect(PROD_DONO_FEE_RATE).toBe(0.05);
+    expect(DONO_FEE_FIXED_MINOR).toBe(20);
+    // £100 → 5% + 20p = 520
+    expect(calculateDonoFeeMinor(10000, "production")).toBe(520);
+    expect(calculateApplicationFeeMinor(10000, "production")).toBe(520);
   });
 
-  it("uses estimated Stripe fee as the donor pass-through envelope", () => {
-    // £100 → 1.5% + 20p = 170
-    expect(calculateFeeEnvelopeMinor(10000)).toBe(170);
+  it("uses demo Dono fee 2% + 20p", () => {
+    // £100 → 2% + 20p = 220
+    expect(calculateDonoFeeMinor(10000, "demo")).toBe(220);
+  });
+
+  it("estimates Stripe fee for transparency only", () => {
     expect(estimateStripeFeeMinor(10000)).toBe(170);
-    // £1 → 1.5% + 20p = 22
-    expect(calculateFeeEnvelopeMinor(100)).toBe(22);
   });
 
   it("refunds Dono application fee proportionally to refunded gross", () => {
@@ -32,37 +35,18 @@ describe("platformFee", () => {
         refundedGrossMinor: 5000,
       }),
     ).toBe(175);
-    expect(
-      calculateApplicationFeeRefundMinor({
-        originalApplicationFeeMinor: 350,
-        originalGrossMinor: 10000,
-        refundedGrossMinor: 10000,
-      }),
-    ).toBe(350);
-    expect(
-      calculateApplicationFeeRefundMinor({
-        originalApplicationFeeMinor: 0,
-        originalGrossMinor: 10000,
-        refundedGrossMinor: 5000,
-      }),
-    ).toBe(0);
-    expect(
-      calculateApplicationFeeRefundMinor({
-        originalApplicationFeeMinor: 350,
-        originalGrossMinor: 0,
-        refundedGrossMinor: 100,
-      }),
-    ).toBe(0);
   });
 
-  it("always adds estimated Stripe fee on top so intended reaches the campaign", () => {
-    const breakdown = calculateDonationFeeBreakdown(100);
-    expect(breakdown.estimatedStripeFeeMinor).toBe(170);
-    expect(breakdown.feeEnvelopeMinor).toBe(170);
-    expect(breakdown.platformFeeMinor).toBe(0);
-    expect(breakdown.applicationFeeAmountMinor).toBe(0);
-    expect(breakdown.amountToCampaignMinor).toBe(10000);
-    expect(breakdown.totalChargedMinor).toBe(10170); // £100 + £1.70
-    expect(breakdown.coverFees).toBe(true);
+  it("does not add Stripe cost to donor total; coverFees optional", () => {
+    const uncovered = calculateDonationFeeBreakdown(100, false, "production");
+    expect(uncovered.platformFeeMinor).toBe(520);
+    expect(uncovered.totalChargedMinor).toBe(10000);
+    expect(uncovered.coverFees).toBe(false);
+    expect(uncovered.amountToCampaignMinor).toBe(10000 - 520 - 170);
+
+    const covered = calculateDonationFeeBreakdown(100, true, "production");
+    expect(covered.totalChargedMinor).toBe(10000 + 520);
+    expect(covered.amountToCampaignMinor).toBe(10000 - 170);
+    expect(covered.coverFees).toBe(true);
   });
 });

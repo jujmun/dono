@@ -13,12 +13,25 @@ import {
   recordLegalAcceptancesForContext,
 } from "./lib/legalAcceptance";
 
+function listDocs() {
+  return (LEGAL_DOCUMENT_IDS as readonly LegalDocumentId[]).map((id) => {
+    const version = LEGAL_DOCUMENT_VERSIONS[id];
+    return { id, version };
+  });
+}
+
 const contextValidator = v.union(
   v.literal("signup"),
-  v.literal("create_campaign"),
   v.literal("create_society"),
   v.literal("donate"),
+  v.literal("donate_guest"),
 );
+
+const wordingValidator = v.object({
+  id: v.string(),
+  text: v.string(),
+  accepted: v.boolean(),
+});
 
 export const getRequiredDocuments = query({
   args: { context: contextValidator },
@@ -50,27 +63,57 @@ export const acceptDocuments = mutation({
   args: {
     context: contextValidator,
     guestKey: v.optional(v.string()),
+    role: v.optional(v.string()),
+    campaignId: v.optional(v.id("campaigns")),
+    wordings: v.optional(v.array(wordingValidator)),
+    recipientPanel: v.optional(v.any()),
+    feeBreakdown: v.optional(v.any()),
   },
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId && !args.guestKey) {
       throw new Error("Sign in or provide a guest key to accept legal documents.");
     }
-    await recordLegalAcceptancesForContext(ctx, {
+    const ids = await recordLegalAcceptancesForContext(ctx, {
       userId: userId ?? undefined,
       guestKey: args.guestKey,
       context: args.context as LegalAcceptanceContext,
+      role: args.role,
+      campaignId: args.campaignId,
+      wordings: args.wordings,
+      recipientPanel: args.recipientPanel,
+      feeBreakdown: args.feeBreakdown,
+      mechanism: "active_tick",
     });
-    return { ok: true as const };
+    return { ok: true as const, acceptanceIds: ids };
   },
 });
 
 export const listDocumentVersions = query({
   args: {},
-  handler: async () => {
-    return (LEGAL_DOCUMENT_IDS as readonly LegalDocumentId[]).map((id) => ({
-      id,
-      version: LEGAL_DOCUMENT_VERSIONS[id],
-    }));
+  handler: async () => listDocs(),
+});
+
+export const listMyAcceptances = query({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) return [];
+    const rows = await ctx.db
+      .query("legalAcceptances")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    return rows
+      .map((row) => ({
+        id: row._id,
+        documentId: row.documentId,
+        version: row.version,
+        contentHash: row.contentHash ?? null,
+        event: row.event ?? null,
+        context: row.context,
+        acceptedAt: row.acceptedAt,
+        role: row.role ?? null,
+      }))
+      .sort((a, b) => b.acceptedAt - a.acceptedAt);
   },
 });

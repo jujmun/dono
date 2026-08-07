@@ -33,7 +33,7 @@ export const assertDonateGates = internalMutation({
     await assertLegalAcceptedForContext(ctx, {
       userId: args.userId,
       guestKey: args.guestKey,
-      context: "donate",
+      context: args.userId ? "donate" : "donate_guest",
     });
     if (args.userId) {
       const profile = await ctx.db
@@ -45,6 +45,20 @@ export const assertDonateGates = internalMutation({
         profile?.dateOfBirth,
         "You must confirm you are at least 18 years old to donate. Add your date of birth in your account profile first.",
       );
+    }
+    return null;
+  },
+});
+
+/** Patch acceptance rows with the donation id after the donation exists (CH-14). */
+export const linkAcceptancesToDonation = internalMutation({
+  args: {
+    acceptanceIds: v.array(v.id("legalAcceptances")),
+    donationId: v.id("donations"),
+  },
+  handler: async (ctx, args) => {
+    for (const id of args.acceptanceIds) {
+      await ctx.db.patch(id, { donationId: args.donationId });
     }
     return null;
   },

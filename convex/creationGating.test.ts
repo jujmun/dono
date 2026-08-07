@@ -273,7 +273,7 @@ describe("creation mutations without student card", () => {
     await t.run(async (ctx) => {
       await recordLegalAcceptancesForContext(ctx, {
         userId: studentId,
-        context: "create_campaign",
+        context: "create_society",
       });
     });
     const asStudent = t.withIdentity({ subject: studentId });

@@ -46,6 +46,11 @@ export function RetroBrowserFooter() {
             <Text className="text-[12.5px] text-[#4a453c]">Donor Terms</Text>
           </Pressable>
         </Link>
+        <Link href="/legal/refund_dispute" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Refunds</Text>
+          </Pressable>
+        </Link>
         <Link href="/legal/community_guidelines" asChild>
           <Pressable className="mb-1.5">
             <Text className="text-[12.5px] text-[#4a453c]">Guidelines</Text>
@@ -54,6 +59,11 @@ export function RetroBrowserFooter() {
         <Link href="/legal/cookie" asChild>
           <Pressable className="mb-1.5">
             <Text className="text-[12.5px] text-[#4a453c]">Cookie Policy</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/complaints" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Complaints</Text>
           </Pressable>
         </Link>
         <Link href="/settings/privacy" asChild>

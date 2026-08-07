@@ -20,7 +20,8 @@ import {
   RetroPanel,
   StoryWithCostBreakdown,
 } from "@/components/retro";
-import { AppShell } from "@/components/app-shell";
+import { LEGAL_DOCUMENT_TITLES, LEGAL_SUITE_VERSION, legalHref } from "@/lib/legal/documents";
+import type { LegalDocumentId } from "@/lib/legal/documents";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
 import { ReportContentModal } from "@/components/report-content-modal";
@@ -35,6 +36,7 @@ import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
 import { CampaignUpdateDisplay } from "@/components/campaign-update-display";
 import { computeMatchCredit } from "@/lib/donation-psychology";
 import { cn } from "@/lib/utils";
+import { AppShell } from "@/components/app-shell";
 
 type DonationThankYouState = {
   amount?: number;
@@ -78,6 +80,9 @@ export default function CampaignDetailPage() {
   const [isAnonymous, setIsAnonymous] = useState(false);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [ageAttested, setAgeAttested] = useState(false);
+  const [coverFees, setCoverFees] = useState(false);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [showSupportPublicly, setShowSupportPublicly] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
@@ -95,6 +100,10 @@ export default function CampaignDetailPage() {
   const donationReadiness = useQuery(
     api.stripeConnectInternal.getCampaignDonationReadiness,
     id ? { campaignSlug: id } : "skip",
+  );
+  const donateDisclosures = useQuery(
+    api.campaigns.getDonateDisclosures,
+    id ? { slug: id } : "skip",
   );
   const stripePlatform = useQuery(api.stripePlatform.isConfigured, {});
   const commenterMembership = useQuery(
@@ -560,6 +569,15 @@ export default function CampaignDetailPage() {
         onLegalAcceptedChange={setLegalAccepted}
         ageAttested={ageAttested}
         onAgeAttestedChange={setAgeAttested}
+        coverFees={coverFees}
+        onCoverFeesChange={setCoverFees}
+        marketingOptIn={marketingOptIn}
+        onMarketingOptInChange={setMarketingOptIn}
+        showSupportPublicly={showSupportPublicly}
+        onShowSupportPubliclyChange={setShowSupportPublicly}
+        recipientPanel={donateDisclosures?.recipientPanel ?? null}
+        panelComplete={donateDisclosures?.panelComplete === true}
+        mayExceedTarget={donateDisclosures?.mayExceedTarget !== false}
         onClose={() => setDonateSheetOpen(false)}
         onSuccess={(amount, options) => {
           const matchedAmount = computeMatchCredit(amount, activeMatch ?? null);
@@ -580,6 +598,18 @@ export default function CampaignDetailPage() {
         campaignSlug={campaign.id}
         pendingConfirmation={thankYou?.pendingConfirmation}
         paymentIntentId={thankYou?.paymentIntentId}
+        legalVersions={(
+          [
+            "donor_terms",
+            "refund_dispute",
+            "terms_of_service",
+            "privacy",
+          ] as LegalDocumentId[]
+        ).map((id) => ({
+          title: LEGAL_DOCUMENT_TITLES[id],
+          version: LEGAL_SUITE_VERSION,
+          href: legalHref(id),
+        }))}
         onClose={() => setThankYou(null)}
       />
 

@@ -50,7 +50,6 @@ import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { parseCampaignVideoUrl } from "@/lib/video-url";
 import { CAMPAIGN_TEMPLATES, DEFAULT_CAMPAIGN_TEMPLATE_ID } from "@/lib/campaign-templates";
 import { CampaignTemplateWireframe } from "@/components/ui/campaign-template-wireframe";
-import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { DateInput } from "@/components/date-input";
 import {
   DobSelect,
@@ -190,7 +189,6 @@ export default function CreateCampaignPage() {
   const updateProfileDateOfBirth = useMutation(api.users.updateProfile);
   const updateCampaign = useMutation(api.campaignCreator.update);
   const proposeCampaignEdit = useMutation(api.campaignEditRequests.propose);
-  const acceptDocuments = useMutation(api.legal.acceptDocuments);
   const resubmitCampaign = useMutation(api.campaignCreator.resubmit);
   const submitForReview = useMutation(api.campaignCreator.submitForReview);
   const generateImageUploadUrl = useMutation(api.campaignCreator.generateImageUploadUrl);
@@ -237,7 +235,6 @@ export default function CreateCampaignPage() {
   const [ownershipStatement, setOwnershipStatement] = useState("");
   const [promotionalUseOptIn, setPromotionalUseOptInLocal] = useState(false);
   const [promotionalUseSaving, setPromotionalUseSaving] = useState(false);
-  const [legalAccepted, setLegalAccepted] = useState(false);
   const [dobInput, setDobInput] = useState("");
   const [dobError, setDobError] = useState<string | null>(null);
   const [dobSaving, setDobSaving] = useState(false);
@@ -493,10 +490,6 @@ export default function CreateCampaignPage() {
   };
 
   const ensureCampaignCreated = async (): Promise<string> => {
-    if (!legalAccepted) {
-      throw new Error("Please accept the campaign terms to continue.");
-    }
-    await acceptDocuments({ context: "create_campaign" });
     if (campaignSlug) return campaignSlug;
 
     const result = await createCampaign({
@@ -519,10 +512,6 @@ export default function CreateCampaignPage() {
     setError(null);
     if (!hasDateOfBirth) {
       setError("Please confirm your date of birth before verifying your identity.");
-      return;
-    }
-    if (!legalAccepted) {
-      setError("Please accept the campaign terms before verifying your identity.");
       return;
     }
     setVerifying(true);
@@ -608,7 +597,7 @@ export default function CreateCampaignPage() {
         // Live post-approval edits skip Identity — already verified at launch.
         if (requiresApproval) return true;
         // DOB + legal + Stripe Identity verified.
-        return stripeVerified && legalAccepted && hasDateOfBirth;
+        return stripeVerified && hasDateOfBirth;
       default:
         return true;
     }
@@ -1430,15 +1419,7 @@ export default function CreateCampaignPage() {
                 </View>
               </View>
 
-              {isEditMode && stripeVerified ? (
-                <View className="rounded-xl border border-retro-ink bg-white p-4">
-                  <LegalAcceptanceCheckbox
-                    context="create_campaign"
-                    accepted={legalAccepted}
-                    onAcceptedChange={setLegalAccepted}
-                  />
-                </View>
-              ) : (
+              {!requiresApproval ? (
                 <View className="rounded-xl border border-retro-ink bg-white p-4">
                   <View className="mb-1.5 flex-row items-center gap-2">
                     <ShieldCheck size={16} color="#17211B" />
@@ -1449,6 +1430,9 @@ export default function CreateCampaignPage() {
                   <Text className="mb-3 text-xs text-[#5c574f]">
                     You'll be asked for a quick photo of your ID and a selfie so we
                     can confirm it's really you — it only takes a minute.
+                  </Text>
+                  <Text className="mb-3 text-xs text-[#5c574f]">
+                    Society Campaign Terms were accepted at society onboarding.
                   </Text>
 
                   {!dobLoading && !hasDateOfBirth ? (
@@ -1487,13 +1471,6 @@ export default function CreateCampaignPage() {
                     </View>
                   ) : null}
 
-                  <LegalAcceptanceCheckbox
-                    context="create_campaign"
-                    accepted={legalAccepted}
-                    onAcceptedChange={setLegalAccepted}
-                    className="mb-3"
-                  />
-
                   {renderVerificationStatus()}
 
                   <Pressable
@@ -1502,14 +1479,12 @@ export default function CreateCampaignPage() {
                       verifying ||
                       stripeVerified ||
                       stripeProcessing ||
-                      !legalAccepted ||
                       !hasDateOfBirth
                     }
                     className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
                       verifying ||
                       stripeVerified ||
                       stripeProcessing ||
-                      !legalAccepted ||
                       !hasDateOfBirth
                         ? "opacity-50"
                         : ""
@@ -1530,10 +1505,6 @@ export default function CreateCampaignPage() {
                       Confirm your date of birth above before starting identity
                       verification.
                     </Text>
-                  ) : !legalAccepted ? (
-                    <Text className="mt-2 text-xs text-[#5c574f]">
-                      Accept the terms above before starting identity verification.
-                    </Text>
                   ) : stripeFailed ? (
                     <Text className="mt-2 text-xs text-rose-700">
                       That didn't go through — please try again.
@@ -1544,6 +1515,10 @@ export default function CreateCampaignPage() {
                     </Text>
                   ) : null}
                 </View>
+              ) : (
+                <Text className="text-xs text-[#5c574f]">
+                  Society Campaign Terms were accepted at society onboarding.
+                </Text>
               )}
             </View>
           )}
@@ -1622,25 +1597,12 @@ export default function CreateCampaignPage() {
                     setStep(4);
                     return;
                   }
-                  if (!legalAccepted) {
-                    setError("Please accept the campaign terms to continue.");
-                    return;
-                  }
                   setError(null);
-                  setSubmitting(true);
-                  void acceptDocuments({ context: "create_campaign" })
-                    .then(() => setStep(4))
-                    .catch((err: Error) => {
-                      setError(
-                        getFriendlyAuthError(err) ||
-                          "Could not record legal acceptance.",
-                      );
-                    })
-                    .finally(() => setSubmitting(false));
+                  setStep(4);
                 }}
-                disabled={!canProceed() || submitting}
+                disabled={!canProceed()}
                 className={`${requiresApproval || stripeVerified ? primaryBtnClass : accentBtnClass} ${
-                  !canProceed() || submitting ? "opacity-50" : ""
+                  !canProceed() ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
@@ -1788,7 +1750,6 @@ export default function CreateCampaignPage() {
                       setExpectedExpenditureDate("");
                       setPlannedUpdateSchedule("");
                       setOwnershipStatement("");
-                      setLegalAccepted(false);
                       setFundLines(initialFundLines());
                       setCampaignSlug(null);
                       setError(null);

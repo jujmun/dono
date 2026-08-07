@@ -15,7 +15,8 @@
     "dev:backend": "convex dev",
     "lint": "eslint",
     "seed": "convex run seed:seed",
-    "test": "vitest run"
+    "test": "vitest run",
+    "legal:render": "node scripts/render-legal-live-versions.mjs"
   },
   "dependencies": {
     "@auth/core": "^0.41.1",
