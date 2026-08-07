@@ -67,14 +67,12 @@ export default function HomePage() {
     isAuthenticated ? { limit: 3 } : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const activeMatches = useQuery(api.campaignMatches.listActive) ?? [];
+  // CR-02a: match windows removed; listActive always returns [].
+  void activeMatches;
 
   const matchBySlug = useMemo(() => {
-    const map = new Map<string, { multiplier: number }>();
-    for (const match of activeMatches) {
-      map.set(match.campaignSlug, { multiplier: match.multiplier });
-    }
-    return map;
-  }, [activeMatches]);
+    return new Map<string, { multiplier: number }>();
+  }, []);
 
   const profileCollege = profile?.college?.trim().toLowerCase() ?? "";
   const getBadges = (campaign: Campaign) => {

@@ -1,6 +1,8 @@
 /**
- * Donor cost model: estimated Stripe processing only (UK card 1.5% + 20p).
- * Dono takes no platform fee — Connect application_fee is always 0.
+ * Pilot fee model (temporary override of legal-launch PF-00/01):
+ * estimated Stripe processing only (UK card 1.5% + 20p). Dono application fee
+ * is 0 — founders confirmed for pilot that Dono takes no cut. Production
+ * schedule in TRUTH.md (5%+20p / demo 2%+20p) remains NOT YET IMPLEMENTED.
  * Processing is always added on top so the intended amount reaches the campaign.
  */
 

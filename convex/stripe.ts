@@ -82,6 +82,9 @@ async function validateCampaignAndAmount(
     title: string;
     communitySlug: string;
     stripeAccountId: string;
+    goal: number;
+    raised: number;
+    remaining: number;
   };
   amount: number;
 }> {
@@ -106,7 +109,24 @@ async function validateCampaignAndAmount(
     { campaignSlug: normalizedSlug },
   );
 
-  return { campaign, amount };
+  // CR-09: Cap donation to remaining need before confirmation.
+  const cappedAmount = Math.min(amount, campaign.remaining);
+  if (cappedAmount <= 0) {
+    throw new ConvexError({
+      code: "CAMPAIGN_FUNDED",
+      message: "This campaign has already reached its funding target.",
+    });
+  }
+  const cappedValidation = validateDonationAmount(cappedAmount);
+  if (!cappedValidation.valid) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message:
+        "Only a remainder below the minimum donation is left on this campaign.",
+    });
+  }
+
+  return { campaign, amount: cappedAmount };
 }
 
 const STRIPE_CREATE_LIMIT = {
@@ -421,33 +441,32 @@ export const confirmOneTimeDonation = action({
       });
     }
 
-    const isFundDonation =
+    // CF-01: refuse to settle any legacy platform-account / fund charge.
+    if (
       paymentIntent.metadata?.donationType === "fund_one_time" ||
-      donation?.fundId != null;
+      donation?.fundId != null
+    ) {
+      throw new ConvexError({
+        code: "FEATURE_REMOVED",
+        message:
+          "Community fund donations are not available. Dono does not settle charges on a platform payment account.",
+      });
+    }
 
     const latestCharge =
       typeof paymentIntent.latest_charge === "string"
         ? paymentIntent.latest_charge
         : paymentIntent.latest_charge?.id;
 
-    let alreadyProcessed = false;
-    if (isFundDonation) {
-      const fundResult: { alreadyProcessed: boolean } = await ctx.runMutation(
-        internal.stripeFunds.markFundDonationSucceeded,
-        { stripePaymentIntentId: args.paymentIntentId },
-      );
-      alreadyProcessed = fundResult.alreadyProcessed;
-    } else {
-      const campaignResult: { alreadyProcessed: boolean } = await ctx.runMutation(
-        internal.stripeInternal.markDonationSucceeded,
-        {
-          stripePaymentIntentId: args.paymentIntentId,
-          stripeChargeId: latestCharge,
-          stripeConnectedAccountId: donation?.stripeConnectedAccountId,
-        },
-      );
-      alreadyProcessed = campaignResult.alreadyProcessed;
-    }
+    const campaignResult: { alreadyProcessed: boolean } = await ctx.runMutation(
+      internal.stripeInternal.markDonationSucceeded,
+      {
+        stripePaymentIntentId: args.paymentIntentId,
+        stripeChargeId: latestCharge,
+        stripeConnectedAccountId: donation?.stripeConnectedAccountId,
+      },
+    );
+    const alreadyProcessed = campaignResult.alreadyProcessed;
 
     return {
       confirmed: true,
@@ -510,128 +529,17 @@ export const createSocietySubscription = action({
     communitySlug: v.string(),
     amount: v.number(),
   },
-  handler: async (
-    ctx,
-    args,
-  ): Promise<{
+  handler: async (): Promise<{
     clientSecret: string;
     subscriptionId: string;
     stripeAccountId: string;
   }> => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "You must be signed in to perform this action.",
-      });
-    }
-
-    const communitySlug = args.communitySlug.trim().toLowerCase();
-    if (!communitySlug) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Society is required.",
-      });
-    }
-
-    const amount = Number(args.amount);
-    const amountValidation = validateDonationAmount(amount);
-    if (!amountValidation.valid) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: amountValidation.message,
-      });
-    }
-
-    await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
-    const userContext = await ctx.runQuery(
-      internal.stripeInternal.getVerifiedUserContext,
-      { userId },
-    );
-    const society: {
-      communitySlug: string;
-      name: string;
-      stripeAccountId: string;
-      activeCampaignCount: number;
-    } = await ctx.runQuery(internal.stripeInternal.resolveSocietyMerchantAccount, {
-      communitySlug,
+    // CR-01a: Society-level recurring removed at the API boundary.
+    throw new ConvexError({
+      code: "FEATURE_REMOVED",
+      message:
+        "Recurring donations are not available. Monthly society subscriptions have been removed for beta.",
     });
-
-    const quotaKey = `stripeSocietySub:${userId}`;
-    await enforceStripeCreateQuota(ctx, quotaKey, userId);
-
-    const stripe = getStripeClient();
-    const connectOpts = { stripeAccount: society.stripeAccountId };
-
-    // Direct charge on the society's connected account (society MoR).
-    // No Dono platform fee — Stripe's processing is deducted by Stripe.
-    const customer = await stripe.customers.create(
-      {
-        email: userContext.email || undefined,
-        name: userContext.name || undefined,
-        metadata: { userId, platformUserId: userId },
-      },
-      connectOpts,
-    );
-
-    const price = await stripe.prices.create(
-      {
-        currency: "gbp",
-        unit_amount: donationAmountToStripeMinorUnits(amount),
-        recurring: { interval: "month" },
-        product_data: {
-          name: `Monthly subscription to ${society.name}`,
-        },
-      },
-      connectOpts,
-    );
-
-    const subscription = await stripe.subscriptions.create(
-      {
-        customer: customer.id,
-        items: [{ price: price.id }],
-        payment_behavior: "default_incomplete",
-        payment_settings: {
-          save_default_payment_method: "on_subscription",
-        },
-        // confirmation_secret needs its own dotted expand path, same as
-        // payment_intent did on older API versions — expanding just
-        // "latest_invoice" is not enough to populate it.
-        expand: ["latest_invoice.confirmation_secret"],
-        metadata: {
-          userId,
-          communitySlug: society.communitySlug,
-          societyName: society.name.slice(0, 500),
-          donationType: "society_recurring",
-          merchantOfRecord: "connected_account",
-        },
-      },
-      connectOpts,
-    );
-
-    const clientSecret = getSubscriptionPaymentIntentClientSecret(subscription);
-    if (!clientSecret) {
-      throw new ConvexError({
-        code: "STRIPE_ERROR",
-        message: "Stripe did not return a subscription payment secret.",
-      });
-    }
-
-    await ctx.runMutation(internal.stripeInternal.createSocietySubscriptionRecord, {
-      userId,
-      communitySlug: society.communitySlug,
-      amount,
-      stripeSubscriptionId: subscription.id,
-      stripePriceId: price.id,
-    });
-
-    await resetStripeCreateQuota(ctx, quotaKey);
-
-    return {
-      clientSecret,
-      subscriptionId: subscription.id,
-      stripeAccountId: society.stripeAccountId,
-    };
   },
 });
 

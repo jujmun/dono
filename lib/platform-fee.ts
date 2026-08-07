@@ -2,13 +2,14 @@
  * Client-side fee breakdown (mirrors convex/lib/platformFee.ts for donate UI).
  * Keep in sync with the Convex module.
  *
- * Donor pays estimated Stripe processing only (1.5% + 20p). No Dono platform fee.
- * Processing is always added on top of the intended gift.
+ * Pilot override: donor pays estimated Stripe processing only (1.5% + 20p).
+ * No Dono platform fee. Legal-launch production/demo schedules (5%+20p / 2%+20p)
+ * remain NOT YET IMPLEMENTED per founder pilot decision.
  */
 
-/** @deprecated No Dono platform fee; kept at 0 for callers that still reference it. */
+/** @deprecated No Dono platform fee during pilot; kept at 0 for callers. */
 export const PLATFORM_FEE_RATE = 0;
-/** @deprecated No Dono platform fee; kept at 0 for callers that still reference it. */
+/** @deprecated No Dono platform fee during pilot; kept at 0 for callers. */
 export const PLATFORM_FEE_FIXED_MINOR = 0;
 export const ESTIMATED_STRIPE_PERCENT = 0.015;
 export const ESTIMATED_STRIPE_FIXED_MINOR = 20;

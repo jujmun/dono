@@ -2,7 +2,6 @@ import { View, Text } from "react-native";
 import { Clock, MapPin } from "lucide-react-native";
 import { CampaignImageGallery } from "@/components/campaign-image-gallery";
 import { CategoryBadge } from "@/components/ui/category-badge";
-import { VerificationList } from "@/components/ui/verification-badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EngagementStats } from "@/components/activity-feed";
 import {
@@ -114,13 +113,6 @@ export function CampaignPreview({
   return (
     <View className="flex-col lg:flex-row lg:items-start lg:gap-8">
       <View className="min-w-0 flex-1">
-        <View className="mb-4">
-          <VerificationList
-            verifications={[{ type: "student", label: "New Campaign" }]}
-            size="md"
-          />
-        </View>
-
         <Text className="mb-3 font-retro-bold text-2xl text-dono-text">{title}</Text>
 
         <View className="mb-4 gap-2">

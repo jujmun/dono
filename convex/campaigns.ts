@@ -592,35 +592,15 @@ export const approve = mutation({
   },
 });
 
-/** Mint a short-lived student-card URL and audit the access. */
+/** EL-01/EL-07: Identity-document / student-card viewing removed from Dono. */
 export const getIdDocumentUrlForAdmin = mutation({
   args: { slug: v.string() },
-  handler: async (ctx, args) => {
-    const { userId: adminUserId } = await requireAdmin(ctx);
-    const campaign = await ctx.db
-      .query("campaigns")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .unique();
-    if (!campaign?.idDocumentStorageId) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "No student card on file for this campaign.",
-      });
-    }
-    await logAdminAction(ctx, {
-      adminUserId,
-      action: "campaign.viewIdDocument",
-      targetType: "campaign",
-      targetId: args.slug,
+  handler: async () => {
+    throw new ConvexError({
+      code: "FEATURE_REMOVED",
+      message:
+        "Identity documents are not stored or served by Dono. Verification is performed by the Payment Provider.",
     });
-    const url = await ctx.storage.getUrl(campaign.idDocumentStorageId);
-    if (!url) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Student card file could not be loaded.",
-      });
-    }
-    return { url };
   },
 });
 
@@ -751,8 +731,13 @@ export const create = mutation({
       profile?.dateOfBirth,
       "You must be at least 18 years old to create a campaign.",
     );
+    // EL-01/EL-07: Dono does not accept identity-document uploads.
     if (args.idDocumentStorageId) {
-      await claimStorageId(ctx, userId, args.idDocumentStorageId);
+      throw new ConvexError({
+        code: "FEATURE_REMOVED",
+        message:
+          "Identity documents are not accepted by Dono. Verification is performed by the Payment Provider.",
+      });
     }
     const title = args.title.trim();
     const category = args.category.trim();
@@ -898,9 +883,6 @@ export const create = mutation({
       impactItems: [],
       createdBy: userId,
       responsibleIndividualUserId,
-      ...(args.idDocumentStorageId
-        ? { idDocumentStorageId: args.idDocumentStorageId }
-        : {}),
       ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
       ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
       ...(ownershipStatement ? { ownershipStatement } : {}),
