@@ -45,8 +45,9 @@ everything.
 - [design-psychology-and-community-guide.md](design/design-psychology-and-community-guide.md) — Design strategy grounded in donation psychology and research: brand and visual identity, information architecture, campaign cards/pages, donation flow, post-donation experience, community features, gamification, notifications, copy/tone, accessibility, metrics, and a design-review checklist.
 
 ### [engineering/](engineering/) — Engineering
-- [payments-architecture.md](engineering/payments-architecture.md) — Payments, disputes & risk architecture. The governing principle ("donor money must never pass through Dono"), Stripe Connect Standard direct-charge model, refund vs chargeback lifecycles, evidence/data-retention requirements, fraud controls, and deferred items.
-- [product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md) — Engineering source of truth for aligning the build with the legal framework and product roadmap (July 2026): current MVP scope, P0/P1/P2 priorities before and after demo, intentional deviations, database considerations, and out-of-scope items. Feeds the [TODO](TODO.md#engineering--software).
+- [legal-launch/](engineering/legal-launch/) — **Current engineering source for legal launch:** master implementation checklist, privacy/DPIA narrative, moderation specification and Online Safety traceability.
+- [payments-architecture.md](engineering/payments-architecture.md) — Superseded July 2026 payment-architecture brief, retained as historical reasoning only.
+- [product-legal-alignment-roadmap.md](engineering/product-legal-alignment-roadmap.md) — Superseded July 2026 roadmap, retained as historical context only.
 - [engineering-change-handoff.docx](engineering/engineering-change-handoff.docx) — Engineering change handoff (binary doc).
 
 ### [legal/](legal/) — Legal & policy

@@ -1,5 +1,7 @@
 # Dono cookie & storage configuration — comprehensive review
 
+> **HISTORICAL EVIDENCE SNAPSHOT — NOT A BUILD LIST.** Current privacy, consent, retention and DPIA implementation is consolidated in [`legal-launch/PRIVACY_DPIA_ENGINEERING_NARRATIVE.md`](legal-launch/PRIVACY_DPIA_ENGINEERING_NARRATIVE.md) and the master checklist. Re-run the tests there against the release configuration.
+
 **Date:** 31 Jul 2026  
 **Method:** Code inventory (not a live clean-browser capture)  
 **Related:** [developer-configuration-form.md](./developer-configuration-form.md) §4–5 · [terms-engineering-questionnaire-answers.md](./terms-engineering-questionnaire-answers.md) §H · [09_dono_cookie_policy.md](../terms/09_dono_cookie_policy.md)

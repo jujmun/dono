@@ -1,6 +1,8 @@
 # Dono — Payments, Disputes & Risk Architecture
 ### Unified brief for engineering (July 2026)
 
+> **SUPERSEDED — HISTORICAL ONLY.** The current payment and refund implementation requirements are in [`legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md`](legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md), and settled product decisions are in `../TRUTH.md`. Do not implement this file's old positions on student recipients, fee allocation or owner-only refunds.
+
 This document consolidates our internal analyses of chargebacks, refunds, regulatory position, and platform liability into a single reference for the build. It explains **why** the architecture was chosen, **what** must be implemented, and which questions are deliberately deferred.
 
 ---

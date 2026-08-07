@@ -1,5 +1,7 @@
 # Dono — Engineering questions to answer before the Terms can be finalised
 
+> **HISTORICAL QUESTIONNAIRE — NOT A BUILD LIST.** The answers and every resulting build requirement are now centralised in [`../engineering/legal-launch/`](../engineering/legal-launch/README.md). Retain this file as the original fact-finding record; do not add actions here.
+
 **For:** the Dono engineering team
 **Purpose:** the revised Terms (v2.1) still contain **[CONFIRM WITH ENGINEERING]** markers. We cannot publish an accurate, honest T&C suite until we know how the current stack actually works. Please answer as specifically as possible — "how it is today", not "how it might be". Where a feature isn't built yet, say **NOT BUILT** and give the plan/ETA. One-word or "typically" answers aren't enough; a wrong cookie table or security claim can be checked by anyone in seconds.
 

@@ -2,6 +2,8 @@
 ## Product-Legal Alignment Roadmap
 **Version:** July 2026
 
+> **SUPERSEDED — HISTORICAL ONLY.** This was an earlier roadmap and is not an engineering source of truth. Its requirements have been consolidated into [`legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md`](legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md), with privacy/DPIA work in [`legal-launch/PRIVACY_DPIA_ENGINEERING_NARRATIVE.md`](legal-launch/PRIVACY_DPIA_ENGINEERING_NARRATIVE.md). Do not build from this file: among other things, its verification-badge, individual-campaign, fee and sequencing positions are superseded by `TRUTH.md`.
+
 ---
 
 # Purpose
@@ -10,7 +12,7 @@ This document summarises all engineering work required to align the Dono platfor
 
 This is **not** a request to immediately build every feature.
 
-Instead, this document should act as the engineering source of truth for:
+This document originally tracked:
 
 - current implementation
 - intentional deviations
@@ -18,7 +20,7 @@ Instead, this document should act as the engineering source of truth for:
 - post-demo roadmap
 - legal alignment requirements
 
-The legal documents remain the ultimate source of truth.
+It is retained only as historical context. The source hierarchy in `legal-launch/README.md` now governs.
 
 ---
 

@@ -1,5 +1,7 @@
 # Dono — engineering fact-finding questionnaire for legal completion
 
+> **HISTORICAL QUESTIONNAIRE — NOT A BUILD LIST.** The resulting requirements are centralised in [`../engineering/legal-launch/`](../engineering/legal-launch/README.md). Retain this file as evidence of the questions asked; do not track implementation here.
+
 **Prepared:** 5 August 2026  
 **Release being assessed:** Real-user beta next week, followed by public launch the week after  
 **Source:** *Dono pre-launch legal due diligence review*, 31 July 2026; the current v2.2 legal suite; and the existing engineering questionnaire/answers in this repository.  

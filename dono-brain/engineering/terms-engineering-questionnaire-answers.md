@@ -1,5 +1,7 @@
 # Dono — Terms engineering questionnaire (B–J)
 
+> **HISTORICAL EVIDENCE SNAPSHOT — NOT A BUILD LIST.** Unbuilt and partially built items identified here have been consolidated into [`legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md`](legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md). Use this file only to understand the 31 July evidence baseline.
+
 **Date:** 31 Jul 2026  
 **Source chat:** [Terms honesty pack / Identity / questionnaire](87035976-a5ac-4aa9-a8cf-f44c26961add)  
 **Scope:** Live Expo + Convex codebase, including age gates, auth rate limits, analytics consent, audited student-card access, campaign/society student-card + Stripe Identity (always required for creators), and softened legal stubs.

@@ -1,5 +1,7 @@
 # Dono — Developer configuration form (Stripe, cookies, analytics, processors)
 
+> **HISTORICAL EVIDENCE SNAPSHOT — NOT A BUILD LIST.** Current requirements are consolidated in [`legal-launch/`](legal-launch/README.md). Where this 31 July snapshot differs from `TRUTH.md` or the central checklist—including fee allocation or card-dependent estimates—the newer sources govern.
+
 **Date:** 31 Jul 2026  
 **Source:** Live Expo + Convex codebase, Stripe docs, [stripe.com/gb/pricing](https://stripe.com/gb/pricing) (fetched 31 Jul 2026).  
 **Related:** [terms-engineering-questionnaire-answers.md](./terms-engineering-questionnaire-answers.md)
