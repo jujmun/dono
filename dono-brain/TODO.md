@@ -83,6 +83,7 @@ Everything else in the five gates is an implementation, evidence or external-con
 
 ## Design / Product — outstanding
 
+- [ ] **Add a clear Donate button to the webpage and make the donation UX super straightforward**, with an obvious entry point and a simple, low-friction path through donation
 - [ ] **Remove every verification badge and trust indicator from the designs.** The badge set (Verified Student / Student Status Checked / Society Approved / Institutionally Endorsed) is **cancelled** — see `TRUTH.md`. Replace with neutral lifecycle states rendered without approving styling
 - [ ] **Design the checkout legal identity panel** ("You're donating to") with all six mandatory fields, and the blocked state when a field is missing
 - [ ] **Design the fee-cover checkout** showing Campaign contribution / **Payment processing fee (Dono)** for demo (or Dono fee for production) / **Stripe processing cost (paid by the campaign)** / expected amount reaching the campaign. Campaign Owner pays by default; Donor cover is optional and unticked
