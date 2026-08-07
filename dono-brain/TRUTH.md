@@ -16,7 +16,7 @@
 | **AWAITING DECISION** | Open — see the applicable legal register and [`TODO.md`](TODO.md) |
 | **SUPERSEDED** | Was true, is not. Kept so the change is visible |
 
-**Last updated:** 7 August 2026 (revision 5: repository authority and legal-suite status clarified; no substantive product decision changed)
+**Last updated:** 7 August 2026 (revision 6: NCA CSEA organisation registration confirmed (checklist item C1) — organisation reference 8o7pn1R2, Amrit as Organisation Administrator, Sashank and Joe added as named users pending NCA verification)
 
 ---
 
@@ -31,6 +31,7 @@
 | **Amrit Kaur Rooprai** is the Online Safety lead, data protection lead, financial-crime lead and incident lead | CURRENT | 31 Jul 2026 |
 | **Sashank** is the deputy for all four roles, and Deputy Organisation Administrator for NCA CSEA reporting | CURRENT | 31 Jul 2026 |
 | **Joe** is the second backup | CURRENT | 31 Jul 2026 |
+| **Dono is registered with the NCA CSEA reporting portal as an organisation** (checklist item C1 — see `legal/suites/v3.0/procedures/dono-csea-legal-readiness-checklist-v3.0.md`). **Organisation reference: `8o7pn1R2`.** Amrit is the Organisation Administrator. Sashank (Deputy Organisation Administrator) and Joe are added as named users and **awaiting NCA verification** — their accounts are not yet confirmed usable (C3/C4 remain open). C2–C5 and the rest of the checklist are unaffected by this entry and remain outstanding until separately evidenced | CURRENT (C1) / APPROVED — NOT YET IMPLEMENTED (C2–C5) | 7 Aug 2026 |
 | **One contact address for everything: `joindono.team@gmail.com`.** Dono operates a **single public support email** at launch and early-stage operations. No multiple inboxes, ticketing systems, role-based queues, shared mailboxes or category-specific infrastructure. No document may claim otherwise. Dedicated tooling may be introduced later; it is not a launch requirement | CURRENT | 6 Aug 2026 |
 | Registered address: 37 St Giles', Oxford OX1 3LD | CURRENT | 30 Jul 2026 |
 | **Every founder, contributor, volunteer and contractor must accept the Team and Contributor Agreement** (`legal/suites/v2.3/dono-team-and-contributor-agreement-v2.3.md`) before accessing production systems or personal data. It covers IP assignment, confidentiality, data protection and authorised access, security, decision authority, conflicts, and exit and offboarding with immediate access removal | APPROVED — NOT YET IMPLEMENTED | 6 Aug 2026 |

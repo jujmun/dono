@@ -115,10 +115,10 @@
 
 | # | Requirement | Evidence | Status |
 |---|---|---|---|
-| C1 | Dono registered with the NCA CSEA reporting portal as an organisation | Registration confirmation | **Outstanding** |
+| C1 | Dono registered with the NCA CSEA reporting portal as an organisation | Registration confirmation | **Complete** — see `dono-csea-legal-readiness-checklist-v3.0.md` §3.1 for the organisation reference |
 | C2 | Organisation Administrator (Amrit) account created and access tested | Test login record | **Outstanding** |
-| C3 | Deputy Organisation Administrator (Sashank) account created and access tested | Test login record | **Outstanding** |
-| C4 | Named working accounts, not shared credentials | Account list | **Outstanding** |
+| C3 | Deputy Organisation Administrator (Sashank) account created and access tested | Test login record | **Outstanding** — awaiting NCA verification |
+| C4 | Named working accounts, not shared credentials | Account list | **Outstanding** — awaiting NCA verification |
 | C5 | 24-hour emergency contact registered with the NCA | Confirmation | **Outstanding** |
 | C6 | Restricted storage built: segregated, encrypted, role-limited, access-logged | Test evidence | **Outstanding** |
 | C7 | Hide-in-place (restrict without delete) available to moderators | Test evidence | **Outstanding** |

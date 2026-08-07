@@ -52,7 +52,8 @@ Nothing goes live with real users, real money or real personal data until all fi
 - [ ] **Answer counsel questions Q12 to Q15** — removal of the unused platform-account/variable-fee paths on confirmed zero-payment facts; fee-label presentation; identity-data retention and creator age use; and what can presently be proved about acceptance
 - [x] **Creator age gate decided:** use the Payment Provider's verified date of birth, fail-closed for missing, inconsistent or under-18 results, with a documented correction/review route
 - [ ] **Complete the ICO registration self-assessment** and record the outcome (register item U4)
-- [ ] **CSEA/NCA registration:** application/sign-up is in progress and Dono is waiting for communication from the National Crime Agency. Record the response, confirm which named users are eligible, complete training and test the reporting route before marking the CSEA checklist complete
+- [x] ~~CSEA/NCA registration: application/sign-up is in progress and Dono is waiting for communication from the National Crime Agency~~ — **done.** Dono is registered with the NCA CSEA reporting portal as an organisation (checklist item C1). Organisation reference `8o7pn1R2`. Amrit is Organisation Administrator
+- [ ] **CSEA/NCA named users:** Sashank (Deputy Organisation Administrator) and Joe are added but **awaiting NCA verification** — confirm once verified (C3/C4), then complete training and test the reporting route before marking the CSEA checklist complete
 - [ ] Trademark clearance search and UK filing once the brand is finalised
 - [ ] Review the Stripe Connected Account Agreement and Platform Agreement; do not opt into any setting that shifts liability toward Dono
 

@@ -161,7 +161,7 @@ We have consolidated all referral rules into `dono-institutional-referral-protoc
 
 Public user-generated content is launch-blocked until eight acceptance tests pass. The CSEA procedure is at `dono-csea-reporting-procedure-v2.3.md`, with a 12-item pre-launch checklist and two retention clocks (report reference 5 years; content and prescribed information 1 year).
 
-**Current NCA status:** Dono has started the NCA sign-up/registration process and is waiting for communication from the NCA. Portal registration, named-user eligibility, training and an end-to-end test are not yet being claimed as complete.
+**Current NCA status:** Dono is registered with the NCA CSEA reporting portal as an organisation (checklist item C1 — organisation reference `8o7pn1R2`). Amrit is Organisation Administrator; Sashank (Deputy Organisation Administrator) and Joe are added as named users and awaiting NCA verification. Named-user eligibility, training and an end-to-end test are not yet being claimed as complete.
 
 **Please advise:** is the launch gate correctly drawn? Are the retention clocks right? Is the **comment** moderation model (pre-publication keyword filtering, immediate publication of comments that pass, post-moderation, and a report control on every comment) proportionate for a service of this size under the illegal-content and children's duties, alongside human review of campaigns and media before publication? Anything missing from the CSEA checklist?
 

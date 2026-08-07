@@ -31,9 +31,9 @@ Under **section 66 of the Online Safety Act 2023** and the **Online Safety (CSEA
 
 > ## **DONO IS NOT LEGALLY READY TO DISCHARGE THE SECTION 66 DUTY THROUGH THE NCA PORTAL.**
 >
-> **Every item C1 to C12 is outstanding. NCA registration is not confirmed.**
+> **C1 (NCA organisation registration) is confirmed — organisation reference `8o7pn1R2`. C2–C12 remain outstanding**, including C3/C4 (Sashank and Joe added as named users but awaiting NCA verification).
 >
-> Until C1–C5 close, Dono **cannot submit a report through the portal at all**. The consequence is not that the duty is suspended — the duty is absolute — but that Dono would be unable to comply if content were detected today.
+> Until C2–C5 close, Dono **cannot submit a report through the portal at all**. The consequence is not that the duty is suspended — the duty is absolute — but that Dono would be unable to comply if content were detected today.
 
 ### 2.1 The interim position
 
@@ -55,13 +55,13 @@ Public user-generated content is disabled. That materially reduces the likelihoo
 
 | # | Requirement | Evidence required | Owner | Status |
 |---|---|---|---|---|
-| **C1** | Dono registered with the NCA CSEA reporting portal **as an organisation** | Written registration confirmation from the NCA | Amrit | **OUTSTANDING** |
-| **C2** | **Organisation Administrator** (Amrit) account created and access tested | Dated test login record | Amrit | **OUTSTANDING** |
-| **C3** | **Deputy Organisation Administrator** (Sashank) account created and access tested | Dated test login record | Sashank | **OUTSTANDING** |
-| **C4** | **Named individual working accounts, not shared credentials** | Account list showing one account per named person | Amrit | **OUTSTANDING** |
+| **C1** | Dono registered with the NCA CSEA reporting portal **as an organisation** | Written registration confirmation from the NCA | Amrit | **COMPLETE** — organisation reference `8o7pn1R2` |
+| **C2** | **Organisation Administrator** (Amrit) account created and access tested | Dated test login record | Amrit | **OUTSTANDING** — account exists (Amrit is Organisation Administrator); dated test login record not yet evidenced |
+| **C3** | **Deputy Organisation Administrator** (Sashank) account created and access tested | Dated test login record | Sashank | **OUTSTANDING** — Sashank added as named user, **awaiting NCA verification** |
+| **C4** | **Named individual working accounts, not shared credentials** | Account list showing one account per named person | Amrit | **OUTSTANDING** — Joe added as named user, **awaiting NCA verification** |
 | **C5** | **24-hour emergency contact registered** with the NCA | NCA confirmation | Amrit | **OUTSTANDING** |
 
-> **C1 is the single blocking dependency for the whole regime.** Nothing downstream can be tested until the NCA confirms registration and which individuals are eligible users. **This is an external dependency Dono cannot resolve unilaterally and must be chased actively rather than waited on.**
+> **C1 is complete.** C2–C5 remain open: Sashank's and Joe's accounts are added but awaiting NCA verification, and access has not yet been tested. **This is still an external dependency for C3/C4 and must be chased actively rather than waited on.**
 
 ### 3.2 Retention and deletion — **legal requirements**
 
@@ -159,8 +159,8 @@ These are not checklist items. They apply from today and every moderator must be
 | Approver name | Amrit Kaur Rooprai |
 | Role | Online Safety lead and service provider |
 | Document version approved | 3.0 |
-| Items complete | **0 of 12** |
-| NCA registration confirmed (C1)? | ☐ Yes, on ____________ · ☑ **No** |
+| Items complete | **1 of 12** (C1) |
+| NCA registration confirmed (C1)? | ☑ Yes, on 7 August 2026 (organisation reference `8o7pn1R2`) · ☐ No |
 | CSEA route legally ready? | ☐ Yes, on ____________ · ☑ **No** |
 | Interim route communicated to every person capable of reviewing content? | ☐ Yes, on ____________ · ☐ No |
 | Signature | ______________________ |
@@ -180,6 +180,6 @@ These are not checklist items. They apply from today and every moderator must be
 | Accountable owner | Amrit Kaur Rooprai |
 | Prepared by | Legal consolidation, 7 August 2026 |
 | Approved by | *(signature required — section 7)* |
-| Status | **NOT READY.** 0 of 12 items complete |
+| Status | **NOT READY.** 1 of 12 items complete (C1) |
 | Supersedes | Nothing — consolidated at v3.0 from the pre-launch checklist in `../../v2.3/dono-csea-reporting-procedure-v2.3.md` §9 |
 | Next scheduled review | **Monthly until closed**, then on any change of law, portal arrangement or named person |

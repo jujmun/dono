@@ -11,6 +11,8 @@ truth file and one company action register, both kept prominently at the root:
 - [`open-questions/questions-for-solicitor.md`](open-questions/questions-for-solicitor.md)
   — the counsel question pack, currently prepared against legal suite v2.3 and
   requiring reconciliation with v3.0 before it is sent.
+- [`open-questions/legal-professional-referral.md`](open-questions/legal-professional-referral.md)
+  — waiting on Cath for a solicitor referral to send the question pack to.
 - [`releases/release-control-matrix.md`](releases/release-control-matrix.md) — the
   operational feature release gate.
 
