@@ -9,7 +9,7 @@
 
 > **Read this first if you are a student officer.** Most student societies are unincorporated associations. Under the law of England and Wales an unincorporated association is not a separate legal person and **cannot itself be a party to a contract**. That means the person who signs up on the Society's behalf is the person Dono contracts with. Clause 1 explains exactly what that does — and, importantly, does not — mean for you personally. **Dono limits your financial exposure to the money in the Connected Account you control**, except where you act dishonestly. Please read clause 1.6 before you accept.
 
----
+--
 
 ### 1. Who contracts with Dono, and who is liable
 
