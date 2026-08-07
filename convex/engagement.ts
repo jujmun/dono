@@ -4,6 +4,8 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  assertCommentingAllowed,
+  getProfileByUserId,
   optionalUserId,
   requireAdmin,
   requireSocietyMember,
@@ -13,6 +15,7 @@ import { toCampaign } from "./lib/mappers";
 import { clampLimit } from "./lib/pagination";
 import { toActivityItem } from "./lib/mappers";
 import { containsProfanity, containsUrl } from "./lib/commentModeration";
+import { assertPlatformFlagOff } from "./platformSettings";
 
 const MAX_COMMENT_LENGTH = 2000;
 
@@ -285,11 +288,18 @@ export const unfollowSociety = mutation({
 export const addComment = mutation({
   args: { campaignSlug: v.string(), body: v.string() },
   handler: async (ctx, args) => {
+    await assertPlatformFlagOff(
+      ctx,
+      "disableComments",
+      "Commenting is temporarily disabled.",
+    );
     const campaign = await getCampaignBySlug(ctx, args.campaignSlug);
     if (!campaign) {
       throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
     }
     const { userId } = await requireCampaignCommenter(ctx, campaign);
+    const profile = await getProfileByUserId(ctx, userId);
+    assertCommentingAllowed(profile);
 
     const body = args.body.trim();
     if (!body || body.length > MAX_COMMENT_LENGTH) {
@@ -378,7 +388,7 @@ export const editComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
-    assertCommentAllowed(body);
+    await assertCommentAllowed(ctx, body, userId, "comment");
 
     await ctx.db.patch(args.commentId, {
       body,

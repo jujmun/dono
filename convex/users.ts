@@ -26,6 +26,7 @@ import {
 import { toCampaign } from "./lib/mappers";
 import { assertAdultOrThrow } from "./lib/ageGate";
 import { clearVerificationPatch } from "./lib/verificationRetention";
+import { assertPlatformFlagOff } from "./platformSettings";
 
 const userTypeValidator = v.union(v.literal("student"), v.literal("alumni"));
 
@@ -109,6 +110,164 @@ export const me = query({
   },
 });
 
+/**
+ * Subject-access export (GV-06 / PR-11). Returns a JSON-serializable dump of
+ * the caller's profile, legal acceptances, donations, memberships, reports
+ * they filed, and evidence they uploaded. Omits admin-only / Stripe-secret
+ * fields from donation rows.
+ */
+export const exportMyData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId, profile } = await requireVerifiedUser(ctx);
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be found.",
+      });
+    }
+
+    const [
+      legalAcceptances,
+      donations,
+      memberships,
+      reports,
+      evidence,
+      societies,
+      campaignFollows,
+      communityFollows,
+    ] = await Promise.all([
+      ctx.db
+        .query("legalAcceptances")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("donations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("societyMembers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("contentReports")
+        .withIndex("by_reporter", (q) => q.eq("reporterUserId", userId))
+        .collect(),
+      ctx.db
+        .query("campaignEvidence")
+        .withIndex("by_uploader", (q) => q.eq("uploadedBy", userId))
+        .collect(),
+      ctx.db
+        .query("societies")
+        .withIndex("by_creatorId", (q) => q.eq("creatorId", userId))
+        .collect(),
+      ctx.db
+        .query("campaignFollows")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("communityFollows")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    ]);
+
+    const exportedAt = Date.now();
+
+    return {
+      exportedAt,
+      profile: {
+        userId: profile.userId,
+        email: profile.email,
+        name: profile.name ?? null,
+        phone: profile.phone ?? null,
+        college: profile.college ?? null,
+        degree: profile.degree ?? null,
+        yearInCollege: profile.yearInCollege ?? null,
+        userType: profile.userType ?? null,
+        matriculationYear: profile.matriculationYear ?? null,
+        interestedSocietySlugs: profile.interestedSocietySlugs ?? [],
+        dateOfBirth: profile.dateOfBirth ?? null,
+        ageAttestedAt: profile.ageAttestedAt ?? null,
+        onboardingSkippedAt: profile.onboardingSkippedAt ?? null,
+        avatarUrl: profile.avatarUrl ?? null,
+        role: profile.role,
+        emailVerifiedAt: profile.emailVerifiedAt ?? null,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+        suspendedAt: profile.suspendedAt ?? null,
+        commentingRestrictedUntil: profile.commentingRestrictedUntil ?? null,
+      },
+      legalAcceptances: legalAcceptances.map((row) => ({
+        documentId: row.documentId,
+        version: row.version,
+        context: row.context,
+        acceptedAt: row.acceptedAt,
+      })),
+      donations: donations.map((d) => ({
+        id: d._id,
+        campaignId: d.campaignId ?? null,
+        fundId: d.fundId ?? null,
+        amount: d.amount,
+        currency: d.currency,
+        type: d.type,
+        paymentStatus: d.paymentStatus,
+        isAnonymous: d.isAnonymous ?? false,
+        donorEmail: d.donorEmail ?? null,
+        coverFees: d.coverFees ?? null,
+        createdAt: d.createdAt,
+        refundedAmountMinor: d.refundedAmountMinor ?? null,
+        intendedCampaignAmountMinor: d.intendedCampaignAmountMinor ?? null,
+        ageAttested: d.ageAttested ?? null,
+        legalAcceptedAt: d.legalAcceptedAt ?? null,
+        emailUpdatesOptIn: d.emailUpdatesOptIn ?? null,
+      })),
+      memberships: memberships.map((m) => ({
+        communitySlug: m.communitySlug,
+        role: m.role,
+        status: m.status,
+        createdAt: m.createdAt,
+      })),
+      reportsFiled: reports.map((r) => ({
+        id: r._id,
+        targetType: r.targetType,
+        campaignSlug: r.campaignSlug ?? null,
+        commentId: r.commentId ?? null,
+        societySlug: r.societySlug ?? null,
+        reason: r.reason,
+        status: r.status,
+        createdAt: r.createdAt,
+        resolvedAt: r.resolvedAt ?? null,
+      })),
+      evidenceUploaded: evidence.map((e) => ({
+        id: e._id,
+        campaignId: e.campaignId,
+        storageId: e.storageId,
+        description: e.description,
+        expenditureDate: e.expenditureDate,
+        dueAt: e.dueAt,
+        createdAt: e.createdAt,
+      })),
+      societiesCreated: societies.map((s) => ({
+        id: s._id,
+        slug: s.slug,
+        name: s.name,
+        status: s.status,
+        createdAt: s.createdAt,
+      })),
+      follows: {
+        campaigns: campaignFollows.map((f) => ({
+          campaignSlug: f.campaignSlug,
+          createdAt: f.createdAt,
+        })),
+        communities: communityFollows.map((f) => ({
+          communitySlug: f.communitySlug,
+          createdAt: f.createdAt,
+        })),
+      },
+    };
+  },
+});
+
 /** Admin-only: student profile + their campaigns for moderation context. */
 export const getStudentForAdmin = query({
   args: { userId: v.id("users") },
@@ -137,6 +296,9 @@ export const getStudentForAdmin = query({
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
+      suspendedAt: profile.suspendedAt ?? null,
+      suspendedReason: profile.suspendedReason ?? null,
+      commentingRestrictedUntil: profile.commentingRestrictedUntil ?? null,
       createdAt: profile.createdAt,
       campaigns: theirs,
     };
@@ -386,6 +548,12 @@ export const ensureProfile = internalMutation({
       return;
     }
 
+    await assertPlatformFlagOff(
+      ctx,
+      "disableRegistration",
+      "New account registration is temporarily disabled.",
+    );
+
     const now = Date.now();
     await ctx.db.insert("profiles", {
       userId: args.userId,
@@ -433,6 +601,12 @@ export const ensureMyProfile = mutation({
       await linkGuestDonationsForUser(ctx, userId, user.email);
       return;
     }
+
+    await assertPlatformFlagOff(
+      ctx,
+      "disableRegistration",
+      "New account registration is temporarily disabled.",
+    );
 
     await ctx.db.insert("profiles", {
       userId,
@@ -500,6 +674,11 @@ export const setUserType = mutation({
           message: "User profile could not be found.",
         });
       }
+      await assertPlatformFlagOff(
+        ctx,
+        "disableRegistration",
+        "New account registration is temporarily disabled.",
+      );
       const now = Date.now();
       const profileId = await ctx.db.insert("profiles", {
         userId,

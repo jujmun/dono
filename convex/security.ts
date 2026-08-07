@@ -5,6 +5,7 @@ import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
+import { assertPlatformFlagOff } from "./platformSettings";
 
 export const FLOW_LIMITS = {
   signIn: { maxAttempts: 8, windowMs: 10 * 60 * 1000, lockoutMs: 15 * 60 * 1000 },
@@ -124,6 +125,11 @@ export const consumeAuthFlow = internalMutation({
   handler: async (ctx, args) => {
     let email: string;
     if (args.flow === "signUp") {
+      await assertPlatformFlagOff(
+        ctx,
+        "disableRegistration",
+        "New account registration is temporarily disabled.",
+      );
       if (args.userType === "alumni") {
         email = normalizeAndValidateEmail(args.email);
       } else if (args.userType === "student") {

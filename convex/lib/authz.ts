@@ -172,6 +172,33 @@ export async function requireAdmin(ctx: CtxWithDb) {
   };
 }
 
+/** Fail closed when the profile has an active suspension. */
+export function assertNotSuspended(
+  profile: Doc<"profiles"> | null | undefined,
+): void {
+  if (profile?.suspendedAt) {
+    throw new ConvexError({
+      code: "ACCOUNT_SUSPENDED",
+      message:
+        profile.suspendedReason?.trim() ||
+        "This account has been suspended and cannot perform this action.",
+    });
+  }
+}
+
+/** Fail closed while a commenting restriction is in force. */
+export function assertCommentingAllowed(
+  profile: Doc<"profiles"> | null | undefined,
+): void {
+  const until = profile?.commentingRestrictedUntil;
+  if (until !== undefined && until > Date.now()) {
+    throw new ConvexError({
+      code: "COMMENTING_RESTRICTED",
+      message: "Commenting is temporarily restricted on this account.",
+    });
+  }
+}
+
 export async function requireVerifiedUser(ctx: CtxWithDb) {
   const { userId, user, profile } = await requireCurrentUser(ctx);
 
@@ -184,6 +211,8 @@ export async function requireVerifiedUser(ctx: CtxWithDb) {
       message: "Please verify your email before continuing.",
     });
   }
+
+  assertNotSuspended(profile);
 
   return { userId, user, profile };
 }

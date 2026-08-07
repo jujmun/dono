@@ -6,6 +6,8 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -85,6 +87,7 @@ export default function AccountPage() {
   );
   const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
   const requestAccountDeletion = useAction(api.users.requestAccountDeletion);
+  const exportMyData = useMutation(api.users.exportMyData);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -104,6 +107,9 @@ export default function AccountPage() {
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+  const [exportingData, setExportingData] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportPreview, setExportPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -232,6 +238,29 @@ export default function AccountPage() {
         setDeleteAccountError(getFriendlyAuthError(err));
         setDeletingAccount(false);
       });
+  };
+
+  const handleExportMyData = () => {
+    setExportingData(true);
+    setExportError(null);
+    setExportPreview(null);
+    void exportMyData({})
+      .then((payload) => {
+        const json = JSON.stringify(payload, null, 2);
+        if (Platform.OS === "web" && typeof document !== "undefined") {
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = `dono-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+          anchor.click();
+          URL.revokeObjectURL(url);
+        } else {
+          setExportPreview(json);
+        }
+      })
+      .catch((err) => setExportError(getFriendlyAuthError(err)))
+      .finally(() => setExportingData(false));
   };
 
   if (isLoading) {
@@ -498,6 +527,39 @@ export default function AccountPage() {
             </View>
           )}
         </SectionCard>
+
+        <View className="border-t border-dono-border pt-6">
+          <View className="flex-row items-start justify-between gap-6">
+            <View className="flex-1">
+              <Text className="font-retro-bold text-dono-text">
+                Download my data
+              </Text>
+              <Text className="mt-1 text-sm text-dono-muted">
+                Export your profile, legal acceptances, donations, memberships,
+                reports and uploaded evidence as JSON.
+              </Text>
+              {exportError ? (
+                <Text className="mt-2 text-sm text-rose-700">{exportError}</Text>
+              ) : null}
+            </View>
+            <Pressable
+              onPress={handleExportMyData}
+              disabled={exportingData}
+              className="rounded-full border border-dono-border bg-white px-6 py-2.5"
+            >
+              <Text className="font-retro-bold text-sm text-dono-text">
+                {exportingData ? "Preparing..." : "Download my data"}
+              </Text>
+            </Pressable>
+          </View>
+          {exportPreview ? (
+            <ScrollView className="mt-4 max-h-64 rounded-xl border border-dono-border bg-dono-bg p-3">
+              <Text className="font-retro-mono text-xs text-dono-text">
+                {exportPreview}
+              </Text>
+            </ScrollView>
+          ) : null}
+        </View>
 
         <View className="border-t border-dono-border pt-6">
           <View className="flex-row items-start justify-between gap-6">

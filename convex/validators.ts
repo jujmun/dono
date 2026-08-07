@@ -129,6 +129,13 @@ export const campaignFields = {
   /** Standing marketing/promotional-use consent — withdrawable at any status. */
   promotionalUseOptIn: v.optional(v.boolean()),
   promotionalUseOptInAt: v.optional(v.number()),
+  /** Moderator pause — campaign stays listed but new donations/comments blocked. */
+  pausedAt: v.optional(v.number()),
+  pausedBy: v.optional(v.id("users")),
+  pauseReason: v.optional(v.string()),
+  /** Moderator restriction — new comments blocked while campaign stays live. */
+  commentsRestrictedAt: v.optional(v.number()),
+  commentsRestrictedBy: v.optional(v.id("users")),
 };
 
 export const verificationStatusValidator = v.union(
