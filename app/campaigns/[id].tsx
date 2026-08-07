@@ -101,10 +101,6 @@ export default function CampaignDetailPage() {
     api.stripeConnectInternal.getCampaignDonationReadiness,
     id ? { campaignSlug: id } : "skip",
   );
-  const donateDisclosures = useQuery(
-    api.campaigns.getDonateDisclosures,
-    id ? { slug: id } : "skip",
-  );
   const stripePlatform = useQuery(api.stripePlatform.isConfigured, {});
   const commenterMembership = useQuery(
     api.societyMembers.getMyMembership,
@@ -575,9 +571,6 @@ export default function CampaignDetailPage() {
         onMarketingOptInChange={setMarketingOptIn}
         showSupportPublicly={showSupportPublicly}
         onShowSupportPubliclyChange={setShowSupportPublicly}
-        recipientPanel={donateDisclosures?.recipientPanel ?? null}
-        panelComplete={donateDisclosures?.panelComplete === true}
-        mayExceedTarget={donateDisclosures?.mayExceedTarget !== false}
         onClose={() => setDonateSheetOpen(false)}
         onSuccess={(amount, options) => {
           const matchedAmount = computeMatchCredit(amount, activeMatch ?? null);

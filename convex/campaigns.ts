@@ -1282,88 +1282,130 @@ export const removePlaceholderCampaigns = mutation({
 /**
  * CH-01 checkout disclosures for a campaign. Payment must be blocked if any
  * mandatory recipient-panel field is missing.
+ *
+ * Fail-soft: never throw for missing/duplicate society rows — campaign pages
+ * must still render; incomplete panels only block checkout.
  */
 export const getDonateDisclosures = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    const campaign = await ctx.db
-      .query("campaigns")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .unique();
-    if (!campaign || !isPublicCampaign(campaign)) {
+    try {
+      // Never use .unique() here — duplicate slugs must not crash campaign pages.
+      const campaign = await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+        .first();
+      if (!campaign || !isPublicCampaign(campaign)) {
+        return null;
+      }
+
+      const communitySlug = campaign.creator?.communityId ?? "";
+      if (!communitySlug) {
+        return {
+          recipientPanel: {
+            ownerLegalName: campaign.creator?.name?.trim() || "",
+            legalStatus: "an unincorporated student society",
+            representativeName: campaign.creator?.name?.trim() || "",
+            connectedAccountHolder: campaign.creator?.name?.trim() || "",
+            propertyOwner:
+              campaign.ownershipStatement?.trim() ||
+              campaign.creator?.name?.trim() ||
+              "",
+          },
+          panelComplete: Boolean(campaign.creator?.name?.trim()),
+          mayExceedTarget: true,
+          goal: campaign.goal,
+          raised: campaign.raised,
+        };
+      }
+
+      const society = await ctx.db
+        .query("societies")
+        .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+        .first();
+
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+        .first();
+
+      const responsibleUserId =
+        campaign.responsibleIndividualUserId ??
+        society?.responsibleIndividualUserId ??
+        campaign.createdBy ??
+        null;
+
+      let representativeName = "";
+      if (responsibleUserId) {
+        try {
+          const profile = await ctx.db
+            .query("profiles")
+            .withIndex("by_userId", (q) => q.eq("userId", responsibleUserId))
+            .first();
+          representativeName =
+            profile?.name?.trim() ||
+            society?.verifiedName?.trim() ||
+            campaign.verifiedName?.trim() ||
+            campaign.creator?.name?.trim() ||
+            "";
+        } catch {
+          representativeName =
+            society?.verifiedName?.trim() ||
+            campaign.creator?.name?.trim() ||
+            "";
+        }
+      } else {
+        representativeName =
+          society?.verifiedName?.trim() ||
+          campaign.verifiedName?.trim() ||
+          campaign.creator?.name?.trim() ||
+          "";
+      }
+
+      const ownerLegalName =
+        society?.name?.trim() ||
+        community?.name?.trim() ||
+        campaign.creator?.name?.trim() ||
+        "";
+
+      const legalStatus =
+        society?.orgType === "college"
+          ? "a college"
+          : "an unincorporated student society";
+
+      const connectedAccountHolder =
+        society?.verifiedName?.trim() ||
+        ownerLegalName ||
+        representativeName ||
+        "";
+
+      const propertyOwner =
+        campaign.ownershipStatement?.trim() || ownerLegalName || "";
+
+      const recipientPanel = {
+        ownerLegalName,
+        legalStatus,
+        representativeName,
+        connectedAccountHolder,
+        propertyOwner,
+      };
+
+      return {
+        recipientPanel,
+        panelComplete: Boolean(
+          recipientPanel.ownerLegalName &&
+            recipientPanel.legalStatus &&
+            recipientPanel.representativeName &&
+            recipientPanel.connectedAccountHolder &&
+            recipientPanel.propertyOwner,
+        ),
+        mayExceedTarget: true,
+        goal: campaign.goal,
+        raised: campaign.raised,
+      };
+    } catch (error) {
+      console.error("getDonateDisclosures failed", args.slug, error);
       return null;
     }
-
-    const society = await ctx.db
-      .query("societies")
-      .withIndex("by_slug", (q) => q.eq("slug", campaign.creator.communityId))
-      .unique();
-
-    const community = await ctx.db
-      .query("communities")
-      .withIndex("by_slug", (q) => q.eq("slug", campaign.creator.communityId))
-      .unique();
-
-    const responsibleUserId =
-      campaign.responsibleIndividualUserId ??
-      society?.responsibleIndividualUserId ??
-      null;
-
-    let representativeName = "";
-    if (responsibleUserId) {
-      const profile = await ctx.db
-        .query("profiles")
-        .withIndex("by_userId", (q) => q.eq("userId", responsibleUserId))
-        .unique();
-      representativeName =
-        profile?.name?.trim() ||
-        society?.verifiedName?.trim() ||
-        campaign.verifiedName?.trim() ||
-        "";
-    } else {
-      representativeName =
-        society?.verifiedName?.trim() || campaign.verifiedName?.trim() || "";
-    }
-
-    const ownerLegalName =
-      society?.name?.trim() ||
-      community?.name?.trim() ||
-      campaign.creator.name?.trim() ||
-      "";
-
-    const legalStatus = "an unincorporated student society";
-    const connectedAccountHolder =
-      society?.verifiedName?.trim() ||
-      ownerLegalName ||
-      representativeName ||
-      "";
-    const propertyOwner =
-      campaign.ownershipStatement?.trim() ||
-      ownerLegalName ||
-      "";
-
-    const recipientPanel = {
-      ownerLegalName,
-      legalStatus,
-      representativeName,
-      connectedAccountHolder,
-      propertyOwner,
-    };
-
-    const complete = Boolean(
-      recipientPanel.ownerLegalName &&
-        recipientPanel.legalStatus &&
-        recipientPanel.representativeName &&
-        recipientPanel.connectedAccountHolder &&
-        recipientPanel.propertyOwner,
-    );
-
-    return {
-      recipientPanel,
-      panelComplete: complete,
-      mayExceedTarget: true,
-      goal: campaign.goal,
-      raised: campaign.raised,
-    };
   },
 });

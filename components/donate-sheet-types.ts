@@ -20,8 +20,9 @@ export type DonateSheetProps = {
   onMarketingOptInChange: (value: boolean) => void;
   showSupportPublicly: boolean;
   onShowSupportPubliclyChange: (value: boolean) => void;
-  recipientPanel: RecipientPanelData | null;
-  panelComplete: boolean;
+  /** Optional overrides — sheet loads disclosures itself when omitted. */
+  recipientPanel?: RecipientPanelData | null;
+  panelComplete?: boolean;
   mayExceedTarget?: boolean;
   onClose: () => void;
   onSuccess: (
