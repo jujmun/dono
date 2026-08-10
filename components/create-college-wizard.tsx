@@ -5,13 +5,11 @@ import {
   TextInput,
   Pressable,
   ActivityIndicator,
-  Linking,
   Platform,
 } from "react-native";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
-import * as ExpoLinking from "expo-linking";
 import {
   CheckCircle2,
   ArrowRight,
@@ -35,6 +33,9 @@ import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
+import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
+import { getFriendlyConnectError } from "@/lib/stripe/errors";
+import { openStripeUrl } from "@/lib/stripe/open-url";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -343,23 +344,16 @@ export function CreateCollegeWizard() {
     }
   };
 
-  const connectReturnUrls = (slug: string) => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      const origin = window.location.origin;
-      return {
-        returnUrl: `${origin}${CREATE_PATH}?connect=return&slug=${encodeURIComponent(slug)}`,
-        refreshUrl: `${origin}${CREATE_PATH}?connect=refresh&slug=${encodeURIComponent(slug)}`,
-      };
-    }
-    return {
-      returnUrl: ExpoLinking.createURL(CREATE_PATH, {
-        queryParams: { connect: "return", slug },
-      }),
-      refreshUrl: ExpoLinking.createURL(CREATE_PATH, {
-        queryParams: { connect: "refresh", slug },
-      }),
-    };
-  };
+  const connectReturnUrls = (slug: string) => ({
+    returnUrl: buildConnectReturnUrl(CREATE_PATH, {
+      connect: "return",
+      slug,
+    }),
+    refreshUrl: buildConnectReturnUrl(CREATE_PATH, {
+      connect: "refresh",
+      slug,
+    }),
+  });
 
   const ensureCollegeCreated = async (): Promise<string> => {
     if (collegeSlug) return collegeSlug;
@@ -414,10 +408,10 @@ export function CreateCollegeWizard() {
         returnUrl: urls.returnUrl,
         refreshUrl: urls.refreshUrl,
       });
-      await Linking.openURL(url);
+      await openStripeUrl(url);
       void refreshConnectAccountStatus({ communitySlug: slug }).catch(() => {});
     } catch (err) {
-      setError(getFriendlyAuthError(err) || "Could not start payout setup.");
+      setError(getFriendlyConnectError(err) || "Could not start payout setup.");
     } finally {
       setConnectLoading(false);
     }

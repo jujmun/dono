@@ -7,14 +7,12 @@ import {
   Image,
   ActivityIndicator,
   Modal,
-  Linking,
   Platform,
 } from "react-native";
 import { Link, useLocalSearchParams } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import * as DocumentPicker from "expo-document-picker";
-import * as ExpoLinking from "expo-linking";
 import {
   CheckCircle2,
   ArrowRight,
@@ -46,8 +44,11 @@ import { VerifyingIndicator } from "@/components/ui/verifying-indicator";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isAtLeastAge, parseIsoDateOnly } from "@/lib/age";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
+import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
+import { getFriendlyConnectError } from "@/lib/stripe/errors";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
+import { openStripeUrl } from "@/lib/stripe/open-url";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import type { OrgType } from "@/lib/types";
@@ -516,42 +517,33 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
   };
 
   const connectReturnUrls = (slug: string) => {
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      const origin = window.location.origin;
-      return {
-        returnUrl: `${origin}${createPath}?connect=return&slug=${encodeURIComponent(slug)}`,
-        refreshUrl: `${origin}${createPath}?connect=refresh&slug=${encodeURIComponent(slug)}`,
-      };
-    }
+    const query = { connect: "return", slug };
+    const refreshQuery = { connect: "refresh", slug };
     return {
-      returnUrl: ExpoLinking.createURL(createPath, {
-        queryParams: { connect: "return", slug },
-      }),
-      refreshUrl: ExpoLinking.createURL(createPath, {
-        queryParams: { connect: "refresh", slug },
-      }),
+      returnUrl: buildConnectReturnUrl(createPath, query),
+      refreshUrl: buildConnectReturnUrl(createPath, refreshQuery),
     };
   };
 
   const handleConnectOnboarding = async () => {
-    if (!societySlug) return;
     setError(null);
     setConnectLoading(true);
     try {
-      persistOrgSlug(orgType, societySlug);
-      const urls = connectReturnUrls(societySlug);
+      const slug = societySlug ?? (await ensureSocietyCreated());
+      persistOrgSlug(orgType, slug);
+      const urls = connectReturnUrls(slug);
       const { url } = await createConnectOnboardingLink({
-        communitySlug: societySlug,
+        communitySlug: slug,
         returnUrl: urls.returnUrl,
         refreshUrl: urls.refreshUrl,
       });
-      await Linking.openURL(url);
+      await openStripeUrl(url);
       // Soft refresh after returning — user may stay in this tab on web.
-      void refreshConnectAccountStatus({ communitySlug: societySlug }).catch(
+      void refreshConnectAccountStatus({ communitySlug: slug }).catch(
         () => {},
       );
     } catch (err) {
-      setError(getFriendlyAuthError(err) || "Could not start payout setup.");
+      setError(getFriendlyConnectError(err) || "Could not start payout setup.");
     } finally {
       setConnectLoading(false);
     }
@@ -1155,9 +1147,9 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
             ) : null}
             <Pressable
               onPress={() => void handleConnectOnboarding()}
-              disabled={!societySlug || connectLoading || connectReady}
+              disabled={connectLoading || connectReady}
               className={`retro-key flex-row items-center justify-center gap-2 rounded-lg border-2 border-retro-ink bg-white px-4 py-3 ${
-                !societySlug || connectLoading || connectReady ? "opacity-50" : ""
+                connectLoading || connectReady ? "opacity-50" : ""
               }`}
             >
               {connectLoading ? (
