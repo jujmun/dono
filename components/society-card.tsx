@@ -1,11 +1,12 @@
 import { Link } from "expo-router";
-import { View, Text, Pressable, ActivityIndicator, Linking, Platform } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useAction } from "convex/react";
 import { useState } from "react";
-import * as ExpoLinking from "expo-linking";
 import { Building2, Users } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
+import { openStripeUrl } from "@/lib/stripe/open-url";
 import { retroKeyClass } from "@/lib/retro-key";
 import { cn, initialsFor } from "@/lib/utils";
 import type { MySociety, Society } from "@/lib/types";
@@ -43,16 +44,13 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
     setConnectLoading(true);
     setConnectError(null);
     try {
-      const returnUrl =
-        Platform.OS === "web" && typeof window !== "undefined"
-          ? `${window.location.origin}/societies`
-          : ExpoLinking.createURL("/societies");
+      const returnUrl = buildConnectReturnUrl("/societies");
       const { url } = await createConnectOnboardingLink({
         communitySlug: society.slug,
         returnUrl,
         refreshUrl: returnUrl,
       });
-      await Linking.openURL(url);
+      await openStripeUrl(url);
       void refreshConnectAccountStatus({ communitySlug: society.slug }).catch(
         () => {},
       );

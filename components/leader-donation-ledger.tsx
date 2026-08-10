@@ -5,7 +5,6 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
-  Linking,
   Share,
 } from "react-native";
 import { useAction, useConvexAuth, useQuery } from "convex/react";
@@ -15,6 +14,7 @@ import { formatCurrency } from "@/lib/constants";
 import { downloadTextFile } from "@/lib/download-blob";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { getFriendlyConnectError } from "@/lib/stripe/errors";
+import { openStripeUrl } from "@/lib/stripe/open-url";
 import type { Campaign } from "@/lib/types";
 
 interface LeaderDonationLedgerProps {
@@ -97,7 +97,7 @@ export function LeaderDonationLedger({ slug }: LeaderDonationLedgerProps) {
         communitySlug: slug,
       });
       if (loginEmail) setDashboardLoginEmail(loginEmail);
-      await Linking.openURL(url);
+      await openStripeUrl(url);
     } catch (err) {
       setError(getFriendlyConnectError(err));
     } finally {

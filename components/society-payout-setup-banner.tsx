@@ -4,14 +4,13 @@ import {
   Text,
   Pressable,
   ActivityIndicator,
-  Linking,
-  Platform,
 } from "react-native";
 import { useAction, useConvexAuth, useQuery } from "convex/react";
 import { Banknote } from "lucide-react-native";
-import * as ExpoLinking from "expo-linking";
 import { api } from "@convex/_generated/api";
+import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
 import { getFriendlyConnectError } from "@/lib/stripe/errors";
+import { openStripeUrl } from "@/lib/stripe/open-url";
 
 interface SocietyPayoutSetupBannerProps {
   slug: string;
@@ -87,15 +86,7 @@ export function SocietyPayoutSetupBanner({
 
   const buildReturnUrl = () => {
     const path = returnPath ?? `/societies/${encodeURIComponent(slug)}`;
-    const normalizedPath = path.startsWith("/") ? path : `/${path}`;
-    const siteUrl = process.env.EXPO_PUBLIC_SITE_URL?.replace(/\/$/, "");
-    if (Platform.OS === "web" && siteUrl) {
-      return `${siteUrl}${normalizedPath}`;
-    }
-    if (Platform.OS === "web" && typeof window !== "undefined") {
-      return `${window.location.origin}${normalizedPath}`;
-    }
-    return ExpoLinking.createURL(normalizedPath.replace(/^\//, ""));
+    return buildConnectReturnUrl(path);
   };
 
   const handleOpenDashboard = async () => {
@@ -106,7 +97,7 @@ export function SocietyPayoutSetupBanner({
         communitySlug: slug,
       });
       if (loginEmail) setDashboardLoginEmail(loginEmail);
-      await Linking.openURL(url);
+      await openStripeUrl(url);
     } catch (err) {
       setError(getFriendlyConnectError(err));
     } finally {
@@ -124,7 +115,7 @@ export function SocietyPayoutSetupBanner({
         returnUrl,
         refreshUrl: returnUrl,
       });
-      await Linking.openURL(url);
+      await openStripeUrl(url);
       void refreshConnectAccountStatus({ communitySlug: slug }).catch(() => {});
     } catch (err) {
       setError(getFriendlyConnectError(err));
