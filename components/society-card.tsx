@@ -4,8 +4,8 @@ import { useAction } from "convex/react";
 import { useState } from "react";
 import { Building2, Users } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
-import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
+import { getFriendlyConnectError } from "@/lib/stripe/errors";
 import { openStripeUrl } from "@/lib/stripe/open-url";
 import { retroKeyClass } from "@/lib/retro-key";
 import { cn, initialsFor } from "@/lib/utils";
@@ -55,7 +55,7 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
         () => {},
       );
     } catch (err) {
-      setConnectError(getFriendlyAuthError(err));
+      setConnectError(getFriendlyConnectError(err));
     } finally {
       setConnectLoading(false);
     }
