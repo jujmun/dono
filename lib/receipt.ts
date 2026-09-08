@@ -1,4 +1,5 @@
 import type { Campaign } from "@/lib/types";
+import { getDisplayRaised } from "@/lib/constants";
 import { parseImpactItem } from "@/lib/fund-breakdown";
 
 export interface ReceiptLine {
@@ -28,9 +29,10 @@ export function buildGoalLineItems(campaign: Campaign): ReceiptLine[] {
 
 /** Closing ledger row — always present on campaign cards. */
 export function buildReceiptFooter(campaign: Campaign): ReceiptLine {
-  const remaining = Math.max(0, campaign.goal - campaign.raised);
+  const raised = getDisplayRaised(campaign);
+  const remaining = Math.max(0, campaign.goal - raised);
 
-  if (campaign.raised === 0) {
+  if (raised === 0) {
     return { label: "Total goal", amount: campaign.goal };
   }
 

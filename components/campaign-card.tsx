@@ -2,7 +2,7 @@ import { type Href, Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
 import { Users, Heart } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
-import { formatCurrency, getProgress } from "@/lib/constants";
+import { formatCurrency, getDisplayRaised, getProgress } from "@/lib/constants";
 import { getPrimaryCampaignImage } from "@/lib/campaign-images";
 import {
   buildGoalLineItems,
@@ -57,7 +57,8 @@ export function CampaignCard({
   variant = "default",
   href,
 }: CampaignCardProps) {
-  const progress = getProgress(campaign.raised, campaign.goal);
+  const displayRaised = getDisplayRaised(campaign);
+  const progress = getProgress(displayRaised, campaign.goal);
   const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
   const subtitle = getReceiptSubtitle(campaign);
   const imageSource = getPrimaryCampaignImage(campaign);
@@ -96,7 +97,7 @@ export function CampaignCard({
 
               <View className="mt-3 flex-row items-center justify-between border-t border-dashed border-dono-border pt-3">
                 <Text className="font-retro-mono text-xs text-dono-text">
-                  {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+                  {formatCurrency(displayRaised)} of {formatCurrency(campaign.goal)}
                 </Text>
                 <View className="flex-row items-center gap-3">
                   <View className="flex-row items-center gap-1">
@@ -150,7 +151,7 @@ export function CampaignCard({
 
             <View className="mt-4 flex-row items-center justify-between border-t border-dashed border-dono-border pt-4">
               <Text className="font-retro-mono text-sm text-dono-text">
-                {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+                {formatCurrency(displayRaised)} of {formatCurrency(campaign.goal)}
               </Text>
               <View className="flex-row items-center gap-4">
                 <View className="flex-row items-center gap-1.5">

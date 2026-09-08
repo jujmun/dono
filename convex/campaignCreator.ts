@@ -17,6 +17,7 @@ import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
 import { isEditableByOwner, isPublicStatus, hasCompletedStripeIdentity, isReadyForSocietyReview, requiresSocietyApproval } from "./lib/campaignVisibility";
+import { assertExistingFunding } from "./lib/existingFunding";
 import { buildCampaignVerifications } from "./lib/verificationBadges";
 import { notifySocietyLeadersCampaignPending } from "./lib/societyCampaignNotify";
 import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
@@ -120,6 +121,7 @@ export const update = mutation({
     description: v.optional(v.string()),
     story: v.optional(v.string()),
     goal: v.optional(v.number()),
+    existingFunding: v.optional(v.number()),
     template: v.optional(v.string()),
     /** Empty string clears the notes. */
     additionalNotes: v.optional(v.string()),
@@ -199,6 +201,15 @@ export const update = mutation({
         throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid goal." });
       }
       patch.goal = args.goal;
+    }
+    const nextGoal = args.goal !== undefined ? args.goal : campaign.goal;
+    const nextExistingFunding =
+      args.existingFunding !== undefined
+        ? args.existingFunding
+        : (campaign.existingFunding ?? 0);
+    assertExistingFunding(nextExistingFunding, nextGoal);
+    if (args.existingFunding !== undefined) {
+      patch.existingFunding = args.existingFunding;
     }
     if (args.template !== undefined) {
       if (!isValidCampaignTemplateId(args.template)) {

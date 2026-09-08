@@ -39,6 +39,7 @@ import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
 import { CampaignUpdateDisplay } from "@/components/campaign-update-display";
 import { computeMatchCredit } from "@/lib/donation-psychology";
+import { getDisplayRaised } from "@/lib/constants";
 import { cn } from "@/lib/utils";
 import { AppShell } from "@/components/app-shell";
 
@@ -371,7 +372,7 @@ export default function CampaignDetailPage() {
         className="w-full"
       />
       <CampaignHeroProgressStrip
-        raised={campaign.raised}
+        raised={getDisplayRaised(campaign)}
         goal={campaign.goal}
       />
     </View>

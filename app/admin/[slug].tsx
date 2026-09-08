@@ -285,6 +285,12 @@ export default function AdminCampaignReviewPage() {
           Goal {formatCurrency(campaign.goal)} · Submitted {campaign.createdAt} ·{" "}
           {campaign.university}
         </Text>
+        {(campaign.existingFunding ?? 0) > 0 ? (
+          <Text className="mt-1 text-sm text-dono-muted">
+            Includes {formatCurrency(campaign.existingFunding ?? 0)} already received
+            outside Dono
+          </Text>
+        ) : null}
 
         {moderated && campaign.moderationNote ? (
           <View className="mt-6 rounded-2xl border border-rose-200 bg-rose-50 p-5">

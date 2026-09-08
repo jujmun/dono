@@ -335,6 +335,7 @@ export default defineSchema({
       story: v.optional(v.string()),
       category: v.optional(v.string()),
       goal: v.optional(v.number()),
+      existingFunding: v.optional(v.number()),
       template: v.optional(v.string()),
       additionalNotes: v.optional(v.string()),
       expectedExpenditureDate: v.optional(v.string()),

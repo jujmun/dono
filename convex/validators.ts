@@ -30,6 +30,10 @@ export const campaignFields = {
   category: v.string(),
   goal: v.number(),
   raised: v.number(),
+  /** Pounds already received outside Dono. Counts toward the public progress
+   * bar only — does not inflate donors, community totals, or Stripe funds.
+   * Missing on older rows; treat as 0. Must stay strictly below `goal`. */
+  existingFunding: v.optional(v.number()),
   donors: v.number(),
   likes: v.number(),
   followers: v.number(),

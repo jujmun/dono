@@ -7,6 +7,10 @@ import { isAllowedCampaignCategory } from "./lib/campaignCategories";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { createNotification } from "./lib/notifications";
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
+import {
+  assertExistingFunding,
+  liveStatusAfterTotals,
+} from "./lib/existingFunding";
 
 const MAX_TITLE_LENGTH = 120;
 const MAX_CATEGORY_LENGTH = 60;
@@ -25,6 +29,7 @@ const proposedFields = v.object({
   story: v.optional(v.string()),
   category: v.optional(v.string()),
   goal: v.optional(v.number()),
+  existingFunding: v.optional(v.number()),
   template: v.optional(v.string()),
   additionalNotes: v.optional(v.string()),
   expectedExpenditureDate: v.optional(v.string()),
@@ -40,6 +45,7 @@ type Proposed = {
   story?: string;
   category?: string;
   goal?: number;
+  existingFunding?: number;
   template?: string;
   additionalNotes?: string;
   expectedExpenditureDate?: string;
@@ -95,6 +101,15 @@ function normalizeProposed(raw: Proposed): Proposed {
       throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid goal." });
     }
     proposed.goal = raw.goal;
+  }
+  if (raw.existingFunding !== undefined) {
+    if (!Number.isFinite(raw.existingFunding) || raw.existingFunding < 0) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Already received must be at least 0 and less than the funding goal.",
+      });
+    }
+    proposed.existingFunding = raw.existingFunding;
   }
   if (raw.template !== undefined) {
     if (!isValidCampaignTemplateId(raw.template)) {
@@ -178,6 +193,7 @@ function currentSnapshot(campaign: Doc<"campaigns">) {
     story: campaign.story,
     category: campaign.category,
     goal: campaign.goal,
+    existingFunding: campaign.existingFunding ?? 0,
     template: campaign.template,
     additionalNotes: campaign.additionalNotes ?? "",
     expectedExpenditureDate: campaign.expectedExpenditureDate ?? "",
@@ -235,6 +251,10 @@ export const propose = mutation({
     }
 
     const proposed = normalizeProposed(args.proposed);
+    const nextGoal = proposed.goal ?? campaign.goal;
+    const nextExistingFunding =
+      proposed.existingFunding ?? campaign.existingFunding ?? 0;
+    assertExistingFunding(nextExistingFunding, nextGoal);
 
     const requestId = await replacePendingRequest(
       ctx,
@@ -300,6 +320,7 @@ export const adminReview = mutation({
       if (p.story !== undefined) patch.story = p.story;
       if (p.category !== undefined) patch.category = p.category;
       if (p.goal !== undefined) patch.goal = p.goal;
+      if (p.existingFunding !== undefined) patch.existingFunding = p.existingFunding;
       if (p.template !== undefined) patch.template = p.template;
       if (p.additionalNotes !== undefined) {
         patch.additionalNotes = p.additionalNotes || undefined;
@@ -318,6 +339,21 @@ export const adminReview = mutation({
       }
       if (p.impactItems !== undefined) {
         patch.impactItems = p.impactItems;
+      }
+      const nextGoal = p.goal !== undefined ? p.goal : campaign.goal;
+      const nextExistingFunding =
+        p.existingFunding !== undefined
+          ? p.existingFunding
+          : (campaign.existingFunding ?? 0);
+      assertExistingFunding(nextExistingFunding, nextGoal);
+      const nextStatus = liveStatusAfterTotals(
+        campaign.status,
+        campaign.raised,
+        nextExistingFunding,
+        nextGoal,
+      );
+      if (nextStatus !== campaign.status) {
+        patch.status = nextStatus;
       }
       if (Object.keys(patch).length > 0) {
         await ctx.db.patch(campaign._id, patch);

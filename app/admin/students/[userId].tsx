@@ -22,7 +22,7 @@ import {
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
-import { formatCurrency } from "@/lib/constants";
+import { formatCurrency, getDisplayRaised } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 
 type StudentAdminPayload = {
@@ -327,7 +327,7 @@ export default function AdminStudentProfilePage() {
                         </Text>
                         <Text className="mt-1 text-sm text-dono-muted">
                           Goal {formatCurrency(campaign.goal)} · Raised{" "}
-                          {formatCurrency(campaign.raised)}
+                          {formatCurrency(getDisplayRaised(campaign))}
                         </Text>
                       </View>
                       <View className="items-center gap-0.5 pt-1">

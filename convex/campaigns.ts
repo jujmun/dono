@@ -5,6 +5,10 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
 import {
+  assertExistingFunding,
+  displayRaised,
+} from "./lib/existingFunding";
+import {
   enrichCampaignWithMedia,
   enrichCampaignsWithMedia,
 } from "./lib/campaignMedia";
@@ -205,10 +209,11 @@ export const listNearGoal = query({
       .filter((c) => isPublicCampaign(c))
       .filter((c) => c.status === "active" && c.goal > 0)
       .filter((c) => {
-        const progress = c.raised / c.goal;
-        return progress >= 0.8 && c.raised < c.goal;
+        const shown = displayRaised(c);
+        const progress = shown / c.goal;
+        return progress >= 0.8 && shown < c.goal;
       })
-      .sort((a, b) => b.raised / b.goal - a.raised / a.goal)
+      .sort((a, b) => displayRaised(b) / b.goal - displayRaised(a) / a.goal)
       .slice(0, limit);
     return await enrichCampaignsWithMedia(ctx, nearGoal);
   },
@@ -709,6 +714,7 @@ export const create = mutation({
     description: v.string(),
     story: v.string(),
     goal: v.number(),
+    existingFunding: v.optional(v.number()),
     template: v.string(),
     expectedExpenditureDate: v.optional(v.string()),
     plannedUpdateSchedule: v.optional(v.string()),
@@ -794,6 +800,8 @@ export const create = mutation({
         message: "Goal must be between 1 and 1,000,000.",
       });
     }
+    const existingFunding = args.existingFunding ?? 0;
+    assertExistingFunding(existingFunding, args.goal);
 
     const society = await ctx.db
       .query("societies")
@@ -862,6 +870,7 @@ export const create = mutation({
       category,
       goal: args.goal,
       raised: 0,
+      existingFunding,
       donors: 0,
       likes: 0,
       followers: 0,
@@ -1315,7 +1324,7 @@ export const getDonateDisclosures = query({
           panelComplete: Boolean(campaign.creator?.name?.trim()),
           mayExceedTarget: true,
           goal: campaign.goal,
-          raised: campaign.raised,
+          raised: displayRaised(campaign),
         };
       }
 
@@ -1401,7 +1410,7 @@ export const getDonateDisclosures = query({
         ),
         mayExceedTarget: true,
         goal: campaign.goal,
-        raised: campaign.raised,
+        raised: displayRaised(campaign),
       };
     } catch (error) {
       console.error("getDonateDisclosures failed", args.slug, error);

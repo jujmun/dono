@@ -5,6 +5,9 @@
     },
     "posthog": {
       "enabled": true
+    },
+    "convex": {
+      "enabled": true
     }
   }
 }

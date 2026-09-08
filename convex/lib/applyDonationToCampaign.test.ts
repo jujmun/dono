@@ -24,4 +24,20 @@ describe("computeCampaignAfterDonation", () => {
 
     expect(result.status).toBe("completed");
   });
+
+  it("marks campaign funded when existing funding plus the donation reach the goal", () => {
+    const result = computeCampaignAfterDonation(
+      {
+        raised: 250,
+        donors: 3,
+        goal: 500,
+        existingFunding: 200,
+        status: "active",
+      },
+      50,
+    );
+
+    expect(result.status).toBe("funded");
+    expect(result.raised).toBe(300);
+  });
 });

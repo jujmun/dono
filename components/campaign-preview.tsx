@@ -11,7 +11,7 @@ import {
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
-import { formatCurrency } from "@/lib/constants";
+import { formatCurrency, getProgress } from "@/lib/constants";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 
 function previewDeadline(): string {
@@ -26,6 +26,8 @@ export interface CampaignPreviewProps {
   university: string;
   story: string;
   goal: number;
+  /** Off-platform funds already received — preview progress starts here. */
+  existingFunding?: number;
   imageUri?: string | null;
   imageUris?: string[];
   impactLines?: { label: string; amount: number }[];
@@ -40,6 +42,7 @@ export function CampaignPreview({
   university,
   story,
   goal,
+  existingFunding = 0,
   imageUri,
   imageUris,
   impactLines,
@@ -55,6 +58,8 @@ export function CampaignPreview({
   const resolvedTemplate = template ? getCampaignTemplate(template) : null;
   const accentHex = resolvedTemplate?.unlocks.accentHex;
   const heroLayout = resolvedTemplate?.unlocks.heroLayout ?? "media-first";
+  const previewRaised = Number.isFinite(existingFunding) ? Math.max(0, existingFunding) : 0;
+  const previewProgress = goal > 0 ? getProgress(previewRaised, goal) : 0;
 
   const galleryBlock = (
     <CampaignImageGallery
@@ -160,11 +165,11 @@ export function CampaignPreview({
               className={`font-retro-mono-bold text-3xl ${!accentHex ? "text-dono-primary" : ""}`}
               style={accentHex ? { color: accentHex } : undefined}
             >
-              {formatCurrency(0)}
+              {formatCurrency(previewRaised)}
             </Text>
             <Text className="text-sm text-dono-muted">of {formatCurrency(goal)}</Text>
           </View>
-          <ProgressBar value={0} className="mt-3" showLabel fillColor={accentHex} />
+          <ProgressBar value={previewProgress} className="mt-3" showLabel fillColor={accentHex} />
           <Text className="mt-2 text-sm text-dono-muted">0 donors · 0 followers</Text>
 
           <View
