@@ -137,6 +137,13 @@ export function PendingCampaignEditsSection({ enabled }: { enabled: boolean }) {
                   proposed={formatCurrency(p.goal)}
                 />
               ) : null}
+              {p.existingFunding !== undefined ? (
+                <DiffRow
+                  label="Already received"
+                  current={formatCurrency(c.existingFunding)}
+                  proposed={formatCurrency(p.existingFunding)}
+                />
+              ) : null}
               {p.template !== undefined ? (
                 <DiffRow
                   label="Template"

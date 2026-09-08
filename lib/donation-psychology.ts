@@ -1,6 +1,6 @@
 import type { Campaign } from "@/lib/types";
 import { buildGoalLineItems } from "./receipt";
-import { formatCurrency, getProgress } from "./constants";
+import { formatCurrency, getDisplayRaised, getProgress } from "./constants";
 
 export const DETAIL_DONATION_PRESETS = [5, 10, 25, 100, 150, 200] as const;
 export const RECOMMENDED_DONATION_AMOUNT = 25;
@@ -87,15 +87,20 @@ export function nextRoundUpAmount(amount: number): number | null {
   return rounded;
 }
 
-export function isNearGoal(campaign: Pick<Campaign, "raised" | "goal" | "status">): boolean {
+export function isNearGoal(
+  campaign: Pick<Campaign, "raised" | "existingFunding" | "goal" | "status">,
+): boolean {
   if (campaign.status === "funded" || campaign.status === "completed") return false;
   if (campaign.goal <= 0) return false;
-  const progress = getProgress(campaign.raised, campaign.goal);
-  return progress >= 80 && campaign.raised < campaign.goal;
+  const raised = getDisplayRaised(campaign);
+  const progress = getProgress(raised, campaign.goal);
+  return progress >= 80 && raised < campaign.goal;
 }
 
-export function nearGoalRemaining(campaign: Pick<Campaign, "raised" | "goal">): number {
-  return Math.max(0, campaign.goal - campaign.raised);
+export function nearGoalRemaining(
+  campaign: Pick<Campaign, "raised" | "existingFunding" | "goal">,
+): number {
+  return Math.max(0, campaign.goal - getDisplayRaised(campaign));
 }
 
 /** Short copy tying the selected amount to a budget line item. */

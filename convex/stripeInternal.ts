@@ -4,6 +4,10 @@ import { internal } from "./_generated/api";
 import type { Id } from "./_generated/dataModel";
 import { computeCampaignAfterDonation } from "./lib/applyDonationToCampaign";
 import {
+  displayRaised,
+  isCampaignFunded,
+} from "./lib/existingFunding";
+import {
   DONATION_CURRENCY,
   donationAmountToStripeMinorUnits,
   normalizeCampaignSlug,
@@ -155,7 +159,7 @@ export const resolveCampaignMerchantAccount = internalQuery({
       });
     }
 
-    const remaining = Math.max(0, campaign.goal - campaign.raised);
+    const remaining = Math.max(0, campaign.goal - displayRaised(campaign));
     if (remaining <= 0) {
       throw new ConvexError({
         code: "CAMPAIGN_FUNDED",
@@ -562,12 +566,13 @@ export const markDonationSucceeded = internalMutation({
       ...(args.stripeChargeId ? { stripeChargeId: args.stripeChargeId } : {}),
     });
 
-    const wasFunded = campaign.raised >= campaign.goal;
+    const wasFunded = isCampaignFunded(campaign);
     const { raised, donors, status } = computeCampaignAfterDonation(
       {
         raised: campaign.raised,
         donors: campaign.donors,
         goal: campaign.goal,
+        existingFunding: campaign.existingFunding,
         status: campaign.status,
       },
       donation.amount,
@@ -685,7 +690,15 @@ export const markDonationSucceeded = internalMutation({
       });
     }
 
-    if (!wasFunded && raised >= campaign.goal && campaign.createdBy) {
+    if (
+      !wasFunded &&
+      isCampaignFunded({
+        raised,
+        existingFunding: campaign.existingFunding,
+        goal: campaign.goal,
+      }) &&
+      campaign.createdBy
+    ) {
       const profile = await getProfileByUserId(ctx, campaign.createdBy);
       if (profile?.email) {
         await ctx.scheduler.runAfter(0, internal.emails.sendCampaignFunded, {
@@ -831,6 +844,7 @@ export const recordRecurringInvoicePayment = internalMutation({
         raised: campaign.raised,
         donors: campaign.donors,
         goal: campaign.goal,
+        existingFunding: campaign.existingFunding,
         status: campaign.status,
       },
       args.amount,
@@ -1165,6 +1179,7 @@ export const processSuccessfulSocietyInvoice = internalMutation({
           raised: campaign.raised,
           donors: campaign.donors,
           goal: campaign.goal,
+          existingFunding: campaign.existingFunding,
           status: campaign.status,
         },
         amountPounds,

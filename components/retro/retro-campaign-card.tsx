@@ -6,6 +6,7 @@ import {
   creatorTypeLabels,
   formatCurrency,
   getCampaignApprovalStage,
+  getDisplayRaised,
   getProgress,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
@@ -39,7 +40,8 @@ export function RetroCampaignCard({
   matchMultiplier,
   collegeMatch = false,
 }: RetroCampaignCardProps) {
-  const progress = getProgress(campaign.raised, campaign.goal);
+  const displayRaised = getDisplayRaised(campaign);
+  const progress = getProgress(displayRaised, campaign.goal);
   const imageSource = getPrimaryCampaignImage(campaign);
   const goalLines = buildGoalLineItems(campaign).slice(0, 3);
   const footer = buildReceiptFooter(campaign);
@@ -189,7 +191,7 @@ export function RetroCampaignCard({
 
             <View className="flex-row items-center justify-between">
               <Text className="font-retro-mono-bold text-xs text-retro-ink">
-                {formatCurrency(campaign.raised)} of{" "}
+                {formatCurrency(displayRaised)} of{" "}
                 {formatCurrency(campaign.goal)}
               </Text>
               <View className="flex-row gap-3">

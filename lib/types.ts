@@ -35,6 +35,8 @@ export interface Campaign {
   category: CampaignCategory;
   goal: number;
   raised: number;
+  /** Pounds already received outside Dono. Counts toward display progress only. */
+  existingFunding?: number;
   donors: number;
   likes: number;
   followers: number;

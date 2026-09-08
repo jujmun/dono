@@ -11,6 +11,14 @@ export function getProgress(raised: number, goal: number): number {
   return Math.min(Math.round((raised / goal) * 100), 100);
 }
 
+/** Public progress total: Dono donations plus off-platform funds already received. */
+export function getDisplayRaised(campaign: {
+  raised: number;
+  existingFunding?: number;
+}): number {
+  return campaign.raised + (campaign.existingFunding ?? 0);
+}
+
 export const categoryLabels: Record<string, string> = {
   textbooks: "Textbooks",
   equipment: "Equipment",

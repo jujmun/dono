@@ -6,6 +6,7 @@ import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
+import { displayRaised, isCampaignFunded } from "./lib/existingFunding";
 
 const MAX_HEADLINE_LENGTH = 120;
 const MAX_BODY_LENGTH = 500;
@@ -17,8 +18,13 @@ const UPDATE_MEDIA_UPLOAD_LIMIT = {
   lockoutMs: 15 * 60 * 1000,
 };
 
-function assertUpdateEligible(campaign: { raised: number; goal: number; status: string }) {
-  const eligible = campaign.raised >= campaign.goal || campaign.status === "completed";
+function assertUpdateEligible(campaign: {
+  raised: number;
+  existingFunding?: number;
+  goal: number;
+  status: string;
+}) {
+  const eligible = isCampaignFunded(campaign) || campaign.status === "completed";
   if (!eligible) {
     throw new ConvexError({
       code: "INVALID_STATE",
@@ -102,7 +108,7 @@ export const create = mutation({
       });
     }
 
-    const amountRaised = campaign.raised;
+    const amountRaised = displayRaised(campaign);
     const reconciliationNote = args.reconciliationNote?.trim() || undefined;
     if (args.amountSpent < amountRaised && !reconciliationNote) {
       throw new ConvexError({
@@ -224,7 +230,7 @@ export const listUpdatableForSocietyLeader = query({
       .collect();
 
     const eligible = campaigns.filter(
-      (c) => c.raised >= c.goal || c.status === "completed",
+      (c) => isCampaignFunded(c) || c.status === "completed",
     );
 
     const results = await Promise.all(
@@ -242,7 +248,7 @@ export const listUpdatableForSocietyLeader = query({
       .map((c) => ({
         slug: c.slug,
         title: c.title,
-        raised: c.raised,
+        raised: displayRaised(c),
         goal: c.goal,
       }));
   },

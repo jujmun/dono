@@ -91,6 +91,7 @@ const initialForm = {
   description: "",
   story: "",
   goal: "",
+  existingFunding: "",
 };
 
 /** Thumbnail strip + add/remove controls — shared by the Details step and
@@ -262,6 +263,10 @@ export default function CreateCampaignPage() {
         description: editCampaign.description,
         story: editCampaign.story,
         goal: String(editCampaign.goal),
+        existingFunding:
+          editCampaign.existingFunding && editCampaign.existingFunding > 0
+            ? String(editCampaign.existingFunding)
+            : "",
       });
       setTemplate(editCampaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID);
       setVideoUrl(editCampaign.videoUrl ?? "");
@@ -339,6 +344,14 @@ export default function CreateCampaignPage() {
   );
   const goalAmount = Number(form.goal) || 0;
   const goalInvalid = form.goal.trim().length > 0 && goalAmount <= 0;
+  const existingFundingRaw = form.existingFunding.trim();
+  const existingFundingAmount =
+    existingFundingRaw === "" ? 0 : Number(existingFundingRaw);
+  const existingFundingInvalid =
+    existingFundingRaw.length > 0 &&
+    (!Number.isFinite(existingFundingAmount) ||
+      existingFundingAmount < 0 ||
+      (goalAmount > 0 && existingFundingAmount >= goalAmount));
   // Compare in pence — decimal amounts summed as floats can drift by a
   // hair (e.g. 1166.67 × 3) and a strict === would reject a correct ledger.
   const totalsMatch = Math.round(fundLineTotal * 100) === Math.round(goalAmount * 100);
@@ -499,6 +512,7 @@ export default function CreateCampaignPage() {
       description: form.description,
       story: form.story,
       goal: Number(form.goal),
+      existingFunding: existingFundingAmount,
       template,
       expectedExpenditureDate: expectedExpenditureDate.trim(),
       plannedUpdateSchedule: plannedUpdateSchedule.trim(),
@@ -591,6 +605,7 @@ export default function CreateCampaignPage() {
         return (
           Boolean(form.goal) &&
           Number(form.goal) > 0 &&
+          !existingFundingInvalid &&
           transparencyFieldsComplete
         );
       case 3:
@@ -1103,6 +1118,30 @@ export default function CreateCampaignPage() {
 
               <View>
                 <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
+                  Already received (£)
+                </Text>
+                <Text className="mb-2 text-xs text-[#5c574f]">
+                  Optional — money you already have for this campaign (grants, prior
+                  donations, and so on). It counts toward the progress bar. Leave blank
+                  for £0.
+                </Text>
+                <TextInput
+                  value={form.existingFunding}
+                  onChangeText={(v) => update("existingFunding", v)}
+                  placeholder="e.g. 200"
+                  placeholderTextColor="#56615A"
+                  keyboardType="numeric"
+                  className={inputClass}
+                />
+                {existingFundingInvalid ? (
+                  <Text className="mt-1 text-xs text-rose-700">
+                    Already received must be at least 0 and less than your funding goal.
+                  </Text>
+                ) : null}
+              </View>
+
+              <View>
+                <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   What your donation funds
                 </Text>
                 <Text className="mb-3 text-xs text-[#5c574f]">
@@ -1301,6 +1340,7 @@ export default function CreateCampaignPage() {
                 university={DEFAULT_UNIVERSITY}
                 story={form.story}
                 goal={Number(form.goal)}
+                existingFunding={existingFundingAmount}
                 imageUris={pickedImageUris}
                 imageUri={pickedImageUris.length === 0 ? editCampaign?.image : undefined}
                 impactLines={previewImpactLines}
@@ -1627,6 +1667,7 @@ export default function CreateCampaignPage() {
                           description: form.description,
                           story: form.story,
                           goal: Number(form.goal),
+                          existingFunding: existingFundingAmount,
                           template,
                           additionalNotes,
                           expectedExpenditureDate: expectedExpenditureDate.trim(),
@@ -1650,6 +1691,7 @@ export default function CreateCampaignPage() {
                       description: form.description,
                       story: form.story,
                       goal: Number(form.goal),
+                      existingFunding: existingFundingAmount,
                       template,
                       additionalNotes,
                       expectedExpenditureDate: expectedExpenditureDate.trim(),
@@ -1733,6 +1775,7 @@ export default function CreateCampaignPage() {
                           campaign_community_slug: form.communitySlug,
                           campaign_university: DEFAULT_UNIVERSITY,
                           campaign_goal: Number(form.goal),
+                          campaign_existing_funding: existingFundingAmount,
                           campaign_has_image:
                             pickedImages.length > 0 && !imageUploadFailed,
                           campaign_image_count: pickedImages.length,

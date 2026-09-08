@@ -15,6 +15,7 @@ export function toCampaign(campaign: CampaignDoc) {
     category: campaign.category,
     goal: campaign.goal,
     raised: campaign.raised,
+    existingFunding: campaign.existingFunding ?? 0,
     donors: campaign.donors,
     likes: campaign.likes,
     followers: campaign.followers,
