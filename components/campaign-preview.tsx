@@ -11,6 +11,7 @@ import {
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
+import { StoryText } from "@/components/story-text";
 import { formatCurrency, getProgress } from "@/lib/constants";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 
@@ -78,7 +79,7 @@ export function CampaignPreview({
   const storyBlock = (
     <View key="story" className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
       <Text className="mb-3 text-lg font-retro-bold text-dono-text">The story</Text>
-      <Text className="leading-relaxed text-dono-muted">{story}</Text>
+      <StoryText className="leading-relaxed text-dono-muted" text={story} />
     </View>
   );
 

@@ -36,6 +36,7 @@ import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
+import { StoryText } from "@/components/story-text";
 import type { Campaign, CampaignCategory } from "@/lib/types";
 
 type AdminReviewPayload = {
@@ -427,9 +428,10 @@ export default function AdminCampaignReviewPage() {
           <Text className="mt-6 font-retro-bold text-base text-dono-text">
             Full story
           </Text>
-          <Text className="mt-3 text-sm leading-6 text-dono-text">
-            {campaign.story}
-          </Text>
+          <StoryText
+            text={campaign.story}
+            className="mt-3 text-sm leading-6 text-dono-text"
+          />
         </View>
 
         {error ? (

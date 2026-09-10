@@ -23,10 +23,10 @@ describe("isCampaignFunded", () => {
     ).toBe(true);
   });
 
-  it("is not funded when Dono raised alone is still short", () => {
-    expect(
-      isCampaignFunded({ raised: 200, existingFunding: 200, goal: 500 }),
-    ).toBe(false);
+  it("is not funded when the goal has not been set yet", () => {
+    expect(isCampaignFunded({ raised: 0, existingFunding: 0, goal: 0 })).toBe(
+      false,
+    );
   });
 });
 

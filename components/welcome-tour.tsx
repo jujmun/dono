@@ -4,7 +4,6 @@ import {
   Home,
   PiggyBank,
   Users,
-  Sparkles,
   User,
   Plus,
   Heart,
@@ -57,14 +56,6 @@ const studentSlides: WelcomeTourSlide[] = [
     navLabel: "Communities",
   },
   {
-    title: "Impact",
-    description:
-      "Your dashboard tracks donations you've made, campaigns and communities you follow, and the difference your giving has made.",
-    icon: Sparkles,
-    href: "/dashboard",
-    navLabel: "Impact",
-  },
-  {
     title: "Your account",
     description:
       "Update your profile and review feedback on campaigns you run — all from Account settings.",
@@ -114,14 +105,6 @@ const alumniSlides: WelcomeTourSlide[] = [
     icon: Users,
     href: "/societies",
     navLabel: "Communities",
-  },
-  {
-    title: "Impact",
-    description:
-      "Your dashboard tracks donations you've made, campaigns and communities you follow, and the difference your giving has made.",
-    icon: Sparkles,
-    href: "/dashboard",
-    navLabel: "Impact",
   },
   {
     title: "Your account",

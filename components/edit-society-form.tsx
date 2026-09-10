@@ -14,6 +14,7 @@ import { CheckCircle2, ImagePlus } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { CampaignImage } from "@/components/ui/campaign-image";
+import { StoryTextInput } from "@/components/story-text";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { uploadImageToConvexStorage } from "@/lib/convex-storage-upload";
 import { api } from "@convex/_generated/api";
@@ -291,11 +292,10 @@ export function EditSocietyForm({
 
           <View className="gap-1.5">
             <Text className="font-retro-bold text-sm text-retro-ink">About</Text>
-            <TextInput
+            <StoryTextInput
               value={story}
               onChangeText={setStory}
               className={`${inputClass} min-h-[120px]`}
-              multiline
               placeholderTextColor="#9a948a"
             />
           </View>

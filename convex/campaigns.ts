@@ -4,18 +4,13 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
-import {
-  assertExistingFunding,
-  displayRaised,
-} from "./lib/existingFunding";
+import { displayRaised } from "./lib/existingFunding";
 import {
   enrichCampaignWithMedia,
   enrichCampaignsWithMedia,
 } from "./lib/campaignMedia";
 import {
   requireAdmin,
-  requireSocietyMember,
-  requireStudentCreator,
   resolveCreatorContact,
   optionalUserId,
   getProfileByUserId,
@@ -29,25 +24,15 @@ import {
   isReadyForAdminReview,
   isUnderReview,
 } from "./lib/campaignVisibility";
-import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
-import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
-import { assertAdultOrThrow } from "./lib/ageGate";
 import { buildCampaignVerifications } from "./lib/verificationBadges";
 import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
+import { insertPendingCampaign } from "./lib/insertPendingCampaign";
 import {
   buildCampaignActiveMessage,
-  buildCampaignPendingMessage,
   buildCampaignRejectedMessage,
   createNotification,
 } from "./lib/notifications";
-
-function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 function isPublicStatusLocal(status: string) {
   return isPublicStatus(status);
@@ -124,14 +109,6 @@ const placeholderCampaignSlugs = [
   "sports-equipment",
   "accessibility-ramp",
 ];
-
-const MAX_TITLE_LENGTH = 120;
-const MAX_CATEGORY_LENGTH = 60;
-const MAX_UNIVERSITY_LENGTH = 120;
-const MAX_DESCRIPTION_LENGTH = 500;
-const MAX_STORY_LENGTH = 5000;
-const MIN_GOAL = 1;
-const MAX_GOAL = 1_000_000;
 
 export const list = query({
   args: {},
@@ -723,20 +700,6 @@ export const create = mutation({
     idDocumentStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const communitySlug = args.communitySlug.trim();
-    const { profile } = await requireStudentCreator(ctx);
-    const { userId, community } = await requireSocietyMember(
-      ctx,
-      communitySlug,
-    );
-    await assertLegalAcceptedForContext(ctx, {
-      userId,
-      context: "create_society",
-    });
-    assertAdultOrThrow(
-      profile?.dateOfBirth,
-      "You must be at least 18 years old to create a campaign.",
-    );
     // EL-01/EL-07: Dono does not accept identity-document uploads.
     if (args.idDocumentStorageId) {
       throw new ConvexError({
@@ -745,169 +708,26 @@ export const create = mutation({
           "Identity documents are not accepted by Dono. Verification is performed by the Payment Provider.",
       });
     }
-    const title = args.title.trim();
-    const category = args.category.trim();
-    const description = args.description.trim();
-    const story = args.story.trim();
-    const university = community.university.trim();
-
-    if (!isValidCampaignTemplateId(args.template)) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Invalid template selection.",
-      });
-    }
-
-    if (!title || title.length > MAX_TITLE_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Title is required and must be at most 120 characters.",
-      });
-    }
-    if (!category || category.length > MAX_CATEGORY_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Category is required and must be at most 60 characters.",
-      });
-    }
-    if (!isAllowedCampaignCategory(category)) {
-      throw new ConvexError({
-        code: "PROHIBITED_CATEGORY",
-        message: "This campaign category is not permitted under the Terms.",
-      });
-    }
-    if (!university || university.length > MAX_UNIVERSITY_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "University is required and must be at most 120 characters.",
-      });
-    }
-    if (!description || description.length > MAX_DESCRIPTION_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Description is required and must be at most 500 characters.",
-      });
-    }
-    if (!story || story.length > MAX_STORY_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Story is required and must be at most 5000 characters.",
-      });
-    }
-    if (!Number.isFinite(args.goal) || args.goal < MIN_GOAL || args.goal > MAX_GOAL) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Goal must be between 1 and 1,000,000.",
-      });
-    }
-    const existingFunding = args.existingFunding ?? 0;
-    assertExistingFunding(existingFunding, args.goal);
-
-    const society = await ctx.db
-      .query("societies")
-      .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
-      .unique();
-    const responsibleIndividualUserId =
-      args.responsibleIndividualUserId ??
-      society?.responsibleIndividualUserId ??
-      society?.creatorId ??
-      userId;
-    if (!responsibleIndividualUserId) {
-      throw new ConvexError({
-        code: "RESPONSIBLE_INDIVIDUAL_REQUIRED",
-        message: "A named Responsible Individual is required.",
-      });
-    }
-
-    const creatorName = community.name;
-    const initials = creatorName
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-
-    let baseSlug = slugify(title);
-    let slug = baseSlug;
-    let suffix = 1;
-    while (
-      await ctx.db
-        .query("campaigns")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .unique()
-    ) {
-      slug = `${baseSlug}-${suffix}`;
-      suffix += 1;
-    }
-
-    const today = new Date();
-    const deadline = new Date(today);
-    deadline.setMonth(deadline.getMonth() + 2);
-    const maxDeadline = new Date(today);
-    maxDeadline.setFullYear(maxDeadline.getFullYear() + 1);
-    if (deadline > maxDeadline) {
-      deadline.setTime(maxDeadline.getTime());
-    }
-
-    const expectedExpenditureDate = args.expectedExpenditureDate?.trim();
-    const plannedUpdateSchedule = args.plannedUpdateSchedule?.trim();
-    const ownershipStatement = args.ownershipStatement?.trim();
-
     // societyApprovalStatus stays unset until the owner finishes the create
     // wizard (submitForReview). Identity runs mid-wizard against this row.
-    const initialVerifications = buildCampaignVerifications({
-      stripeVerificationStatus: undefined,
-      societyApprovalStatus: undefined,
-      verifications: [],
-      institutionallyEndorsed: false,
-    });
-
-    const campaignId = await ctx.db.insert("campaigns", {
-      slug,
-      title,
-      description,
-      story,
-      category,
-      goal: args.goal,
-      raised: 0,
-      existingFunding,
-      donors: 0,
-      likes: 0,
-      followers: 0,
-      comments: 0,
-      creator: {
-        name: creatorName,
-        type: "society",
-        avatar: initials || "SO",
-        communityId: communitySlug,
+    return await insertPendingCampaign(
+      ctx,
+      {
+        title: args.title,
+        category: args.category,
+        communitySlug: args.communitySlug,
+        description: args.description,
+        story: args.story,
+        goal: args.goal,
+        existingFunding: args.existingFunding,
+        template: args.template,
+        expectedExpenditureDate: args.expectedExpenditureDate,
+        plannedUpdateSchedule: args.plannedUpdateSchedule,
+        ownershipStatement: args.ownershipStatement,
+        responsibleIndividualUserId: args.responsibleIndividualUserId,
       },
-      verifications: initialVerifications,
-      university,
-      image: "default",
-      template: args.template,
-      createdAt: today.toISOString().slice(0, 10),
-      deadline: deadline.toISOString().slice(0, 10),
-      status: "pending",
-      updates: [],
-      impactItems: [],
-      createdBy: userId,
-      responsibleIndividualUserId,
-      ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
-      ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
-      ...(ownershipStatement ? { ownershipStatement } : {}),
-    });
-
-    // No relatedEntityId here: a "pending" campaign isn't public
-    // (isPublicCampaign requires active/funded/completed) and getBySlug
-    // returns null for it even to its own creator, so there's nowhere for
-    // a link to land yet.
-    await createNotification(ctx, {
-      userId,
-      type: "campaign_pending",
-      message: buildCampaignPendingMessage(title),
-    });
-
-    return { slug, campaignId };
+      { notifyOwner: true },
+    );
   },
 });
 

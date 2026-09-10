@@ -65,4 +65,27 @@ describe("getFriendlyAuthError", () => {
       getFriendlyAuthError(new Error("[CONVEX M(campaigns:create)] Server Error")),
     ).toBe("Something went wrong. Please try again.");
   });
+
+  it("does not leak Convex request-id Server Error wrappers", () => {
+    expect(
+      getFriendlyAuthError(
+        new Error(
+          "[CONVEX M(campaigns:create)] [Request ID: 6a5a5243d65084a3] Server Error\nCalled by client",
+        ),
+      ),
+    ).toBe("Something went wrong. Please try again.");
+  });
+
+  it("surfaces LEGAL_ACCEPTANCE_REQUIRED from ConvexError.data", () => {
+    const err = new Error(
+      "[CONVEX M(campaigns:create)] [Request ID: abc] Server Error\nCalled by client",
+    ) as Error & { data: { code: string; message: string } };
+    err.data = {
+      code: "LEGAL_ACCEPTANCE_REQUIRED",
+      message: "Please accept the latest society campaign terms before continuing.",
+    };
+    expect(getFriendlyAuthError(err)).toBe(
+      "Please accept the latest society campaign terms before continuing.",
+    );
+  });
 });

@@ -111,6 +111,21 @@
   transition: none;
 }
 
+/* Story editor: expo fonts are registered as family names, not weights.
+   <b>/<strong> must switch file or bold is invisible. */
+.story-text-editor {
+  font-family: "Fredoka_500Medium", "Fredoka", sans-serif !important;
+  font-weight: 500 !important;
+  font-synthesis: none;
+}
+
+.story-text-editor b,
+.story-text-editor strong,
+.story-text-editor [style*="font-weight"] {
+  font-family: "Fredoka_700Bold", "Fredoka", sans-serif !important;
+  font-weight: 700 !important;
+}
+
 @keyframes retro-ticker {
   from {
     transform: translateX(0);

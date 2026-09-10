@@ -22,6 +22,7 @@ import {
 import { usePostHog } from "posthog-react-native";
 import { AppShell } from "@/components/app-shell";
 import { CampaignPreview } from "@/components/campaign-preview";
+import { StoryTextInput } from "@/components/story-text";
 import { ImageCropModal, type CropSourceImage } from "@/components/image-crop-modal";
 import { LoginGate } from "@/components/login-gate";
 import { DonorCreateGate } from "@/components/donor-create-gate";
@@ -42,7 +43,9 @@ import {
   MAX_CAMPAIGN_IMAGES,
   CAMPAIGN_IMAGE_ASPECT,
 } from "@/lib/campaign-images";
+import { SocietyAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { wordingRecord } from "@/lib/legal/wordings";
 import { uploadCampaignImages } from "@/lib/upload-campaign-images";
 import { encodeImpactItems, parseImpactItem } from "@/lib/fund-breakdown";
 import { launchIdentityVerification } from "@/lib/stripe/launch-identity-verification";
@@ -187,6 +190,7 @@ export default function CreateCampaignPage() {
   const isEditMode = Boolean(editSlug);
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
+  const saveDraft = useMutation(api.campaignCreator.saveDraft);
   const updateProfileDateOfBirth = useMutation(api.users.updateProfile);
   const updateCampaign = useMutation(api.campaignCreator.update);
   const proposeCampaignEdit = useMutation(api.campaignEditRequests.propose);
@@ -206,6 +210,11 @@ export default function CreateCampaignPage() {
   const refreshVerificationStatus = useAction(
     api.campaignIdentity.refreshVerificationStatus,
   );
+  const acceptDocuments = useMutation(api.legal.acceptDocuments);
+  const hasAcceptedSocietyTerms = useQuery(
+    api.legal.hasAcceptedContext,
+    isAuthenticated ? { context: "create_society" } : "skip",
+  );
   const mySocieties = useQuery(
     api.societyMembers.listMyApprovedSocieties,
     isAuthenticated && !isEditMode ? {} : "skip",
@@ -222,6 +231,8 @@ export default function CreateCampaignPage() {
   );
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [savingDraft, setSavingDraft] = useState(false);
+  const [draftSaved, setDraftSaved] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
   const [cropQueue, setCropQueue] = useState<CropSourceImage[]>([]);
   const [cropReplaceIndex, setCropReplaceIndex] = useState<number | null>(null);
@@ -243,6 +254,10 @@ export default function CreateCampaignPage() {
   const [campaignSlug, setCampaignSlug] = useState<string | null>(null);
   const [verifying, setVerifying] = useState(false);
   const [loadedEditSlug, setLoadedEditSlug] = useState<string | null>(null);
+  const [societyTermsAccepted, setSocietyTermsAccepted] = useState(false);
+  const needsSocietyTermsReaccept = hasAcceptedSocietyTerms === false;
+  const societyTermsReady =
+    hasAcceptedSocietyTerms === true || societyTermsAccepted;
 
   // Edit mode operates on the existing campaign doc — adopt its slug
   // immediately so ensureCampaignCreated never creates a new one.
@@ -502,8 +517,23 @@ export default function CreateCampaignPage() {
     }
   };
 
+  const ensureSocietyTermsAccepted = async () => {
+    if (hasAcceptedSocietyTerms === true) return;
+    if (!societyTermsAccepted) {
+      throw new Error(
+        "Please accept the latest Society Campaign Terms before continuing.",
+      );
+    }
+    await acceptDocuments({
+      context: "create_society",
+      role: "responsible_representative",
+      wordings: [wordingRecord("W-SOC-ACCEPT-1", true)],
+    });
+  };
+
   const ensureCampaignCreated = async (): Promise<string> => {
     if (campaignSlug) return campaignSlug;
+    await ensureSocietyTermsAccepted();
 
     const result = await createCampaign({
       title: form.title,
@@ -526,6 +556,10 @@ export default function CreateCampaignPage() {
     setError(null);
     if (!hasDateOfBirth) {
       setError("Please confirm your date of birth before verifying your identity.");
+      return;
+    }
+    if (!societyTermsReady) {
+      setError("Please accept the latest Society Campaign Terms before continuing.");
       return;
     }
     setVerifying(true);
@@ -611,11 +645,130 @@ export default function CreateCampaignPage() {
       case 3:
         // Live post-approval edits skip Identity — already verified at launch.
         if (requiresApproval) return true;
-        // DOB + legal + Stripe Identity verified.
-        return stripeVerified && hasDateOfBirth;
+        // DOB + current Society Campaign Terms + Stripe Identity verified.
+        return stripeVerified && hasDateOfBirth && societyTermsReady;
       default:
         return true;
     }
+  };
+
+  const needsResubmit =
+    editCampaign?.status === "rejected" ||
+    editCampaign?.status === "changes_requested";
+  const showSaveDraft = step < 5 && !requiresApproval && !photosOnly;
+  const draftFieldArgs = () => {
+    const goal = Number(form.goal);
+    const hasGoal = Number.isFinite(goal) && goal > 0;
+    return {
+      title: form.title,
+      category: form.category,
+      communitySlug: form.communitySlug,
+      description: form.description,
+      story: form.story,
+      goal: hasGoal ? goal : 0,
+      existingFunding: hasGoal ? existingFundingAmount : 0,
+      template,
+      additionalNotes,
+      expectedExpenditureDate: expectedExpenditureDate.trim(),
+      plannedUpdateSchedule: plannedUpdateSchedule.trim(),
+      ownershipStatement: ownershipStatement.trim(),
+    };
+  };
+
+  const persistCampaignExtras = async (
+    slug: string,
+    options: { pushVideoIfEmpty: boolean },
+  ) => {
+    let imageUploadFailed = false;
+    let videoSaveFailed = false;
+    try {
+      if (fundLinesComplete || filledFundLines.length === 0) {
+        await setImpactItems({
+          slug,
+          impactItems: fundLinesComplete ? encodedImpactItems : [],
+        });
+      }
+    } catch {
+      setError(
+        "Campaign saved but fund breakdown could not be saved. Try again from this page.",
+      );
+    }
+    if (parsedVideoUrl || options.pushVideoIfEmpty) {
+      try {
+        await setCampaignVideoUrl({
+          slug,
+          videoUrl: parsedVideoUrl?.watchUrl ?? "",
+        });
+      } catch {
+        videoSaveFailed = true;
+      }
+    }
+    if (pickedImages.length > 0) {
+      try {
+        const allUploaded = await uploadCampaignImages({
+          slug,
+          images: pickedImages,
+          generateUploadUrl: generateImageUploadUrl,
+          setImage: setCampaignImage,
+          setImages: setCampaignImages,
+        });
+        imageUploadFailed = !allUploaded;
+      } catch {
+        imageUploadFailed = true;
+      }
+    }
+    return { imageUploadFailed, videoSaveFailed };
+  };
+
+  const adoptSavedSlug = (slug: string) => {
+    setCampaignSlug(slug);
+    setLoadedEditSlug(slug);
+    if (editSlug !== slug) {
+      router.setParams({ editSlug: slug });
+    }
+  };
+
+  const handleSaveDraft = () => {
+    if (savingDraft || submitting) return;
+    setError(null);
+    setDraftSaved(false);
+    setSavingDraft(true);
+    void (async () => {
+      const result = await saveDraft({
+        ...(campaignSlug ? { slug: campaignSlug } : {}),
+        ...draftFieldArgs(),
+      });
+      const slug = result.slug;
+      adoptSavedSlug(slug);
+      const { imageUploadFailed } = await persistCampaignExtras(slug, {
+        pushVideoIfEmpty: Boolean(parsedVideoUrl || campaignSlug || isEditMode),
+      });
+      if (imageUploadFailed && pickedImages.length > 0) {
+        setError(
+          "Draft saved but photos could not be uploaded. Try again from this page.",
+        );
+      } else {
+        setDraftSaved(true);
+      }
+      posthog?.capture("campaign_draft_saved", {
+        campaign_title: form.title,
+        campaign_category: form.category,
+        campaign_community_slug: form.communitySlug,
+        campaign_university: DEFAULT_UNIVERSITY,
+        campaign_goal: Number(form.goal),
+        campaign_existing_funding: existingFundingAmount,
+        campaign_has_image: pickedImages.length > 0 && !imageUploadFailed,
+        campaign_image_count: pickedImages.length,
+        campaign_template: template,
+      });
+    })()
+      .catch((err: Error) => {
+        setDraftSaved(false);
+        setError(getFriendlyAuthError(err) || "Failed to save draft.");
+      })
+      .finally(() => {
+        setSavingDraft(false);
+      });
   };
 
   const inputClass =
@@ -653,7 +806,7 @@ export default function CreateCampaignPage() {
     );
   }
 
-  if (isEditMode && editCampaign === undefined) {
+  if (isEditMode && editCampaign === undefined && loadedEditSlug !== editSlug) {
     return (
       <AppShell>
         <View className="items-center py-16">
@@ -822,9 +975,11 @@ export default function CreateCampaignPage() {
           <Text className="mt-1 text-center text-[#5c574f]">
             {requiresApproval
               ? "Propose changes for admin review. Your live campaign stays public until approved."
-              : isEditMode
+              : needsResubmit
                 ? "Update your campaign and resubmit it for review."
-                : "Free for students. Reach alumni who care about your community."}
+                : isEditMode
+                  ? "Your draft is saved. Submit when you're ready to send it for review."
+                  : "Free for students. Reach alumni who care about your community."}
           </Text>
         </View>
 
@@ -1081,14 +1236,11 @@ export default function CreateCampaignPage() {
                 <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Your Story
                 </Text>
-                <TextInput
+                <StoryTextInput
                   value={form.story}
                   onChangeText={(v) => update("story", v)}
                   placeholder="Tell donors why this matters..."
                   placeholderTextColor="#56615A"
-                  multiline
-                  numberOfLines={6}
-                  textAlignVertical="top"
                   className={`${inputClass} min-h-[140px]`}
                 />
               </View>
@@ -1471,9 +1623,22 @@ export default function CreateCampaignPage() {
                     You'll be asked for a quick photo of your ID and a selfie so we
                     can confirm it's really you — it only takes a minute.
                   </Text>
-                  <Text className="mb-3 text-xs text-[#5c574f]">
-                    Society Campaign Terms were accepted at society onboarding.
-                  </Text>
+                  {hasAcceptedSocietyTerms === false ? (
+                    <View className="mb-3">
+                      <Text className="mb-2 text-xs text-[#5c574f]">
+                        Society Campaign Terms have been updated since onboarding.
+                        Please accept the current version to continue.
+                      </Text>
+                      <SocietyAcceptanceCheckbox
+                        accepted={societyTermsAccepted}
+                        onAcceptedChange={setSocietyTermsAccepted}
+                      />
+                    </View>
+                  ) : hasAcceptedSocietyTerms === true ? (
+                    <Text className="mb-3 text-xs text-[#5c574f]">
+                      Society Campaign Terms were accepted at society onboarding.
+                    </Text>
+                  ) : null}
 
                   {!dobLoading && !hasDateOfBirth ? (
                     <View className="mb-3 rounded-lg border border-dono-border bg-dono-surface-muted p-3">
@@ -1519,13 +1684,15 @@ export default function CreateCampaignPage() {
                       verifying ||
                       stripeVerified ||
                       stripeProcessing ||
-                      !hasDateOfBirth
+                      !hasDateOfBirth ||
+                      !societyTermsReady
                     }
                     className={`mt-3 flex-row ${primaryBtnClass} gap-2 self-start px-4 ${
                       verifying ||
                       stripeVerified ||
                       stripeProcessing ||
-                      !hasDateOfBirth
+                      !hasDateOfBirth ||
+                      !societyTermsReady
                         ? "opacity-50"
                         : ""
                     }`}
@@ -1544,6 +1711,11 @@ export default function CreateCampaignPage() {
                     <Text className="mt-2 text-xs text-[#5c574f]">
                       Confirm your date of birth above before starting identity
                       verification.
+                    </Text>
+                  ) : needsSocietyTermsReaccept && !societyTermsAccepted ? (
+                    <Text className="mt-2 text-xs text-[#5c574f]">
+                      Accept the current Society Campaign Terms above before
+                      starting identity verification.
                     </Text>
                   ) : stripeFailed ? (
                     <Text className="mt-2 text-xs text-rose-700">
@@ -1568,14 +1740,14 @@ export default function CreateCampaignPage() {
               <Text className="text-lg font-retro-bold text-retro-ink">
                 {requiresApproval
                   ? "Submit edits for review"
-                  : isEditMode
+                  : needsResubmit
                     ? "Before your changes go live"
                     : "Before your campaign goes live"}
               </Text>
               <Text className="text-sm leading-relaxed text-[#5c574f]">
                 {requiresApproval
                   ? "Your proposed edits go to our team. The public campaign page stays as-is until they approve."
-                  : isEditMode
+                  : needsResubmit
                     ? "Resubmitting sends your campaign back to our team for review, the same as a new submission. We'll reach out directly if anything still needs adjusting."
                     : "We take moderation seriously. Every campaign is reviewed by our team to make sure it meets Dono's guidelines and has the best possible chance of reaching alumni and getting funded. We'll reach out directly if anything needs adjusting."}
               </Text>
@@ -1606,7 +1778,7 @@ export default function CreateCampaignPage() {
             </View>
           )}
 
-          <View className="mt-8 flex-row justify-between">
+          <View className="mt-8 flex-row flex-wrap items-center justify-between gap-3">
             {step > 0 && step < 5 ? (
               <Pressable
                 onPress={() => setStep(step - 1)}
@@ -1618,12 +1790,27 @@ export default function CreateCampaignPage() {
               <View />
             )}
 
+            <View className="flex-row flex-wrap items-center justify-end gap-2">
+              {showSaveDraft ? (
+                <Pressable
+                  onPress={handleSaveDraft}
+                  disabled={savingDraft || submitting}
+                  className={`${secondaryBtnClass} ${
+                    savingDraft || submitting ? "opacity-50" : ""
+                  }`}
+                >
+                  <Text className="font-retro-bold text-sm text-[#5c574f]">
+                    {savingDraft ? "Saving…" : "Save draft"}
+                  </Text>
+                </Pressable>
+              ) : null}
+
             {step < 3 ? (
               <Pressable
                 onPress={() => setStep(step + 1)}
-                disabled={!canProceed()}
+                disabled={!canProceed() || savingDraft}
                 className={`flex-row ${primaryBtnClass} gap-2 ${
-                  !canProceed() ? "opacity-50" : ""
+                  !canProceed() || savingDraft ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
@@ -1640,22 +1827,20 @@ export default function CreateCampaignPage() {
                   setError(null);
                   setStep(4);
                 }}
-                disabled={!canProceed()}
+                disabled={!canProceed() || savingDraft}
                 className={`${requiresApproval || stripeVerified ? primaryBtnClass : accentBtnClass} ${
-                  !canProceed() ? "opacity-50" : ""
+                  !canProceed() || savingDraft ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
               </Pressable>
             ) : step === 4 ? (
               <Pressable
-                disabled={submitting}
+                disabled={submitting || savingDraft}
                 onPress={() => {
                   setError(null);
+                  setDraftSaved(false);
                   setSubmitting(true);
-                  // The campaign was created when the identity check started
-                  // (or already existed, in edit mode) — push any fields
-                  // edited since, then attach the extras.
                   void (async () => {
                     const slug = campaignSlug ?? (await ensureCampaignCreated());
                     if (requiresApproval) {
@@ -1682,59 +1867,7 @@ export default function CreateCampaignPage() {
                               : undefined,
                         },
                       });
-                      return slug;
-                    }
-                    await updateCampaign({
-                      slug,
-                      title: form.title,
-                      category: form.category,
-                      description: form.description,
-                      story: form.story,
-                      goal: Number(form.goal),
-                      existingFunding: existingFundingAmount,
-                      template,
-                      additionalNotes,
-                      expectedExpenditureDate: expectedExpenditureDate.trim(),
-                      plannedUpdateSchedule: plannedUpdateSchedule.trim(),
-                      ownershipStatement: ownershipStatement.trim(),
-                      ...(isEditMode ? { logEdit: true } : {}),
-                    });
-                    return slug;
-                  })()
-                    .then(async (slug) => {
                       let imageUploadFailed = false;
-                      let videoSaveFailed = false;
-                      if (!requiresApproval) {
-                        try {
-                          // Fund breakdown is optional — only persist when complete,
-                          // or clear it when the creator left the section empty.
-                          if (fundLinesComplete || filledFundLines.length === 0) {
-                            await setImpactItems({
-                              slug,
-                              impactItems: fundLinesComplete
-                                ? encodedImpactItems
-                                : [],
-                            });
-                          }
-                        } catch {
-                          setError(
-                            "Campaign saved but fund breakdown could not be saved. Try again from this page.",
-                          );
-                        }
-                        // Edit mode always pushes the video field, including
-                        // clearing it — create mode only sets it when non-empty
-                        // since a brand-new campaign starts with none anyway.
-                        if (parsedVideoUrl || isEditMode) {
-                          try {
-                            await setCampaignVideoUrl({
-                              slug,
-                              videoUrl: parsedVideoUrl?.watchUrl ?? "",
-                            });
-                          } catch {
-                            videoSaveFailed = true;
-                          }
-                        }
-                      }
                       if (pickedImages.length > 0) {
                         try {
                           const allUploaded = await uploadCampaignImages({
@@ -1749,7 +1882,37 @@ export default function CreateCampaignPage() {
                           imageUploadFailed = true;
                         }
                       }
-
+                      return {
+                        slug,
+                        imageUploadFailed,
+                        videoSaveFailed: false,
+                      };
+                    }
+                    const fields = draftFieldArgs();
+                    await updateCampaign({
+                      slug,
+                      title: fields.title,
+                      category: fields.category,
+                      description: fields.description,
+                      story: fields.story,
+                      goal: fields.goal,
+                      existingFunding: fields.existingFunding,
+                      template: fields.template,
+                      additionalNotes: fields.additionalNotes,
+                      expectedExpenditureDate: fields.expectedExpenditureDate,
+                      plannedUpdateSchedule: fields.plannedUpdateSchedule,
+                      ownershipStatement: fields.ownershipStatement,
+                      ...(needsResubmit ||
+                      editCampaign?.societyApprovalStatus !== undefined
+                        ? { logEdit: true }
+                        : {}),
+                    });
+                    const extras = await persistCampaignExtras(slug, {
+                      pushVideoIfEmpty: Boolean(parsedVideoUrl || isEditMode),
+                    });
+                    return { slug, ...extras };
+                  })()
+                    .then(async ({ slug, imageUploadFailed, videoSaveFailed }) => {
                       if (imageUploadFailed && pickedImages.length > 0) {
                         setError(
                           "Campaign saved but photos could not be uploaded. Open the campaign from My Campaigns to add photos.",
@@ -1757,16 +1920,16 @@ export default function CreateCampaignPage() {
                         return;
                       }
 
-                      if (isEditMode && !requiresApproval) {
+                      if (needsResubmit) {
                         await resubmitCampaign({ slug });
-                      } else if (!isEditMode && !requiresApproval) {
+                      } else if (!requiresApproval) {
                         await submitForReview({ slug });
                       }
 
                       posthog?.capture(
                         requiresApproval
                           ? "campaign_edit_proposed"
-                          : isEditMode
+                          : needsResubmit
                             ? "campaign_resubmitted"
                             : "campaign_created",
                         {
@@ -1795,6 +1958,7 @@ export default function CreateCampaignPage() {
                       setOwnershipStatement("");
                       setFundLines(initialFundLines());
                       setCampaignSlug(null);
+                      setDraftSaved(false);
                       setError(null);
                       setStep(5);
                     })
@@ -1803,7 +1967,7 @@ export default function CreateCampaignPage() {
                         getFriendlyAuthError(err) ||
                           (requiresApproval
                             ? "Failed to submit edits for review."
-                            : isEditMode
+                            : needsResubmit
                               ? "Failed to resubmit campaign."
                               : "Failed to create campaign."),
                       );
@@ -1813,27 +1977,36 @@ export default function CreateCampaignPage() {
                     });
                 }}
                 className={`${accentBtnClass} ${
-                  submitting ? "opacity-50" : ""
+                  submitting || savingDraft ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">
                   {submitting
                     ? requiresApproval
                       ? "Submitting..."
-                      : isEditMode
+                      : needsResubmit
                         ? "Resubmitting..."
                         : pickedImages.length > 0
                           ? "Creating & uploading..."
                           : "Completing..."
                     : requiresApproval
                       ? "Submit for review"
-                      : isEditMode
+                      : needsResubmit
                         ? "Resubmit for review"
                         : "Complete"}
                 </Text>
               </Pressable>
             ) : null}
+            </View>
           </View>
+
+          {draftSaved && !error ? (
+            <View className="mt-4 rounded-xl bg-green-50 px-4 py-3">
+              <Text className="text-sm text-green-800">
+                Draft saved — find it under My Campaigns.
+              </Text>
+            </View>
+          ) : null}
 
           {error && (
             <View className="mt-4 rounded-xl bg-rose-50 px-4 py-3">
