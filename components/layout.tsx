@@ -6,7 +6,6 @@ import {
   Users,
   PiggyBank,
   User,
-  Sparkles,
   Plus,
   Menu,
   X,
@@ -19,7 +18,6 @@ const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
   { href: "/societies", label: "Communities", icon: Users },
-  { href: "/dashboard", label: "Impact", icon: Sparkles },
   { href: "/account", label: "You", icon: User },
 ] as const;
 

@@ -3,9 +3,7 @@ import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useConvexAuth, useQuery } from "convex/react";
 import { useMemo } from "react";
 import {
-  Gift,
   Heart,
-  Users,
   ArrowRight,
   Calendar,
 } from "lucide-react-native";
@@ -97,33 +95,14 @@ export default function DashboardPage() {
         </Text>
       </View>
 
-      <View className="mb-8 flex-row flex-wrap gap-4">
-        {[
-          {
-            icon: Gift,
-            label: "Total Donated",
-            value: formatCurrency(impact.totalDonated),
-          },
-          {
-            icon: Heart,
-            label: "Campaigns Supported",
-            value: impact.campaignsSupported.toString(),
-          },
-          {
-            icon: Users,
-            label: "Societies",
-            value: impact.societiesFollowed.toString(),
-          },
-        ].map((stat) => (
-          <View
-            key={stat.label}
-            className="min-w-[140px] flex-1 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4"
-          >
-            <stat.icon size={20} color="#211E1A" />
-            <Text className="mt-2 font-retro-bold text-xl text-retro-ink">{stat.value}</Text>
-            <Text className="font-retro-mono text-xs text-dono-muted">{stat.label}</Text>
-          </View>
-        ))}
+      <View className="mb-8 self-start rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4">
+        <Heart size={20} color="#211E1A" />
+        <Text className="mt-2 font-retro-bold text-xl text-retro-ink">
+          {impact.campaignsSupported.toString()}
+        </Text>
+        <Text className="font-retro-mono text-xs text-dono-muted">
+          Campaigns Supported
+        </Text>
       </View>
 
       {donoWrapped ? (

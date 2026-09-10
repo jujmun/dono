@@ -8,6 +8,7 @@ export function formatCurrency(amount: number): string {
 }
 
 export function getProgress(raised: number, goal: number): number {
+  if (!(goal > 0)) return 0;
   return Math.min(Math.round((raised / goal) * 100), 100);
 }
 
@@ -79,7 +80,7 @@ export function getCampaignApprovalStage(
   }
   if (campaign.creator.type === "society") {
     if (campaign.societyApprovalStatus === undefined) {
-      return { label: "Not yet submitted for review" };
+      return { label: "Draft" };
     }
     if (campaign.societyApprovalStatus !== "approved") {
       return { label: "Awaiting society leader approval" };

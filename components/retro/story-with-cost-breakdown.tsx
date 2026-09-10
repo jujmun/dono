@@ -1,5 +1,6 @@
 import { createElement, type ReactNode } from "react";
-import { View, Text, Platform, useWindowDimensions } from "react-native";
+import { View, Platform, useWindowDimensions } from "react-native";
+import { StoryText, storyBoldWebChildren } from "@/components/story-text";
 import {
   ReceiptDivider,
   ReceiptLedger,
@@ -84,12 +85,13 @@ function storyToParagraphs(story: string): string[] {
       flush();
       continue;
     }
-    // Short title-like lines (e.g. "What your donation will support") break.
+    // Ignore **bold** markers so a bold heading still breaks as its own line.
+    const plain = line.replace(/\*\*/g, "");
     const looksLikeHeading =
-      line.length <= 60 &&
-      !/[.!?]$/.test(line) &&
-      /^[A-Z0-9]/.test(line) &&
-      line.split(/\s+/).length <= 8;
+      plain.length <= 60 &&
+      !/[.!?]$/.test(plain) &&
+      /^[A-Z0-9]/.test(plain) &&
+      plain.split(/\s+/).length <= 8;
     if (looksLikeHeading && buffer) {
       flush();
       paragraphs.push(line);
@@ -157,7 +159,7 @@ function WebFloatBody({
             marginBottom: index === paragraphs.length - 1 ? 0 : 14,
           },
         },
-        paragraph,
+        ...storyBoldWebChildren(paragraph),
       ),
     ),
   );
@@ -189,9 +191,10 @@ export function StoryWithCostBreakdown({
         <WebFloatBody story={displayStory} cost={cost} />
       ) : (
         <View className="gap-4">
-          <Text className="text-[18px] leading-6 text-retro-ink">
-            {displayStory}
-          </Text>
+          <StoryText
+            text={displayStory}
+            className="text-[18px] leading-6 text-retro-ink"
+          />
           {cost}
         </View>
       )}

@@ -1,12 +1,16 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { MutationCtx } from "./_generated/server";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
   requireRecordOwner,
   requireSocietyLeader,
+  requireSocietyMember,
+  requireStudentCreator,
   requireVerifiedUser,
 } from "./lib/authz";
+import { insertPendingCampaign } from "./lib/insertPendingCampaign";
 import { toCampaign } from "./lib/mappers";
 import { enrichCampaignWithMedia, enrichCampaignsWithMedia } from "./lib/campaignMedia";
 import {
@@ -21,6 +25,8 @@ import { assertExistingFunding } from "./lib/existingFunding";
 import { buildCampaignVerifications } from "./lib/verificationBadges";
 import { notifySocietyLeadersCampaignPending } from "./lib/societyCampaignNotify";
 import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
+import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
+import { assertAdultOrThrow } from "./lib/ageGate";
 import {
   buildCampaignEditedMessage,
   buildCampaignReadyForAdminMessage,
@@ -47,6 +53,193 @@ const IMAGE_UPLOAD_LIMIT = {
   windowMs: 15 * 60 * 1000,
   lockoutMs: 15 * 60 * 1000,
 };
+
+type CampaignOwnerPatch = {
+  title?: string;
+  category?: string;
+  university?: string;
+  description?: string;
+  story?: string;
+  goal?: number;
+  existingFunding?: number;
+  template?: string;
+  additionalNotes?: string;
+  expectedExpenditureDate?: string;
+  plannedUpdateSchedule?: string;
+  ownershipStatement?: string;
+  responsibleIndividualUserId?: Id<"users">;
+  logEdit?: boolean;
+  allowIncomplete?: boolean;
+};
+
+async function applyCampaignOwnerPatch(
+  ctx: MutationCtx,
+  campaign: Doc<"campaigns">,
+  args: CampaignOwnerPatch,
+) {
+  const incomplete = args.allowIncomplete === true;
+  const patch: Record<string, unknown> = {};
+  if (args.title !== undefined) {
+    let title = args.title.trim();
+    if (!title && incomplete) {
+      title = "Untitled campaign";
+    }
+    if (!title || title.length > MAX_TITLE_LENGTH) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid title." });
+    }
+    patch.title = title;
+  }
+  if (args.category !== undefined) {
+    const category = args.category.trim();
+    if (!category) {
+      if (!incomplete) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid category." });
+      }
+      patch.category = "";
+    } else {
+      if (category.length > MAX_CATEGORY_LENGTH) {
+        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid category." });
+      }
+      if (!isAllowedCampaignCategory(category)) {
+        throw new ConvexError({
+          code: "PROHIBITED_CATEGORY",
+          message: "This campaign category is not permitted under the Terms.",
+        });
+      }
+      patch.category = category;
+    }
+  }
+  if (args.university !== undefined) {
+    const university = args.university.trim();
+    if (!university || university.length > MAX_UNIVERSITY_LENGTH) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid university." });
+    }
+    patch.university = university;
+  }
+  if (args.description !== undefined) {
+    const description = args.description.trim();
+    if (description.length > MAX_DESCRIPTION_LENGTH) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid description." });
+    }
+    if (!incomplete && !description) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid description." });
+    }
+    patch.description = description;
+  }
+  if (args.story !== undefined) {
+    const story = args.story.trim();
+    if (story.length > MAX_STORY_LENGTH) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid story." });
+    }
+    if (!incomplete && !story) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid story." });
+    }
+    patch.story = story;
+  }
+  if (args.goal !== undefined) {
+    const minGoal = incomplete ? 0 : MIN_GOAL;
+    if (!Number.isFinite(args.goal) || args.goal < minGoal || args.goal > MAX_GOAL) {
+      throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid goal." });
+    }
+    patch.goal = args.goal;
+  }
+  const nextGoal = args.goal !== undefined ? args.goal : campaign.goal;
+  const nextExistingFunding =
+    args.existingFunding !== undefined
+      ? args.existingFunding
+      : (campaign.existingFunding ?? 0);
+  if (nextGoal < MIN_GOAL) {
+    if (nextExistingFunding !== 0) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Already received requires a funding goal.",
+      });
+    }
+  } else {
+    assertExistingFunding(nextExistingFunding, nextGoal);
+  }
+  if (args.existingFunding !== undefined) {
+    patch.existingFunding = args.existingFunding;
+  }
+  if (args.template !== undefined) {
+    if (!isValidCampaignTemplateId(args.template)) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Invalid template selection.",
+      });
+    }
+    patch.template = args.template;
+  }
+  if (args.additionalNotes !== undefined) {
+    const additionalNotes = args.additionalNotes.trim();
+    if (additionalNotes.length > MAX_ADDITIONAL_NOTES_LENGTH) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Invalid additional notes.",
+      });
+    }
+    patch.additionalNotes = additionalNotes || undefined;
+  }
+  if (args.expectedExpenditureDate !== undefined) {
+    const expectedExpenditureDate = args.expectedExpenditureDate.trim();
+    if (
+      expectedExpenditureDate &&
+      !/^\d{4}-\d{2}-\d{2}$/.test(expectedExpenditureDate)
+    ) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "expectedExpenditureDate must be YYYY-MM-DD.",
+      });
+    }
+    patch.expectedExpenditureDate = expectedExpenditureDate || undefined;
+  }
+  if (args.plannedUpdateSchedule !== undefined) {
+    const plannedUpdateSchedule = args.plannedUpdateSchedule.trim();
+    if (plannedUpdateSchedule.length > MAX_UPDATE_SCHEDULE) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Invalid planned update schedule.",
+      });
+    }
+    patch.plannedUpdateSchedule = plannedUpdateSchedule || undefined;
+  }
+  if (args.ownershipStatement !== undefined) {
+    const ownershipStatement = args.ownershipStatement.trim();
+    if (ownershipStatement.length > MAX_OWNERSHIP_STATEMENT) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Invalid ownership statement.",
+      });
+    }
+    patch.ownershipStatement = ownershipStatement || undefined;
+  }
+  if (args.responsibleIndividualUserId !== undefined) {
+    const responsibleUser = await ctx.db.get(args.responsibleIndividualUserId);
+    if (!responsibleUser) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Responsible individual user was not found.",
+      });
+    }
+    patch.responsibleIndividualUserId = args.responsibleIndividualUserId;
+  }
+
+  if (Object.keys(patch).length > 0) {
+    await ctx.db.patch(campaign._id, patch);
+  }
+
+  if (args.logEdit && campaign.createdBy) {
+    const title = (patch.title as string | undefined) ?? campaign.title;
+    await createNotification(ctx, {
+      userId: campaign.createdBy,
+      type: "campaign_edited",
+      message: buildCampaignEditedMessage(title),
+      relatedEntityType: "campaign",
+      relatedEntityId: campaign.slug,
+      read: true,
+    });
+  }
+}
 
 export const listMine = query({
   args: {},
@@ -137,7 +330,7 @@ export const update = mutation({
     logEdit: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    await requireVerifiedUser(ctx);
     const campaign = await ctx.db
       .query("campaigns")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
@@ -154,137 +347,108 @@ export const update = mutation({
       });
     }
 
-    const patch: Record<string, unknown> = {};
-    if (args.title !== undefined) {
-      const title = args.title.trim();
-      if (!title || title.length > MAX_TITLE_LENGTH) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid title." });
-      }
-      patch.title = title;
-    }
-    if (args.category !== undefined) {
-      const category = args.category.trim();
-      if (!category || category.length > MAX_CATEGORY_LENGTH) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid category." });
-      }
-      if (!isAllowedCampaignCategory(category)) {
-        throw new ConvexError({
-          code: "PROHIBITED_CATEGORY",
-          message: "This campaign category is not permitted under the Terms.",
-        });
-      }
-      patch.category = category;
-    }
-    if (args.university !== undefined) {
-      const university = args.university.trim();
-      if (!university || university.length > MAX_UNIVERSITY_LENGTH) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid university." });
-      }
-      patch.university = university;
-    }
-    if (args.description !== undefined) {
-      const description = args.description.trim();
-      if (!description || description.length > MAX_DESCRIPTION_LENGTH) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid description." });
-      }
-      patch.description = description;
-    }
-    if (args.story !== undefined) {
-      const story = args.story.trim();
-      if (!story || story.length > MAX_STORY_LENGTH) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid story." });
-      }
-      patch.story = story;
-    }
-    if (args.goal !== undefined) {
-      if (!Number.isFinite(args.goal) || args.goal < MIN_GOAL || args.goal > MAX_GOAL) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid goal." });
-      }
-      patch.goal = args.goal;
-    }
-    const nextGoal = args.goal !== undefined ? args.goal : campaign.goal;
-    const nextExistingFunding =
-      args.existingFunding !== undefined
-        ? args.existingFunding
-        : (campaign.existingFunding ?? 0);
-    assertExistingFunding(nextExistingFunding, nextGoal);
-    if (args.existingFunding !== undefined) {
-      patch.existingFunding = args.existingFunding;
-    }
-    if (args.template !== undefined) {
-      if (!isValidCampaignTemplateId(args.template)) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid template selection." });
-      }
-      patch.template = args.template;
-    }
-    if (args.additionalNotes !== undefined) {
-      const additionalNotes = args.additionalNotes.trim();
-      if (additionalNotes.length > MAX_ADDITIONAL_NOTES_LENGTH) {
-        throw new ConvexError({ code: "INVALID_INPUT", message: "Invalid additional notes." });
-      }
-      patch.additionalNotes = additionalNotes || undefined;
-    }
-    if (args.expectedExpenditureDate !== undefined) {
-      const expectedExpenditureDate = args.expectedExpenditureDate.trim();
-      if (
-        expectedExpenditureDate &&
-        !/^\d{4}-\d{2}-\d{2}$/.test(expectedExpenditureDate)
-      ) {
-        throw new ConvexError({
-          code: "INVALID_INPUT",
-          message: "expectedExpenditureDate must be YYYY-MM-DD.",
-        });
-      }
-      patch.expectedExpenditureDate = expectedExpenditureDate || undefined;
-    }
-    if (args.plannedUpdateSchedule !== undefined) {
-      const plannedUpdateSchedule = args.plannedUpdateSchedule.trim();
-      if (plannedUpdateSchedule.length > MAX_UPDATE_SCHEDULE) {
-        throw new ConvexError({
-          code: "INVALID_INPUT",
-          message: "Invalid planned update schedule.",
-        });
-      }
-      patch.plannedUpdateSchedule = plannedUpdateSchedule || undefined;
-    }
-    if (args.ownershipStatement !== undefined) {
-      const ownershipStatement = args.ownershipStatement.trim();
-      if (ownershipStatement.length > MAX_OWNERSHIP_STATEMENT) {
-        throw new ConvexError({
-          code: "INVALID_INPUT",
-          message: "Invalid ownership statement.",
-        });
-      }
-      patch.ownershipStatement = ownershipStatement || undefined;
-    }
-    if (args.responsibleIndividualUserId !== undefined) {
-      const responsibleUser = await ctx.db.get(args.responsibleIndividualUserId);
-      if (!responsibleUser) {
-        throw new ConvexError({
-          code: "INVALID_INPUT",
-          message: "Responsible individual user was not found.",
-        });
-      }
-      patch.responsibleIndividualUserId = args.responsibleIndividualUserId;
-    }
-
-    if (Object.keys(patch).length > 0) {
-      await ctx.db.patch(campaign._id, patch);
-    }
-
-    if (args.logEdit && campaign.createdBy) {
-      const title = (patch.title as string | undefined) ?? campaign.title;
-      await createNotification(ctx, {
-        userId: campaign.createdBy,
-        type: "campaign_edited",
-        message: buildCampaignEditedMessage(title),
-        relatedEntityType: "campaign",
-        relatedEntityId: campaign.slug,
-        read: true,
-      });
-    }
-
+    await applyCampaignOwnerPatch(ctx, campaign, args);
     return null;
+  },
+});
+
+const saveDraftFields = {
+  title: v.string(),
+  category: v.string(),
+  communitySlug: v.string(),
+  description: v.string(),
+  story: v.string(),
+  goal: v.number(),
+  existingFunding: v.optional(v.number()),
+  template: v.string(),
+  additionalNotes: v.optional(v.string()),
+  expectedExpenditureDate: v.optional(v.string()),
+  plannedUpdateSchedule: v.optional(v.string()),
+  ownershipStatement: v.optional(v.string()),
+};
+
+/** Persist a campaign without opening society/admin review queues. */
+export const saveDraft = mutation({
+  args: {
+    slug: v.optional(v.string()),
+    ...saveDraftFields,
+  },
+  returns: v.object({ slug: v.string() }),
+  handler: async (ctx, args) => {
+    if (args.slug) {
+      const slug = args.slug;
+      await requireVerifiedUser(ctx);
+      const campaign = await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+      if (!campaign) {
+        throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+      }
+      await requireRecordOwner(ctx, campaign.createdBy);
+      if (!isEditableByOwner(campaign.status)) {
+        throw new ConvexError({
+          code: "INVALID_STATE",
+          message:
+            "Only pending, rejected, or changes-requested campaigns can be saved as drafts.",
+        });
+      }
+      await applyCampaignOwnerPatch(ctx, campaign, {
+        title: args.title,
+        category: args.category,
+        description: args.description,
+        story: args.story,
+        goal: args.goal,
+        existingFunding: args.existingFunding,
+        template: args.template,
+        additionalNotes: args.additionalNotes,
+        expectedExpenditureDate: args.expectedExpenditureDate,
+        plannedUpdateSchedule: args.plannedUpdateSchedule,
+        ownershipStatement: args.ownershipStatement,
+        allowIncomplete: true,
+      });
+      const nextSociety = args.communitySlug.trim();
+      if (nextSociety && !campaign.creator.communityId) {
+        const { community } = await requireSocietyMember(ctx, nextSociety);
+        const creatorName = community.name;
+        const initials = creatorName
+          .split(" ")
+          .map((part) => part[0])
+          .join("")
+          .slice(0, 2)
+          .toUpperCase();
+        await ctx.db.patch(campaign._id, {
+          creator: {
+            name: creatorName,
+            type: "society",
+            avatar: initials || "SO",
+            communityId: nextSociety,
+          },
+          university: community.university.trim(),
+        });
+      }
+      return { slug: campaign.slug };
+    }
+
+    const { slug } = await insertPendingCampaign(
+      ctx,
+      {
+        title: args.title,
+        category: args.category,
+        communitySlug: args.communitySlug,
+        description: args.description,
+        story: args.story,
+        goal: args.goal,
+        existingFunding: args.existingFunding,
+        template: args.template,
+        expectedExpenditureDate: args.expectedExpenditureDate,
+        plannedUpdateSchedule: args.plannedUpdateSchedule,
+        ownershipStatement: args.ownershipStatement,
+        additionalNotes: args.additionalNotes,
+      },
+      { notifyOwner: false, incomplete: true },
+    );
+    return { slug };
   },
 });
 
@@ -375,6 +539,59 @@ export const submitForReview = mutation({
       });
     }
     await requireRecordOwner(ctx, campaign.createdBy);
+
+    if (!campaign.title.trim()) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Add a title before submitting for review.",
+      });
+    }
+    if (
+      !campaign.category.trim() ||
+      !isAllowedCampaignCategory(campaign.category)
+    ) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Choose a category before submitting for review.",
+      });
+    }
+    if (!campaign.description.trim()) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Add a description before submitting for review.",
+      });
+    }
+    if (!campaign.story.trim()) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Add a story before submitting for review.",
+      });
+    }
+    if (
+      !Number.isFinite(campaign.goal) ||
+      campaign.goal < MIN_GOAL ||
+      campaign.goal > MAX_GOAL
+    ) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Set a funding goal before submitting for review.",
+      });
+    }
+    if (!campaign.creator.communityId) {
+      throw new ConvexError({
+        code: "INVALID_INPUT",
+        message: "Choose a society before submitting for review.",
+      });
+    }
+    const { profile } = await requireStudentCreator(ctx);
+    await assertLegalAcceptedForContext(ctx, {
+      userId,
+      context: "create_society",
+    });
+    assertAdultOrThrow(
+      profile?.dateOfBirth,
+      "You must be at least 18 years old to create a campaign.",
+    );
 
     // Already submitted — idempotent.
     if (campaign.societyApprovalStatus !== undefined) {

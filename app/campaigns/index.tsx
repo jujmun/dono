@@ -1,17 +1,17 @@
-import { type Href } from "expo-router";
-import { useMemo, useState } from "react";
+import { type Href, useLocalSearchParams, useRouter } from "expo-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
   TextInput,
   Pressable,
   ActivityIndicator,
-  ScrollView,
   useWindowDimensions,
 } from "react-native";
 import { useConvexAuth, useQuery } from "convex/react";
 import { Search, SlidersHorizontal } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
+import { FilterChip } from "@/components/filter-chip";
 import { LoginGate } from "@/components/login-gate";
 import { RetroCampaignCard } from "@/components/retro";
 import {
@@ -32,8 +32,8 @@ type CampaignsTab = "discover" | "mine";
 type DiscoverSort = "all" | "trending" | "near_goal";
 
 const allTabs: { id: CampaignsTab; label: string }[] = [
-  { id: "discover", label: "Discover Campaigns" },
-  { id: "mine", label: "My Campaigns" },
+  { id: "discover", label: "Discover" },
+  { id: "mine", label: "My campaigns" },
 ];
 
 const sortChips: { id: DiscoverSort; label: string }[] = [
@@ -42,16 +42,35 @@ const sortChips: { id: DiscoverSort; label: string }[] = [
   { id: "near_goal", label: "Near goal" },
 ];
 
+function tabFromSearchParam(
+  value: string | string[] | undefined,
+): CampaignsTab {
+  const raw = Array.isArray(value) ? value[0] : value;
+  return raw === "mine" ? "mine" : "discover";
+}
+
 export default function CampaignsPage() {
   const { width } = useWindowDimensions();
   const columns = width >= 1200 ? 3 : width >= 820 ? 2 : 1;
   const { isAuthenticated } = useConvexAuth();
   const profile = useCurrentProfile();
-  const tabs = canCreate(profile)
-    ? allTabs
-    : allTabs.filter((t) => t.id !== "mine");
+  const router = useRouter();
+  const { tab: tabParam } = useLocalSearchParams<{ tab?: string | string[] }>();
+  const requestedTab = tabFromSearchParam(tabParam);
+  const [tab, setTab] = useState<CampaignsTab>(requestedTab);
+  const tabs =
+    canCreate(profile) || tab === "mine"
+      ? allTabs
+      : allTabs.filter((t) => t.id !== "mine");
 
-  const [tab, setTab] = useState<CampaignsTab>("discover");
+  useEffect(() => {
+    setTab(requestedTab);
+  }, [requestedTab]);
+
+  const selectTab = (next: CampaignsTab) => {
+    setTab(next);
+    router.setParams({ tab: next });
+  };
   const [discoverSort, setDiscoverSort] = useState<DiscoverSort>("all");
   const campaigns = (useQuery(api.campaigns.list) ?? undefined) as
     | Campaign[]
@@ -75,8 +94,12 @@ export default function CampaignsPage() {
   const ownedIds = new Set((myCampaignsRaw ?? []).map((c) => c.id));
 
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(false);
+  const [showFilters, setShowFilters] = useState(true);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
+  const filtersActive =
+    tab !== "discover" ||
+    discoverSort !== "all" ||
+    selectedCategories.length > 0;
 
   const matchBySlug = useMemo(() => {
     return new Map<string, { multiplier: number }>();
@@ -117,6 +140,18 @@ export default function CampaignsPage() {
     return matchesSearch && matchesCategory;
   });
 
+  const filterSummary = [
+    tab === "mine" ? "My campaigns" : "Discover",
+    tab === "discover"
+      ? (sortChips.find((chip) => chip.id === discoverSort)?.label ?? "All")
+      : null,
+    selectedCategories.length === 0
+      ? "All categories"
+      : selectedCategories.map((cat) => categoryLabels[cat] ?? cat).join(", "),
+  ]
+    .filter((part): part is string => Boolean(part))
+    .join(" · ");
+
   return (
     <AppShell>
       <Text className="mb-1.5 font-retro-bold text-[32px] text-retro-ink">
@@ -126,142 +161,128 @@ export default function CampaignsPage() {
         Support specific, tangible projects at universities across the UK
       </Text>
 
-      <View className="mb-4 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5">
-        <Search size={16} color="#8a8478" />
-        <TextInput
-          placeholder="Search campaigns, universities…"
-          placeholderTextColor="#8a8478"
-          value={search}
-          onChangeText={setSearch}
-          className="min-w-0 flex-1 font-retro-mono text-[13px] text-retro-ink outline-none"
-        />
-      </View>
-
-      <View className="mb-5 flex-row flex-wrap gap-2">
-        {tabs.map((t) => {
-          const count =
-            t.id === "discover"
-              ? campaigns?.length
-              : myCampaigns?.length;
-          const label =
-            typeof count === "number" ? `${t.label} (${count})` : t.label;
-          return (
-            <Pressable
-              key={t.id}
-              onPress={() => setTab(t.id)}
-              className={cn(
-                "retro-key",
-                "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
-                tab === t.id ? "bg-retro-mint" : "bg-retro-paper",
-              )}
-              accessibilityRole="button"
-              accessibilityState={{ selected: tab === t.id }}
-              accessibilityLabel={label}
-            >
-              <Text
-                className={cn(
-                  "font-retro-bold text-[12.5px]",
-                  tab === t.id ? "text-retro-paper" : "text-retro-ink",
-                )}
-              >
-                {label}
-              </Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      {tab === "discover" ? (
-        <View className="mb-4 flex-row flex-wrap gap-2">
-          {sortChips.map((chip) => {
-            const chipCount =
-              chip.id === "all"
-                ? campaigns?.length
-                : chip.id === "trending"
-                  ? trending?.length
-                  : nearGoal?.length;
-            // Always query chip sources for counts when on discover
-            const label =
-              typeof chipCount === "number"
-                ? `${chip.label} (${chipCount})`
-                : chip.label;
-            return (
-            <Pressable
-              key={chip.id}
-              onPress={() => setDiscoverSort(chip.id)}
-              className={cn("retro-key", 
-                "rounded-full border-2 border-retro-ink px-3 py-1",
-                discoverSort === chip.id
-                  ? "bg-retro-sky"
-                  : "bg-retro-cream",
-              )}
-              accessibilityRole="button"
-              accessibilityState={{ selected: discoverSort === chip.id }}
-              accessibilityLabel={label}
-            >
-              <Text
-                className={cn(
-                  "font-retro-mono-bold text-[11px]",
-                  discoverSort === chip.id ? "text-retro-paper" : "text-retro-ink",
-                )}
-              >
-                {label}
-              </Text>
-            </Pressable>
-            );
-          })}
+      <View className="mb-4 flex-row items-center gap-2.5">
+        <View className="min-w-0 flex-1 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5">
+          <Search size={16} color="#8a8478" />
+          <TextInput
+            placeholder="Search campaigns, universities…"
+            placeholderTextColor="#8a8478"
+            value={search}
+            onChangeText={setSearch}
+            className="min-w-0 flex-1 font-retro-mono text-[13px] text-retro-ink outline-none"
+          />
         </View>
-      ) : null}
-
-      <View className="mb-5 flex-row items-center gap-2">
         <Pressable
           onPress={() => setShowFilters((v) => !v)}
-          className={cn("retro-key", 
-            "rounded-lg border-2 border-retro-ink px-2.5 py-2",
-            showFilters
-              ? "bg-retro-mint"
-              : "bg-retro-cream",
+          className={cn(
+            "retro-key",
+            "shrink-0 flex-row items-center gap-1.5 self-stretch rounded-[10px] border-[3px] border-retro-ink px-3.5",
+            showFilters || filtersActive ? "bg-retro-mint" : "bg-retro-paper",
           )}
+          accessibilityRole="button"
+          accessibilityLabel="Filters"
+          accessibilityState={{ expanded: showFilters }}
         >
-          <SlidersHorizontal size={14} color="#211E1A" />
-        </Pressable>
-        {showFilters && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            className="min-w-0 flex-1"
-            contentContainerClassName="flex-row items-center gap-2"
+          <SlidersHorizontal
+            size={16}
+            color={showFilters || filtersActive ? "#FFF9EF" : "#211E1A"}
+          />
+          <Text
+            className={cn(
+              "font-retro-bold text-[12.5px]",
+              showFilters || filtersActive ? "text-retro-paper" : "text-retro-ink",
+            )}
           >
-            {categories.map((cat) => {
-              const on =
-                cat === "all"
-                  ? selectedCategories.length === 0
-                  : selectedCategories.includes(cat);
-              return (
-                <Pressable
-                  key={cat}
-                  onPress={() => toggleCategory(cat)}
-                  className={cn("retro-key", 
-                    "rounded-full border-2 border-retro-ink px-3.5 py-1.5",
-                    on
-                      ? "bg-retro-mint"
-                      : "bg-retro-paper",
-                  )}
-                >
-                  <Text
-                    className={cn(
-                      "font-retro-bold text-[12.5px]",
-                      on ? "text-retro-paper" : "text-retro-ink",
-                    )}
-                  >
-                    {cat === "all" ? "All" : categoryLabels[cat]}
-                  </Text>
-                </Pressable>
-              );
-            })}
-          </ScrollView>
-        )}
+            Filter
+          </Text>
+        </Pressable>
       </View>
+
+      {showFilters ? (
+        <View className="mb-5 gap-3.5 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4">
+          <View className="gap-2">
+            <Text className="font-retro-mono-bold text-[11px] uppercase tracking-wide text-[#5c574f]">
+              Show
+            </Text>
+            <View className="flex-row flex-wrap items-center gap-2">
+              {tabs.map((t) => {
+                const count =
+                  t.id === "discover" ? campaigns?.length : myCampaigns?.length;
+                const label =
+                  typeof count === "number" ? `${t.label} (${count})` : t.label;
+                return (
+                  <FilterChip
+                    key={t.id}
+                    label={label}
+                    selected={tab === t.id}
+                    onPress={() => selectTab(t.id)}
+                    selectedClassName="bg-retro-mint"
+                  />
+                );
+              })}
+            </View>
+          </View>
+
+          {tab === "discover" ? (
+            <View className="gap-2">
+              <Text className="font-retro-mono-bold text-[11px] uppercase tracking-wide text-[#5c574f]">
+                Sort
+              </Text>
+              <View className="flex-row flex-wrap items-center gap-2">
+                {sortChips.map((chip) => {
+                  const chipCount =
+                    chip.id === "all"
+                      ? campaigns?.length
+                      : chip.id === "trending"
+                        ? trending?.length
+                        : nearGoal?.length;
+                  const label =
+                    typeof chipCount === "number"
+                      ? `${chip.label} (${chipCount})`
+                      : chip.label;
+                  return (
+                    <FilterChip
+                      key={chip.id}
+                      label={label}
+                      selected={discoverSort === chip.id}
+                      onPress={() => setDiscoverSort(chip.id)}
+                      selectedClassName="bg-retro-sky"
+                    />
+                  );
+                })}
+              </View>
+            </View>
+          ) : null}
+
+          <View className="gap-2">
+            <Text className="font-retro-mono-bold text-[11px] uppercase tracking-wide text-[#5c574f]">
+              Category
+            </Text>
+            <View className="flex-row flex-wrap items-center gap-2">
+              {categories.map((cat) => {
+                const on =
+                  cat === "all"
+                    ? selectedCategories.length === 0
+                    : selectedCategories.includes(cat);
+                return (
+                  <FilterChip
+                    key={cat}
+                    label={cat === "all" ? "All" : (categoryLabels[cat] ?? cat)}
+                    selected={on}
+                    onPress={() => toggleCategory(cat)}
+                    selectedClassName="bg-retro-marigold"
+                    selectedTextClassName="text-retro-ink"
+                  />
+                );
+              })}
+            </View>
+          </View>
+        </View>
+      ) : (
+        <Text className="mb-5 font-retro-mono text-[12px] text-[#5c574f]">
+          {filterSummary}
+        </Text>
+      )}
 
       {showMineLoginGate ? null : scoped === undefined ? (
         <ActivityIndicator color="#211E1A" className="py-12" />

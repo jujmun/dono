@@ -66,6 +66,7 @@ import type * as lib_emails from "../lib/emails.js";
 import type * as lib_existingFunding from "../lib/existingFunding.js";
 import type * as lib_featureGates from "../lib/featureGates.js";
 import type * as lib_htmlEscape from "../lib/htmlEscape.js";
+import type * as lib_insertPendingCampaign from "../lib/insertPendingCampaign.js";
 import type * as lib_legalAcceptance from "../lib/legalAcceptance.js";
 import type * as lib_legalArtifacts_generated from "../lib/legalArtifacts/generated.js";
 import type * as lib_legalDocuments from "../lib/legalDocuments.js";
@@ -183,6 +184,7 @@ declare const fullApi: ApiFromModules<{
   "lib/existingFunding": typeof lib_existingFunding;
   "lib/featureGates": typeof lib_featureGates;
   "lib/htmlEscape": typeof lib_htmlEscape;
+  "lib/insertPendingCampaign": typeof lib_insertPendingCampaign;
   "lib/legalAcceptance": typeof lib_legalAcceptance;
   "lib/legalArtifacts/generated": typeof lib_legalArtifacts_generated;
   "lib/legalDocuments": typeof lib_legalDocuments;

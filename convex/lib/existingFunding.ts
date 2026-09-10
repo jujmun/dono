@@ -16,6 +16,7 @@ export function displayRaised(campaign: {
 }
 
 export function isCampaignFunded(campaign: CampaignTotals): boolean {
+  if (!(campaign.goal > 0)) return false;
   return displayRaised(campaign) >= campaign.goal;
 }
 

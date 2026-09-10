@@ -27,6 +27,7 @@ import {
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
 import { DonorCreateGate } from "@/components/donor-create-gate";
+import { StoryText, StoryTextInput } from "@/components/story-text";
 import { isAlumni } from "@/lib/auth/user-type";
 import {
   SocietyAcceptanceCheckbox,
@@ -822,7 +823,7 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
               <Text className="font-retro-display text-lg text-retro-ink">
                 About your {entityLabel}
               </Text>
-              <TextInput
+              <StoryTextInput
                 value={form.story}
                 onChangeText={(v) => update("story", v)}
                 placeholder={
@@ -831,9 +832,6 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
                     : "Tell alumni what your society does and why it matters..."
                 }
                 placeholderTextColor="#56615A"
-                multiline
-                numberOfLines={6}
-                textAlignVertical="top"
                 className={`${inputClass} min-h-[140px]`}
               />
             </View>
@@ -1202,9 +1200,10 @@ export function CreateOrgWizard({ orgType }: CreateOrgWizardProps) {
             {form.story ? (
               <View className="gap-2 rounded-lg border-2 border-retro-ink/20 bg-white p-3">
                 <Text className="font-retro-mono text-xs text-retro-ink">About</Text>
-                <Text className="font-retro-mono text-sm leading-relaxed text-retro-ink/70">
-                  {form.story}
-                </Text>
+                <StoryText
+                  text={form.story}
+                  className="font-retro-mono text-sm leading-relaxed text-retro-ink/70"
+                />
               </View>
             ) : null}
 

@@ -36,6 +36,7 @@ import { formatCurrency } from "@/lib/constants";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { initialsFor, normalizeExternalUrl } from "@/lib/utils";
+import { StoryText } from "@/components/story-text";
 import {
   uploadCampaignUpdateMedia,
   type CampaignUpdateMediaUpload,
@@ -264,7 +265,10 @@ function SocietyDetail({
         {/* 2. About */}
         <View className="mb-10">
           <SocietyPageSection title="About">
-            <Text className="leading-relaxed text-dono-text">{society.story}</Text>
+            <StoryText
+              text={society.story}
+              className="leading-relaxed text-dono-text"
+            />
           </SocietyPageSection>
         </View>
 

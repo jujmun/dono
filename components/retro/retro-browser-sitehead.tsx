@@ -1,24 +1,18 @@
 import { useState } from "react";
 import { Link, usePathname } from "expo-router";
-import {
-  View,
-  Text,
-  Pressable,
-  Image,
-  useWindowDimensions,
-} from "react-native";
+import { View, Text, Pressable, useWindowDimensions } from "react-native";
 import { useConvexAuth } from "convex/react";
 import { Menu, X } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { canCreate } from "@/lib/auth/user-type";
 import { NotificationBell } from "@/components/notification-bell";
+import { ProfileMenu } from "@/components/profile-menu";
 import { DonoDino } from "./dono-dino";
 
 const baseNavItems = [
   { href: "/campaigns", label: "Campaigns" },
   { href: "/societies", label: "Communities" },
-  { href: "/dashboard", label: "Impact" },
 ] as const;
 
 export function RetroBrowserSitehead() {
@@ -90,22 +84,7 @@ export function RetroBrowserSitehead() {
           ) : null}
           {!isLoading && isAuthenticated ? <NotificationBell /> : null}
           {!isLoading && isAuthenticated ? (
-            <Link href="/account" asChild>
-              <Pressable className="retro-key h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-retro-ink bg-retro-cream">
-                {profile?.avatarUrl ? (
-                  <Image
-                    source={{ uri: profile.avatarUrl }}
-                    style={{ width: "100%", height: "100%" }}
-                    resizeMode="cover"
-                    accessibilityLabel="Your profile picture"
-                  />
-                ) : (
-                  <Text className="font-retro-mono-bold text-sm text-retro-ink">
-                    {initials}
-                  </Text>
-                )}
-              </Pressable>
-            </Link>
+            <ProfileMenu initials={initials} avatarUrl={profile?.avatarUrl} />
           ) : !isLoading ? (
             <Link href="/signin" asChild>
               <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
