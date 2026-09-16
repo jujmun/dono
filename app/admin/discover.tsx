@@ -72,7 +72,7 @@ export default function AdminDiscoverPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -113,7 +113,7 @@ export default function AdminDiscoverPage() {
 
         {reviewType === "campaigns" ? (
           <View>
-            <Text className="mb-4 text-lg font-retro-bold text-dono-text">
+            <Text className="mb-4 text-lg font-retro-display text-dono-text">
               {trimmedSearch ? "Matching posts" : "All live posts"}
             </Text>
             {campaigns === undefined ? (
@@ -138,7 +138,7 @@ export default function AdminDiscoverPage() {
           </View>
         ) : (
           <View>
-            <Text className="mb-4 text-lg font-retro-bold text-dono-text">
+            <Text className="mb-4 text-lg font-retro-display text-dono-text">
               {trimmedSearch ? "Matching societies" : "All live societies"}
             </Text>
             {societies === undefined ? (
@@ -170,7 +170,7 @@ export default function AdminDiscoverPage() {
                       <View className="mb-2">
                         <AdminStatusChip label="Live" tone="live" />
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {society.name}
                       </Text>
                       <Text className="mt-1 text-sm text-dono-muted" numberOfLines={2}>

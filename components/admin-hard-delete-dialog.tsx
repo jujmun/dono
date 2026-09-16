@@ -83,7 +83,7 @@ export function AdminHardDeleteDialog({
           >
             <View className="mb-3 flex-row items-center gap-2">
               <AlertTriangle size={18} color="#be123c" />
-              <Text className="flex-1 font-retro-bold text-lg text-dono-text">
+              <Text className="flex-1 font-retro-display text-lg text-dono-text">
                 Permanently delete this {entityLabel}?
               </Text>
             </View>

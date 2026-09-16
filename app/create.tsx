@@ -215,16 +215,18 @@ export default function CreateCampaignPage() {
     api.legal.hasAcceptedContext,
     isAuthenticated ? { context: "create_society" } : "skip",
   );
-  const mySocieties = useQuery(
-    api.societyMembers.listMyApprovedSocieties,
-    isAuthenticated && !isEditMode ? {} : "skip",
-  );
   const myProfile = useQuery(api.users.me, isAuthenticated ? {} : "skip");
   const editCampaign = useQuery(
     api.campaignCreator.getMineForEdit,
     isAuthenticated && editSlug ? { slug: editSlug } : "skip",
   );
   const requiresApproval = Boolean(editCampaign?.requiresApproval);
+  const attachedSocietySlug = (editCampaign?.creator.communityId ?? "").trim();
+  const societyLocked = requiresApproval || Boolean(attachedSocietySlug);
+  const mySocieties = useQuery(
+    api.societyMembers.listMyApprovedSocieties,
+    isAuthenticated && !societyLocked ? {} : "skip",
+  );
   const pendingCampaignEdit = useQuery(
     api.campaignEditRequests.getPendingForEntity,
     isAuthenticated && editSlug && requiresApproval ? { slug: editSlug } : "skip",
@@ -833,7 +835,7 @@ export default function CreateCampaignPage() {
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-2xl px-4 py-8">
-          <Text className="font-retro-bold text-2xl text-retro-ink">
+          <Text className="font-retro-display text-2xl text-retro-ink">
             Add campaign photos
           </Text>
           <Text className="mt-1 text-sm text-[#5c574f]">
@@ -943,7 +945,7 @@ export default function CreateCampaignPage() {
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-2xl px-4 py-16">
-          <Text className="font-retro-bold text-xl text-retro-ink">
+          <Text className="font-retro-display text-xl text-retro-ink">
             This campaign can&apos;t be edited right now
           </Text>
           <Text className="mt-2 text-sm text-[#5c574f]">
@@ -969,7 +971,7 @@ export default function CreateCampaignPage() {
         className={`mx-auto w-full px-4 py-8 ${step === 3 ? "max-w-7xl" : "max-w-2xl"}`}
       >
         <View className="mb-8 items-center">
-          <Text className="font-retro-bold text-2xl text-retro-ink">
+          <Text className="font-retro-display text-2xl text-retro-ink">
             {isEditMode ? "Edit Campaign" : "Start a Campaign"}
           </Text>
           <Text className="mt-1 text-center text-[#5c574f]">
@@ -1154,7 +1156,7 @@ export default function CreateCampaignPage() {
                 <Text className="mb-1.5 font-retro-bold text-sm text-retro-ink">
                   Posting on behalf of
                 </Text>
-                {isEditMode ? (
+                {societyLocked ? (
                   <View className="gap-1 rounded-xl border-2 border-retro-ink bg-retro-cream p-4">
                     <Text className="font-retro-bold text-xs text-retro-ink">
                       {editCampaign?.creator.name ?? "Loading..."}
@@ -1428,7 +1430,7 @@ export default function CreateCampaignPage() {
           {step === 3 && (
             <View className="gap-4">
               <View>
-                <Text className="text-lg font-retro-bold text-retro-ink">
+                <Text className="text-lg font-retro-display text-retro-ink">
                   Review your campaign
                 </Text>
                 <Text className="mt-1 text-sm text-[#5c574f]">
@@ -1737,7 +1739,7 @@ export default function CreateCampaignPage() {
 
           {step === 4 && (
             <View className="gap-5">
-              <Text className="text-lg font-retro-bold text-retro-ink">
+              <Text className="text-lg font-retro-display text-retro-ink">
                 {requiresApproval
                   ? "Submit edits for review"
                   : needsResubmit
@@ -1758,7 +1760,7 @@ export default function CreateCampaignPage() {
           {step === 5 && (
             <View className="items-center gap-3 py-4">
               <CheckCircle2 size={32} color="#17211B" />
-              <Text className="text-center text-lg font-retro-bold text-retro-ink">
+              <Text className="text-center text-lg font-retro-display text-retro-ink">
                 Confirmed!
               </Text>
               <Text className="text-center text-sm leading-relaxed text-[#5c574f]">
@@ -1893,6 +1895,7 @@ export default function CreateCampaignPage() {
                       slug,
                       title: fields.title,
                       category: fields.category,
+                      communitySlug: fields.communitySlug,
                       description: fields.description,
                       story: fields.story,
                       goal: fields.goal,

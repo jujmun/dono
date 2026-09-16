@@ -5,7 +5,7 @@ export function RetroBrowserFooter() {
   return (
     <View className="flex-row flex-wrap justify-between gap-6 border-t-[3px] border-retro-ink bg-retro-cream px-[26px] py-7">
       <View className="max-w-xs">
-        <Text className="mb-1.5 font-retro-bold text-[17px] text-retro-ink">
+        <Text className="mb-1.5 font-logo text-[17px] text-retro-ink">
           Dono
         </Text>
         <Text className="text-[12.5px] leading-5 text-[#5c574f]">
@@ -13,7 +13,7 @@ export function RetroBrowserFooter() {
         </Text>
       </View>
       <View>
-        <Text className="mb-2 font-retro-bold text-[13px] text-retro-ink">
+        <Text className="mb-2 font-retro-display text-[13px] text-retro-ink">
           Platform
         </Text>
         <Link href="/campaigns" asChild>
@@ -28,7 +28,7 @@ export function RetroBrowserFooter() {
         </Link>
       </View>
       <View>
-        <Text className="mb-2 font-retro-bold text-[13px] text-retro-ink">
+        <Text className="mb-2 font-retro-display text-[13px] text-retro-ink">
           Legal
         </Text>
         <Link href="/legal/terms_of_service" asChild>

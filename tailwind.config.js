@@ -5,41 +5,35 @@ module.exports = {
   theme: {
     extend: {
       fontFamily: {
-        // Canonical: Fredoka (UI) + Space Mono (meta/amounts)
-        retro: ["Fredoka_500Medium", "Fredoka", "sans-serif"],
-        "retro-bold": ["Fredoka_700Bold", "Fredoka", "sans-serif"],
+        // Canonical: Space Mono (titles / headings) + Work Sans (body / UI)
+        // Logo wordmark stays Fredoka, as before the type swap.
+        logo: ["Fredoka_700Bold", "Fredoka", "sans-serif"],
+        retro: ["WorkSans_400Regular", "Work Sans", "sans-serif"],
+        "retro-bold": ["WorkSans_700Bold", "Work Sans", "sans-serif"],
+        "retro-display": ["SpaceMono_700Bold", "Space Mono", "monospace"],
         "retro-mono": [
-          "SpaceMono_400Regular",
-          "Space Mono",
-          "SF Mono",
-          "Consolas",
-          "monospace",
+          "WorkSans_400Regular",
+          "Work Sans",
+          "sans-serif",
         ],
         "retro-mono-bold": [
-          "SpaceMono_700Bold",
-          "Space Mono",
-          "SF Mono",
-          "Consolas",
-          "monospace",
+          "WorkSans_700Bold",
+          "Work Sans",
+          "sans-serif",
         ],
-        // Legacy aliases → same faces (no Inter)
-        sans: ["Fredoka_500Medium", "Fredoka", "sans-serif"],
-        "sans-medium": ["Fredoka_700Bold", "Fredoka", "sans-serif"],
-        display: ["Fredoka_500Medium", "Fredoka", "sans-serif"],
-        "display-medium": ["Fredoka_700Bold", "Fredoka", "sans-serif"],
+        sans: ["WorkSans_400Regular", "Work Sans", "sans-serif"],
+        "sans-medium": ["WorkSans_700Bold", "Work Sans", "sans-serif"],
+        display: ["SpaceMono_700Bold", "Space Mono", "monospace"],
+        "display-medium": ["SpaceMono_700Bold", "Space Mono", "monospace"],
         mono: [
-          "SpaceMono_400Regular",
-          "Space Mono",
-          "SF Mono",
-          "Consolas",
-          "monospace",
+          "WorkSans_400Regular",
+          "Work Sans",
+          "sans-serif",
         ],
         "mono-medium": [
-          "SpaceMono_700Bold",
-          "Space Mono",
-          "SF Mono",
-          "Consolas",
-          "monospace",
+          "WorkSans_700Bold",
+          "Work Sans",
+          "sans-serif",
         ],
       },
       colors: {

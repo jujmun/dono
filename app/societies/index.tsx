@@ -116,7 +116,7 @@ export default function SocietiesPage() {
   return (
     <AppShell>
       <View className="mb-6">
-        <Text className="font-retro-bold text-[32px] text-retro-ink">
+        <Text className="font-retro-display text-[32px] text-retro-ink">
           Communities
         </Text>
       </View>

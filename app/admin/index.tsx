@@ -163,7 +163,7 @@ export default function AdminPortalPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Text className="mt-2 text-dono-muted">
@@ -254,7 +254,7 @@ export default function AdminPortalPage() {
                         />
                         ) : null}
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {campaign.title}
                       </Text>
                       <Text className="mt-1 text-sm text-dono-muted">
@@ -328,7 +328,7 @@ export default function AdminPortalPage() {
                       <View className="mb-2">
                         <AdminStatusChip label="Pending" tone="pending" />
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {society.name}
                       </Text>
                       <Text className="mt-1 text-xs text-dono-muted">

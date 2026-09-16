@@ -58,7 +58,7 @@ export default function AdminMessagesPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -69,7 +69,7 @@ export default function AdminMessagesPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <Text className="font-retro-bold text-2xl text-retro-ink">Messages</Text>
+        <Text className="font-retro-display text-2xl text-retro-ink">Messages</Text>
         <Text className="mt-1 text-sm text-dono-muted">
           Send a message directly to any student — it arrives as a notification
           for them. The full conversation with each student is one continuous

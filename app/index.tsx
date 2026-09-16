@@ -39,7 +39,7 @@ function CampaignSection({
   return (
     <View className="mb-16">
       <View className="mb-6 items-center">
-        <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
+        <Text className="font-retro-display text-2xl text-retro-ink">{title}</Text>
         {subtitle ? (
           <Text className="mt-1 text-center text-dono-muted">{subtitle}</Text>
         ) : null}

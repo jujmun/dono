@@ -2,11 +2,14 @@ import "../global.css";
 import { Stack, useRouter, useSegments, usePathname, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { useEffect, useRef, useState } from "react";
+import { useFonts } from "expo-font";
 import {
-  useFonts,
-  Fredoka_500Medium,
-  Fredoka_700Bold,
-} from "@expo-google-fonts/fredoka";
+  WorkSans_400Regular,
+  WorkSans_400Regular_Italic,
+  WorkSans_700Bold,
+  WorkSans_700Bold_Italic,
+} from "@expo-google-fonts/work-sans";
+import { Fredoka_700Bold } from "@expo-google-fonts/fredoka";
 import {
   SpaceMono_400Regular,
   SpaceMono_700Bold,
@@ -173,7 +176,10 @@ function AppTree() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Fredoka_500Medium,
+    WorkSans_400Regular,
+    WorkSans_400Regular_Italic,
+    WorkSans_700Bold,
+    WorkSans_700Bold_Italic,
     Fredoka_700Bold,
     SpaceMono_400Regular,
     SpaceMono_700Bold,

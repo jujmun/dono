@@ -107,7 +107,7 @@ export default function VerifyEmailPage() {
     <AppShell>
       <View className="mx-auto w-full max-w-md px-4 py-12">
         <View className="rounded-2xl border border-dono-border bg-white p-8">
-          <Text className="font-retro-bold text-2xl text-dono-text">Verify Email</Text>
+          <Text className="font-retro-display text-2xl text-dono-text">Verify Email</Text>
           <Text className="mt-1 text-sm text-dono-muted">
             Enter the 6-digit code sent to your inbox.
           </Text>

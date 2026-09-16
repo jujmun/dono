@@ -241,6 +241,35 @@ async function applyCampaignOwnerPatch(
   }
 }
 
+/** Drafts may be saved before a society is chosen; attach once, never replace. */
+async function attachSocietyIfMissing(
+  ctx: MutationCtx,
+  campaign: Doc<"campaigns">,
+  communitySlug: string | undefined,
+) {
+  const nextSociety = communitySlug?.trim() ?? "";
+  if (!nextSociety || campaign.creator.communityId) {
+    return;
+  }
+  const { community } = await requireSocietyMember(ctx, nextSociety);
+  const creatorName = community.name;
+  const initials = creatorName
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+  await ctx.db.patch(campaign._id, {
+    creator: {
+      name: creatorName,
+      type: "society",
+      avatar: initials || "SO",
+      communityId: nextSociety,
+    },
+    university: community.university.trim(),
+  });
+}
+
 export const listMine = query({
   args: {},
   handler: async (ctx) => {
@@ -322,6 +351,8 @@ export const update = mutation({
     plannedUpdateSchedule: v.optional(v.string()),
     ownershipStatement: v.optional(v.string()),
     responsibleIndividualUserId: v.optional(v.id("users")),
+    /** Attaches a society only when the draft does not already have one. */
+    communitySlug: v.optional(v.string()),
     /** True only from app/create.tsx's edit mode (?editSlug=..., reached from
      * an admin-changes-requested notification) — logs a campaign_edited
      * event so admins see it in the review thread. Left unset by the same
@@ -348,6 +379,7 @@ export const update = mutation({
     }
 
     await applyCampaignOwnerPatch(ctx, campaign, args);
+    await attachSocietyIfMissing(ctx, campaign, args.communitySlug);
     return null;
   },
 });
@@ -407,26 +439,7 @@ export const saveDraft = mutation({
         ownershipStatement: args.ownershipStatement,
         allowIncomplete: true,
       });
-      const nextSociety = args.communitySlug.trim();
-      if (nextSociety && !campaign.creator.communityId) {
-        const { community } = await requireSocietyMember(ctx, nextSociety);
-        const creatorName = community.name;
-        const initials = creatorName
-          .split(" ")
-          .map((part) => part[0])
-          .join("")
-          .slice(0, 2)
-          .toUpperCase();
-        await ctx.db.patch(campaign._id, {
-          creator: {
-            name: creatorName,
-            type: "society",
-            avatar: initials || "SO",
-            communityId: nextSociety,
-          },
-          university: community.university.trim(),
-        });
-      }
+      await attachSocietyIfMissing(ctx, campaign, args.communitySlug);
       return { slug: campaign.slug };
     }
 

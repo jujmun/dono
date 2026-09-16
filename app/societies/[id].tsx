@@ -185,7 +185,7 @@ function SocietyPageSection({
   return (
     <View className="gap-3">
       <View className="gap-1">
-        <Text className="font-retro-bold text-lg text-dono-text">{title}</Text>
+        <Text className="font-retro-display text-lg text-dono-text">{title}</Text>
         {subtitle ? (
           <Text className="text-sm text-dono-muted">{subtitle}</Text>
         ) : null}
@@ -242,7 +242,7 @@ function SocietyDetail({
             </View>
             <View className="min-w-0 flex-1 gap-1">
               <View className="flex-row items-start gap-2">
-                <Text className="min-w-0 flex-1 font-retro-bold text-2xl leading-tight text-dono-text">
+                <Text className="min-w-0 flex-1 font-retro-display text-2xl leading-tight text-dono-text">
                   {society.name}
                 </Text>
                 <SocietyEditPencil slug={slug} orgType={society.orgType} />
@@ -306,7 +306,7 @@ function CommunityDetail({
             </View>
             <View className="min-w-0 flex-1 gap-1">
               <View className="flex-row flex-wrap items-center gap-2">
-                <Text className="font-retro-bold text-2xl leading-tight text-dono-text">
+                <Text className="font-retro-display text-2xl leading-tight text-dono-text">
                   {community.name}
                 </Text>
               </View>
@@ -661,7 +661,7 @@ function SocietyBody({ slug }: { slug: string }) {
               <Shield size={16} color="#17211B" />
             </View>
             <View className="min-w-0 flex-1 gap-1">
-              <Text className="font-retro-bold text-lg text-dono-text">
+              <Text className="font-retro-display text-lg text-dono-text">
                 Leadership
               </Text>
               <Text className="text-sm text-dono-muted">
@@ -726,7 +726,7 @@ function LeaderJoinRequests({ slug }: { slug: string }) {
 
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-5">
-      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+      <Text className="mb-3 font-retro-display text-lg text-dono-text">
         Pending join requests
       </Text>
       {error ? <Text className="mb-2 text-xs text-rose-700">{error}</Text> : null}
@@ -816,7 +816,7 @@ function LeaderPendingCampaigns({ slug }: { slug: string }) {
 
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-5">
-      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+      <Text className="mb-3 font-retro-display text-lg text-dono-text">
         Campaigns awaiting your approval
       </Text>
       {error ? <Text className="mb-2 text-xs text-rose-700">{error}</Text> : null}
@@ -999,7 +999,7 @@ function LeaderCampaignUpdates({ slug }: { slug: string }) {
 
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-5">
-      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+      <Text className="mb-3 font-retro-display text-lg text-dono-text">
         Post a campaign update
       </Text>
       <View className="gap-4">

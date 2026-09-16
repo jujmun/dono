@@ -103,7 +103,7 @@ export function PendingCampaignEditsSection({ enabled }: { enabled: boolean }) {
             <View className="flex-row flex-wrap gap-2">
               <AdminStatusChip label="Edit pending" tone="pending" />
             </View>
-            <Text className="font-retro-bold text-lg text-dono-text">
+            <Text className="font-retro-display text-lg text-dono-text">
               {row.campaignTitle}
             </Text>
             <Text className="text-xs text-dono-muted">
@@ -327,7 +327,7 @@ export function PendingSocietyEditsSection({ enabled }: { enabled: boolean }) {
             <View className="flex-row flex-wrap gap-2">
               <AdminStatusChip label="Edit pending" tone="pending" />
             </View>
-            <Text className="font-retro-bold text-lg text-dono-text">
+            <Text className="font-retro-display text-lg text-dono-text">
               {row.societyName}
             </Text>
             <Text className="text-xs text-dono-muted">

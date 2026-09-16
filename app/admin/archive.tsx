@@ -87,7 +87,7 @@ export default function AdminArchivePage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -170,7 +170,7 @@ export default function AdminArchivePage() {
                             <Text className="text-xs text-dono-muted">{when}</Text>
                           ) : null}
                         </View>
-                        <Text className="font-retro-bold text-lg text-dono-text">
+                        <Text className="font-retro-display text-lg text-dono-text">
                           {campaign.title}
                         </Text>
                         <Text className="mt-1 text-sm text-dono-muted">
@@ -237,7 +237,7 @@ export default function AdminArchivePage() {
                           <Text className="text-xs text-dono-muted">{when}</Text>
                         ) : null}
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {society.name}
                       </Text>
                       {society.moderationNote ? (

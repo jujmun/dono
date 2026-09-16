@@ -123,7 +123,7 @@ export default function AdminCampaignReviewPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Pressable
@@ -279,7 +279,7 @@ export default function AdminCampaignReviewPage() {
           ) : null}
         </View>
 
-        <Text className="font-retro-bold text-2xl text-dono-text">
+        <Text className="font-retro-display text-2xl text-dono-text">
           {campaign.title}
         </Text>
         <Text className="mt-2 text-sm text-dono-muted">

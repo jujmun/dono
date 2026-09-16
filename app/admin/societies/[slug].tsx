@@ -79,7 +79,7 @@ export default function AdminSocietyReviewPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Pressable
@@ -191,7 +191,7 @@ export default function AdminSocietyReviewPage() {
           ) : null}
         </View>
 
-        <Text className="font-retro-bold text-2xl text-dono-text">{society.name}</Text>
+        <Text className="font-retro-display text-2xl text-dono-text">{society.name}</Text>
         <Text className="mt-2 text-sm text-dono-muted">{society.description}</Text>
 
         {moderated && society.moderationNote ? (

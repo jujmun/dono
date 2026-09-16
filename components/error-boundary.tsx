@@ -34,7 +34,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     return (
       <View className="flex-1 items-center justify-center bg-white p-6">
         <ScrollView className="w-full max-w-2xl" contentContainerClassName="gap-3">
-          <Text className="font-retro-bold text-lg text-rose-700">
+          <Text className="font-retro-display text-lg text-rose-700">
             Something crashed while rendering this page
           </Text>
           <Text className="font-retro-mono-bold text-sm text-dono-text">

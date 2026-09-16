@@ -40,7 +40,7 @@ export function Header() {
         <View className="flex-1 flex-row items-center">
           <Link href="/" asChild>
             <Pressable className="flex-row items-center gap-2">
-              <Text className="font-retro-bold text-xl text-dono-text">Dono</Text>
+              <Text className="font-logo text-xl text-dono-text">Dono</Text>
             </Pressable>
           </Link>
         </View>
@@ -237,7 +237,7 @@ export function Footer() {
         <View className={cn("gap-8", isWide ? "flex-row flex-wrap" : "")}>
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
             <View className="mb-4 flex-row items-center gap-2">
-              <Text className="font-retro-bold text-lg text-dono-text">Dono</Text>
+              <Text className="font-logo text-lg text-dono-text">Dono</Text>
             </View>
             <Text className="text-sm text-dono-muted">
               Community infrastructure for transparent university giving.

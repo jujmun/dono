@@ -135,7 +135,7 @@ export function RetroCampaignCard({
             <View>
               <View className="mb-0.5 min-h-[52px] flex-row items-start justify-between gap-2">
                 <Text
-                  className="min-w-0 flex-1 font-retro-bold text-[19px] leading-[26px] text-retro-ink"
+                  className="min-w-0 flex-1 font-retro-display text-[19px] leading-[26px] text-retro-ink"
                   numberOfLines={2}
                 >
                   {campaign.title}

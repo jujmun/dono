@@ -159,7 +159,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
         )}
       >
         {!embedded ? (
-          <Text className="mb-4 text-lg font-retro-bold text-dono-text">
+          <Text className="mb-4 text-lg font-retro-display text-dono-text">
             Comments
           </Text>
         ) : null}

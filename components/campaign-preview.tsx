@@ -78,7 +78,7 @@ export function CampaignPreview({
 
   const storyBlock = (
     <View key="story" className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-      <Text className="mb-3 text-lg font-retro-bold text-dono-text">The story</Text>
+      <Text className="mb-3 text-lg font-retro-display text-dono-text">The story</Text>
       <StoryText className="leading-relaxed text-dono-muted" text={story} />
     </View>
   );
@@ -119,7 +119,7 @@ export function CampaignPreview({
   return (
     <View className="flex-col lg:flex-row lg:items-start lg:gap-8">
       <View className="min-w-0 flex-1">
-        <Text className="mb-3 font-retro-bold text-2xl text-dono-text">{title}</Text>
+        <Text className="mb-3 font-retro-display text-2xl text-dono-text">{title}</Text>
 
         <View className="mb-4 gap-2">
           <View className="flex-row items-center gap-1">
@@ -151,7 +151,7 @@ export function CampaignPreview({
 
         {additionalNotes ? (
           <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-            <Text className="mb-3 text-lg font-retro-bold text-dono-text">
+            <Text className="mb-3 text-lg font-retro-display text-dono-text">
               Anything else?
             </Text>
             <Text className="leading-relaxed text-dono-muted">{additionalNotes}</Text>

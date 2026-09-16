@@ -71,7 +71,7 @@ export default function AdminPlatformSettingsPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -82,7 +82,7 @@ export default function AdminPlatformSettingsPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-2xl px-4 py-8">
-        <Text className="font-retro-bold text-2xl text-dono-text">
+        <Text className="font-retro-display text-2xl text-dono-text">
           Platform kill switches
         </Text>
         <Text className="mt-2 text-sm text-dono-muted">

@@ -61,7 +61,7 @@ export function AdminStatsNav({ active }: { active: AdminSection }) {
     <View className="mb-6">
       <View className="mb-6 flex-row items-start justify-between gap-4">
         <View className="min-h-[56px] flex-1">
-          <Text className="font-retro-bold text-2xl text-retro-ink">
+          <Text className="font-retro-display text-2xl text-retro-ink">
             {current.title}
           </Text>
           <Text className="mt-1 text-sm text-dono-muted">{current.subtitle}</Text>

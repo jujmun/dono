@@ -101,7 +101,7 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
           </CampaignImage>
           <View className="p-4">
             <Text
-              className="font-retro-bold text-sm text-retro-ink"
+              className="font-retro-display text-sm text-retro-ink"
               numberOfLines={1}
             >
               {society.name}

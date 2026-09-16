@@ -71,7 +71,7 @@ function AdminSitehead() {
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
         <View className="flex-row items-center gap-2">
           <DonoDino height={26} />
-          <Text className="font-retro-bold text-xl text-retro-ink">Dono</Text>
+          <Text className="font-logo text-xl text-retro-ink">Dono</Text>
           <View className="rounded-full border-2 border-retro-ink bg-retro-coral px-2.5 py-0.5">
             <Text className="font-retro-bold text-[11px] text-retro-paper">
               ADMIN

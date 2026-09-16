@@ -57,7 +57,7 @@ export function RetroDinoHero() {
       className="retro-hero-bubble justify-center rounded-[20px] border-[3px] border-retro-ink bg-retro-paper px-5 py-8 md:px-8 md:py-10"
       style={isWide ? { flex: 1 } : undefined}
     >
-      <Text className="mb-3 text-center font-retro-bold text-[22px] leading-7 text-retro-ink md:text-3xl md:leading-9">
+      <Text className="mb-3 text-center font-retro-display text-[22px] leading-7 text-retro-ink md:text-3xl md:leading-9">
         Where did my last donation{"\u00A0"}go?
       </Text>
       <Text className="text-center font-retro-mono text-[14px] leading-7 text-retro-forest md:text-lg md:leading-8">

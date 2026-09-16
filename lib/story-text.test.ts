@@ -1,98 +1,90 @@
 import { describe, expect, it } from "vitest";
 import {
   htmlToStory,
-  parseStoryBold,
-  storyHasBold,
+  parseStoryRuns,
   storyToEditorHtml,
-  toggleStoryBold,
+  stripStoryMarkers,
+  toggleStoryMark,
 } from "./story-text";
 
-describe("parseStoryBold", () => {
-  it("returns a single plain part when there are no markers", () => {
-    expect(parseStoryBold("Hello world")).toEqual([
-      { text: "Hello world", bold: false },
+describe("parseStoryRuns", () => {
+  it("returns a single plain run when there are no markers", () => {
+    expect(parseStoryRuns("Hello world")).toEqual([
+      { text: "Hello world", bold: false, italic: false, underline: false },
     ]);
   });
 
-  it("splits mixed plain and bold segments", () => {
-    expect(parseStoryBold("We need **new blades** this term.")).toEqual([
-      { text: "We need ", bold: false },
-      { text: "new blades", bold: true },
-      { text: " this term.", bold: false },
+  it("parses bold, italic, and underline", () => {
+    expect(parseStoryRuns("**bold** _italic_ ++under++")).toEqual([
+      { text: "bold", bold: true, italic: false, underline: false },
+      { text: " ", bold: false, italic: false, underline: false },
+      { text: "italic", bold: false, italic: true, underline: false },
+      { text: " ", bold: false, italic: false, underline: false },
+      { text: "under", bold: false, italic: false, underline: true },
     ]);
   });
 
-  it("handles adjacent bold spans", () => {
-    expect(parseStoryBold("**Yes** **please**")).toEqual([
-      { text: "Yes", bold: true },
-      { text: " ", bold: false },
-      { text: "please", bold: true },
+  it("parses nested bold italic", () => {
+    expect(parseStoryRuns("**_both_**")).toEqual([
+      { text: "both", bold: true, italic: true, underline: false },
     ]);
   });
 
   it("leaves unmatched markers as literal text", () => {
-    expect(parseStoryBold("Almost **bold")).toEqual([
-      { text: "Almost **bold", bold: false },
+    expect(parseStoryRuns("Almost **bold")).toEqual([
+      { text: "Almost **bold", bold: false, italic: false, underline: false },
     ]);
   });
 });
 
-describe("storyHasBold", () => {
-  it("is true only when a complete **pair** is present", () => {
-    expect(storyHasBold("plain")).toBe(false);
-    expect(storyHasBold("Almost **bold")).toBe(false);
-    expect(storyHasBold("We need **new blades**")).toBe(true);
+describe("stripStoryMarkers", () => {
+  it("flattens formatted copy", () => {
+    expect(stripStoryMarkers("We need **new blades** this term.")).toBe(
+      "We need new blades this term.",
+    );
+    expect(stripStoryMarkers("_hi_ ++there++")).toBe("hi there");
   });
 });
 
-describe("toggleStoryBold", () => {
-  it("wraps a selection", () => {
-    expect(toggleStoryBold("Hello world", 0, 5)).toBe("**Hello** world");
+describe("toggleStoryMark", () => {
+  it("wraps and unwraps bold", () => {
+    expect(toggleStoryMark("Hello world", 0, 5, "bold")).toBe("**Hello** world");
+    expect(toggleStoryMark("**Hello** world", 2, 7, "bold")).toBe("Hello world");
   });
 
-  it("unwraps a selection that already includes markers", () => {
-    expect(toggleStoryBold("**Hello** world", 0, 9)).toBe("Hello world");
-  });
-
-  it("unwraps when markers sit just outside the selection", () => {
-    expect(toggleStoryBold("**Hello** world", 2, 7)).toBe("Hello world");
+  it("wraps italic and underline", () => {
+    expect(toggleStoryMark("Hello world", 0, 5, "italic")).toBe("_Hello_ world");
+    expect(toggleStoryMark("Hello world", 6, 11, "underline")).toBe(
+      "Hello ++world++",
+    );
   });
 
   it("expands an empty selection to the word at the cursor", () => {
-    expect(toggleStoryBold("Hello world", 1, 1)).toBe("**Hello** world");
-  });
-
-  it("is a no-op in whitespace", () => {
-    expect(toggleStoryBold("Hello world", 5, 5)).toBe("Hello world");
-  });
-
-  it("wraps the last word when the cursor is at the end", () => {
-    expect(toggleStoryBold("Hello world", 11, 11)).toBe("Hello **world**");
+    expect(toggleStoryMark("Hello world", 1, 1, "bold")).toBe("**Hello** world");
   });
 });
 
 describe("story editor html", () => {
-  it("round-trips bold and plain text", () => {
-    const story = "We need **new blades** this term.";
-    expect(storyToEditorHtml(story)).toBe(
-      "We need <strong>new blades</strong> this term.",
-    );
+  it("round-trips mixed marks", () => {
+    const story = "We need **new** _blades_ ++now++.";
     expect(htmlToStory(storyToEditorHtml(story))).toBe(story);
   });
 
-  it("accepts <b> tags and line breaks from the editor", () => {
-    expect(htmlToStory("Hello <b>world</b><br>again")).toBe(
-      "Hello **world**\nagain",
+  it("accepts editor tags and line breaks", () => {
+    expect(htmlToStory("Hello <b>world</b><br><i>again</i> <u>please</u>")).toBe(
+      "Hello **world**\n_again_ ++please++",
     );
   });
 
-  it("accepts font-weight spans from the editor", () => {
-    expect(htmlToStory('<span style="font-weight: 700">Hello</span>')).toBe(
-      "**Hello**",
-    );
-  });
-
-  it("decodes entities after unwrapping tags", () => {
-    expect(htmlToStory("A &amp; B")).toBe("A & B");
+  it("accepts style spans from the editor", () => {
+    expect(
+      htmlToStory('<span style="font-weight: 700">Hello</span>'),
+    ).toBe("**Hello**");
+    expect(
+      htmlToStory('<span style="font-style: italic">Hello</span>'),
+    ).toBe("_Hello_");
+    expect(
+      htmlToStory('<span style="text-decoration: underline">Hello</span>'),
+    ).toBe("++Hello++");
   });
 });

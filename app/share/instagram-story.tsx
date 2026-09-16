@@ -222,7 +222,7 @@ export default function InstagramStorySharePage() {
   if (!campaignSlug) {
     return (
       <View className="min-h-screen flex-1 items-center justify-center bg-retro-cream px-6">
-        <Text className="text-center font-retro-bold text-lg text-retro-ink">
+        <Text className="text-center font-retro-display text-lg text-retro-ink">
           Missing campaign
         </Text>
         <Text className="mt-2 text-center text-sm text-[#5c574f]">
@@ -243,7 +243,7 @@ export default function InstagramStorySharePage() {
   if (campaignDoc === null) {
     return (
       <View className="min-h-screen flex-1 items-center justify-center bg-retro-cream px-6">
-        <Text className="text-center font-retro-bold text-lg text-retro-ink">
+        <Text className="text-center font-retro-display text-lg text-retro-ink">
           Campaign not found
         </Text>
       </View>
@@ -263,7 +263,7 @@ export default function InstagramStorySharePage() {
       <Text className="font-retro-mono text-xs uppercase text-[#5c574f]">
         Instagram Stories
       </Text>
-      <Text className="mt-2 text-center font-retro-bold text-2xl text-retro-ink">
+      <Text className="mt-2 text-center font-retro-display text-2xl text-retro-ink">
         Share your gift
       </Text>
       <Text className="mt-2 max-w-sm text-center text-sm leading-5 text-[#5c574f]">
