@@ -22,7 +22,7 @@ export function CommunityCard({ community }: CommunityCardProps) {
 
           <View className="pt-9">
             <View className="mb-1 flex-row items-start justify-between gap-2">
-              <Text className="flex-1 font-retro-bold text-dono-text">{community.name}</Text>
+              <Text className="flex-1 font-retro-display text-dono-text">{community.name}</Text>
             </View>
 
             <Text className="mb-3 text-xs text-dono-muted">{community.university}</Text>

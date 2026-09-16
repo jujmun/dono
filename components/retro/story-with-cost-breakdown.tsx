@@ -1,6 +1,7 @@
 import { createElement, type ReactNode } from "react";
 import { View, Platform, useWindowDimensions } from "react-native";
-import { StoryText, storyBoldWebChildren } from "@/components/story-text";
+import { StoryText, storyRichWebChildren } from "@/components/story-text";
+import { STORY_FONT_FAMILY, stripStoryMarkers } from "@/lib/story-text";
 import {
   ReceiptDivider,
   ReceiptLedger,
@@ -85,8 +86,7 @@ function storyToParagraphs(story: string): string[] {
       flush();
       continue;
     }
-    // Ignore **bold** markers so a bold heading still breaks as its own line.
-    const plain = line.replace(/\*\*/g, "");
+    const plain = stripStoryMarkers(line);
     const looksLikeHeading =
       plain.length <= 60 &&
       !/[.!?]$/.test(plain) &&
@@ -111,7 +111,8 @@ function storyToParagraphs(story: string): string[] {
 
 const storyParagraphStyle = {
   margin: 0,
-  fontFamily: "Fredoka, Fredoka_500Medium, sans-serif",
+  fontFamily: STORY_FONT_FAMILY,
+  fontWeight: 400,
   fontSize: 18,
   lineHeight: "24px",
   color: "#211E1A",
@@ -159,7 +160,7 @@ function WebFloatBody({
             marginBottom: index === paragraphs.length - 1 ? 0 : 14,
           },
         },
-        ...storyBoldWebChildren(paragraph),
+        ...storyRichWebChildren(paragraph),
       ),
     ),
   );

@@ -55,7 +55,7 @@ export function RetroPanel({
         </View>
         <Text
           className={cn(
-            "font-retro-bold text-[13.5px] uppercase",
+            "font-retro-display text-[13.5px] uppercase",
             barTitleClasses[accent],
           )}
           numberOfLines={1}

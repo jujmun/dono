@@ -12,7 +12,7 @@ export function SocietySubscribeSheet({
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View className="flex-1 justify-end bg-black/40">
         <View className="rounded-t-3xl bg-white px-6 pb-6 pt-6">
-          <Text className="font-retro-bold text-xl text-dono-text">
+          <Text className="font-retro-display text-xl text-dono-text">
             Subscribe to {societyName}
           </Text>
           <Text className="mt-3 text-sm text-dono-muted">

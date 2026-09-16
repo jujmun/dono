@@ -305,7 +305,7 @@ function PasswordAuthFormInner({
       <View className="mx-auto w-full max-w-md">
         <RetroPanel title={mode === "signUp" ? "SIGN_UP.exe" : "SIGN_IN.exe"} accent="mint">
           <View className="mb-6 items-center">
-            <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
+            <Text className="font-retro-display text-2xl text-retro-ink">{title}</Text>
             <Text className="mt-1 text-center text-sm text-dono-muted">
               {step === "role"
                 ? "Are you a current student or an alumni?"

@@ -118,7 +118,7 @@ export function LeaderDonationLedger({ slug }: LeaderDonationLedgerProps) {
       <View className="mb-3 flex-row items-start gap-2">
         <Receipt size={20} color="#17211B" />
         <View className="flex-1">
-          <Text className="font-retro-bold text-lg text-dono-text">Donation ledger</Text>
+          <Text className="font-retro-display text-lg text-dono-text">Donation ledger</Text>
           <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
             See which campaign each payment belongs to so you can delegate funds to the
             right campaign lead. Anonymous donors are never identified by name or email.
@@ -129,13 +129,13 @@ export function LeaderDonationLedger({ slug }: LeaderDonationLedgerProps) {
       <View className="mb-4 flex-row flex-wrap gap-3">
         <View className="rounded-xl border border-dono-border bg-dono-surface px-4 py-3">
           <Text className="text-xs text-dono-muted">Net to campaigns</Text>
-          <Text className="font-retro-bold text-lg text-dono-text">
+          <Text className="font-retro-display text-lg text-dono-text">
             {formatCurrency(ledger.summary.totalNetToCampaignGbp)}
           </Text>
         </View>
         <View className="rounded-xl border border-dono-border bg-dono-surface px-4 py-3">
           <Text className="text-xs text-dono-muted">Payments shown</Text>
-          <Text className="font-retro-bold text-lg text-dono-text">
+          <Text className="font-retro-display text-lg text-dono-text">
             {ledger.summary.donationCount}
           </Text>
         </View>

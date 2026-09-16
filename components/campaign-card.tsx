@@ -77,7 +77,7 @@ export function CampaignCard({
             </CampaignImage>
             <View className="p-4">
               <Text
-                className="font-retro-bold text-base text-dono-text"
+                className="font-retro-display text-base text-dono-text"
                 numberOfLines={2}
               >
                 {campaign.title}
@@ -133,7 +133,7 @@ export function CampaignCard({
           <View className="p-5">
             <View className="flex-row items-start justify-between gap-4">
               <View className="min-w-0 flex-1">
-                <Text className="font-retro-bold text-xl text-dono-text" numberOfLines={2}>
+                <Text className="font-retro-display text-xl text-dono-text" numberOfLines={2}>
                   {campaign.title}
                 </Text>
                 {subtitle ? (

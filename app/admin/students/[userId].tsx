@@ -98,7 +98,7 @@ export default function AdminStudentProfilePage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -159,7 +159,7 @@ export default function AdminStudentProfilePage() {
               </View>
             )}
             <View className="flex-1">
-              <Text className="font-retro-bold text-2xl text-dono-text">
+              <Text className="font-retro-display text-2xl text-dono-text">
                 {student.name || "Unnamed student"}
               </Text>
               <Text className="mt-1 text-sm text-dono-muted">{student.email}</Text>

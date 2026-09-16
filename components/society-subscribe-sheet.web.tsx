@@ -187,7 +187,7 @@ export function SocietySubscribeSheet({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 8 }}
           >
-            <Text className="font-retro-bold text-xl text-dono-text">
+            <Text className="font-retro-display text-xl text-dono-text">
               Subscribe to {societyName}
             </Text>
             <Text className="mt-1 text-sm text-dono-muted">

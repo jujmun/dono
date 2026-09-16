@@ -443,7 +443,7 @@ export default function CampaignDetailPage() {
       <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
         <Text
           className={cn(
-            "font-retro-bold uppercase leading-tight text-retro-ink",
+            "font-retro-display uppercase leading-tight text-retro-ink",
             isWide ? "max-w-full text-[34px]" : "w-full text-[22px]",
           )}
         >

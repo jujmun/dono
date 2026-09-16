@@ -67,7 +67,7 @@ function SectionCard({
 }) {
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-6">
-      <Text className="font-retro-bold text-lg text-dono-text">{title}</Text>
+      <Text className="font-retro-display text-lg text-dono-text">{title}</Text>
       <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
       {children}
     </View>
@@ -312,7 +312,7 @@ export default function AccountPage() {
             <Text className="text-sm text-dono-muted">/</Text>
             <Text className="text-sm text-dono-muted">Account settings</Text>
           </View>
-          <Text className="mt-3 font-retro-bold text-2xl text-dono-text">
+          <Text className="mt-3 font-retro-display text-2xl text-dono-text">
             Account settings
           </Text>
           <Text className="mt-1 text-dono-muted">
@@ -322,7 +322,7 @@ export default function AccountPage() {
 
         <View className="rounded-2xl border border-dono-border bg-white p-6">
           <View className="mb-1 flex-row items-center justify-between gap-4">
-            <Text className="font-retro-bold text-lg text-dono-text">Account</Text>
+            <Text className="font-retro-display text-lg text-dono-text">Account</Text>
             {memberSince ? (
               <Text className="font-retro-mono text-xs uppercase tracking-wide text-dono-muted">
                 {memberSince}
@@ -353,7 +353,7 @@ export default function AccountPage() {
                 />
               ) : (
                 <View className="h-full w-full items-center justify-center">
-                  <Text className="font-retro-bold text-2xl text-dono-text">
+                  <Text className="font-retro-display text-2xl text-dono-text">
                     {initials}
                   </Text>
                 </View>

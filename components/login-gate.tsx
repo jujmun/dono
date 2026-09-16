@@ -5,7 +5,7 @@ export function LoginGate({ message }: { message: string }) {
   return (
     <View className="mx-auto w-full max-w-7xl px-4 py-8">
       <View className="items-center rounded-2xl border border-dono-border bg-white p-10">
-        <Text className="text-center font-retro-bold text-xl text-dono-text">
+        <Text className="text-center font-retro-display text-xl text-dono-text">
           Sign in required
         </Text>
         <Text className="mt-2 text-center text-sm text-dono-muted">{message}</Text>

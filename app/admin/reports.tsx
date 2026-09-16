@@ -133,7 +133,7 @@ export default function AdminReportsPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Text className="mt-2 text-dono-muted">
@@ -147,7 +147,7 @@ export default function AdminReportsPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <Text className="mb-1 font-retro-bold text-2xl text-dono-text">
+        <Text className="mb-1 font-retro-display text-2xl text-dono-text">
           Reports
         </Text>
         <Text className="mb-6 text-sm text-dono-muted">

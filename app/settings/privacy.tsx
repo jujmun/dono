@@ -65,7 +65,7 @@ export default function PrivacySettingsPage() {
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-xl px-4 py-10">
-        <Text className="font-retro-bold text-2xl text-dono-text">
+        <Text className="font-retro-display text-2xl text-dono-text">
           Privacy and analytics settings
         </Text>
         <Text className="mt-2 text-sm leading-relaxed text-dono-muted">
@@ -77,7 +77,7 @@ export default function PrivacySettingsPage() {
 
         <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
           <Text className="text-sm text-dono-muted">Current choice</Text>
-          <Text className="mt-1 font-retro-bold text-lg text-dono-text">
+          <Text className="mt-1 font-retro-display text-lg text-dono-text">
             {statusLabel}
           </Text>
           {record ? (

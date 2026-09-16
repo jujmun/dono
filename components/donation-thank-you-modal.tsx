@@ -270,7 +270,7 @@ export function DonationThankYouModal({
               <Animated.View entering={FadeInDown.delay(120).springify()} className="items-center">
                 <View className="mb-3 flex-row items-center gap-2">
                   <Sparkles size={18} color="#168456" />
-                  <Text className="font-retro-bold text-3xl text-dono-text">
+                  <Text className="font-retro-display text-3xl text-dono-text">
                     Thank you!
                   </Text>
                   <Sparkles size={18} color="#168456" />

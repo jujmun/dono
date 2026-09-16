@@ -240,7 +240,7 @@ export function ImageCropModal({
     >
       <View className="flex-1 items-center justify-center bg-black/60 px-4">
         <View className="w-full max-w-xl rounded-[14px] border-[3px] border-retro-ink bg-retro-paper p-5">
-          <Text className="font-retro-bold text-xl text-retro-ink">
+          <Text className="font-retro-display text-xl text-retro-ink">
             Frame your photo
           </Text>
           <Text className="mt-1 text-sm text-[#5c574f]">

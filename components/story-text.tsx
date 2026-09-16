@@ -6,55 +6,64 @@ import {
   type ReactNode,
 } from "react";
 import { Platform, Pressable, Text, TextInput, View } from "react-native";
-import { Bold } from "lucide-react-native";
+import { Bold, Italic, Underline } from "lucide-react-native";
 import {
+  STORY_FONT_FAMILY,
   htmlToStory,
-  parseStoryBold,
+  parseStoryRuns,
+  storyRunFontFamily,
   storyToEditorHtml,
-  toggleStoryBold,
+  toggleStoryMark,
+  type StoryMark,
 } from "@/lib/story-text";
+
+const storyFont = {
+  fontFamily: STORY_FONT_FAMILY,
+  fontWeight: "400" as const,
+};
+
+const webRunStyle = (run: {
+  bold: boolean;
+  italic: boolean;
+  underline: boolean;
+}) => ({
+  fontFamily: storyRunFontFamily(run),
+  fontWeight: run.bold ? 700 : 400,
+  fontStyle: run.italic ? ("italic" as const) : ("normal" as const),
+  textDecoration: run.underline ? "underline" : "none",
+});
 
 type StoryTextProps = {
   text: string;
   className?: string;
 };
 
-/** Render story copy with **bold** spans as nested Text. */
+/** Render story copy in Work Sans with bold / italic / underline spans. */
 export function StoryText({ text, className }: StoryTextProps) {
-  const parts = parseStoryBold(text);
+  const runs = parseStoryRuns(text);
   return (
-    <Text className={className}>
-      {parts.map((part, index) =>
-        part.bold ? (
-          <Text
-            key={index}
-            className="font-retro-bold"
-            style={{ fontFamily: "Fredoka_700Bold", fontWeight: "700" }}
-          >
-            {part.text}
-          </Text>
-        ) : (
-          <Text key={index}>{part.text}</Text>
-        ),
-      )}
+    <Text className={className} style={storyFont}>
+      {runs.map((run, index) => (
+        <Text
+          key={index}
+          style={{
+            fontFamily: storyRunFontFamily(run),
+            fontWeight: run.bold ? "700" : "400",
+            fontStyle: run.italic ? "italic" : "normal",
+            textDecorationLine: run.underline ? "underline" : "none",
+          }}
+        >
+          {run.text}
+        </Text>
+      ))}
     </Text>
   );
 }
 
-const storyRegularFont = "Fredoka_500Medium, Fredoka, sans-serif";
-const storyBoldFont = "Fredoka_700Bold, Fredoka, sans-serif";
-
-const webBoldStyle = {
-  fontFamily: storyBoldFont,
-  fontWeight: 700,
-} as const;
-
-/** Inline **bold** children for web `<p>` story paragraphs. */
-export function storyBoldWebChildren(text: string): ReactNode[] {
-  return parseStoryBold(text).map((part, index) =>
-    part.bold
-      ? createElement("strong", { key: index, style: webBoldStyle }, part.text)
-      : part.text,
+/** Inline formatted children for web `<p>` story paragraphs. */
+export function storyRichWebChildren(text: string): ReactNode[] {
+  return parseStoryRuns(text).map((run, index) =>
+    createElement("span", { key: index, style: webRunStyle(run) }, run.text),
   );
 }
 
@@ -69,11 +78,68 @@ type StoryTextInputProps = {
 type EditorEl = {
   innerHTML: string;
   focus: () => void;
+  contains: (node: Node) => boolean;
+};
+
+const FORMAT_COMMAND: Record<StoryMark, string> = {
+  bold: "bold",
+  italic: "italic",
+  underline: "underline",
 };
 
 function emitEditorStory(el: EditorEl | null, onChangeText: (value: string) => void) {
   if (!el) return;
   onChangeText(htmlToStory(el.innerHTML));
+}
+
+function FormatButton({
+  mark,
+  label,
+  onPress,
+}: {
+  mark: StoryMark;
+  label: string;
+  onPress: (mark: StoryMark) => void;
+}) {
+  const icon =
+    mark === "bold" ? (
+      <Bold size={14} color="#17211B" />
+    ) : mark === "italic" ? (
+      <Italic size={14} color="#17211B" />
+    ) : (
+      <Underline size={14} color="#17211B" />
+    );
+
+  if (Platform.OS === "web") {
+    return createElement(
+      "button",
+      {
+        type: "button",
+        className: "story-format-btn",
+        "aria-label": label,
+        onMouseDown: (event: { preventDefault: () => void }) => {
+          event.preventDefault();
+        },
+        onClick: () => onPress(mark),
+      },
+      icon,
+      createElement("span", null, label),
+    );
+  }
+
+  return (
+    <Pressable
+      onPress={() => onPress(mark)}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      className="flex-row items-center gap-1.5 rounded-lg border-2 border-retro-ink bg-white px-2.5 py-1.5"
+    >
+      {icon}
+      <Text style={storyFont} className="text-xs text-retro-ink">
+        {label}
+      </Text>
+    </Pressable>
+  );
 }
 
 function WebStoryEditor({
@@ -91,13 +157,18 @@ function WebStoryEditor({
     el.innerHTML = storyToEditorHtml(value);
   }, [editorRef, value]);
 
+  const apply = (mark: StoryMark) => {
+    document.execCommand(FORMAT_COMMAND[mark]);
+    emitEditorStory(editorRef.current, onChangeText);
+  };
+
   return (
     <View className={`relative ${className ?? ""}`}>
       {!value && placeholder ? (
         <Text
           pointerEvents="none"
-          className="absolute left-0 top-0 font-retro text-sm"
-          style={{ color: placeholderTextColor ?? "#56615A" }}
+          className="absolute left-0 top-0 text-sm"
+          style={{ ...storyFont, color: placeholderTextColor ?? "#56615A" }}
         >
           {placeholder}
         </Text>
@@ -115,8 +186,8 @@ function WebStoryEditor({
           outline: "none",
           whiteSpace: "pre-wrap",
           wordBreak: "break-word",
-          fontFamily: storyRegularFont,
-          fontWeight: 500,
+          fontFamily: STORY_FONT_FAMILY,
+          fontWeight: 400,
           fontSize: "inherit",
           lineHeight: "inherit",
           color: "inherit",
@@ -136,10 +207,17 @@ function WebStoryEditor({
           ctrlKey: boolean;
           preventDefault: () => void;
         }) => {
-          if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "b") {
+          if (!(event.metaKey || event.ctrlKey)) return;
+          const key = event.key.toLowerCase();
+          if (key === "b") {
             event.preventDefault();
-            document.execCommand("bold");
-            emitEditorStory(editorRef.current, onChangeText);
+            apply("bold");
+          } else if (key === "i") {
+            event.preventDefault();
+            apply("italic");
+          } else if (key === "u") {
+            event.preventDefault();
+            apply("underline");
           }
         },
       })}
@@ -147,7 +225,7 @@ function WebStoryEditor({
   );
 }
 
-/** Multiline story field with a Bold control that bolds the current selection in place. */
+/** Multiline story field with Bold / Italic / Underline in Work Sans. */
 export function StoryTextInput({
   value,
   onChangeText,
@@ -158,35 +236,23 @@ export function StoryTextInput({
   const editorRef = useRef<EditorEl | null>(null);
   const selectionRef = useRef({ start: 0, end: 0 });
 
-  const applyBold = () => {
+  const applyMark = (mark: StoryMark) => {
     if (Platform.OS === "web") {
-      editorRef.current?.focus();
-      document.execCommand("bold");
+      document.execCommand(FORMAT_COMMAND[mark]);
       emitEditorStory(editorRef.current, onChangeText);
       return;
     }
     const { start, end } = selectionRef.current;
-    onChangeText(toggleStoryBold(value, start, end));
+    onChangeText(toggleStoryMark(value, start, end, mark));
   };
 
   return (
     <View className="gap-1.5">
-      <Pressable
-        onPressIn={applyBold}
-        accessibilityRole="button"
-        accessibilityLabel="Bold selected text"
-        className="retro-key flex-row items-center gap-1.5 self-start rounded-lg border-2 border-retro-ink bg-white px-2.5 py-1.5"
-        {...(Platform.OS === "web"
-          ? {
-              onMouseDown: (event: { preventDefault: () => void }) => {
-                event.preventDefault();
-              },
-            }
-          : {})}
-      >
-        <Bold size={14} color="#17211B" />
-        <Text className="font-retro-bold text-xs text-retro-ink">Bold</Text>
-      </Pressable>
+      <View className="flex-row flex-wrap gap-1.5">
+        <FormatButton mark="bold" label="Bold" onPress={applyMark} />
+        <FormatButton mark="italic" label="Italic" onPress={applyMark} />
+        <FormatButton mark="underline" label="Underline" onPress={applyMark} />
+      </View>
       {Platform.OS === "web" ? (
         <WebStoryEditor
           value={value}
@@ -209,6 +275,7 @@ export function StoryTextInput({
           numberOfLines={6}
           textAlignVertical="top"
           className={className}
+          style={storyFont}
         />
       )}
     </View>

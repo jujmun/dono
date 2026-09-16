@@ -455,4 +455,87 @@ describe("creation mutations without student card", () => {
     expect(campaign?.creator.communityId).toBe("");
     expect(campaign?.societyApprovalStatus).toBeUndefined();
   });
+
+  it("campaignCreator.saveDraft attaches a society chosen after the first save", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "late-society@ox.ac.uk",
+      userType: "student",
+    });
+    const societySlug = "late-society";
+    await seedVerifiedSocietyCommunity(t, societySlug);
+    await seedApprovedMembership(t, { communitySlug: societySlug, userId: studentId });
+    const asStudent = t.withIdentity({ subject: studentId });
+
+    const created = await asStudent.mutation(api.campaignCreator.saveDraft, {
+      title: "Later society",
+      category: "",
+      communitySlug: "",
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+    await asStudent.mutation(api.campaignCreator.saveDraft, {
+      slug: created.slug,
+      title: "Later society",
+      category: "",
+      communitySlug: societySlug,
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+    const campaign = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", created.slug))
+        .unique();
+    });
+    expect(campaign?.creator.communityId).toBe(societySlug);
+    expect(campaign?.creator.name).toBe(`Society ${societySlug}`);
+    expect(campaign?.societyApprovalStatus).toBeUndefined();
+  });
+
+  it("campaignCreator.update attaches a society chosen after an incomplete draft", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "late-update@ox.ac.uk",
+      userType: "student",
+      dateOfBirth: ADULT_DOB,
+    });
+    const societySlug = "late-update-society";
+    await seedVerifiedSocietyCommunity(t, societySlug);
+    await seedApprovedMembership(t, { communitySlug: societySlug, userId: studentId });
+    const asStudent = t.withIdentity({ subject: studentId });
+
+    const created = await asStudent.mutation(api.campaignCreator.saveDraft, {
+      title: "Complete later",
+      category: "",
+      communitySlug: "",
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+    await asStudent.mutation(api.campaignCreator.update, {
+      slug: created.slug,
+      title: "Complete later",
+      category: "textbooks",
+      communitySlug: societySlug,
+      description: "desc",
+      story: "story",
+      goal: 100,
+      template: "classic",
+    });
+    const campaign = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", created.slug))
+        .unique();
+    });
+    expect(campaign?.creator.communityId).toBe(societySlug);
+    expect(campaign?.category).toBe("textbooks");
+    expect(campaign?.societyApprovalStatus).toBeUndefined();
+  });
 });

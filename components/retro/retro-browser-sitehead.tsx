@@ -33,7 +33,7 @@ export function RetroBrowserSitehead() {
         <Link href="/" asChild>
           <Pressable className="flex-row items-center gap-2" accessibilityLabel="Dono home">
             <DonoDino height={26} />
-            <Text className="font-retro-bold text-xl text-retro-ink">Dono</Text>
+            <Text className="font-logo text-xl text-retro-ink">Dono</Text>
           </Pressable>
         </Link>
 

@@ -154,7 +154,7 @@ export default function CampaignsPage() {
 
   return (
     <AppShell>
-      <Text className="mb-1.5 font-retro-bold text-[32px] text-retro-ink">
+      <Text className="mb-1.5 font-retro-display text-[32px] text-retro-ink">
         Campaigns
       </Text>
       <Text className="mb-5 text-sm text-[#4a453c]">

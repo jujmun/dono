@@ -101,7 +101,7 @@ export function FundBreakdownSection({
 }) {
   return (
     <View className={cn("rounded-2xl border border-dono-border bg-white p-6", className)}>
-      <Text className="font-retro-bold text-lg text-dono-text">{title}</Text>
+      <Text className="font-retro-display text-lg text-dono-text">{title}</Text>
       {subtitle ? (
         <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
       ) : null}

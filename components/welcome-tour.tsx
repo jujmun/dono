@@ -156,7 +156,7 @@ export function WelcomeTour({
         <View className="mb-5 h-16 w-16 items-center justify-center rounded-2xl bg-dono-primary/10">
           <Icon size={28} color="#17211B" strokeWidth={2} />
         </View>
-        <Text className="text-center font-retro-bold text-2xl text-dono-text">
+        <Text className="text-center font-retro-display text-2xl text-dono-text">
           {slide.title}
         </Text>
         <View className="mt-2 rounded-full bg-dono-surface-muted px-3 py-1">

@@ -89,7 +89,7 @@ export default function DashboardPage() {
   return (
     <AppShell>
       <View className="mb-8">
-        <Text className="font-retro-bold text-[32px] text-retro-ink">Your Impact</Text>
+        <Text className="font-retro-display text-[32px] text-retro-ink">Your Impact</Text>
         <Text className="mt-1 text-dono-muted">
           Track your generosity and see the difference you&apos;ve made
         </Text>
@@ -130,7 +130,7 @@ export default function DashboardPage() {
         <View>
           <View className="mb-4 flex-row items-center gap-2">
             <Calendar size={20} color="#17211B" />
-            <Text className="text-lg font-retro-bold text-dono-text">
+            <Text className="text-lg font-retro-display text-dono-text">
               Recent Donations
             </Text>
           </View>
@@ -162,7 +162,7 @@ export default function DashboardPage() {
 
         <View className="mt-8">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-lg font-retro-bold text-dono-text">
+            <Text className="text-lg font-retro-display text-dono-text">
               Campaigns You Follow
             </Text>
             <Link href="/campaigns" asChild>
@@ -186,7 +186,7 @@ export default function DashboardPage() {
 
         <View className="mt-8">
           <View className="mb-4 flex-row items-center justify-between">
-            <Text className="text-lg font-retro-bold text-dono-text">
+            <Text className="text-lg font-retro-display text-dono-text">
               Societies You Follow
             </Text>
             <Link href="/societies" asChild>

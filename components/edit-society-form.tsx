@@ -176,7 +176,7 @@ export function EditSocietyForm({
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-2xl px-4 py-16">
-          <Text className="font-retro-bold text-xl text-retro-ink">
+          <Text className="font-retro-display text-xl text-retro-ink">
             Society not found
           </Text>
           <Text className="mt-2 text-sm text-[#5c574f]">
@@ -201,7 +201,7 @@ export function EditSocietyForm({
     return (
       <AppShell>
         <View className="mx-auto w-full max-w-2xl px-4 py-16">
-          <Text className="font-retro-bold text-xl text-retro-ink">
+          <Text className="font-retro-display text-xl text-retro-ink">
             This society can&apos;t be edited right now
           </Text>
           <Text className="mt-2 text-sm text-[#5c574f]">
@@ -225,7 +225,7 @@ export function EditSocietyForm({
       <AppShell>
         <View className="mx-auto w-full max-w-2xl items-center px-4 py-16">
           <CheckCircle2 size={32} color="#17211B" />
-          <Text className="mt-3 text-center text-lg font-retro-bold text-retro-ink">
+          <Text className="mt-3 text-center text-lg font-retro-display text-retro-ink">
             Submitted for review
           </Text>
           <Text className="mt-2 text-center text-sm text-[#5c574f]">
@@ -246,7 +246,7 @@ export function EditSocietyForm({
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-2xl px-4 py-8">
-        <Text className="mb-1 text-center font-retro-bold text-2xl text-retro-ink">
+        <Text className="mb-1 text-center font-retro-display text-2xl text-retro-ink">
           Edit {orgType === "college" ? "College" : "Society"}
         </Text>
         <Text className="mb-6 text-center text-sm text-[#5c574f]">

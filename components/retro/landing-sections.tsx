@@ -23,7 +23,7 @@ export function LandingHeroActions({
       <Text className="mb-1 text-center font-retro-mono text-xs uppercase tracking-wide text-dono-muted">
         For Oxford students, societies & alumni
       </Text>
-      <Text className="mb-2 max-w-xl text-center font-retro-bold text-2xl leading-8 text-retro-ink md:text-3xl md:leading-9">
+      <Text className="mb-2 max-w-xl text-center font-retro-display text-2xl leading-8 text-retro-ink md:text-3xl md:leading-9">
         Fund a student project you can point to
       </Text>
       <Text className="mb-5 max-w-md text-center text-[15px] leading-6 text-dono-muted">
@@ -131,7 +131,7 @@ export function LandingHowItWorks() {
   return (
     <View className="mb-16">
       <View className="mb-6 items-center">
-        <Text className="font-retro-bold text-2xl text-retro-ink">
+        <Text className="font-retro-display text-2xl text-retro-ink">
           How Dono works
         </Text>
         <Text className="mt-1 max-w-lg text-center text-dono-muted">
@@ -149,7 +149,7 @@ export function LandingHowItWorks() {
             <Text className="mb-2 font-retro-mono-bold text-sm text-retro-mint">
               {step.n}
             </Text>
-            <Text className="mb-2 font-retro-bold text-lg text-retro-ink">
+            <Text className="mb-2 font-retro-display text-lg text-retro-ink">
               {step.title}
             </Text>
             <Text className="text-[15px] leading-6 text-dono-muted">
@@ -180,7 +180,7 @@ export function LandingAudienceSplit({
         <Text className="mb-1 font-retro-mono text-xs uppercase text-dono-muted">
           For alumni & donors
         </Text>
-        <Text className="mb-3 font-retro-bold text-xl text-retro-ink">
+        <Text className="mb-3 font-retro-display text-xl text-retro-ink">
           Support something you can point to
         </Text>
         <Text className="mb-5 text-[15px] leading-6 text-dono-muted">
@@ -206,7 +206,7 @@ export function LandingAudienceSplit({
         <Text className="mb-1 font-retro-mono text-xs uppercase text-dono-muted">
           For students & societies
         </Text>
-        <Text className="mb-3 font-retro-bold text-xl text-retro-ink">
+        <Text className="mb-3 font-retro-display text-xl text-retro-ink">
           Fund the gap traditional grants miss
         </Text>
         <Text className="mb-5 text-[15px] leading-6 text-dono-muted">
@@ -252,7 +252,7 @@ export function LandingWhyDono() {
   return (
     <View className="mb-16">
       <View className="mb-6 items-center">
-        <Text className="font-retro-bold text-2xl text-retro-ink">
+        <Text className="font-retro-display text-2xl text-retro-ink">
           Why Dono
         </Text>
         <Text className="mt-1 max-w-lg text-center text-dono-muted">
@@ -273,7 +273,7 @@ export function LandingWhyDono() {
               <View className="mb-3 h-10 w-10 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-paper">
                 <Icon size={18} color="#211E1A" />
               </View>
-              <Text className="mb-2 font-retro-bold text-base text-retro-ink">
+              <Text className="mb-2 font-retro-display text-base text-retro-ink">
                 {item.title}
               </Text>
               <Text className="text-[14px] leading-6 text-dono-muted">
@@ -293,7 +293,7 @@ export function LandingFinalCta({ profile }: { profile: ProfileLike }) {
 
   return (
     <RetroPanel title="READY.dat" accent="coral" className="mb-0">
-      <Text className="text-center font-retro-bold text-2xl text-retro-ink">
+      <Text className="text-center font-retro-display text-2xl text-retro-ink">
         Ready to make a difference?
       </Text>
       <Text className="mx-auto mt-3 max-w-lg text-center text-dono-muted">

@@ -1,9 +1,32 @@
-export type StoryTextPart = {
+export const STORY_FONT_FAMILY =
+  "WorkSans_400Regular, Work Sans, sans-serif";
+
+export function storyRunFontFamily(run: {
+  bold: boolean;
+  italic: boolean;
+}): string {
+  if (run.bold && run.italic) {
+    return "WorkSans_700Bold_Italic, Work Sans, sans-serif";
+  }
+  if (run.italic) return "WorkSans_400Regular_Italic, Work Sans, sans-serif";
+  if (run.bold) return "WorkSans_700Bold, Work Sans, sans-serif";
+  return STORY_FONT_FAMILY;
+}
+
+export type StoryRun = {
   text: string;
   bold: boolean;
+  italic: boolean;
+  underline: boolean;
 };
 
-const BOLD_PATTERN = /\*\*([^*]+)\*\*/g;
+export type StoryMark = "bold" | "italic" | "underline";
+
+const MARK: Record<StoryMark, string> = {
+  bold: "**",
+  italic: "_",
+  underline: "++",
+};
 
 function clampIndex(value: number, length: number): number {
   if (!Number.isFinite(value)) return 0;
@@ -12,7 +35,6 @@ function clampIndex(value: number, length: number): number {
 
 function wordAt(text: string, index: number): { start: number; end: number } {
   const at = clampIndex(index, text.length);
-  // Cursor on a space is not "inside" a word — don't grab the letters beside it.
   if (at < text.length && /\s/.test(text[at] ?? "")) {
     return { start: at, end: at };
   }
@@ -23,27 +45,68 @@ function wordAt(text: string, index: number): { start: number; end: number } {
   return { start, end };
 }
 
-/** Split story copy into plain and **bold** segments. Unmatched markers stay literal. */
-export function parseStoryBold(input: string): StoryTextPart[] {
-  const parts: StoryTextPart[] = [];
-  const pattern = new RegExp(BOLD_PATTERN.source, "g");
-  let last = 0;
-  let match: RegExpExecArray | null;
-  while ((match = pattern.exec(input)) !== null) {
-    if (match.index > last) {
-      parts.push({ text: input.slice(last, match.index), bold: false });
-    }
-    parts.push({ text: match[1] ?? "", bold: true });
-    last = match.index + match[0].length;
-  }
-  if (last < input.length) {
-    parts.push({ text: input.slice(last), bold: false });
-  }
-  return parts.length > 0 ? parts : [{ text: input, bold: false }];
+function peekMarker(
+  s: string,
+  i: number,
+): { kind: StoryMark; token: string } | null {
+  if (s.startsWith("**", i)) return { kind: "bold", token: "**" };
+  if (s.startsWith("++", i)) return { kind: "underline", token: "++" };
+  if (s[i] === "_") return { kind: "italic", token: "_" };
+  return null;
 }
 
-export function storyHasBold(input: string): boolean {
-  return /\*\*[^*]+\*\*/.test(input);
+/** Split story copy into Work Sans runs with bold / italic / underline. */
+export function parseStoryRuns(
+  input: string,
+  marks: { bold: boolean; italic: boolean; underline: boolean } = {
+    bold: false,
+    italic: false,
+    underline: false,
+  },
+): StoryRun[] {
+  const parts: StoryRun[] = [];
+  const flush = (text: string) => {
+    if (text) parts.push({ text, ...marks });
+  };
+
+  let i = 0;
+  let buf = "";
+  while (i < input.length) {
+    const marker = peekMarker(input, i);
+    if (marker) {
+      const close = input.indexOf(marker.token, i + marker.token.length);
+      if (close !== -1) {
+        flush(buf);
+        buf = "";
+        const inner = input.slice(i + marker.token.length, close);
+        parts.push(
+          ...parseStoryRuns(inner, { ...marks, [marker.kind]: true }),
+        );
+        i = close + marker.token.length;
+        continue;
+      }
+    }
+    buf += input[i] ?? "";
+    i += 1;
+  }
+  flush(buf);
+  return parts.length > 0
+    ? parts
+    : [{ text: input, bold: false, italic: false, underline: false }];
+}
+
+/** Flatten formatting markers to plain text. */
+export function stripStoryMarkers(input: string): string {
+  return parseStoryRuns(input)
+    .map((run) => run.text)
+    .join("");
+}
+
+function wrapMarkLines(text: string, token: string): string {
+  return text
+    .split("\n")
+    .map((line) => (line ? `${token}${line}${token}` : ""))
+    .join("\n");
 }
 
 function escapeStoryHtml(text: string): string {
@@ -64,42 +127,57 @@ function decodeStoryEntities(text: string): string {
     .replace(/&amp;/g, "&");
 }
 
-function wrapBoldLines(text: string): string {
-  return text
-    .split("\n")
-    .map((line) => {
-      const plain = line.replace(/\*\*/g, "");
-      return plain ? `**${plain}**` : "";
-    })
-    .join("\n");
-}
-
-/** Convert stored `**bold**` story text into HTML for the inline editor. */
+/** Convert stored markers into HTML for the story editor. */
 export function storyToEditorHtml(input: string): string {
   if (!input) return "";
-  return parseStoryBold(input)
-    .map((part) => {
-      const escaped = escapeStoryHtml(part.text).replace(/\n/g, "<br>");
-      return part.bold ? `<strong>${escaped}</strong>` : escaped;
+  return parseStoryRuns(input)
+    .map((run) => {
+      const escaped = escapeStoryHtml(run.text).replace(/\n/g, "<br>");
+      if (!escaped) return "";
+      let html = escaped;
+      if (run.bold) html = `<b>${html}</b>`;
+      if (run.italic) html = `<i>${html}</i>`;
+      if (run.underline) html = `<u>${html}</u>`;
+      return html;
     })
     .join("");
 }
 
-/** Convert editor HTML back to stored `**bold**` story text. */
+/** Convert editor HTML back to stored markers. */
 export function htmlToStory(html: string): string {
   let s = html.replace(/\u00a0/g, " ");
   s = s.replace(/<br\s*\/?>/gi, "\n");
   s = s.replace(/<\/(div|p)>/gi, "\n");
   s = s.replace(/<(div|p)(?:\s[^>]*)?>/gi, "");
   s = s.replace(
-    /<span[^>]*style="[^"]*font-weight:\s*(?:bold|700)[^"]*"[^>]*>([\s\S]*?)<\/span>/gi,
-    (_all, inner: string) => wrapBoldLines(inner),
+    /<span[^>]*style="([^"]*)"[^>]*>([\s\S]*?)<\/span>/gi,
+    (_all, style: string, inner: string) => {
+      let out = inner;
+      if (/text-decoration:\s*underline/i.test(style)) {
+        out = wrapMarkLines(out, MARK.underline);
+      }
+      if (/font-style:\s*italic/i.test(style)) {
+        out = wrapMarkLines(out, MARK.italic);
+      }
+      if (/font-weight:\s*(?:bold|700)/i.test(style)) {
+        out = wrapMarkLines(out, MARK.bold);
+      }
+      return out;
+    },
   );
   for (let i = 0; i < 8; i += 1) {
-    const next = s.replace(
-      /<(strong|b)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi,
-      (_all, _tag: string, inner: string) => wrapBoldLines(inner),
-    );
+    const next = s
+      .replace(/<u(?:\s[^>]*)?>([\s\S]*?)<\/u>/gi, (_all, inner: string) =>
+        wrapMarkLines(inner, MARK.underline),
+      )
+      .replace(
+        /<(i|em)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi,
+        (_all, _tag: string, inner: string) => wrapMarkLines(inner, MARK.italic),
+      )
+      .replace(
+        /<(b|strong)(?:\s[^>]*)?>([\s\S]*?)<\/\1>/gi,
+        (_all, _tag: string, inner: string) => wrapMarkLines(inner, MARK.bold),
+      );
     if (next === s) break;
     s = next;
   }
@@ -110,15 +188,17 @@ export function htmlToStory(html: string): string {
 }
 
 /**
- * Wrap or unwrap `**` around the selected range. An empty selection expands to
- * the word at the cursor. Returns the original string when there is nothing
- * to wrap.
+ * Wrap or unwrap a marker around the selected range. An empty selection
+ * expands to the word at the cursor.
  */
-export function toggleStoryBold(
+export function toggleStoryMark(
   text: string,
   start: number,
   end: number,
+  kind: StoryMark,
 ): string {
+  const token = MARK[kind];
+  const tokenLen = token.length;
   const length = text.length;
   let lo = Math.min(clampIndex(start, length), clampIndex(end, length));
   let hi = Math.max(clampIndex(start, length), clampIndex(end, length));
@@ -131,16 +211,20 @@ export function toggleStoryBold(
   if (lo === hi) return text;
 
   const selected = text.slice(lo, hi);
-  if (selected.startsWith("**") && selected.endsWith("**") && selected.length >= 4) {
-    return `${text.slice(0, lo)}${selected.slice(2, -2)}${text.slice(hi)}`;
+  if (
+    selected.startsWith(token) &&
+    selected.endsWith(token) &&
+    selected.length >= tokenLen * 2
+  ) {
+    return `${text.slice(0, lo)}${selected.slice(tokenLen, -tokenLen)}${text.slice(hi)}`;
   }
   if (
-    lo >= 2 &&
-    hi + 2 <= length &&
-    text.slice(lo - 2, lo) === "**" &&
-    text.slice(hi, hi + 2) === "**"
+    lo >= tokenLen &&
+    hi + tokenLen <= length &&
+    text.slice(lo - tokenLen, lo) === token &&
+    text.slice(hi, hi + tokenLen) === token
   ) {
-    return `${text.slice(0, lo - 2)}${selected}${text.slice(hi + 2)}`;
+    return `${text.slice(0, lo - tokenLen)}${selected}${text.slice(hi + tokenLen)}`;
   }
-  return `${text.slice(0, lo)}**${selected}**${text.slice(hi)}`;
+  return `${text.slice(0, lo)}${token}${selected}${token}${text.slice(hi)}`;
 }

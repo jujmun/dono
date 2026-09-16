@@ -277,7 +277,7 @@ export function LegalMarkdownBody({
             <InlineText
               key={index}
               text={block.text}
-              className="font-retro-bold text-2xl leading-8 text-retro-ink"
+              className="font-retro-display text-2xl leading-8 text-retro-ink"
             />
           );
         }
@@ -287,7 +287,7 @@ export function LegalMarkdownBody({
             <InlineText
               key={index}
               text={block.text}
-              className="mt-2 font-retro-bold text-xl leading-7 text-retro-ink"
+              className="mt-2 font-retro-display text-xl leading-7 text-retro-ink"
             />
           );
         }
@@ -297,7 +297,7 @@ export function LegalMarkdownBody({
             <InlineText
               key={index}
               text={block.text}
-              className="mt-1 font-retro-bold text-lg leading-6 text-retro-ink"
+              className="mt-1 font-retro-display text-lg leading-6 text-retro-ink"
             />
           );
         }
@@ -307,7 +307,7 @@ export function LegalMarkdownBody({
             <InlineText
               key={index}
               text={block.text}
-              className="font-retro-bold text-base leading-6 text-retro-ink"
+              className="font-retro-display text-base leading-6 text-retro-ink"
             />
           );
         }

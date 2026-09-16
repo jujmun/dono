@@ -105,7 +105,7 @@ function OtpRequestFormInner({
       <View className="mx-auto w-full max-w-md">
         <RetroPanel title="AUTH.exe" accent="mint">
           <View className="mb-6 items-center">
-            <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
+            <Text className="font-retro-display text-2xl text-retro-ink">{title}</Text>
             <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
           </View>
 

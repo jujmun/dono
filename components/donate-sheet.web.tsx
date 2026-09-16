@@ -391,7 +391,7 @@ export function DonateSheet({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 8 }}
           >
-            <Text className="font-retro-bold text-2xl text-dono-text">Donate</Text>
+            <Text className="font-retro-display text-2xl text-dono-text">Donate</Text>
             <Text className="mt-1 text-sm text-dono-muted" numberOfLines={2}>
               {campaignTitle}
             </Text>
