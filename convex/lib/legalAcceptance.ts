@@ -73,7 +73,15 @@ export async function recordLegalAcceptancesForContext(
   },
 ) {
   const docs = requiredAcceptDocsForContext(args.context);
-  assertRegistryDocuments(docs);
+  try {
+    assertRegistryDocuments(docs);
+  } catch {
+    throw new ConvexError({
+      code: "LEGAL_REGISTRY_UNAVAILABLE",
+      message:
+        "Required legal documents are not available. This action cannot proceed.",
+    });
+  }
   const ids: Id<"legalAcceptances">[] = [];
   for (const documentId of docs) {
     const id = await recordLegalAcceptance(ctx, {

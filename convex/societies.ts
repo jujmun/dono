@@ -1298,6 +1298,11 @@ export const recordVerificationSessionCreated = internalMutation({
     await ctx.db.patch(society._id, {
       stripeVerificationSessionId: args.stripeVerificationSessionId,
       stripeVerificationStatus: args.status,
+      // A session is only (re)handed to the user here when it's fresh or
+      // still resubmittable — any last_error is from a prior attempt and
+      // shouldn't keep showing as "failed" before the new attempt resolves.
+      stripeVerificationLastErrorCode: undefined,
+      stripeVerificationLastErrorReason: undefined,
     });
     return null;
   },
