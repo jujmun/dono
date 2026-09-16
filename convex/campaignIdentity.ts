@@ -98,6 +98,11 @@ export const createVerificationSession = action({
         campaign.stripeVerificationSessionId,
       );
       if (existing) {
+        await ctx.runMutation(internal.campaigns.recordVerificationSessionCreated, {
+          slug: campaign.slug,
+          stripeVerificationSessionId: existing.id,
+          status: existing.status,
+        });
         return {
           verificationSessionId: existing.id,
           clientSecret: existing.client_secret,

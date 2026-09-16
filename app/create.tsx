@@ -16,6 +16,7 @@ import {
   CheckCircle2,
   ImagePlus,
   Plus,
+  ShieldAlert,
   ShieldCheck,
   Trash2,
 } from "lucide-react-native";
@@ -607,6 +608,14 @@ export default function CreateCampaignPage() {
         <View className="flex-row items-center gap-2 self-start rounded-xl bg-green-50 px-3 py-2">
           <ShieldCheck size={14} color="#15803d" />
           <Text className="text-xs text-green-800">Verified</Text>
+        </View>
+      );
+    }
+    if (stripeFailed) {
+      return (
+        <View className="flex-row items-center gap-2 self-start rounded-xl bg-rose-50 px-3 py-2">
+          <ShieldAlert size={14} color="#be123c" />
+          <Text className="text-xs text-rose-800">Verification failed</Text>
         </View>
       );
     }

@@ -1,4 +1,4 @@
-import { v } from "convex/values";
+import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import {
@@ -72,7 +72,10 @@ export const acceptDocuments = mutation({
   handler: async (ctx, args) => {
     const userId = await getAuthUserId(ctx);
     if (!userId && !args.guestKey) {
-      throw new Error("Sign in or provide a guest key to accept legal documents.");
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "Sign in or provide a guest key to accept legal documents.",
+      });
     }
     const ids = await recordLegalAcceptancesForContext(ctx, {
       userId: userId ?? undefined,
