@@ -20,8 +20,7 @@ import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import {
-  AgeCapacityCheckbox,
-  DonateAcceptanceCheckbox,
+  DonateTermsCheckbox,
   LegalCheckboxRow,
 } from "@/components/legal-acceptance-checkbox";
 import {
@@ -233,12 +232,28 @@ export function DonateSheet({
   const activePaymentIntentIdRef = useRef<string | null>(null);
   const donorEmailRef = useRef(donorEmail);
   const guestKeyRef = useRef(getOrCreateDonateGuestKey());
+  const [termsError, setTermsError] = useState(false);
 
   donorEmailRef.current = donorEmail;
 
   const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount, coverFees);
   const feeTotalLabel = formatMinorGbp(feeBreakdown.totalChargedMinor);
   const stripeConfigured = Boolean(publishableKey);
+  const termsAccepted = legalAccepted && ageAttested;
+
+  const handleTermsChange = (value: boolean) => {
+    onLegalAcceptedChange(value);
+    onAgeAttestedChange(value);
+    if (value) {
+      setTermsError(false);
+    }
+  };
+
+  // One box drives both flags; hiding the name is the inverse of showing support.
+  const handleShowSupportChange = (value: boolean) => {
+    onShowSupportPubliclyChange(value);
+    onAnonymousChange(!value);
+  };
 
   const abandonActivePaymentIntent = () => {
     const piId = activePaymentIntentIdRef.current;
@@ -465,14 +480,9 @@ export function DonateSheet({
             ) : null}
 
             <View className="mt-4 gap-2">
-              <AgeCapacityCheckbox
-                wordingId="W-AGE-1"
-                accepted={ageAttested}
-                onAcceptedChange={onAgeAttestedChange}
-              />
-              <DonateAcceptanceCheckbox
-                accepted={legalAccepted}
-                onAcceptedChange={onLegalAcceptedChange}
+              <DonateTermsCheckbox
+                accepted={termsAccepted}
+                onAcceptedChange={handleTermsChange}
               />
               <LegalCheckboxRow
                 accepted={coverFees}
@@ -485,17 +495,19 @@ export function DonateSheet({
                 </Text>
               </LegalCheckboxRow>
               <LegalCheckboxRow
-                accepted={isAnonymous}
-                onAcceptedChange={onAnonymousChange}
-                accessibilityLabel={LEGAL_WORDINGS["W-HIDE-1"]}
+                accepted={showSupportPublicly}
+                onAcceptedChange={handleShowSupportChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-DISPLAY-1"]}
               >
                 <View>
                   <Text className="text-sm leading-5 text-dono-text">
-                    {LEGAL_WORDINGS["W-HIDE-1"]}
+                    {LEGAL_WORDINGS["W-DISPLAY-1"]}
                   </Text>
-                  <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
-                    {LEGAL_WORDINGS["W-HIDE-DISCLOSURE-1"]}
-                  </Text>
+                  {!showSupportPublicly ? (
+                    <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
+                      {LEGAL_WORDINGS["W-HIDE-DISCLOSURE-1"]}
+                    </Text>
+                  ) : null}
                 </View>
               </LegalCheckboxRow>
               <LegalCheckboxRow
@@ -505,15 +517,6 @@ export function DonateSheet({
               >
                 <Text className="text-sm leading-5 text-dono-text">
                   {LEGAL_WORDINGS["W-MKT-1"]}
-                </Text>
-              </LegalCheckboxRow>
-              <LegalCheckboxRow
-                accepted={showSupportPublicly}
-                onAcceptedChange={onShowSupportPubliclyChange}
-                accessibilityLabel={LEGAL_WORDINGS["W-DISPLAY-1"]}
-              >
-                <Text className="text-sm leading-5 text-dono-text">
-                  {LEGAL_WORDINGS["W-DISPLAY-1"]}
                 </Text>
               </LegalCheckboxRow>
 
@@ -545,10 +548,22 @@ export function DonateSheet({
               <Text className="mt-6 text-sm text-dono-muted">
                 Confirm your date of birth above to continue to payment.
               </Text>
-            ) : !ageAttested ? null : !legalAccepted ? (
-              <Text className="mt-6 text-sm text-dono-muted">
-                Accept the terms above to continue to payment.
-              </Text>
+            ) : !termsAccepted ? (
+              <View className="mt-6">
+                {termsError ? (
+                  <Text className="mb-3 text-sm text-red-600">
+                    To pay, you need to agree to the terms above.
+                  </Text>
+                ) : null}
+                <Pressable
+                  onPress={() => setTermsError(true)}
+                  className="flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+                >
+                  <Text className="font-retro-bold text-sm text-white">
+                    Pay {feeTotalLabel}
+                  </Text>
+                </Pressable>
+              </View>
             ) : loading ? (
               <View className="mt-8 items-center py-6">
                 <ActivityIndicator color="#17211B" />
