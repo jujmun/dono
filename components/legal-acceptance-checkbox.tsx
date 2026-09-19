@@ -204,6 +204,37 @@ export function DonateAcceptanceCheckbox({
   );
 }
 
+/**
+ * Event C — single checkbox covering W-AGE-1 and W-ACCEPT-1. Shows both
+ * wordings in full so each recorded acceptance matches what the donor saw.
+ */
+export function DonateTermsCheckbox({
+  accepted,
+  onAcceptedChange,
+  className,
+}: {
+  accepted: boolean;
+  onAcceptedChange: (v: boolean) => void;
+  className?: string;
+}) {
+  return (
+    <LegalCheckboxRow
+      accepted={accepted}
+      onAcceptedChange={onAcceptedChange}
+      accessibilityLabel={`${LEGAL_WORDINGS["W-AGE-1"]} ${LEGAL_WORDINGS["W-ACCEPT-1"]}`}
+      className={className}
+    >
+      <Text className="text-sm leading-5 text-dono-text">
+        {LEGAL_WORDINGS["W-AGE-1"]} By continuing, I accept the{" "}
+        <DocLink id="donor_terms" label="Donor Terms" />, the{" "}
+        <DocLink id="refund_dispute" label="Refund and Dispute Policy" /> and the{" "}
+        <DocLink id="terms_of_service" label="Terms of Service" />, and I have
+        read the <DocLink id="privacy" label="Privacy Notice" />.
+      </Text>
+    </LegalCheckboxRow>
+  );
+}
+
 /** @deprecated Prefer event-specific checkboxes. */
 export function LegalAcceptanceCheckbox({
   context,

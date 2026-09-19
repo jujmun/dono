@@ -82,10 +82,10 @@ export default function CampaignDetailPage() {
   );
   const [customAmount, setCustomAmount] = useState("");
   const [donorEmail, setDonorEmail] = useState("");
-  const [isAnonymous, setIsAnonymous] = useState(false);
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const [legalAccepted, setLegalAccepted] = useState(false);
   const [ageAttested, setAgeAttested] = useState(false);
-  const [coverFees, setCoverFees] = useState(false);
+  const [coverFees, setCoverFees] = useState(true);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
   const [showSupportPublicly, setShowSupportPublicly] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
