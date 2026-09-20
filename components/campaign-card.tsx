@@ -2,7 +2,7 @@ import { type Href, Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
 import { Users, Heart } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
-import { formatCurrency, getProgress } from "@/lib/constants";
+import { formatCurrency, getDisplayRaised, getProgress } from "@/lib/constants";
 import { getPrimaryCampaignImage } from "@/lib/campaign-images";
 import {
   buildGoalLineItems,
@@ -38,7 +38,9 @@ function CampaignCardLedger({
       {goalLines.map((line) => (
         <ReceiptLineRow key={line.label} {...line} size={size} />
       ))}
-      <ReceiptDivider className={dividerClass} />
+      {goalLines.length > 0 ? (
+        <ReceiptDivider className={dividerClass} />
+      ) : null}
       <ReceiptLineRow {...footer} emphasis size={size} />
     </>
   );
@@ -55,7 +57,8 @@ export function CampaignCard({
   variant = "default",
   href,
 }: CampaignCardProps) {
-  const progress = getProgress(campaign.raised, campaign.goal);
+  const displayRaised = getDisplayRaised(campaign);
+  const progress = getProgress(displayRaised, campaign.goal);
   const destination = (href ?? `/campaigns/${campaign.id}`) as Href;
   const subtitle = getReceiptSubtitle(campaign);
   const imageSource = getPrimaryCampaignImage(campaign);
@@ -74,7 +77,7 @@ export function CampaignCard({
             </CampaignImage>
             <View className="p-4">
               <Text
-                className="font-retro-bold text-base text-dono-text"
+                className="font-retro-display text-base text-dono-text"
                 numberOfLines={2}
               >
                 {campaign.title}
@@ -94,7 +97,7 @@ export function CampaignCard({
 
               <View className="mt-3 flex-row items-center justify-between border-t border-dashed border-dono-border pt-3">
                 <Text className="font-retro-mono text-xs text-dono-text">
-                  {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+                  {formatCurrency(displayRaised)} of {formatCurrency(campaign.goal)}
                 </Text>
                 <View className="flex-row items-center gap-3">
                   <View className="flex-row items-center gap-1">
@@ -130,7 +133,7 @@ export function CampaignCard({
           <View className="p-5">
             <View className="flex-row items-start justify-between gap-4">
               <View className="min-w-0 flex-1">
-                <Text className="font-retro-bold text-xl text-dono-text" numberOfLines={2}>
+                <Text className="font-retro-display text-xl text-dono-text" numberOfLines={2}>
                   {campaign.title}
                 </Text>
                 {subtitle ? (
@@ -148,7 +151,7 @@ export function CampaignCard({
 
             <View className="mt-4 flex-row items-center justify-between border-t border-dashed border-dono-border pt-4">
               <Text className="font-retro-mono text-sm text-dono-text">
-                {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
+                {formatCurrency(displayRaised)} of {formatCurrency(campaign.goal)}
               </Text>
               <View className="flex-row items-center gap-4">
                 <View className="flex-row items-center gap-1.5">

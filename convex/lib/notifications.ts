@@ -21,16 +21,30 @@ export function buildCampaignEditedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was updated.`;
 }
 
-/** Sent to every admin (see campaignCreator.resubmit) when an owner resubmits
- * a changes-requested/rejected campaign for re-review. */
+/** Sent to every admin when a campaign becomes ready for admin review —
+ * after resubmit for non-society campaigns, or after society leader
+ * approval for society campaigns (see campaignCreator). */
 export function buildCampaignResubmittedMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was resubmitted and needs re-review.`;
 }
 
-// TODO: replace with real onboarding flow — this is a placeholder notification
-// only, per the initial in-app notifications pass. relatedEntityId is
-// intentionally omitted so the bell just shows the message with no link.
-export const ONBOARDING_MESSAGE = "Click here for onboarding.";
+/** Sent to admins when a society leader approves a pending campaign so it
+ * enters the admin review queue. */
+export function buildCampaignReadyForAdminMessage(campaignTitle: string) {
+  return `Campaign '${campaignTitle}' was approved by its society and needs admin review.`;
+}
+
+/** Sent to a donor when Dono cancels their society subscription because the
+ * society has no active campaigns — see stripeWebhook.ts. */
+export function buildSocietySubscriptionCanceledMessage(societyName: string) {
+  return `Your subscription to '${societyName}' was canceled because it has no active campaigns right now.`;
+}
+
+/** Sent to the campaign owner on refund approval (Refund Policy §6.1/6.3) —
+ * they must execute the refund themselves from their Stripe dashboard. */
+export function buildRefundOwnerActionRequiredMessage(campaignTitle: string) {
+  return `A refund was approved for '${campaignTitle}'. Please refund it from your Stripe dashboard — check your email for the payment reference.`;
+}
 
 export function validateAdminMessageBody(body: string) {
   const trimmed = body.trim();
@@ -53,9 +67,11 @@ interface CreateNotificationArgs {
     | "campaign_active"
     | "campaign_rejected"
     | "admin_message"
-    | "onboarding"
     | "campaign_edited"
-    | "campaign_resubmitted";
+    | "campaign_resubmitted"
+    | "society_subscription_canceled"
+    | "refund_owner_action_required"
+
   message: string;
   relatedEntityType?: "campaign";
   relatedEntityId?: string;

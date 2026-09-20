@@ -11,7 +11,8 @@ export default function WelcomePage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useConvexAuth();
   const profile = useCurrentProfile();
-  const { markComplete } = useWelcomeTourStatus(profile?.id);
+  const variant = profile?.userType === "alumni" ? "alumni" : "student";
+  const { markComplete } = useWelcomeTourStatus(profile?.id, variant);
   const [finishing, setFinishing] = useState(false);
 
   const finishTour = () => {
@@ -45,7 +46,7 @@ export default function WelcomePage() {
   return (
     <AppShell>
       <View className="mx-auto w-full max-w-lg px-4 py-12">
-        <WelcomeTour onComplete={finishTour} loading={finishing} />
+        <WelcomeTour onComplete={finishTour} loading={finishing} variant={variant} />
       </View>
     </AppShell>
   );

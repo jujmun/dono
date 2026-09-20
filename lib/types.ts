@@ -35,6 +35,8 @@ export interface Campaign {
   category: CampaignCategory;
   goal: number;
   raised: number;
+  /** Pounds already received outside Dono. Counts toward display progress only. */
+  existingFunding?: number;
   donors: number;
   likes: number;
   followers: number;
@@ -80,6 +82,8 @@ export interface Campaign {
   responsibleIndividualUserId?: string;
   /** Admin/institution endorsement flag. */
   institutionallyEndorsed?: boolean;
+  /** Owner opt-in for Dono to use this campaign's content in its own marketing. */
+  promotionalUseOptIn?: boolean;
 }
 
 export interface CampaignUpdate {
@@ -88,6 +92,7 @@ export interface CampaignUpdate {
   title: string;
   content: string;
   image?: string;
+  createdAt?: number;
 }
 
 export interface Community {
@@ -105,6 +110,8 @@ export interface Community {
   verificationType?: VerificationType;
 }
 
+export type OrgType = "college" | "society";
+
 export interface Society {
   slug: string;
   name: string;
@@ -113,8 +120,10 @@ export interface Society {
   coverImageUrl: string | null;
   websiteUrl: string;
   secondaryLink: string | null;
+  socialUrl?: string | null;
   status: "pending" | "active" | "rejected";
   createdAt: number;
+  orgType: OrgType;
 }
 
 export interface MySociety extends Society {
@@ -137,15 +146,19 @@ export interface AdminSociety {
   coverImageUrl: string | null;
   websiteUrl: string;
   secondaryLink: string | null;
+  socialUrl?: string | null;
   status: "pending" | "active" | "rejected";
   createdAt: number;
   creatorId: string;
+  orgType: OrgType;
   moderationNote: string | null;
   moderatedAt: number | null;
   moderationAction: "rejected" | "taken_down" | null;
   restoredAt: number | null;
   supportingDocumentUrls: string[];
-  idDocumentUrl: string | null;
+  /** @deprecated Prefer hasIdDocument + audited getIdDocumentUrlForAdmin */
+  idDocumentUrl?: string | null;
+  hasIdDocument: boolean;
   stripeVerificationStatus:
     | "created"
     | "requires_input"
@@ -184,7 +197,7 @@ export interface ActivityItem {
 export interface DonorImpact {
   totalDonated: number;
   campaignsSupported: number;
-  communitiesFollowed: number;
+  societiesFollowed: number;
   impactHighlights: string[];
   recentDonations: {
     campaign: string;
@@ -197,7 +210,7 @@ export interface DonoWrapped {
   year: number;
   totalDonated: number;
   campaignsSupported: number;
-  topCommunity: string;
+  topSociety: string;
   rank: string;
   impactStatement: string;
 }
@@ -207,7 +220,6 @@ export type NotificationType =
   | "campaign_active"
   | "campaign_rejected"
   | "admin_message"
-  | "onboarding"
   | "campaign_resubmitted";
 
 export interface Notification {

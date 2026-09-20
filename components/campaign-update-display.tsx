@@ -3,11 +3,11 @@ import { useQuery } from "convex/react";
 import { Clock } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import { RetroPanel } from "@/components/retro/retro-panel";
-import { formatCurrency } from "@/lib/constants";
+import { formatCurrency, getDisplayRaised } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
 
 type CampaignUpdateDisplayProps = {
-  campaign: Pick<Campaign, "id" | "raised" | "goal" | "status">;
+  campaign: Pick<Campaign, "id" | "raised" | "existingFunding" | "goal" | "status">;
 };
 
 export function CampaignUpdateDisplay({ campaign }: CampaignUpdateDisplayProps) {
@@ -15,7 +15,8 @@ export function CampaignUpdateDisplay({ campaign }: CampaignUpdateDisplayProps) 
 
   if (update === undefined) return null;
 
-  const eligible = campaign.raised >= campaign.goal || campaign.status === "completed";
+  const eligible =
+    getDisplayRaised(campaign) >= campaign.goal || campaign.status === "completed";
 
   if (!update) {
     if (!eligible) return null;

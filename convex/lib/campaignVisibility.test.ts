@@ -1,9 +1,13 @@
 import { describe, expect, it } from "vitest";
 import {
+  hasCompletedStripeIdentity,
   isEditableByOwner,
   isPublicCampaign,
+  isReadyForAdminReview,
+  isReadyForSocietyReview,
   isUnderReview,
   requiresSocietyApproval,
+  isUnsubmittedDraft,
 } from "./campaignVisibility";
 
 describe("campaignVisibility", () => {
@@ -28,6 +32,112 @@ describe("campaignVisibility", () => {
       societyApprovalStatus: "approved" as const,
     };
     expect(isPublicCampaign(campaign as never)).toBe(true);
+  });
+});
+
+describe("hasCompletedStripeIdentity", () => {
+  it("requires verified status when Identity is enabled", () => {
+    expect(hasCompletedStripeIdentity({} as never)).toBe(false);
+    expect(
+      hasCompletedStripeIdentity({ stripeVerificationStatus: "processing" } as never),
+    ).toBe(false);
+    expect(
+      hasCompletedStripeIdentity({ stripeVerificationStatus: "verified" } as never),
+    ).toBe(true);
+  });
+});
+
+describe("isReadyForSocietyReview", () => {
+  const societyCreator = {
+    type: "society" as const,
+    name: "Soc",
+    avatar: "SO",
+    communityId: "soc",
+  };
+
+  it("excludes society-pending campaigns until Stripe verified", () => {
+    expect(
+      isReadyForSocietyReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "pending",
+        stripeVerificationStatus: "processing",
+      } as never),
+    ).toBe(false);
+  });
+
+  it("includes society-pending campaigns after Stripe verified", () => {
+    expect(
+      isReadyForSocietyReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "pending",
+        stripeVerificationStatus: "verified",
+      } as never),
+    ).toBe(true);
+  });
+});
+
+describe("isReadyForAdminReview", () => {
+  const societyCreator = {
+    type: "society" as const,
+    name: "Soc",
+    avatar: "SO",
+    communityId: "soc",
+  };
+
+  it("excludes society campaigns awaiting leader approval", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "pending",
+        stripeVerificationStatus: "verified",
+      } as never),
+    ).toBe(false);
+  });
+
+  it("excludes society-approved campaigns until Stripe verified", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "approved",
+        stripeVerificationStatus: "processing",
+      } as never),
+    ).toBe(false);
+  });
+
+  it("includes society campaigns after leader approval and Stripe verified", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: societyCreator,
+        societyApprovalStatus: "approved",
+        stripeVerificationStatus: "verified",
+      } as never),
+    ).toBe(true);
+  });
+
+  it("excludes non-pending campaigns even if society-approved", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "active",
+        creator: societyCreator,
+        societyApprovalStatus: "approved",
+        stripeVerificationStatus: "verified",
+      } as never),
+    ).toBe(false);
+  });
+
+  it("includes pending non-society campaigns when Stripe verified", () => {
+    expect(
+      isReadyForAdminReview({
+        status: "pending",
+        creator: { type: "student", name: "Stu", avatar: "ST" },
+        stripeVerificationStatus: "verified",
+      } as never),
+    ).toBe(true);
   });
 });
 
@@ -56,5 +166,34 @@ describe("isEditableByOwner", () => {
     expect(isEditableByOwner("active")).toBe(false);
     expect(isEditableByOwner("funded")).toBe(false);
     expect(isEditableByOwner("completed")).toBe(false);
+  });
+});
+
+describe("isUnsubmittedDraft", () => {
+  it("is true only for pending campaigns with no society approval status", () => {
+    expect(
+      isUnsubmittedDraft({
+        status: "pending",
+        societyApprovalStatus: undefined,
+      }),
+    ).toBe(true);
+    expect(
+      isUnsubmittedDraft({
+        status: "pending",
+        societyApprovalStatus: "pending",
+      }),
+    ).toBe(false);
+    expect(
+      isUnsubmittedDraft({
+        status: "rejected",
+        societyApprovalStatus: undefined,
+      }),
+    ).toBe(false);
+    expect(
+      isUnsubmittedDraft({
+        status: "active",
+        societyApprovalStatus: "approved",
+      }),
+    ).toBe(false);
   });
 });

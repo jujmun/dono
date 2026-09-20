@@ -12,6 +12,7 @@ export const campaignUpdateValidator = v.object({
   title: v.string(),
   content: v.string(),
   image: v.optional(v.string()),
+  createdAt: v.optional(v.number()),
 });
 
 export const creatorValidator = v.object({
@@ -29,6 +30,10 @@ export const campaignFields = {
   category: v.string(),
   goal: v.number(),
   raised: v.number(),
+  /** Pounds already received outside Dono. Counts toward the public progress
+   * bar only — does not inflate donors, community totals, or Stripe funds.
+   * Missing on older rows; treat as 0. Must stay strictly below `goal`. */
+  existingFunding: v.optional(v.number()),
   donors: v.number(),
   likes: v.number(),
   followers: v.number(),
@@ -41,6 +46,11 @@ export const campaignFields = {
   imageStorageId: v.optional(v.id("_storage")),
   images: v.optional(v.array(v.string())),
   imageStorageIds: v.optional(v.array(v.id("_storage"))),
+  /** Precomputed 1200x630 center-cropped JPEG derivative of the cover image,
+   * used for og:image/twitter:image previews. Generated asynchronously by
+   * campaignOgImageActions.generate after the cover image is set — see
+   * convex/campaignOg.ts. Unset until generation finishes or if it fails. */
+  ogImageStorageId: v.optional(v.id("_storage")),
   /** YouTube or Vimeo watch URL for the campaign media hero. */
   videoUrl: v.optional(v.string()),
   createdAt: v.string(),
@@ -88,6 +98,9 @@ export const campaignFields = {
   ),
   verifiedName: v.optional(v.string()),
   verifiedDob: v.optional(v.string()),
+  /** When verifiedName/verifiedDob were captured — drives the retention-expiry
+   * cron (see convex/lib/verificationRetention.ts) and is cleared alongside them. */
+  verifiedAt: v.optional(v.number()),
   /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
   stripeVerificationLastErrorCode: v.optional(v.string()),
   stripeVerificationLastErrorReason: v.optional(v.string()),
@@ -114,6 +127,19 @@ export const campaignFields = {
   /** Manual student-status check completed by Dono admin. */
   studentStatusCheckedAt: v.optional(v.number()),
   studentStatusCheckedBy: v.optional(v.id("users")),
+  /** Government ID uploaded at create time (mirrors societies.idDocumentStorageId).
+   * Optional so older campaign rows without a document still validate. */
+  idDocumentStorageId: v.optional(v.id("_storage")),
+  /** Standing marketing/promotional-use consent — withdrawable at any status. */
+  promotionalUseOptIn: v.optional(v.boolean()),
+  promotionalUseOptInAt: v.optional(v.number()),
+  /** Moderator pause — campaign stays listed but new donations/comments blocked. */
+  pausedAt: v.optional(v.number()),
+  pausedBy: v.optional(v.id("users")),
+  pauseReason: v.optional(v.string()),
+  /** Moderator restriction — new comments blocked while campaign stays live. */
+  commentsRestrictedAt: v.optional(v.number()),
+  commentsRestrictedBy: v.optional(v.id("users")),
 };
 
 export const verificationStatusValidator = v.union(
@@ -163,9 +189,13 @@ export const societyFields = {
   story: v.string(),
   coverImageStorageId: v.optional(v.id("_storage")),
   websiteUrl: v.string(),
+  /** Donation / fundraising URL (colleges) or secondary link (societies). */
   secondaryLink: v.optional(v.string()),
+  /** Optional social profile URL (colleges). */
+  socialUrl: v.optional(v.string()),
   supportingDocumentStorageIds: v.array(v.id("_storage")),
-  idDocumentStorageId: v.id("_storage"),
+  /** Required for societies; colleges skip student-card upload. */
+  idDocumentStorageId: v.optional(v.id("_storage")),
   creatorId: v.id("users"),
   status: v.union(
     v.literal("pending"),
@@ -198,11 +228,20 @@ export const societyFields = {
   ),
   verifiedName: v.optional(v.string()),
   verifiedDob: v.optional(v.string()),
+  /** When verifiedName/verifiedDob were captured — drives the retention-expiry
+   * cron (see convex/lib/verificationRetention.ts) and is cleared alongside them. */
+  verifiedAt: v.optional(v.number()),
   /** Populated from Stripe's last_error on requires_input; cleared otherwise. */
   stripeVerificationLastErrorCode: v.optional(v.string()),
   stripeVerificationLastErrorReason: v.optional(v.string()),
   /** Named Responsible Individual for the society (Society Campaign Terms). */
   responsibleIndividualUserId: v.optional(v.id("users")),
+  /**
+   * User-created college vs society submissions. Optional for legacy rows —
+   * treat missing as `"society"`. On approve/bridge, sets communities.type /
+   * verificationType accordingly.
+   */
+  orgType: v.optional(v.union(v.literal("college"), v.literal("society"))),
 };
 
 export const fundFields = {
@@ -242,7 +281,6 @@ export const notificationFields = {
     v.literal("campaign_active"),
     v.literal("campaign_rejected"),
     v.literal("admin_message"),
-    v.literal("onboarding"),
     /** System event, not a real notification — the owner edited a campaign
      * via the edit flow. Created read:true (never bumps the recipient's own
      * unread badge); surfaced only in the admin thread. */
@@ -250,6 +288,17 @@ export const notificationFields = {
     /** Sent to every admin when an owner resubmits a changes-requested/
      * rejected campaign for re-review — see campaignCreator.resubmit. */
     v.literal("campaign_resubmitted"),
+    /** Sent to a donor when Dono cancels their society subscription because
+     * the society has no active campaigns — see stripeWebhook.ts. */
+    v.literal("society_subscription_canceled"),
+    /** Sent to the campaign owner when an admin approves a refund request —
+     * per Refund and Dispute Policy §6.1, Dono does not call Stripe's refund
+     * API itself; the owner must execute the refund from their own Stripe
+     * dashboard. See convex/refunds.ts adminDecide. */
+    v.literal("refund_owner_action_required"),
+    /** Legacy welcome-notification type — no longer written, but existing
+     * rows remain in the DB and must pass schema validation. */
+    v.literal("onboarding"),
   ),
   message: v.string(),
   /** Optional link target — only "campaign" today, but a union so more

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ActivityIndicator,
   Modal,
@@ -8,8 +8,7 @@ import {
   TextInput,
   View,
 } from "react-native";
-import { Link } from "expo-router";
-import { useAction, useMutation } from "convex/react";
+import { useAction, useMutation, useQuery } from "convex/react";
 import {
   Elements,
   PaymentElement,
@@ -20,11 +19,27 @@ import { loadStripe } from "@stripe/stripe-js";
 import { usePostHog } from "posthog-react-native";
 import { api } from "@convex/_generated/api";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
-import { LegalAcceptanceCheckbox } from "@/components/legal-acceptance-checkbox";
+import {
+  DonateTermsCheckbox,
+  LegalCheckboxRow,
+} from "@/components/legal-acceptance-checkbox";
+import {
+  DonateRecipientPanel,
+} from "@/components/donate-recipient-panel";
+import {
+  DonateDobGateForm,
+  useDonateDobGate,
+} from "@/components/donate-dob-gate";
 import {
   calculateDonationFeeBreakdown,
   formatMinorGbp,
 } from "@/lib/platform-fee";
+import { LEGAL_WORDINGS, wordingRecord } from "@/lib/legal/wordings";
+import {
+  ReceiptDivider,
+  ReceiptLedger,
+  ReceiptLineRow,
+} from "@/components/ui/receipt-lines";
 import {
   getOrCreateDonateGuestKey,
   type DonateSheetProps,
@@ -32,20 +47,24 @@ import {
 
 const publishableKey = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? "";
 
-function getStripePromise(stripeAccountId: string | null) {
-  if (!publishableKey || !stripeAccountId) {
-    return null;
+const stripePromiseCache = new Map<string, ReturnType<typeof loadStripe>>();
+
+function getStripePromise(stripeAccountId: string) {
+  const cached = stripePromiseCache.get(stripeAccountId);
+  if (cached) {
+    return cached;
   }
-  return loadStripe(publishableKey, { stripeAccount: stripeAccountId });
+
+  const promise = loadStripe(publishableKey, { stripeAccount: stripeAccountId });
+  stripePromiseCache.set(stripeAccountId, promise);
+  return promise;
 }
 
 function PaymentForm({
   campaignId,
   campaignTitle,
   selectedAmount,
-  frequency,
   paymentIntentId,
-  coverFees,
   feeTotalLabel,
   onClose,
   onSuccess,
@@ -54,9 +73,7 @@ function PaymentForm({
   campaignId: string;
   campaignTitle: string;
   selectedAmount: number;
-  frequency: DonateSheetProps["frequency"];
   paymentIntentId: string;
-  coverFees: boolean;
   feeTotalLabel: string;
   onClose: () => void;
   onSuccess: DonateSheetProps["onSuccess"];
@@ -68,7 +85,7 @@ function PaymentForm({
   const confirmOneTimeDonation = useAction(api.stripe.confirmOneTimeDonation);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const donationType = frequency === "monthly" ? "recurring" : "one_time";
+
 
   const handleDonate = async () => {
     if (!stripe || !elements) return;
@@ -81,9 +98,14 @@ function PaymentForm({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: donationType,
-        cover_fees: coverFees,
+        donation_type: "one_time",
+        cover_fees: true,
       });
+
+      const submitResult = await elements.submit();
+      if (submitResult.error) {
+        throw new Error(submitResult.error.message ?? "Payment details are incomplete.");
+      }
 
       const result = await stripe.confirmPayment({
         elements,
@@ -101,16 +123,14 @@ function PaymentForm({
         campaign_id: campaignId,
         campaign_title: campaignTitle,
         amount: selectedAmount,
-        donation_type: donationType,
+        donation_type: "one_time",
       });
 
       let pendingConfirmation = false;
-      if (frequency === "one_time") {
-        try {
-          await confirmOneTimeDonation({ paymentIntentId });
-        } catch {
-          pendingConfirmation = true;
-        }
+      try {
+        await confirmOneTimeDonation({ paymentIntentId });
+      } catch {
+        pendingConfirmation = true;
       }
 
       onPaymentCompleted();
@@ -124,18 +144,18 @@ function PaymentForm({
   };
 
   return (
-    <View className="mt-4 flex-1">
-      <ScrollView
-        className="flex-1"
-        keyboardShouldPersistTaps="handled"
-        contentContainerStyle={{ paddingBottom: 16 }}
-        showsVerticalScrollIndicator
-      >
-        <PaymentElement />
-        {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
-      </ScrollView>
+    <View className="mt-4">
+      <div className="min-h-[220px] w-full">
+        <PaymentElement
+          onLoadError={(event) => {
+            setError(event.error.message ?? "Could not load the payment form.");
+          }}
+        />
+      </div>
 
-      <View className="border-t border-dono-border pt-4">
+      {error ? <Text className="mt-4 text-sm text-red-600">{error}</Text> : null}
+
+      <View className="mt-4 border-t border-dono-border pt-4">
         <Pressable
           onPress={() => void handleDonate()}
           disabled={loading || !stripe || !elements}
@@ -145,9 +165,7 @@ function PaymentForm({
             <ActivityIndicator color="#fff" />
           ) : (
             <Text className="font-retro-bold text-sm text-white">
-              {frequency === "monthly"
-                ? `Subscribe ${feeTotalLabel}/month`
-                : `Pay ${feeTotalLabel}`}
+              Pay {feeTotalLabel}
             </Text>
           )}
         </Pressable>
@@ -161,23 +179,50 @@ export function DonateSheet({
   campaignId,
   campaignTitle,
   selectedAmount,
-  frequency,
   isAuthenticated,
   donorEmail,
   onDonorEmailChange,
-  coverFees,
-  onCoverFeesChange,
+  isAnonymous,
+  onAnonymousChange,
   legalAccepted,
   onLegalAcceptedChange,
+  ageAttested,
+  onAgeAttestedChange,
+  coverFees,
+  onCoverFeesChange,
+  marketingOptIn,
+  onMarketingOptInChange,
+  showSupportPublicly,
+  onShowSupportPubliclyChange,
+  recipientPanel: recipientPanelProp,
+  panelComplete: panelCompleteProp,
+  mayExceedTarget: mayExceedTargetProp,
   onClose,
   onSuccess,
 }: DonateSheetProps) {
   const createPaymentIntent = useAction(api.stripe.createPaymentIntent);
-  const createRecurringDonationSubscription = useAction(
-    api.stripe.createRecurringDonationSubscription,
-  );
   const abandonPaymentIntent = useAction(api.stripe.abandonPaymentIntent);
   const acceptDocuments = useMutation(api.legal.acceptDocuments);
+  // Load only while sheet is open so this query cannot crash the campaign page.
+  const disclosures = useQuery(
+    api.campaigns.getDonateDisclosures,
+    visible && campaignId ? { slug: campaignId } : "skip",
+  );
+  const recipientPanel =
+    recipientPanelProp ?? disclosures?.recipientPanel ?? null;
+  const panelComplete =
+    panelCompleteProp ?? disclosures?.panelComplete === true;
+  const mayExceedTarget =
+    mayExceedTargetProp ?? disclosures?.mayExceedTarget !== false;
+  const {
+    needsDob,
+    dobReady,
+    dobInput,
+    setDobInput,
+    dobError,
+    dobSaving,
+    saveDob,
+  } = useDonateDobGate(isAuthenticated);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
   const [stripeAccountId, setStripeAccountId] = useState<string | null>(null);
@@ -187,19 +232,32 @@ export function DonateSheet({
   const activePaymentIntentIdRef = useRef<string | null>(null);
   const donorEmailRef = useRef(donorEmail);
   const guestKeyRef = useRef(getOrCreateDonateGuestKey());
+  const [termsError, setTermsError] = useState(false);
 
   donorEmailRef.current = donorEmail;
 
-  const frequencyLabel =
-    frequency === "monthly" ? "Monthly donation" : "One-time donation";
-  const monthlyBlockedForGuest = !isAuthenticated && frequency === "monthly";
   const feeBreakdown = calculateDonationFeeBreakdown(selectedAmount, coverFees);
   const feeTotalLabel = formatMinorGbp(feeBreakdown.totalChargedMinor);
   const stripeConfigured = Boolean(publishableKey);
+  const termsAccepted = legalAccepted && ageAttested;
+
+  const handleTermsChange = (value: boolean) => {
+    onLegalAcceptedChange(value);
+    onAgeAttestedChange(value);
+    if (value) {
+      setTermsError(false);
+    }
+  };
+
+  // One box drives both flags; hiding the name is the inverse of showing support.
+  const handleShowSupportChange = (value: boolean) => {
+    onShowSupportPubliclyChange(value);
+    onAnonymousChange(!value);
+  };
 
   const abandonActivePaymentIntent = () => {
     const piId = activePaymentIntentIdRef.current;
-    if (!piId || paymentCompletedRef.current || frequency !== "one_time") {
+    if (!piId || paymentCompletedRef.current) {
       return;
     }
 
@@ -222,12 +280,19 @@ export function DonateSheet({
       return;
     }
 
-    if (monthlyBlockedForGuest || !legalAccepted || !stripeConfigured) {
+    if (
+      !legalAccepted ||
+      !ageAttested ||
+      !stripeConfigured ||
+      !dobReady ||
+      !panelComplete ||
+      !recipientPanel
+    ) {
       setClientSecret(null);
       setPaymentIntentId(null);
       setStripeAccountId(null);
       setLoading(false);
-      if (!legalAccepted && !monthlyBlockedForGuest) {
+      if (!legalAccepted || !ageAttested) {
         setError(null);
       }
       return;
@@ -239,38 +304,46 @@ export function DonateSheet({
     setError(null);
 
     const createPayment = async () => {
-      await acceptDocuments({
-        context: "donate",
+      const context = isAuthenticated ? "donate" : "donate_guest";
+      const wordings = [
+        wordingRecord("W-AGE-1", ageAttested),
+        wordingRecord("W-ACCEPT-1", legalAccepted),
+        wordingRecord("W-COVER-1", coverFees),
+        wordingRecord("W-HIDE-1", isAnonymous),
+        wordingRecord("W-HIDE-DISCLOSURE-1", isAnonymous),
+        wordingRecord("W-MKT-1", marketingOptIn),
+        wordingRecord("W-DISPLAY-1", showSupportPublicly),
+      ];
+      const accepted = await acceptDocuments({
+        context,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
+        role: isAuthenticated ? "donor" : "guest_donor",
+        wordings,
+        recipientPanel,
+        feeBreakdown,
       });
-      if (frequency === "monthly") {
-        return createRecurringDonationSubscription({
-          campaignSlug: campaignId,
-          amount: selectedAmount,
-        });
-      }
       return createPaymentIntent({
         campaignSlug: campaignId,
         amount: selectedAmount,
         donorEmail: donorEmailRef.current.trim() || undefined,
-        anonymous: false,
+        anonymous: isAnonymous,
         coverFees,
-        ageAttested: true,
+        ageAttested,
         guestKey: isAuthenticated ? undefined : guestKeyRef.current,
+        legalAcceptanceIds: accepted.acceptanceIds,
+        recipientPanel,
+        acceptanceWordings: wordings,
+        marketingOptIn,
+        showSupportPublicly,
       });
     };
 
     void createPayment()
       .then((result) => {
-        const piId =
-          "paymentIntentId" in result && result.paymentIntentId
-            ? result.paymentIntentId
-            : null;
-
         if (cancelled) {
-          if (piId && frequency === "one_time") {
+          if (result.paymentIntentId) {
             void abandonPaymentIntent({
-              paymentIntentId: piId,
+              paymentIntentId: result.paymentIntentId,
               donorEmail: donorEmailRef.current.trim() || undefined,
             });
           }
@@ -278,13 +351,9 @@ export function DonateSheet({
         }
 
         setClientSecret(result.clientSecret);
-        if (piId) {
-          setPaymentIntentId(piId);
-          activePaymentIntentIdRef.current = piId;
-        }
-        if ("stripeAccountId" in result && result.stripeAccountId) {
-          setStripeAccountId(result.stripeAccountId);
-        }
+        setPaymentIntentId(result.paymentIntentId);
+        activePaymentIntentIdRef.current = result.paymentIntentId;
+        setStripeAccountId(result.stripeAccountId);
       })
       .catch((err) => {
         if (!cancelled) {
@@ -309,21 +378,24 @@ export function DonateSheet({
     visible,
     campaignId,
     selectedAmount,
-    frequency,
-    monthlyBlockedForGuest,
-    coverFees,
+    isAnonymous,
     legalAccepted,
+    ageAttested,
+    coverFees,
+    marketingOptIn,
+    showSupportPublicly,
+    panelComplete,
     stripeConfigured,
     isAuthenticated,
-    createPaymentIntent,
-    createRecurringDonationSubscription,
-    abandonPaymentIntent,
-    acceptDocuments,
+    dobReady,
   ]);
 
-  const paymentReady =
-    Boolean(clientSecret) &&
-    (frequency === "monthly" || Boolean(paymentIntentId && stripeAccountId));
+  const paymentReady = Boolean(clientSecret && paymentIntentId && stripeAccountId);
+
+  const stripePromise = useMemo(
+    () => (stripeAccountId ? getStripePromise(stripeAccountId) : null),
+    [stripeAccountId],
+  );
 
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
@@ -334,20 +406,17 @@ export function DonateSheet({
             showsVerticalScrollIndicator={false}
             contentContainerStyle={{ paddingBottom: 8 }}
           >
-            <Text className="font-retro-bold text-xl text-dono-text">Donate</Text>
+            <Text className="font-retro-display text-2xl text-dono-text">Donate</Text>
             <Text className="mt-1 text-sm text-dono-muted" numberOfLines={2}>
               {campaignTitle}
             </Text>
 
-            <Text className="mt-5 font-retro-mono-bold text-3xl text-dono-primary">
+            <Text className="mt-5 font-retro-mono-bold text-4xl text-dono-primary">
               {feeTotalLabel}
-              {frequency === "monthly" ? (
-                <Text className="text-base text-dono-muted">/month</Text>
-              ) : null}
             </Text>
-            <Text className="mt-1 text-sm text-dono-muted">{frequencyLabel}</Text>
+            <Text className="mt-1 text-sm text-dono-muted">Total you will pay</Text>
 
-            {!isAuthenticated && frequency === "one_time" ? (
+            {!isAuthenticated ? (
               <TextInput
                 value={donorEmail}
                 onChangeText={onDonorEmailChange}
@@ -359,64 +428,142 @@ export function DonateSheet({
               />
             ) : null}
 
+            {recipientPanel && panelComplete ? (
+              <DonateRecipientPanel panel={recipientPanel} className="mt-4" />
+            ) : (
+              <Text className="mt-4 text-sm text-red-600">
+                Donation recipient details are incomplete. Payment is blocked until
+                the campaign owner finishes required disclosures.
+              </Text>
+            )}
+
+            <ReceiptLedger className="mt-4">
+              <ReceiptLineRow
+                label="Campaign contribution"
+                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
+              />
+              <ReceiptLineRow
+                label={feeBreakdown.donoFeeLabel}
+                amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+                muted={!coverFees}
+              />
+              {coverFees ? (
+                <ReceiptLineRow
+                  label="Fee cover (selected)"
+                  amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+                />
+              ) : null}
+              <ReceiptLineRow
+                label="Stripe processing cost (paid by the campaign)"
+                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
+                muted
+              />
+              <ReceiptDivider />
+              <ReceiptLineRow
+                label="Total you will pay"
+                amount={feeTotalLabel}
+                emphasis
+              />
+              <ReceiptLineRow
+                label="Expected proceeds to the campaign"
+                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
+              />
+            </ReceiptLedger>
+
+            <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
+              {LEGAL_WORDINGS["W-DEADLINE-1"]}
+            </Text>
+            {mayExceedTarget ? (
+              <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
+                {LEGAL_WORDINGS["W-SURPLUS-1"]}
+              </Text>
+            ) : null}
+
             <View className="mt-4 gap-2">
-              <Pressable
-                onPress={() => onCoverFeesChange(!coverFees)}
-                className="flex-row items-center gap-2 py-1"
-                accessibilityRole="checkbox"
-                accessibilityState={{ checked: coverFees }}
+              <DonateTermsCheckbox
+                accepted={termsAccepted}
+                onAcceptedChange={handleTermsChange}
+              />
+              <LegalCheckboxRow
+                accepted={coverFees}
+                onAcceptedChange={onCoverFeesChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-COVER-1"]}
               >
-                <View
-                  className={`h-4 w-4 items-center justify-center rounded border ${
-                    coverFees
-                      ? "border-dono-primary bg-dono-primary"
-                      : "border-dono-border bg-white"
-                  }`}
-                >
-                  {coverFees ? (
-                    <Text className="text-[9px] font-bold leading-none text-white">✓</Text>
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-COVER-1"]} (
+                  {formatMinorGbp(feeBreakdown.platformFeeMinor)})
+                </Text>
+              </LegalCheckboxRow>
+              <LegalCheckboxRow
+                accepted={showSupportPublicly}
+                onAcceptedChange={handleShowSupportChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-DISPLAY-1"]}
+              >
+                <View>
+                  <Text className="text-sm leading-5 text-dono-text">
+                    {LEGAL_WORDINGS["W-DISPLAY-1"]}
+                  </Text>
+                  {!showSupportPublicly ? (
+                    <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
+                      {LEGAL_WORDINGS["W-HIDE-DISCLOSURE-1"]}
+                    </Text>
                   ) : null}
                 </View>
-                <Text className="min-w-0 flex-1 text-sm text-dono-text">
-                  {coverFees
-                    ? `Cover fees so £${selectedAmount} reaches the campaign`
-                    : `Cover fees (£${selectedAmount} gift → ${formatMinorGbp(feeBreakdown.amountToCampaignMinor)} to campaign)`}
+              </LegalCheckboxRow>
+              <LegalCheckboxRow
+                accepted={marketingOptIn}
+                onAcceptedChange={onMarketingOptInChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-MKT-1"]}
+              >
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-MKT-1"]}
                 </Text>
-              </Pressable>
+              </LegalCheckboxRow>
 
-              <LegalAcceptanceCheckbox
-                context="donate"
-                accepted={legalAccepted}
-                onAcceptedChange={onLegalAcceptedChange}
-              />
+              {needsDob ? (
+                <DonateDobGateForm
+                  dobInput={dobInput}
+                  onDobInputChange={setDobInput}
+                  dobError={dobError}
+                  dobSaving={dobSaving}
+                  onSave={() => void saveDob()}
+                />
+              ) : null}
             </View>
 
             <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
               Not Gift Aid. Dono does not issue charitable tax receipts.
             </Text>
 
-            {monthlyBlockedForGuest ? (
-              <View className="mt-6">
-                <Text className="text-sm text-dono-muted">
-                  Monthly donations need an account so you can manage your subscription.
-                </Text>
-                <Link href="/signin" asChild>
-                  <Pressable className="mt-4 items-center rounded-full bg-dono-primary py-3">
-                    <Text className="font-retro-bold text-sm text-white">
-                      Sign in to continue
-                    </Text>
-                  </Pressable>
-                </Link>
-              </View>
-            ) : !stripeConfigured ? (
+            {!stripeConfigured ? (
               <Text className="mt-6 text-sm text-red-600">
                 Stripe is not configured for this environment. Set
                 EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY and restart the app.
               </Text>
-            ) : !legalAccepted ? (
+            ) : !panelComplete ? (
               <Text className="mt-6 text-sm text-dono-muted">
-                Accept the terms above to continue to payment.
+                Recipient disclosures must be complete before payment.
               </Text>
+            ) : needsDob ? (
+              <Text className="mt-6 text-sm text-dono-muted">
+                Confirm your date of birth above to continue to payment.
+              </Text>
+            ) : !termsAccepted ? (
+              <View className="mt-6">
+                {termsError ? (
+                  <Text className="mb-3 text-sm text-red-600">
+                    To pay, you need to agree to the terms above.
+                  </Text>
+                ) : null}
+                <Pressable
+                  onPress={() => setTermsError(true)}
+                  className="flex-row items-center justify-center rounded-full bg-dono-accent py-3"
+                >
+                  <Text className="font-retro-bold text-sm text-white">
+                    Pay {feeTotalLabel}
+                  </Text>
+                </Pressable>
+              </View>
             ) : loading ? (
               <View className="mt-8 items-center py-6">
                 <ActivityIndicator color="#17211B" />
@@ -424,20 +571,22 @@ export function DonateSheet({
               </View>
             ) : error ? (
               <Text className="mt-6 text-sm text-red-600">{error}</Text>
-            ) : paymentReady && clientSecret && stripeAccountId && paymentIntentId ? (
+            ) : paymentReady &&
+              clientSecret &&
+              stripeAccountId &&
+              paymentIntentId &&
+              stripePromise ? (
               <View className="min-h-[280px]">
                 <Elements
                   key={`${stripeAccountId}:${paymentIntentId}`}
-                  stripe={getStripePromise(stripeAccountId)}
+                  stripe={stripePromise}
                   options={{ clientSecret }}
                 >
                   <PaymentForm
                     campaignId={campaignId}
                     campaignTitle={campaignTitle}
                     selectedAmount={selectedAmount}
-                    frequency={frequency}
                     paymentIntentId={paymentIntentId}
-                    coverFees={coverFees}
                     feeTotalLabel={feeTotalLabel}
                     onClose={onClose}
                     onSuccess={onSuccess}

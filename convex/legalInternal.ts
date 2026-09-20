@@ -2,6 +2,8 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
 import { assertAdultOrThrow } from "./lib/ageGate";
+import { assertNotSuspended } from "./lib/authz";
+import { assertPlatformFlagOff } from "./platformSettings";
 
 /** Gates for donate flow callable from Stripe actions. */
 export const assertDonateGates = internalMutation({
@@ -11,6 +13,11 @@ export const assertDonateGates = internalMutation({
     ageAttested: v.boolean(),
   },
   handler: async (ctx, args) => {
+    await assertPlatformFlagOff(
+      ctx,
+      "disableDonations",
+      "Donations are temporarily disabled.",
+    );
     if (!args.ageAttested) {
       throw new ConvexError({
         code: "AGE_RESTRICTED",
@@ -26,16 +33,32 @@ export const assertDonateGates = internalMutation({
     await assertLegalAcceptedForContext(ctx, {
       userId: args.userId,
       guestKey: args.guestKey,
-      context: "donate",
+      context: args.userId ? "donate" : "donate_guest",
     });
     if (args.userId) {
       const profile = await ctx.db
         .query("profiles")
         .withIndex("by_userId", (q) => q.eq("userId", args.userId!))
         .unique();
-      if (profile?.dateOfBirth) {
-        assertAdultOrThrow(profile.dateOfBirth);
-      }
+      assertNotSuspended(profile);
+      assertAdultOrThrow(
+        profile?.dateOfBirth,
+        "You must confirm you are at least 18 years old to donate. Add your date of birth in your account profile first.",
+      );
+    }
+    return null;
+  },
+});
+
+/** Patch acceptance rows with the donation id after the donation exists (CH-14). */
+export const linkAcceptancesToDonation = internalMutation({
+  args: {
+    acceptanceIds: v.array(v.id("legalAcceptances")),
+    donationId: v.id("donations"),
+  },
+  handler: async (ctx, args) => {
+    for (const id of args.acceptanceIds) {
+      await ctx.db.patch(id, { donationId: args.donationId });
     }
     return null;
   },

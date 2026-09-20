@@ -12,6 +12,39 @@ export const YEAR_IN_COLLEGE_OPTIONS = [
 
 export type YearInCollege = (typeof YEAR_IN_COLLEGE_OPTIONS)[number];
 
+export type UserType = "student" | "alumni";
+
+const CURRENT_YEAR = new Date().getFullYear();
+
+export const DAY_OF_MONTH_OPTIONS = Array.from({ length: 31 }, (_, i) => {
+  const value = String(i + 1);
+  return { label: value, value };
+});
+
+export const MONTH_OPTIONS = [
+  { label: "January", value: "1" },
+  { label: "February", value: "2" },
+  { label: "March", value: "3" },
+  { label: "April", value: "4" },
+  { label: "May", value: "5" },
+  { label: "June", value: "6" },
+  { label: "July", value: "7" },
+  { label: "August", value: "8" },
+  { label: "September", value: "9" },
+  { label: "October", value: "10" },
+  { label: "November", value: "11" },
+  { label: "December", value: "12" },
+] as const;
+
+/** Birth years covering ages 18–100, most recent (18yo) first. */
+export const BIRTH_YEAR_OPTIONS = Array.from(
+  { length: 100 - 18 + 1 },
+  (_, i) => {
+    const value = String(CURRENT_YEAR - 18 - i);
+    return { label: value, value };
+  },
+);
+
 const phoneSchema = z
   .string()
   .trim()
@@ -49,3 +82,26 @@ export const profileDetailsSchema = z.object({
 });
 
 export const onboardingProfileSchema = profileDetailsSchema;
+
+export const alumniOnboardingDetailsSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(2, "Name should be at least 2 characters.")
+    .max(80, "Name should be at most 80 characters."),
+  college: z
+    .string()
+    .trim()
+    .min(2, "Enter your college.")
+    .max(80, "College name is too long."),
+  matriculationYear: z
+    .string()
+    .trim()
+    .regex(/^\d{4}$/, "Select your matriculation or graduation year.")
+    .refine((value) => {
+      const year = Number(value);
+      return year >= 1950 && year <= CURRENT_YEAR;
+    }, `Year must be between 1950 and ${CURRENT_YEAR}.`),
+  dateOfBirth: dateOfBirthSchema,
+  interestedSocietySlugs: z.array(z.string().trim().min(1).max(80)).max(40),
+});

@@ -14,11 +14,11 @@ import { Download, Instagram, Copy, Share2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Campaign } from "@/lib/types";
 import { formatCurrency } from "@/lib/constants";
+import { downloadBlob } from "@/lib/download-blob";
 import {
   buildCampaignUrl,
   buildInstagramStoryCaption,
   canShareStoryImageFile,
-  downloadBlob,
   getSiteOrigin,
   openInstagramStoryCamera,
   renderInstagramStoryPngBlob,
@@ -222,7 +222,7 @@ export default function InstagramStorySharePage() {
   if (!campaignSlug) {
     return (
       <View className="min-h-screen flex-1 items-center justify-center bg-retro-cream px-6">
-        <Text className="text-center font-retro-bold text-lg text-retro-ink">
+        <Text className="text-center font-retro-display text-lg text-retro-ink">
           Missing campaign
         </Text>
         <Text className="mt-2 text-center text-sm text-[#5c574f]">
@@ -243,7 +243,7 @@ export default function InstagramStorySharePage() {
   if (campaignDoc === null) {
     return (
       <View className="min-h-screen flex-1 items-center justify-center bg-retro-cream px-6">
-        <Text className="text-center font-retro-bold text-lg text-retro-ink">
+        <Text className="text-center font-retro-display text-lg text-retro-ink">
           Campaign not found
         </Text>
       </View>
@@ -263,7 +263,7 @@ export default function InstagramStorySharePage() {
       <Text className="font-retro-mono text-xs uppercase text-[#5c574f]">
         Instagram Stories
       </Text>
-      <Text className="mt-2 text-center font-retro-bold text-2xl text-retro-ink">
+      <Text className="mt-2 text-center font-retro-display text-2xl text-retro-ink">
         Share your gift
       </Text>
       <Text className="mt-2 max-w-sm text-center text-sm leading-5 text-[#5c574f]">
@@ -279,7 +279,7 @@ export default function InstagramStorySharePage() {
           : ""}
       </Text>
 
-      <View className="mt-6 overflow-hidden rounded-[18px] border-[3px] border-retro-ink bg-white shadow-[5px_5px_0_#211E1A]">
+      <View className="mt-6 overflow-hidden rounded-[18px] border-[3px] border-retro-ink bg-white">
         {previewUri ? (
           <Image
             source={{ uri: previewUri }}
@@ -304,7 +304,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleShareStory()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-mint py-3.5 shadow-[3px_3px_0_#211E1A]"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-mint py-3.5"
         >
           {fileShareSupported ? (
             <Share2 size={18} color="#F7F3E8" />
@@ -323,7 +323,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleSave()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-marigold py-3.5 shadow-[3px_3px_0_#211E1A]"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-marigold py-3.5"
         >
           <Download size={18} color="#211E1A" />
           <Text className="font-retro-bold text-sm text-retro-ink">
@@ -334,7 +334,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleOpenInstagram()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
         >
           <Instagram size={16} color="#211E1A" />
           <Text className="font-retro-bold text-sm text-retro-ink">
@@ -345,7 +345,7 @@ export default function InstagramStorySharePage() {
         <Pressable
           onPress={() => void handleCopyCaption()}
           disabled={busy != null}
-          className="flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
+          className="retro-key flex-row items-center justify-center gap-2 rounded-full border-2 border-retro-ink bg-retro-paper py-3"
         >
           <Copy size={16} color="#211E1A" />
           <Text className="font-retro-bold text-sm text-retro-ink">

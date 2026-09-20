@@ -77,11 +77,11 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         verifiedName: fullName(expanded.verified_outputs),
         verifiedDob: formatDob(expanded.verified_outputs?.dob),
       };
-      const { updated } = await ctx.runMutation(
+      const societyResult = await ctx.runMutation(
         internal.societies.updateVerificationFromWebhook,
         update,
       );
-      if (!updated) {
+      if (!societyResult.updated) {
         await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
@@ -97,11 +97,11 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         lastErrorCode: session.last_error?.code ?? undefined,
         lastErrorReason: session.last_error?.reason ?? undefined,
       };
-      const { updated } = await ctx.runMutation(
+      const societyResult = await ctx.runMutation(
         internal.societies.updateVerificationFromWebhook,
         update,
       );
-      if (!updated) {
+      if (!societyResult.updated) {
         await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,
@@ -116,11 +116,11 @@ export const identityWebhook = httpAction(async (ctx, request) => {
         stripeVerificationSessionId: session.id,
         status: session.status,
       };
-      const { updated } = await ctx.runMutation(
+      const societyResult = await ctx.runMutation(
         internal.societies.updateVerificationFromWebhook,
         update,
       );
-      if (!updated) {
+      if (!societyResult.updated) {
         await ctx.runMutation(
           internal.campaigns.updateVerificationFromWebhook,
           update,

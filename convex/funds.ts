@@ -1,8 +1,7 @@
 import { ConvexError, v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { requireAdmin } from "./lib/authz";
-import { toFund } from "./lib/mappers";
-import { clampLimit } from "./lib/pagination";
+import { throwFeatureRemoved } from "./lib/featureGates";
 
 const placeholderFundSlugs = [
   "medical-textbooks",
@@ -12,18 +11,19 @@ const placeholderFundSlugs = [
   "work-experience",
 ];
 
-function slugify(name: string) {
-  return name
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
+/**
+ * CF-01: Community-fund (platform-account) payment path is removed.
+ * Public enumeration and payment settlement must not exist. Admin cleanup
+ * mutations remain so leftover seed/placeholder rows can be deleted.
+ */
 
 export const list = query({
   args: {},
-  handler: async (ctx) => {
-    const funds = await ctx.db.query("communityFunds").collect();
-    return funds.map(toFund);
+  handler: async () => {
+    throwFeatureRemoved(
+      "Community funds",
+      "Community fund donations are not available. Dono does not operate pooled platform-held funds.",
+    );
   },
 });
 
@@ -33,45 +33,31 @@ export const listPaginated = query({
     cursor: v.optional(v.string()),
     limit: v.optional(v.number()),
   },
-  handler: async (ctx, args) => {
-    const limit = clampLimit(args.limit, 20, 50);
-    let funds = await ctx.db.query("communityFunds").collect();
-    if (args.category) {
-      funds = funds.filter((f) => f.category === args.category);
-    }
-    funds.sort((a, b) => b.totalRaised - a.totalRaised);
-
-    let start = 0;
-    if (args.cursor) {
-      const idx = funds.findIndex((f) => f.slug === args.cursor);
-      start = idx >= 0 ? idx + 1 : 0;
-    }
-
-    const page = funds.slice(start, start + limit);
-    return {
-      items: page.map(toFund),
-      nextCursor: start + limit < funds.length ? page[page.length - 1]?.slug : null,
-    };
+  handler: async () => {
+    throwFeatureRemoved(
+      "Community funds",
+      "Community fund donations are not available. Dono does not operate pooled platform-held funds.",
+    );
   },
 });
 
 export const listFeatured = query({
   args: { limit: v.optional(v.number()) },
-  handler: async (ctx, args) => {
-    const limit = clampLimit(args.limit, 3);
-    const funds = await ctx.db.query("communityFunds").take(limit);
-    return funds.map(toFund);
+  handler: async () => {
+    throwFeatureRemoved(
+      "Community funds",
+      "Community fund donations are not available. Dono does not operate pooled platform-held funds.",
+    );
   },
 });
 
 export const getBySlug = query({
   args: { slug: v.string() },
-  handler: async (ctx, args) => {
-    const fund = await ctx.db
-      .query("communityFunds")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .unique();
-    return fund ? toFund(fund) : null;
+  handler: async () => {
+    throwFeatureRemoved(
+      "Community funds",
+      "Community fund donations are not available. Dono does not operate pooled platform-held funds.",
+    );
   },
 });
 
@@ -83,46 +69,11 @@ export const create = mutation({
     university: v.string(),
     image: v.optional(v.string()),
   },
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const name = args.name.trim();
-    const description = args.description.trim();
-    const category = args.category.trim();
-    const university = args.university.trim();
-
-    if (!name || !description || !category || !university) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "All fund fields are required.",
-      });
-    }
-
-    let baseSlug = slugify(name);
-    let slug = baseSlug;
-    let suffix = 1;
-    while (
-      await ctx.db
-        .query("communityFunds")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .unique()
-    ) {
-      slug = `${baseSlug}-${suffix}`;
-      suffix += 1;
-    }
-
-    const fundId = await ctx.db.insert("communityFunds", {
-      slug,
-      name,
-      description,
-      category,
-      totalRaised: 0,
-      donors: 0,
-      campaignsSupported: 0,
-      image: args.image?.trim() || "default",
-      university,
-    });
-
-    return { slug, fundId };
+  handler: async () => {
+    throwFeatureRemoved(
+      "Community funds",
+      "Community fund donations are not available. Dono does not operate pooled platform-held funds.",
+    );
   },
 });
 
@@ -147,3 +98,25 @@ export const removePlaceholderFunds = mutation({
     return { deleted, slugs: placeholderFundSlugs };
   },
 });
+
+/** Admin-only: delete every communityFund row (leftover seed / legacy). */
+export const deleteAllFunds = mutation({
+  args: {},
+  handler: async (ctx) => {
+    await requireAdmin(ctx);
+    const funds = await ctx.db.query("communityFunds").collect();
+    for (const fund of funds) {
+      await ctx.db.delete(fund._id);
+    }
+    return { deleted: funds.length };
+  },
+});
+
+/** Kept so typed callers fail closed rather than falling through. */
+export function assertFundsRemoved(): never {
+  throw new ConvexError({
+    code: "FEATURE_REMOVED",
+    message:
+      "Community fund donations are not available. Dono does not operate pooled platform-held funds.",
+  });
+}

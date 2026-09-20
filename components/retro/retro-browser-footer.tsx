@@ -5,7 +5,7 @@ export function RetroBrowserFooter() {
   return (
     <View className="flex-row flex-wrap justify-between gap-6 border-t-[3px] border-retro-ink bg-retro-cream px-[26px] py-7">
       <View className="max-w-xs">
-        <Text className="mb-1.5 font-retro-bold text-[17px] text-retro-ink">
+        <Text className="mb-1.5 font-logo text-[17px] text-retro-ink">
           Dono
         </Text>
         <Text className="text-[12.5px] leading-5 text-[#5c574f]">
@@ -13,7 +13,7 @@ export function RetroBrowserFooter() {
         </Text>
       </View>
       <View>
-        <Text className="mb-2 font-retro-bold text-[13px] text-retro-ink">
+        <Text className="mb-2 font-retro-display text-[13px] text-retro-ink">
           Platform
         </Text>
         <Link href="/campaigns" asChild>
@@ -23,12 +23,12 @@ export function RetroBrowserFooter() {
         </Link>
         <Link href="/societies" asChild>
           <Pressable className="mb-1.5">
-            <Text className="text-[12.5px] text-[#4a453c]">Societies</Text>
+            <Text className="text-[12.5px] text-[#4a453c]">Communities</Text>
           </Pressable>
         </Link>
       </View>
       <View>
-        <Text className="mb-2 font-retro-bold text-[13px] text-retro-ink">
+        <Text className="mb-2 font-retro-display text-[13px] text-retro-ink">
           Legal
         </Text>
         <Link href="/legal/terms_of_service" asChild>
@@ -46,9 +46,31 @@ export function RetroBrowserFooter() {
             <Text className="text-[12.5px] text-[#4a453c]">Donor Terms</Text>
           </Pressable>
         </Link>
+        <Link href="/legal/refund_dispute" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Refunds</Text>
+          </Pressable>
+        </Link>
         <Link href="/legal/community_guidelines" asChild>
-          <Pressable>
+          <Pressable className="mb-1.5">
             <Text className="text-[12.5px] text-[#4a453c]">Guidelines</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/cookie" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Cookie Policy</Text>
+          </Pressable>
+        </Link>
+        <Link href="/legal/complaints" asChild>
+          <Pressable className="mb-1.5">
+            <Text className="text-[12.5px] text-[#4a453c]">Complaints</Text>
+          </Pressable>
+        </Link>
+        <Link href="/settings/privacy" asChild>
+          <Pressable>
+            <Text className="text-[12.5px] text-[#4a453c]">
+              Privacy and analytics settings
+            </Text>
           </Pressable>
         </Link>
       </View>

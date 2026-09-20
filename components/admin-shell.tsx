@@ -9,6 +9,7 @@ import {
 import { useAuthActions } from "@convex-dev/auth/react";
 import { Menu, X, LogOut } from "lucide-react-native";
 import { cn } from "@/lib/utils";
+import { DonoDino } from "@/components/retro/dono-dino";
 import { RetroBrowserFooter } from "@/components/retro/retro-browser-footer";
 import { ScrollView } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
@@ -39,6 +40,16 @@ const adminNavItems = [
     label: "Groups",
     match: (p: string) => p.startsWith("/admin/groups"),
   },
+  {
+    href: "/admin/reports",
+    label: "Reports",
+    match: (p: string) => p.startsWith("/admin/reports"),
+  },
+  {
+    href: "/admin/settings",
+    label: "Settings",
+    match: (p: string) => p.startsWith("/admin/settings"),
+  },
 ] as const;
 
 function AdminSitehead() {
@@ -59,8 +70,8 @@ function AdminSitehead() {
     <View className="border-b-[3px] border-retro-ink bg-retro-paper">
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
         <View className="flex-row items-center gap-2">
-          <View className="h-3.5 w-3.5 rounded-full border-2 border-retro-ink bg-retro-coral" />
-          <Text className="font-retro-bold text-xl text-retro-ink">Dono</Text>
+          <DonoDino height={26} />
+          <Text className="font-logo text-xl text-retro-ink">Dono</Text>
           <View className="rounded-full border-2 border-retro-ink bg-retro-coral px-2.5 py-0.5">
             <Text className="font-retro-bold text-[11px] text-retro-paper">
               ADMIN
@@ -75,10 +86,9 @@ function AdminSitehead() {
               return (
                 <Link key={item.href} href={item.href as Href} asChild>
                   <Pressable
-                    className={cn(
-                      "rounded-lg border-2 px-3 py-1.5",
+                    className={cn("retro-key", "rounded-lg border-2 px-3 py-1.5",
                       active
-                        ? "border-retro-ink bg-retro-cream shadow-[2px_2px_0_#211E1A]"
+                        ? "border-retro-ink bg-retro-cream"
                         : "border-transparent",
                     )}
                   >
@@ -105,7 +115,7 @@ function AdminSitehead() {
 
         <Pressable
           onPress={handleSignOut}
-          className="flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-paper px-3 py-2 shadow-[3px_3px_0_#211E1A]"
+          className="retro-key flex-row items-center gap-1.5 rounded-full border-2 border-retro-ink bg-retro-paper px-3 py-2"
           accessibilityLabel="Sign out"
         >
           <LogOut size={14} color="#211E1A" />

@@ -4,9 +4,9 @@ import {
   Home,
   PiggyBank,
   Users,
-  Sparkles,
   User,
   Plus,
+  Heart,
   ArrowRight,
   ArrowLeft,
   type LucideIcon,
@@ -20,7 +20,9 @@ type WelcomeTourSlide = {
   navLabel: string;
 };
 
-const slides: WelcomeTourSlide[] = [
+export type WelcomeTourVariant = "student" | "alumni";
+
+const studentSlides: WelcomeTourSlide[] = [
   {
     title: "Welcome to Dono",
     description:
@@ -46,25 +48,17 @@ const slides: WelcomeTourSlide[] = [
     navLabel: "Campaigns",
   },
   {
-    title: "Societies",
+    title: "Communities",
     description:
       "Explore colleges, departments, and student societies. Follow the communities you care about to stay close to their latest projects.",
     icon: Users,
     href: "/societies",
-    navLabel: "Societies",
-  },
-  {
-    title: "Impact",
-    description:
-      "Your dashboard tracks donations you've made, campaigns and communities you follow, and the difference your giving has made.",
-    icon: Sparkles,
-    href: "/dashboard",
-    navLabel: "Impact",
+    navLabel: "Communities",
   },
   {
     title: "Your account",
     description:
-      "Update your profile, manage recurring donations, and review feedback on campaigns you run — all from Account settings.",
+      "Update your profile and review feedback on campaigns you run — all from Account settings.",
     icon: User,
     href: "/account",
     navLabel: "You",
@@ -79,12 +73,69 @@ const slides: WelcomeTourSlide[] = [
   },
 ];
 
+const alumniSlides: WelcomeTourSlide[] = [
+  {
+    title: "Welcome to Dono",
+    description:
+      "Dono connects Oxford students and alumni through transparent crowdfunding. Here's how to find your way around as a donor.",
+    icon: Home,
+    href: "/",
+    navLabel: "Overview",
+  },
+  {
+    title: "Home",
+    description:
+      "Start on the homepage to see featured campaigns and learn how Dono works. It's the best place to get a feel for what's happening on campus.",
+    icon: Home,
+    href: "/",
+    navLabel: "Home",
+  },
+  {
+    title: "Campaigns",
+    description:
+      "Browse student causes, read updates, donate, like posts, and leave comments. Each campaign shows exactly what your money will fund.",
+    icon: PiggyBank,
+    href: "/campaigns",
+    navLabel: "Campaigns",
+  },
+  {
+    title: "Communities",
+    description:
+      "Explore colleges, departments, and student societies. Follow the communities you care about to stay close to their latest projects and support them directly.",
+    icon: Users,
+    href: "/societies",
+    navLabel: "Communities",
+  },
+  {
+    title: "Your account",
+    description:
+      "Update your profile from Account settings.",
+    icon: User,
+    href: "/account",
+    navLabel: "You",
+  },
+  {
+    title: "Support a cause",
+    description:
+      "Find a campaign or society you care about and back it directly. Every donation shows exactly where your money went.",
+    icon: Heart,
+    href: "/campaigns",
+    navLabel: "Donate",
+  },
+];
+
 type WelcomeTourProps = {
   onComplete: () => void;
   loading?: boolean;
+  variant?: WelcomeTourVariant;
 };
 
-export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
+export function WelcomeTour({
+  onComplete,
+  loading = false,
+  variant = "student",
+}: WelcomeTourProps) {
+  const slides = variant === "alumni" ? alumniSlides : studentSlides;
   const [step, setStep] = useState(0);
   const slide = slides[step];
   const Icon = slide.icon;
@@ -105,7 +156,7 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
         <View className="mb-5 h-16 w-16 items-center justify-center rounded-2xl bg-dono-primary/10">
           <Icon size={28} color="#17211B" strokeWidth={2} />
         </View>
-        <Text className="text-center font-retro-bold text-2xl text-dono-text">
+        <Text className="text-center font-retro-display text-2xl text-dono-text">
           {slide.title}
         </Text>
         <View className="mt-2 rounded-full bg-dono-surface-muted px-3 py-1">
@@ -134,7 +185,7 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
           <Pressable
             onPress={() => setStep((current) => current - 1)}
             disabled={loading}
-            className="flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border py-3"
+            className="retro-key flex-1 flex-row items-center justify-center gap-1.5 rounded-full border border-dono-border py-3"
           >
             <ArrowLeft size={16} color="#56615A" />
             <Text className="font-retro-bold text-sm text-dono-muted">Back</Text>
@@ -152,7 +203,7 @@ export function WelcomeTour({ onComplete, loading = false }: WelcomeTourProps) {
             setStep((current) => current + 1);
           }}
           disabled={loading}
-          className={`flex-1 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-primary py-3 ${
+          className={`retro-key flex-1 flex-row items-center justify-center gap-1.5 rounded-full bg-dono-primary py-3 ${
             loading ? "opacity-50" : ""
           }`}
         >

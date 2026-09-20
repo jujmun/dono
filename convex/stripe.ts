@@ -12,11 +12,9 @@ import {
   normalizeCampaignSlug,
   validateDonationAmount,
 } from "./lib/donationAmounts";
-import {
-  calculateApplicationFeeMinor,
-  calculateDonationFeeBreakdown,
-  PLATFORM_FEE_RATE,
-} from "./lib/platformFee";
+import { calculateDonationFeeBreakdown } from "./lib/platformFee";
+import { documentVersionBindings } from "./lib/legalAcceptance";
+import { requiredAcceptDocsForContext } from "./lib/legalDocuments";
 
 function getStripeClient() {
   const secretKey = process.env.STRIPE_SECRET_KEY;
@@ -43,34 +41,14 @@ function normalizeDonorEmail(email: string | undefined) {
   return trimmed;
 }
 
-async function getOrCreateStripeCustomer(
-  ctx: ActionCtx,
-  userId: Id<"users">,
-  userContext: { email: string; name?: string },
-) {
-  const stripe = getStripeClient();
-
-  const existingCustomer = await ctx.runQuery(
-    internal.stripeInternal.getStripeCustomerByUserId,
-    { userId },
-  );
-
-  if (existingCustomer) {
-    return existingCustomer.stripeCustomerId;
-  }
-
-  const customer = await stripe.customers.create({
-    email: userContext.email || undefined,
-    name: userContext.name || undefined,
-    metadata: { userId },
-  });
-
-  return await ctx.runMutation(internal.stripeInternal.saveStripeCustomer, {
-    userId,
-    stripeCustomerId: customer.id,
-  });
-}
-
+/**
+ * Current Stripe API versions no longer attach a PaymentIntent object to
+ * `invoice.payment_intent` — the client secret for confirming a
+ * `default_incomplete` subscription's first invoice now lives at
+ * `invoice.confirmation_secret.client_secret` instead. Fall back to the
+ * legacy `payment_intent` shape defensively in case of an older pinned
+ * account API version.
+ */
 function getSubscriptionPaymentIntentClientSecret(
   subscription: Stripe.Subscription,
 ) {
@@ -82,6 +60,11 @@ function getSubscriptionPaymentIntentClientSecret(
   const invoice = latestInvoice as Stripe.Invoice & {
     payment_intent?: string | Stripe.PaymentIntent | null;
   };
+
+  if (invoice.confirmation_secret?.client_secret) {
+    return invoice.confirmation_secret.client_secret;
+  }
+
   const paymentIntent = invoice.payment_intent;
   if (!paymentIntent || typeof paymentIntent === "string") {
     return null;
@@ -101,6 +84,9 @@ async function validateCampaignAndAmount(
     title: string;
     communitySlug: string;
     stripeAccountId: string;
+    goal: number;
+    raised: number;
+    remaining: number;
   };
   amount: number;
 }> {
@@ -125,47 +111,24 @@ async function validateCampaignAndAmount(
     { campaignSlug: normalizedSlug },
   );
 
-  return { campaign, amount };
-}
-
-async function requireSignedInDonationContext(
-  ctx: ActionCtx,
-  campaignSlug: string,
-  amount: number,
-): Promise<{
-  userId: Id<"users">;
-  userContext: { userId: Id<"users">; email: string; name?: string };
-  campaign: {
-    campaignId: Id<"campaigns">;
-    campaignSlug: string;
-    title: string;
-    communitySlug: string;
-    stripeAccountId: string;
-  };
-  amount: number;
-}> {
-  const userId = await getAuthUserId(ctx);
-  if (!userId) {
+  // CR-09: Cap donation to remaining need before confirmation.
+  const cappedAmount = Math.min(amount, campaign.remaining);
+  if (cappedAmount <= 0) {
     throw new ConvexError({
-      code: "UNAUTHENTICATED",
-      message: "You must be signed in to perform this action.",
+      code: "CAMPAIGN_FUNDED",
+      message: "This campaign has already reached its funding target.",
+    });
+  }
+  const cappedValidation = validateDonationAmount(cappedAmount);
+  if (!cappedValidation.valid) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message:
+        "Only a remainder below the minimum donation is left on this campaign.",
     });
   }
 
-  const { campaign, amount: validAmount } = await validateCampaignAndAmount(
-    ctx,
-    campaignSlug,
-    amount,
-  );
-
-  const userContext = await ctx.runQuery(
-    internal.stripeInternal.getVerifiedUserContext,
-    { userId },
-  );
-
-  await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
-
-  return { userId, userContext, campaign, amount: validAmount };
+  return { campaign, amount: cappedAmount };
 }
 
 const STRIPE_CREATE_LIMIT = {
@@ -175,6 +138,13 @@ const STRIPE_CREATE_LIMIT = {
 };
 
 const MAX_PENDING_DONATIONS = 10;
+
+/** Clears a quota's attempt count after the Stripe call it was guarding
+ * actually succeeded — so retrying past a transient failure doesn't count
+ * against a donor who ultimately succeeds. */
+async function resetStripeCreateQuota(ctx: ActionCtx, key: string) {
+  await ctx.runMutation(internal.security.resetQuota, { key });
+}
 
 async function enforceStripeCreateQuota(
   ctx: ActionCtx,
@@ -209,6 +179,19 @@ export const createPaymentIntent = action({
     coverFees: v.optional(v.boolean()),
     ageAttested: v.optional(v.boolean()),
     guestKey: v.optional(v.string()),
+    legalAcceptanceIds: v.optional(v.array(v.id("legalAcceptances"))),
+    recipientPanel: v.optional(v.any()),
+    acceptanceWordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
+    marketingOptIn: v.optional(v.boolean()),
+    showSupportPublicly: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const amount = Number(args.amount);
@@ -230,11 +213,19 @@ export const createPaymentIntent = action({
         message: "You must confirm you are at least 18 years old to donate.",
       });
     }
+    const ageAttested = args.ageAttested === true;
+
+    if (!args.recipientPanel) {
+      throw new ConvexError({
+        code: "RECIPIENT_PANEL_REQUIRED",
+        message: "Donation recipient details are incomplete.",
+      });
+    }
 
     await ctx.runMutation(internal.legalInternal.assertDonateGates, {
       userId: userId ?? undefined,
       guestKey: args.guestKey,
-      ageAttested: true,
+      ageAttested,
     });
 
     const quotaKey = userId
@@ -257,14 +248,50 @@ export const createPaymentIntent = action({
     const grossAmountMinor = feeBreakdown.totalChargedMinor;
     const applicationFeeAmountMinor = feeBreakdown.applicationFeeAmountMinor;
 
+    const donateContext = userId ? "donate" : "donate_guest";
+    const legalDocumentVersions = documentVersionBindings(
+      requiredAcceptDocsForContext(donateContext),
+    );
+
+    const donationId = await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
+      userId: userId ?? undefined,
+      donorEmail: receiptEmail,
+      isAnonymous: anonymous,
+      campaignId: campaign.campaignId,
+      amount: validAmount,
+      stripeConnectedAccountId: campaign.stripeAccountId,
+      grossAmountMinor,
+      applicationFeeAmountMinor,
+      coverFees,
+      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
+      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
+      platformFeeMinor: feeBreakdown.platformFeeMinor,
+      amountToCampaignMinor: feeBreakdown.amountToCampaignMinor,
+      ageAttested,
+      ageAttestedAt: Date.now(),
+      legalAcceptedAt: Date.now(),
+      guestKey: args.guestKey,
+      legalAcceptanceIds: args.legalAcceptanceIds,
+      legalDocumentVersions,
+      recipientPanel: args.recipientPanel,
+      feeBreakdownSnapshot: feeBreakdown,
+      acceptanceWordings: args.acceptanceWordings,
+      marketingOptIn: args.marketingOptIn === true,
+      showSupportPublicly: args.showSupportPublicly === true,
+    });
+
     const paymentIntent = await stripe.paymentIntents.create(
       {
         amount: grossAmountMinor,
         currency: "gbp",
-        application_fee_amount: applicationFeeAmountMinor,
+        ...(applicationFeeAmountMinor > 0
+          ? { application_fee_amount: applicationFeeAmountMinor }
+          : {}),
+        description: `Dono: ${campaign.title}`.slice(0, 1000),
         ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
         automatic_payment_methods: { enabled: true },
         metadata: {
+          donationId,
           ...(userId ? { userId } : {}),
           ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
           ...(anonymous ? { anonymous: "true" } : {}),
@@ -272,13 +299,15 @@ export const createPaymentIntent = action({
           intendedCampaignAmountMinor: String(feeBreakdown.intendedCampaignAmountMinor),
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
+          campaignTitle: campaign.title.slice(0, 500),
+          communitySlug: campaign.communitySlug,
           donationType: "one_time",
           merchantOfRecord: "connected_account",
         },
       },
       {
         stripeAccount: campaign.stripeAccountId,
-        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:${coverFees}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
+        idempotencyKey: `donation:${campaign.campaignSlug}:${grossAmountMinor}:cover:${coverFees}:${Date.now()}:${userId ?? donorEmail ?? "guest"}`,
       },
     );
 
@@ -289,22 +318,19 @@ export const createPaymentIntent = action({
       });
     }
 
-    await ctx.runMutation(internal.stripeInternal.createPendingDonation, {
-      userId: userId ?? undefined,
-      donorEmail: receiptEmail,
-      isAnonymous: anonymous,
-      campaignId: campaign.campaignId,
-      amount: validAmount,
+    await ctx.runMutation(internal.stripeInternal.attachPaymentIntentToDonation, {
+      donationId,
       stripePaymentIntentId: paymentIntent.id,
-      stripeConnectedAccountId: campaign.stripeAccountId,
-      grossAmountMinor,
-      applicationFeeAmountMinor,
-      coverFees,
-      intendedCampaignAmountMinor: feeBreakdown.intendedCampaignAmountMinor,
-      estimatedStripeFeeMinor: feeBreakdown.estimatedStripeFeeMinor,
-      ageAttested: true,
-      legalAcceptedAt: Date.now(),
     });
+
+    if (args.legalAcceptanceIds && args.legalAcceptanceIds.length > 0) {
+      await ctx.runMutation(internal.legalInternal.linkAcceptancesToDonation, {
+        acceptanceIds: args.legalAcceptanceIds,
+        donationId,
+      });
+    }
+
+    await resetStripeCreateQuota(ctx, quotaKey);
 
     return {
       clientSecret: paymentIntent.client_secret,
@@ -318,178 +344,6 @@ export const createPaymentIntent = action({
         amountToCampaignMinor: feeBreakdown.amountToCampaignMinor,
         coverFees,
       },
-    };
-  },
-});
-
-export const createFundPaymentIntent = action({
-  args: {
-    fundSlug: v.string(),
-    amount: v.number(),
-    donorEmail: v.optional(v.string()),
-    anonymous: v.optional(v.boolean()),
-  },
-  handler: async (ctx, args) => {
-    const amount = Number(args.amount);
-    const donorEmail = normalizeDonorEmail(args.donorEmail);
-    const anonymous = args.anonymous === true;
-    const amountValidation = validateDonationAmount(amount);
-    if (!amountValidation.valid) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: amountValidation.message,
-      });
-    }
-
-    const fund = await ctx.runQuery(internal.stripeFunds.getFundForDonation, {
-      fundSlug: args.fundSlug.trim(),
-    });
-
-    const stripe = getStripeClient();
-    const userId = await getAuthUserId(ctx);
-
-    const quotaKey = userId
-      ? `stripeFundPi:${userId}`
-      : `stripeFundPi:guest:${donorEmail ?? "anonymous"}`;
-    await enforceStripeCreateQuota(ctx, quotaKey, userId ?? undefined);
-
-    let stripeCustomerId: string | undefined;
-    let receiptEmail = donorEmail;
-
-    if (userId) {
-      await ctx.runQuery(internal.stripeInternal.assertNotAdminDonor, { userId });
-      const userContext = await ctx.runQuery(
-        internal.stripeInternal.getVerifiedUserContext,
-        { userId },
-      );
-      stripeCustomerId = await getOrCreateStripeCustomer(ctx, userId, userContext);
-      receiptEmail = receiptEmail || userContext.email || undefined;
-    }
-
-    // Community funds are Merchant of Record on the platform account (not Connect).
-    // application_fee_amount only applies to Connect direct charges — document MoR in metadata.
-    const paymentIntent = await stripe.paymentIntents.create({
-      amount: donationAmountToStripeMinorUnits(amount),
-      currency: "gbp",
-      ...(stripeCustomerId ? { customer: stripeCustomerId } : {}),
-      ...(receiptEmail ? { receipt_email: receiptEmail } : {}),
-      automatic_payment_methods: { enabled: true },
-      metadata: {
-        ...(userId ? { userId } : {}),
-        ...(receiptEmail ? { donorEmail: receiptEmail } : {}),
-        ...(anonymous ? { anonymous: "true" } : {}),
-        fundId: fund.fundId,
-        fundSlug: fund.fundSlug,
-        donationType: "fund_one_time",
-        merchantOfRecord: "platform",
-      },
-    });
-
-    if (!paymentIntent.client_secret) {
-      throw new ConvexError({
-        code: "STRIPE_ERROR",
-        message: "Stripe did not return a client secret.",
-      });
-    }
-
-    await ctx.runMutation(internal.stripeFunds.createPendingFundDonation, {
-      userId: userId ?? undefined,
-      donorEmail: receiptEmail,
-      isAnonymous: anonymous,
-      fundId: fund.fundId,
-      amount,
-      stripePaymentIntentId: paymentIntent.id,
-    });
-
-    return {
-      clientSecret: paymentIntent.client_secret,
-      paymentIntentId: paymentIntent.id,
-    };
-  },
-});
-
-export const createRecurringDonationSubscription = action({
-  args: {
-    campaignSlug: v.string(),
-    amount: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const { userId, userContext, campaign, amount } =
-      await requireSignedInDonationContext(
-        ctx,
-        args.campaignSlug,
-        Number(args.amount),
-      );
-
-    await enforceStripeCreateQuota(ctx, `stripeSub:${userId}`, userId);
-
-    const stripe = getStripeClient();
-    const connectOpts = { stripeAccount: campaign.stripeAccountId };
-
-    // Direct charge on the campaign's connected account (society MoR) with
-    // Dono's 5% platform fee via application_fee_percent.
-    const customer = await stripe.customers.create(
-      {
-        email: userContext.email || undefined,
-        name: userContext.name || undefined,
-        metadata: { userId, platformUserId: userId },
-      },
-      connectOpts,
-    );
-
-    const price = await stripe.prices.create(
-      {
-        currency: "gbp",
-        unit_amount: donationAmountToStripeMinorUnits(amount),
-        recurring: { interval: "month" },
-        product_data: {
-          name: `Monthly donation to ${campaign.title}`,
-        },
-      },
-      connectOpts,
-    );
-
-    const subscription = await stripe.subscriptions.create(
-      {
-        customer: customer.id,
-        items: [{ price: price.id }],
-        application_fee_percent: PLATFORM_FEE_RATE * 100,
-        payment_behavior: "default_incomplete",
-        payment_settings: {
-          save_default_payment_method: "on_subscription",
-        },
-        expand: ["latest_invoice.payment_intent"],
-        metadata: {
-          userId,
-          campaignId: campaign.campaignId,
-          campaignSlug: campaign.campaignSlug,
-          donationType: "recurring",
-          merchantOfRecord: "connected_account",
-        },
-      },
-      connectOpts,
-    );
-
-    const clientSecret = getSubscriptionPaymentIntentClientSecret(subscription);
-    if (!clientSecret) {
-      throw new ConvexError({
-        code: "STRIPE_ERROR",
-        message: "Stripe did not return a subscription payment secret.",
-      });
-    }
-
-    await ctx.runMutation(internal.stripeInternal.createRecurringDonationRecord, {
-      userId,
-      campaignId: campaign.campaignId,
-      amount,
-      stripeSubscriptionId: subscription.id,
-      stripePriceId: price.id,
-    });
-
-    return {
-      clientSecret,
-      subscriptionId: subscription.id,
-      stripeAccountId: campaign.stripeAccountId,
     };
   },
 });
@@ -632,33 +486,32 @@ export const confirmOneTimeDonation = action({
       });
     }
 
-    const isFundDonation =
+    // CF-01: refuse to settle any legacy platform-account / fund charge.
+    if (
       paymentIntent.metadata?.donationType === "fund_one_time" ||
-      donation?.fundId != null;
+      donation?.fundId != null
+    ) {
+      throw new ConvexError({
+        code: "FEATURE_REMOVED",
+        message:
+          "Community fund donations are not available. Dono does not settle charges on a platform payment account.",
+      });
+    }
 
     const latestCharge =
       typeof paymentIntent.latest_charge === "string"
         ? paymentIntent.latest_charge
         : paymentIntent.latest_charge?.id;
 
-    let alreadyProcessed = false;
-    if (isFundDonation) {
-      const fundResult: { alreadyProcessed: boolean } = await ctx.runMutation(
-        internal.stripeFunds.markFundDonationSucceeded,
-        { stripePaymentIntentId: args.paymentIntentId },
-      );
-      alreadyProcessed = fundResult.alreadyProcessed;
-    } else {
-      const campaignResult: { alreadyProcessed: boolean } = await ctx.runMutation(
-        internal.stripeInternal.markDonationSucceeded,
-        {
-          stripePaymentIntentId: args.paymentIntentId,
-          stripeChargeId: latestCharge,
-          stripeConnectedAccountId: donation?.stripeConnectedAccountId,
-        },
-      );
-      alreadyProcessed = campaignResult.alreadyProcessed;
-    }
+    const campaignResult: { alreadyProcessed: boolean } = await ctx.runMutation(
+      internal.stripeInternal.markDonationSucceeded,
+      {
+        stripePaymentIntentId: args.paymentIntentId,
+        stripeChargeId: latestCharge,
+        stripeConnectedAccountId: donation?.stripeConnectedAccountId,
+      },
+    );
+    const alreadyProcessed = campaignResult.alreadyProcessed;
 
     return {
       confirmed: true,
@@ -667,36 +520,21 @@ export const confirmOneTimeDonation = action({
   },
 });
 
-export const cancelRecurringDonation = action({
-  args: {
-    recurringDonationId: v.id("recurringDonations"),
-  },
+/** Cancels one legacy campaign-level recurring donation's Stripe subscription
+ * and marks its record canceled. No per-user auth check — callers are
+ * responsible for authorization (see cancelCampaignRecurringDonations, the
+ * one-off migration that bulk-cancels every live row after monthly campaign
+ * donations were removed). */
+export const cancelRecurringDonationSubscriptionOnStripe = internalAction({
+  args: { recurringDonationId: v.id("recurringDonations") },
   handler: async (ctx, args) => {
-    const userId = await getAuthUserId(ctx);
-    if (!userId) {
-      throw new ConvexError({
-        code: "UNAUTHENTICATED",
-        message: "You must be signed in to perform this action.",
-      });
-    }
-
     const recurringDonation = await ctx.runQuery(
-      internal.stripeInternal.getRecurringDonationForUser,
-      {
-        recurringDonationId: args.recurringDonationId,
-        userId,
-      },
+      internal.stripeInternal.getRecurringDonationById,
+      { recurringDonationId: args.recurringDonationId },
     );
 
-    if (!recurringDonation) {
-      throw new ConvexError({
-        code: "NOT_FOUND",
-        message: "Recurring donation not found.",
-      });
-    }
-
-    if (recurringDonation.status === "canceled") {
-      return { canceled: true };
+    if (!recurringDonation || recurringDonation.status === "canceled") {
+      return { canceled: false };
     }
 
     const stripe = getStripeClient();
@@ -717,8 +555,10 @@ export const cancelRecurringDonation = action({
       } else {
         await stripe.subscriptions.cancel(recurringDonation.stripeSubscriptionId);
       }
-    } catch {
-      await stripe.subscriptions.cancel(recurringDonation.stripeSubscriptionId);
+    } catch (error) {
+      if (!isStripeCancelErrorSafeToIgnore(error)) {
+        await stripe.subscriptions.cancel(recurringDonation.stripeSubscriptionId);
+      }
     }
 
     await ctx.runMutation(internal.stripeInternal.cancelRecurringDonationRecord, {
@@ -729,58 +569,248 @@ export const cancelRecurringDonation = action({
   },
 });
 
-/** Called after admin approves a refund request — refunds on the connected account. */
-export const processApprovedRefund = internalAction({
-  args: { refundRequestId: v.id("refundRequests") },
-  handler: async (ctx, args) => {
-    const payload = await ctx.runQuery(internal.refunds.getRequestForStripe, {
-      refundRequestId: args.refundRequestId,
+export const createSocietySubscription = action({
+  args: {
+    communitySlug: v.string(),
+    amount: v.number(),
+  },
+  handler: async (): Promise<{
+    clientSecret: string;
+    subscriptionId: string;
+    stripeAccountId: string;
+  }> => {
+    // CR-01a: Society-level recurring removed at the API boundary.
+    throw new ConvexError({
+      code: "FEATURE_REMOVED",
+      message:
+        "Recurring donations are not available. Monthly society subscriptions have been removed for beta.",
     });
-    if (!payload || payload.status !== "approved") {
-      return { processed: false };
-    }
-    if (
-      !payload.stripeConnectedAccountId ||
-      (!payload.stripePaymentIntentId && !payload.stripeChargeId)
-    ) {
-      await ctx.runMutation(internal.refunds.markRefundProcessed, {
-        refundRequestId: args.refundRequestId,
-        failed: true,
-        failureNote: "Donation is missing Stripe payment identifiers for refund.",
+  },
+});
+
+export const cancelSocietySubscription = action({
+  args: {
+    societySubscriptionId: v.id("societySubscriptions"),
+  },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "You must be signed in to perform this action.",
       });
-      return { processed: false };
+    }
+
+    const societySubscription = await ctx.runQuery(
+      internal.stripeInternal.getSocietySubscriptionForUser,
+      { societySubscriptionId: args.societySubscriptionId, userId },
+    );
+
+    if (!societySubscription) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Subscription not found.",
+      });
+    }
+
+    if (societySubscription.status === "canceled") {
+      return { canceled: true };
     }
 
     const stripe = getStripeClient();
-    try {
-      const refund = await stripe.refunds.create(
-        {
-          ...(payload.stripePaymentIntentId
-            ? { payment_intent: payload.stripePaymentIntentId }
-            : { charge: payload.stripeChargeId! }),
-          reason: "requested_by_customer",
-          metadata: {
-            refundRequestId: String(args.refundRequestId),
-            donationId: String(payload.donationId),
-          },
-        },
-        { stripeAccount: payload.stripeConnectedAccountId },
-      );
+    const connect = await ctx.runQuery(
+      internal.stripeInternal.getConnectAccountIdForCommunity,
+      { communitySlug: societySubscription.communitySlug },
+    );
 
-      await ctx.runMutation(internal.refunds.markRefundProcessed, {
-        refundRequestId: args.refundRequestId,
-        stripeRefundId: refund.id,
-      });
-      return { processed: true, stripeRefundId: refund.id };
+    try {
+      if (connect?.stripeAccountId) {
+        await stripe.subscriptions.cancel(
+          societySubscription.stripeSubscriptionId,
+          {},
+          { stripeAccount: connect.stripeAccountId },
+        );
+      } else {
+        await stripe.subscriptions.cancel(societySubscription.stripeSubscriptionId);
+      }
     } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Stripe refund failed.";
-      await ctx.runMutation(internal.refunds.markRefundProcessed, {
-        refundRequestId: args.refundRequestId,
-        failed: true,
-        failureNote: message,
-      });
-      return { processed: false };
+      if (!isStripeCancelErrorSafeToIgnore(error)) {
+        await stripe.subscriptions.cancel(societySubscription.stripeSubscriptionId);
+      }
     }
+
+    await ctx.runMutation(internal.stripeInternal.cancelSocietySubscriptionRecord, {
+      stripeSubscriptionId: societySubscription.stripeSubscriptionId,
+      reason: "user_requested",
+    });
+
+    return { canceled: true };
   },
 });
+
+/**
+ * Cancels every still-billing subscription a user has — society-level and
+ * legacy campaign-level — as part of account deletion.
+ *
+ * Called before the account's identity is released (see
+ * users.requestAccountDeletion): once the email is severed the user can no
+ * longer sign in to reach the cancel UI, so a subscription left running would
+ * charge them indefinitely. Throwing here aborts the deletion by design.
+ */
+export const cancelAllSubscriptionsForUser = internalAction({
+  args: { userId: v.id("users") },
+  handler: async (
+    ctx,
+    args,
+  ): Promise<{
+    societySubscriptionsCanceled: number;
+    recurringDonationsCanceled: number;
+  }> => {
+    const live = await ctx.runQuery(
+      internal.stripeInternal.listLiveSubscriptionsForUser,
+      { userId: args.userId },
+    );
+
+    const stripe = getStripeClient();
+
+    for (const societySubscription of live.societySubscriptions) {
+      const connect = await ctx.runQuery(
+        internal.stripeInternal.getConnectAccountIdForCommunity,
+        { communitySlug: societySubscription.communitySlug },
+      );
+
+      try {
+        if (connect?.stripeAccountId) {
+          await stripe.subscriptions.cancel(
+            societySubscription.stripeSubscriptionId,
+            {},
+            { stripeAccount: connect.stripeAccountId },
+          );
+        } else {
+          await stripe.subscriptions.cancel(
+            societySubscription.stripeSubscriptionId,
+          );
+        }
+      } catch (error) {
+        if (!isStripeCancelErrorSafeToIgnore(error)) {
+          await stripe.subscriptions.cancel(
+            societySubscription.stripeSubscriptionId,
+          );
+        }
+      }
+
+      await ctx.runMutation(
+        internal.stripeInternal.cancelSocietySubscriptionRecord,
+        {
+          stripeSubscriptionId: societySubscription.stripeSubscriptionId,
+          reason: "user_requested",
+        },
+      );
+    }
+
+    for (const recurringDonationId of live.recurringDonationIds) {
+      await ctx.runAction(
+        internal.stripe.cancelRecurringDonationSubscriptionOnStripe,
+        { recurringDonationId },
+      );
+    }
+
+    return {
+      societySubscriptionsCanceled: live.societySubscriptions.length,
+      recurringDonationsCanceled: live.recurringDonationIds.length,
+    };
+  },
+});
+
+/**
+ * Safety net for processSuccessfulSocietyInvoice: a society subscription
+ * invoice was already charged (Stripe bills synchronously) but the society
+ * turned out to have zero active campaigns at that moment — refunds the
+ * charge in full, cancels the subscription so it can't happen again, and
+ * notifies the donor. The pre-emptive invoice.upcoming handler in
+ * stripeWebhook.ts is the primary defense; this only fires for the narrow
+ * window where a campaign went inactive after that check ran.
+ */
+export const refundAndCancelSocietySubscriptionForNoCampaigns = internalAction({
+  args: {
+    societySubscriptionId: v.id("societySubscriptions"),
+    stripeInvoiceId: v.string(),
+    stripePaymentIntentId: v.optional(v.string()),
+    totalAmountMinor: v.number(),
+  },
+  handler: async (ctx, args) => {
+    const societySubscription = await ctx.runQuery(
+      internal.stripeInternal.getSocietySubscriptionById,
+      { societySubscriptionId: args.societySubscriptionId },
+    );
+    if (!societySubscription || societySubscription.status === "canceled") {
+      return { refunded: false, canceled: false };
+    }
+
+    const stripe = getStripeClient();
+    const connect = await ctx.runQuery(
+      internal.stripeInternal.getConnectAccountIdForCommunity,
+      { communitySlug: societySubscription.communitySlug },
+    );
+    const connectOpts = connect?.stripeAccountId
+      ? { stripeAccount: connect.stripeAccountId }
+      : undefined;
+
+    let stripeRefundId: string | undefined;
+    let charged = false;
+    if (args.stripePaymentIntentId) {
+      try {
+        const refund = await stripe.refunds.create(
+          {
+            payment_intent: args.stripePaymentIntentId,
+            reason: "requested_by_customer",
+            metadata: {
+              societySubscriptionId: String(args.societySubscriptionId),
+              reason: "no_active_campaigns",
+            },
+          },
+          connectOpts,
+        );
+        stripeRefundId = refund.id;
+        charged = true;
+      } catch (error) {
+        if (!isStripeCancelErrorSafeToIgnore(error)) {
+          throw error;
+        }
+      }
+    }
+
+    try {
+      if (connectOpts) {
+        await stripe.subscriptions.cancel(
+          societySubscription.stripeSubscriptionId,
+          {},
+          connectOpts,
+        );
+      } else {
+        await stripe.subscriptions.cancel(societySubscription.stripeSubscriptionId);
+      }
+    } catch (error) {
+      if (!isStripeCancelErrorSafeToIgnore(error)) {
+        throw error;
+      }
+    }
+
+    await ctx.runMutation(internal.stripeInternal.cancelSocietySubscriptionRecord, {
+      stripeSubscriptionId: societySubscription.stripeSubscriptionId,
+      reason: "no_active_campaigns",
+    });
+    await ctx.runMutation(internal.stripeInternal.markSocietySubscriptionPaymentRefunded, {
+      stripeInvoiceId: args.stripeInvoiceId,
+      stripeRefundId,
+    });
+    await ctx.runMutation(internal.stripeInternal.notifySocietySubscriptionCanceled, {
+      societySubscriptionId: args.societySubscriptionId,
+      charged,
+      amount: args.totalAmountMinor / 100,
+    });
+
+    return { refunded: Boolean(stripeRefundId), canceled: true };
+  },
+});
+

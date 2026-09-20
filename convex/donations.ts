@@ -22,14 +22,14 @@ export const getDonorImpact = query({
     );
 
     if (donations.length === 0) {
-      const communityFollows = await ctx.db
+      const societyFollows = await ctx.db
         .query("communityFollows")
         .withIndex("by_user", (q) => q.eq("userId", userId))
         .collect();
       return {
         totalDonated: 0,
         campaignsSupported: 0,
-        communitiesFollowed: communityFollows.length,
+        societiesFollowed: societyFollows.length,
         impactHighlights: [],
         recentDonations: [],
       };
@@ -41,7 +41,7 @@ export const getDonorImpact = query({
     );
     const campaignMap = new Map(campaigns.map((c) => [c._id, c]));
 
-    const communityFollows = await ctx.db
+    const societyFollows = await ctx.db
       .query("communityFollows")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
@@ -70,7 +70,7 @@ export const getDonorImpact = query({
     return {
       totalDonated,
       campaignsSupported: campaignIds.length,
-      communitiesFollowed: communityFollows.length,
+      societiesFollowed: societyFollows.length,
       impactHighlights,
       recentDonations,
     };
@@ -95,23 +95,23 @@ export const getDonoWrapped = query({
     const campaignIds = [...new Set(donations.map((d) => d.campaignId))];
     const campaigns = await Promise.all(campaignIds.map((id) => ctx.db.get(id)));
 
-    const communityCounts = new Map<string, number>();
+    const societyCounts = new Map<string, number>();
     for (const campaign of campaigns) {
       if (!campaign) continue;
       const id = campaign.creator.communityId;
-      communityCounts.set(id, (communityCounts.get(id) ?? 0) + 1);
+      societyCounts.set(id, (societyCounts.get(id) ?? 0) + 1);
     }
 
-    let topCommunity = "Your communities";
+    let topSociety = "Your societies";
     let topCount = 0;
-    for (const [communityId, count] of communityCounts) {
+    for (const [societyId, count] of societyCounts) {
       if (count > topCount) {
         topCount = count;
         const community = await ctx.db
           .query("communities")
-          .withIndex("by_slug", (q) => q.eq("slug", communityId))
+          .withIndex("by_slug", (q) => q.eq("slug", societyId))
           .unique();
-        topCommunity = community?.name ?? campaignSlugToName(communityId);
+        topSociety = community?.name ?? campaignSlugToName(societyId);
       }
     }
 
@@ -119,7 +119,7 @@ export const getDonoWrapped = query({
       year: new Date().getFullYear(),
       totalDonated,
       campaignsSupported: campaignIds.length,
-      topCommunity,
+      topSociety,
       rank:
         totalDonated >= 100
           ? "Top 15% of donors"
@@ -200,39 +200,80 @@ export const listRecentForCampaign = query({
           displayName: firstNameFromDisplay(profile?.name),
           relativeTime: relativeTimeLabel(donation.createdAt),
           createdAt: donation.createdAt,
+          viaSocietySubscription: Boolean(donation.societySubscriptionId),
         };
       }),
     );
   },
 });
 
-export const listMyRecurringDonations = query({
+export const listMySocietySubscriptions = query({
   args: {},
   handler: async (ctx) => {
     const userId = await requireUserId(ctx);
 
-    const recurringDonations = await ctx.db
-      .query("recurringDonations")
+    const societySubscriptions = await ctx.db
+      .query("societySubscriptions")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
 
     const results = await Promise.all(
-      recurringDonations.map(async (recurringDonation) => {
-        const campaign = await ctx.db.get(recurringDonation.campaignId);
+      societySubscriptions.map(async (societySubscription) => {
+        const [society, community] = await Promise.all([
+          ctx.db
+            .query("societies")
+            .withIndex("by_slug", (q) => q.eq("slug", societySubscription.communitySlug))
+            .unique(),
+          ctx.db
+            .query("communities")
+            .withIndex("by_slug", (q) => q.eq("slug", societySubscription.communitySlug))
+            .unique(),
+        ]);
         return {
-          id: recurringDonation._id,
-          amount: recurringDonation.amount,
-          currency: recurringDonation.currency,
-          status: recurringDonation.status,
-          createdAt: recurringDonation.createdAt,
-          canceledAt: recurringDonation.canceledAt,
-          campaignTitle: campaign?.title ?? "Unknown campaign",
-          campaignSlug: campaign?.slug ?? "",
+          id: societySubscription._id,
+          amount: societySubscription.amount,
+          currency: societySubscription.currency,
+          status: societySubscription.status,
+          canceledReason: societySubscription.canceledReason ?? null,
+          createdAt: societySubscription.createdAt,
+          canceledAt: societySubscription.canceledAt,
+          societyName: society?.name ?? community?.name ?? "Unknown society",
+          communitySlug: societySubscription.communitySlug,
         };
       }),
     );
 
     return results.sort((a, b) => b.createdAt - a.createdAt);
+  },
+});
+
+/** The current user's non-canceled subscription to one specific society, if
+ * any — powers the "you're subscribed £X/month" state on the society page
+ * header so it doesn't just live buried in account settings. */
+export const getMySocietySubscription = query({
+  args: { communitySlug: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await requireUserId(ctx);
+
+    const societySubscriptions = await ctx.db
+      .query("societySubscriptions")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+
+    const active = societySubscriptions
+      .filter(
+        (s) => s.communitySlug === args.communitySlug && s.status !== "canceled",
+      )
+      .sort((a, b) => b.createdAt - a.createdAt)[0];
+
+    if (!active) return null;
+
+    return {
+      id: active._id,
+      amount: active.amount,
+      currency: active.currency,
+      status: active.status,
+    };
   },
 });
 

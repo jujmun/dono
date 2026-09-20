@@ -2,7 +2,6 @@ import { View, Text } from "react-native";
 import { Clock, MapPin } from "lucide-react-native";
 import { CampaignImageGallery } from "@/components/campaign-image-gallery";
 import { CategoryBadge } from "@/components/ui/category-badge";
-import { VerificationList } from "@/components/ui/verification-badge";
 import { ProgressBar } from "@/components/ui/progress-bar";
 import { EngagementStats } from "@/components/activity-feed";
 import {
@@ -12,7 +11,8 @@ import {
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
-import { formatCurrency } from "@/lib/constants";
+import { StoryText } from "@/components/story-text";
+import { formatCurrency, getProgress } from "@/lib/constants";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 
 function previewDeadline(): string {
@@ -27,6 +27,8 @@ export interface CampaignPreviewProps {
   university: string;
   story: string;
   goal: number;
+  /** Off-platform funds already received — preview progress starts here. */
+  existingFunding?: number;
   imageUri?: string | null;
   imageUris?: string[];
   impactLines?: { label: string; amount: number }[];
@@ -41,6 +43,7 @@ export function CampaignPreview({
   university,
   story,
   goal,
+  existingFunding = 0,
   imageUri,
   imageUris,
   impactLines,
@@ -56,6 +59,8 @@ export function CampaignPreview({
   const resolvedTemplate = template ? getCampaignTemplate(template) : null;
   const accentHex = resolvedTemplate?.unlocks.accentHex;
   const heroLayout = resolvedTemplate?.unlocks.heroLayout ?? "media-first";
+  const previewRaised = Number.isFinite(existingFunding) ? Math.max(0, existingFunding) : 0;
+  const previewProgress = goal > 0 ? getProgress(previewRaised, goal) : 0;
 
   const galleryBlock = (
     <CampaignImageGallery
@@ -73,19 +78,30 @@ export function CampaignPreview({
 
   const storyBlock = (
     <View key="story" className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-      <Text className="mb-3 text-lg font-retro-bold text-dono-text">The story</Text>
-      <Text className="leading-relaxed text-dono-muted">{story}</Text>
+      <Text className="mb-3 text-lg font-retro-display text-dono-text">The story</Text>
+      <StoryText className="leading-relaxed text-dono-muted" text={story} />
     </View>
   );
 
+  const hasImpactLines = (impactLines?.length ?? 0) > 0;
   const breakdownBlock =
-    impactLines && impactLines.length > 0 ? (
-      <FundBreakdownSection key="breakdown" className="mb-8">
+    goal > 0 ? (
+      <FundBreakdownSection
+        key="breakdown"
+        className="mb-8"
+        title={hasImpactLines ? "What your donation funds" : "Funding goal"}
+      >
         <ReceiptLedger>
-          {impactLines.map((line) => (
-            <ReceiptLineRow key={line.label} label={line.label} amount={line.amount} />
-          ))}
-          <ReceiptDivider />
+          {hasImpactLines
+            ? impactLines!.map((line) => (
+                <ReceiptLineRow
+                  key={line.label}
+                  label={line.label}
+                  amount={line.amount}
+                />
+              ))
+            : null}
+          {hasImpactLines ? <ReceiptDivider /> : null}
           <ReceiptTotalRow label="Total goal" amount={goal} />
         </ReceiptLedger>
       </FundBreakdownSection>
@@ -103,14 +119,7 @@ export function CampaignPreview({
   return (
     <View className="flex-col lg:flex-row lg:items-start lg:gap-8">
       <View className="min-w-0 flex-1">
-        <View className="mb-4">
-          <VerificationList
-            verifications={[{ type: "student", label: "New Campaign" }]}
-            size="md"
-          />
-        </View>
-
-        <Text className="mb-3 font-retro-bold text-2xl text-dono-text">{title}</Text>
+        <Text className="mb-3 font-retro-display text-2xl text-dono-text">{title}</Text>
 
         <View className="mb-4 gap-2">
           <View className="flex-row items-center gap-1">
@@ -142,7 +151,7 @@ export function CampaignPreview({
 
         {additionalNotes ? (
           <View className="mb-8 rounded-2xl border border-dono-border bg-white p-6">
-            <Text className="mb-3 text-lg font-retro-bold text-dono-text">
+            <Text className="mb-3 text-lg font-retro-display text-dono-text">
               Anything else?
             </Text>
             <Text className="leading-relaxed text-dono-muted">{additionalNotes}</Text>
@@ -157,11 +166,11 @@ export function CampaignPreview({
               className={`font-retro-mono-bold text-3xl ${!accentHex ? "text-dono-primary" : ""}`}
               style={accentHex ? { color: accentHex } : undefined}
             >
-              {formatCurrency(0)}
+              {formatCurrency(previewRaised)}
             </Text>
             <Text className="text-sm text-dono-muted">of {formatCurrency(goal)}</Text>
           </View>
-          <ProgressBar value={0} className="mt-3" showLabel fillColor={accentHex} />
+          <ProgressBar value={previewProgress} className="mt-3" showLabel fillColor={accentHex} />
           <Text className="mt-2 text-sm text-dono-muted">0 donors · 0 followers</Text>
 
           <View

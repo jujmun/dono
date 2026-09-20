@@ -12,6 +12,7 @@ import { ConvexError } from "convex/values";
 import { getAuthUserId } from "@convex-dev/auth/server";
 import type { QueryCtx, MutationCtx, ActionCtx } from "../_generated/server";
 import type { Doc, Id } from "../_generated/dataModel";
+import { isDemoOpenAdminEnabled } from "./demoOpenAdmin";
 
 type CtxWithDb = QueryCtx | MutationCtx;
 type AnyCtx = CtxWithDb | ActionCtx;
@@ -128,7 +129,74 @@ export async function requireRole(ctx: CtxWithDb, roles: readonly UserRole[]) {
 }
 
 export async function requireAdmin(ctx: CtxWithDb) {
-  return await requireRole(ctx, ["admin"]);
+  const userId = await getAuthUserId(ctx);
+  if (userId) {
+    return await requireRole(ctx, ["admin"]);
+  }
+
+  // Demo open-admin: unauthenticated admin reads/writes on non-prod only.
+  // Attribute actions to an existing admin profile when present.
+  if (!isDemoOpenAdminEnabled()) {
+    throw new ConvexError({
+      code: "UNAUTHENTICATED",
+      message: "You must be signed in to perform this action.",
+    });
+  }
+
+  const adminProfile = await ctx.db
+    .query("profiles")
+    .withIndex("by_role", (q) => q.eq("role", "admin"))
+    .first();
+  if (adminProfile) {
+    return {
+      userId: adminProfile.userId,
+      role: "admin" as const,
+      profile: adminProfile,
+    };
+  }
+
+  // Demo DB may not have a promoted admin yet — attribute to any profile.
+  const anyProfile = await ctx.db.query("profiles").first();
+  if (!anyProfile) {
+    throw new ConvexError({
+      code: "DEMO_OPEN_ADMIN_NO_ADMIN_USER",
+      message:
+        "Demo open admin requires at least one user profile on this Convex deployment.",
+    });
+  }
+
+  return {
+    userId: anyProfile.userId,
+    role: "admin" as const,
+    profile: anyProfile,
+  };
+}
+
+/** Fail closed when the profile has an active suspension. */
+export function assertNotSuspended(
+  profile: Doc<"profiles"> | null | undefined,
+): void {
+  if (profile?.suspendedAt) {
+    throw new ConvexError({
+      code: "ACCOUNT_SUSPENDED",
+      message:
+        profile.suspendedReason?.trim() ||
+        "This account has been suspended and cannot perform this action.",
+    });
+  }
+}
+
+/** Fail closed while a commenting restriction is in force. */
+export function assertCommentingAllowed(
+  profile: Doc<"profiles"> | null | undefined,
+): void {
+  const until = profile?.commentingRestrictedUntil;
+  if (until !== undefined && until > Date.now()) {
+    throw new ConvexError({
+      code: "COMMENTING_RESTRICTED",
+      message: "Commenting is temporarily restricted on this account.",
+    });
+  }
 }
 
 export async function requireVerifiedUser(ctx: CtxWithDb) {
@@ -144,6 +212,22 @@ export async function requireVerifiedUser(ctx: CtxWithDb) {
     });
   }
 
+  assertNotSuspended(profile);
+
+  return { userId, user, profile };
+}
+
+/**
+ * Verified user, fails closed for alumni/donor accounts. Blocks on
+ * `userType === "alumni"` rather than requiring `"student"` so accounts
+ * predating this field (`userType` undefined) keep existing behaviour.
+ * Use for every campaign/society/college creation entry point.
+ */
+export async function requireStudentCreator(ctx: CtxWithDb) {
+  const { userId, user, profile } = await requireVerifiedUser(ctx);
+  if (profile?.userType === "alumni") {
+    accessDenied();
+  }
   return { userId, user, profile };
 }
 
@@ -194,4 +278,32 @@ export async function requireSocietyLeader(ctx: CtxWithDb, communitySlug: string
     accessDenied();
   }
   return { userId, community, membership };
+}
+
+/** Society submission creator or approved leader — matches Connect payout access. */
+export async function canManageSociety(
+  ctx: CtxWithDb,
+  userId: Id<"users">,
+  communitySlug: string,
+) {
+  const society = await ctx.db
+    .query("societies")
+    .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+    .unique();
+  if (society?.creatorId === userId) {
+    return true;
+  }
+
+  const membership = await getApprovedMembership(ctx, communitySlug, userId);
+  return Boolean(
+    membership && membership.status === "approved" && membership.role === "leader",
+  );
+}
+
+export async function requireCanManageSociety(ctx: CtxWithDb, communitySlug: string) {
+  const { userId } = await requireVerifiedUser(ctx);
+  if (!(await canManageSociety(ctx, userId, communitySlug))) {
+    accessDenied();
+  }
+  return { userId };
 }

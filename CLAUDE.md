@@ -3,7 +3,7 @@
 
 ## Project
 
-Dono is a crowdfunding platform for university students and student-led societies
+Dono is a student-run crowdfunding platform for university students and student-led societies
 to receive funding directly from alumni. Donors browse campaigns, communities
 (colleges, societies, departments), and community funds, and donate to specific
 projects. Auth is restricted to University of Oxford email addresses.

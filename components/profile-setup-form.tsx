@@ -14,6 +14,9 @@ import {
   YEAR_IN_COLLEGE_OPTIONS,
   type YearInCollege,
 } from "@/lib/validation/profile";
+import { CountryCodePicker } from "@/components/country-code-picker";
+import { DobSelect } from "@/components/dob-select";
+import { DEFAULT_COUNTRY, splitPhoneNumber, type Country } from "@/lib/countries";
 
 export type ProfileSetupValues = {
   name: string;
@@ -44,8 +47,14 @@ export function ProfileSetupForm({
   error,
   onSubmit,
 }: ProfileSetupFormProps) {
+  const initialPhone = splitPhoneNumber(initialValues?.phone ?? "");
   const [name, setName] = useState(initialValues?.name ?? "");
-  const [phone, setPhone] = useState(initialValues?.phone ?? "");
+  const [phoneCountry, setPhoneCountry] = useState<Country>(
+    initialValues?.phone ? initialPhone.country : DEFAULT_COUNTRY,
+  );
+  const [phoneNational, setPhoneNational] = useState(
+    initialValues?.phone ? initialPhone.national : "",
+  );
   const [college, setCollege] = useState(initialValues?.college ?? "");
   const [degree, setDegree] = useState(initialValues?.degree ?? "");
   const [yearInCollege, setYearInCollege] = useState<YearInCollege | "">(
@@ -94,6 +103,11 @@ export function ProfileSetupForm({
   };
 
   const handleSubmit = () => {
+    const trimmedNational = phoneNational.trim();
+    const phone = trimmedNational
+      ? `+${phoneCountry.dialCode} ${trimmedNational}`
+      : "";
+
     const parsed = onboardingProfileSchema.safeParse({
       name,
       phone,
@@ -161,14 +175,21 @@ export function ProfileSetupForm({
 
       <View>
         <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">Phone number</Text>
-        <TextInput
-          value={phone}
-          onChangeText={setPhone}
-          placeholder="+44 7700 900000"
-          placeholderTextColor="#56615A"
-          keyboardType="phone-pad"
-          className={inputClassName}
-        />
+        <View className="flex-row gap-2">
+          <CountryCodePicker
+            value={phoneCountry}
+            onChange={setPhoneCountry}
+            disabled={loading}
+          />
+          <TextInput
+            value={phoneNational}
+            onChangeText={setPhoneNational}
+            placeholder="7700 900000"
+            placeholderTextColor="#56615A"
+            keyboardType="phone-pad"
+            className={`flex-1 ${inputClassName}`}
+          />
+        </View>
       </View>
 
       <View>
@@ -197,14 +218,7 @@ export function ProfileSetupForm({
         <Text className="mb-2 text-xs uppercase tracking-wide text-dono-muted">
           Date of birth
         </Text>
-        <TextInput
-          value={dateOfBirth}
-          onChangeText={setDateOfBirth}
-          placeholder="YYYY-MM-DD"
-          placeholderTextColor="#56615A"
-          autoCapitalize="none"
-          className={inputClassName}
-        />
+        <DobSelect value={dateOfBirth} onChange={setDateOfBirth} />
         <Text className="mt-1 text-xs text-dono-muted">
           You must be at least 18 to use Dono.
         </Text>
@@ -249,7 +263,7 @@ export function ProfileSetupForm({
       <Pressable
         onPress={handleSubmit}
         disabled={loading}
-        className={`items-center rounded-full bg-dono-primary py-3 ${
+        className={`retro-key items-center rounded-full bg-dono-primary py-3 ${
           loading ? "opacity-50" : ""
         }`}
       >

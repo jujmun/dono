@@ -11,33 +11,37 @@ import {
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
 import { useEffect, useRef, useState } from "react";
 import { usePostHog } from "posthog-react-native";
+import { Pencil, Heart, Share2, UserPlus, Flag } from "lucide-react-native";
 import {
   CampaignMediaHero,
-  CampaignPhotoGrid,
+  CampaignHeroProgressStrip,
   RECOMMENDED_DONATION_AMOUNT,
   RetroDonateSidebar,
   RetroPanel,
+  StoryWithCostBreakdown,
 } from "@/components/retro";
-import { AppShell } from "@/components/app-shell";
-import { CampaignCommentsSection } from "@/components/campaign-comments-section";
-import { RecentDonorsList } from "@/components/recent-donors-list";
 import {
-  ReceiptDivider,
-  ReceiptLedger,
-  ReceiptLineRow,
-  ReceiptTotalRow,
-} from "@/components/ui/receipt-lines";
-import { formatCurrency } from "@/lib/constants";
+  LEGAL_DOCUMENT_TITLES,
+  LEGAL_SUITE_VERSION,
+  legalVersionedHref,
+} from "@/lib/legal/documents";
+import type { LegalDocumentId } from "@/lib/legal/documents";
+import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
+import { CampaignCommentsSection } from "@/components/campaign-comments-section";
+import { ReportContentModal } from "@/components/report-content-modal";
+import { CampaignLiveStream } from "@/components/campaign-live-stream";
 import { buildGoalLineItems } from "@/lib/receipt";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import type { Campaign } from "@/lib/types";
-import type { DonationFrequency } from "@/components/donate-sheet-types";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
 import { CampaignUpdateDisplay } from "@/components/campaign-update-display";
 import { computeMatchCredit } from "@/lib/donation-psychology";
+import { getDisplayRaised } from "@/lib/constants";
+import { cn } from "@/lib/utils";
+import { AppShell } from "@/components/app-shell";
 
 type DonationThankYouState = {
   amount?: number;
@@ -61,6 +65,7 @@ export default function CampaignDetailPage() {
   const unlikeCampaign = useMutation(api.engagement.unlikeCampaign);
   const followCampaign = useMutation(api.engagement.followCampaign);
   const unfollowCampaign = useMutation(api.engagement.unfollowCampaign);
+  const createReport = useMutation(api.reports.createReport);
   const engagement = useQuery(
     api.engagement.isFollowing,
     id ? { campaignSlug: id } : "skip",
@@ -69,31 +74,49 @@ export default function CampaignDetailPage() {
     api.campaignMatches.getActiveForCampaign,
     id ? { campaignSlug: id } : "skip",
   );
-  const recentDonors = useQuery(
-    api.donations.listRecentForCampaign,
-    id ? { campaignSlug: id, limit: 8 } : "skip",
-  );
+  // activeMatch is always null after CR-02a; query retained so types stay wired.
+  void activeMatch;
   const posthog = usePostHog();
   const [selectedAmount, setSelectedAmount] = useState<number>(
     RECOMMENDED_DONATION_AMOUNT,
   );
   const [customAmount, setCustomAmount] = useState("");
-  const [frequency, setFrequency] = useState<DonationFrequency>("one_time");
   const [donorEmail, setDonorEmail] = useState("");
-  const [coverFees, setCoverFees] = useState(true);
+  const [isAnonymous, setIsAnonymous] = useState(true);
   const [legalAccepted, setLegalAccepted] = useState(false);
+  const [ageAttested, setAgeAttested] = useState(false);
+  const [coverFees, setCoverFees] = useState(true);
+  const [marketingOptIn, setMarketingOptIn] = useState(false);
+  const [showSupportPublicly, setShowSupportPublicly] = useState(false);
   const [donateSheetOpen, setDonateSheetOpen] = useState(false);
   const [thankYou, setThankYou] = useState<DonationThankYouState | null>(null);
   const [likeLoading, setLikeLoading] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const commentsSectionRef = useRef<View>(null);
   const campaign = useQuery(api.campaigns.getBySlug, {
     slug: id ?? "",
   }) as Campaign | null | undefined;
+  const mineForEdit = useQuery(
+    api.campaignCreator.getMineForEdit,
+    isAuthenticated && id ? { slug: id } : "skip",
+  );
+  const showEditPencil = Boolean(mineForEdit?.requiresApproval);
   const donationReadiness = useQuery(
     api.stripeConnectInternal.getCampaignDonationReadiness,
     id ? { campaignSlug: id } : "skip",
   );
+  const stripePlatform = useQuery(api.stripePlatform.isConfigured, {});
+  const commenterMembership = useQuery(
+    api.societyMembers.getMyMembership,
+    campaign ? { communitySlug: campaign.creator.communityId } : "skip",
+  );
+  const canComment =
+    commenterMembership === undefined
+      ? undefined
+      : commenterMembership?.status === "approved";
+
+  const clientStripeConfigured = Boolean(process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
   useEffect(() => {
     if (campaign) {
@@ -173,12 +196,25 @@ export default function CampaignDetailPage() {
   }
 
   const resolvedAmount = customAmount ? Number(customAmount) : selectedAmount;
+  const platformPaymentsReady =
+    stripePlatform?.configured === true && clientStripeConfigured;
   const donationsDisabled =
-    donationReadiness !== undefined && !donationReadiness.canAcceptDonations;
-  const donationsDisabledReason =
-    donationReadiness && !donationReadiness.canAcceptDonations
-      ? donationReadiness.reason
-      : undefined;
+    donationReadiness !== undefined &&
+    (!platformPaymentsReady || !donationReadiness.canAcceptDonations);
+  const donationsDisabledReason = (() => {
+    if (!platformPaymentsReady) {
+      if (stripePlatform?.configured === false) {
+        return "Payments are not configured on this deployment yet.";
+      }
+      if (!clientStripeConfigured) {
+        return "Payments are not configured for this site yet.";
+      }
+    }
+    if (donationReadiness && !donationReadiness.canAcceptDonations) {
+      return donationReadiness.reason;
+    }
+    return undefined;
+  })();
   const liked = engagement?.liked ?? false;
   const following = engagement?.followingCampaign ?? false;
   const deadlineLabel = new Date(campaign.deadline).toLocaleDateString(
@@ -196,7 +232,6 @@ export default function CampaignDetailPage() {
     : null;
   const accent = resolvedTemplate?.unlocks.accent;
   const heroLayout = resolvedTemplate?.unlocks.heroLayout ?? "media-first";
-  const showFrequencyToggle = Platform.OS === "web";
 
   const handleToggleLike = async () => {
     if (!id || likeLoading) return;
@@ -282,157 +317,118 @@ export default function CampaignDetailPage() {
       campaign_goal: campaign.goal,
       campaign_raised: campaign.raised,
       amount: resolvedAmount,
-      donation_type: frequency === "monthly" ? "recurring" : "one_time",
+      donation_type: "one_time",
     });
     setDonateSheetOpen(true);
   };
 
-  const donateSidebar = (
-    <RetroDonateSidebar
-      campaign={campaign}
-      selectedAmount={selectedAmount}
-      customAmount={customAmount}
-      frequency={frequency}
-      onFrequencyChange={setFrequency}
-      showFrequencyToggle={showFrequencyToggle}
-      activeMatch={activeMatch ?? null}
-      liked={liked}
-      following={following}
-      likeLoading={likeLoading}
-      followLoading={followLoading}
-      donationsDisabled={donationsDisabled}
-      donationsDisabledReason={donationsDisabledReason}
-      onSelectPreset={(amount) => {
-        setCustomAmount("");
-        setSelectedAmount(amount);
-        posthog?.capture("donation_amount_selected", {
-          campaign_id: campaign.id,
-          campaign_title: campaign.title,
-          amount,
-        });
-      }}
-      onCustomAmountChange={setCustomAmount}
-      onDonate={openDonateSheet}
-      onToggleLike={() => void handleToggleLike()}
-      onToggleFollow={() => void handleToggleFollow()}
-      onShare={() => void handleShare()}
-    />
-  );
-
-  const heroSection = (
-    <View
-      key="hero"
-      className="mb-6 flex-row flex-wrap gap-5"
-      style={{ alignItems: "flex-start" }}
-    >
-      <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "58%" : "100%",
-          maxWidth: isWide ? "64%" : "100%",
-          minWidth: 0,
-        }}
-      >
-        <CampaignMediaHero campaign={campaign} accent={accent} />
-      </View>
-      <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "30%" : "100%",
-          maxWidth: isWide ? "34%" : "100%",
-          minWidth: isWide ? 260 : undefined,
-        }}
-        className={isWide ? "lg:sticky lg:top-4" : ""}
-      >
-        {donateSidebar}
+  const donateAndUpdatesCard = (
+    <View className="gap-4">
+      <SocietyPayoutSetupBanner
+        slug={campaign.creator.communityId}
+        returnPath={`/campaigns/${encodeURIComponent(campaign.id)}`}
+      />
+      <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper">
+        <RetroDonateSidebar
+          campaign={campaign}
+          selectedAmount={selectedAmount}
+          customAmount={customAmount}
+          activeMatch={activeMatch ?? null}
+          donationsDisabled={donationsDisabled}
+          donationsDisabledReason={donationsDisabledReason}
+          embedded
+          onSelectPreset={(amount) => {
+            setCustomAmount("");
+            setSelectedAmount(amount);
+            posthog?.capture("donation_amount_selected", {
+              campaign_id: campaign.id,
+              campaign_title: campaign.title,
+              amount,
+            });
+          }}
+          onCustomAmountChange={setCustomAmount}
+          onDonate={openDonateSheet}
+        />
+        {id ? (
+          <View className="border-t-[3px] border-retro-ink">
+            <CampaignLiveStream
+              campaignSlug={id}
+              variant="panel"
+              connected
+            />
+          </View>
+        ) : null}
       </View>
     </View>
   );
 
-  const storyPanel = (
-    <RetroPanel title="Why?" accent={accent} className="mb-0 h-full">
-      <Text className="text-sm leading-6 text-retro-ink">{campaign.story}</Text>
-    </RetroPanel>
-  );
-
-  const breakdownPanel = (
-    <RetroPanel title="Cost breakdown" accent="sky" className="mb-0 h-full">
-      <ReceiptLedger>
-        {goalLines.map((line) => (
-          <ReceiptLineRow key={line.label} {...line} />
-        ))}
-        <ReceiptDivider />
-        <ReceiptTotalRow label="Total goal" amount={campaign.goal} />
-      </ReceiptLedger>
-      <Text className="mt-2 font-retro-mono text-[11px] text-[#5c574f]">
-        Raised {formatCurrency(campaign.raised)} of {formatCurrency(campaign.goal)}
-      </Text>
-    </RetroPanel>
-  );
-
-  const storyAndBreakdownSection = (
-    <View
-      key="story-breakdown"
-      className="mb-6 flex-row flex-wrap gap-5"
-      style={{ alignItems: "stretch" }}
-    >
-      <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "48%" : "100%",
-          maxWidth: isWide ? "50%" : "100%",
-        }}
-      >
-        {storyPanel}
-      </View>
-      <View
-        style={{
-          flexGrow: 1,
-          flexBasis: isWide ? "45%" : "100%",
-          maxWidth: isWide ? "48%" : "100%",
-        }}
-      >
-        {breakdownPanel}
-      </View>
+  const mediaBlock = (
+    <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-cream">
+      <CampaignMediaHero
+        campaign={campaign}
+        accent={accent}
+        embedded
+        thumbnailsAlign="end"
+        className="w-full"
+      />
+      <CampaignHeroProgressStrip
+        raised={getDisplayRaised(campaign)}
+        goal={campaign.goal}
+      />
     </View>
   );
 
-  const galleryGridSection = (
-    <View key="gallery" className="mb-6">
-      <CampaignPhotoGrid campaign={campaign} accent={accent} />
+  const whyBlock = (
+    <View className="gap-2">
+      <StoryWithCostBreakdown
+        story={campaign.story}
+        goalLines={goalLines}
+        goal={campaign.goal}
+        accent={accent}
+      />
+      {campaign.ownershipStatement ? (
+        <Text className="px-0.5 font-retro-mono text-[10px] leading-4 text-[#5c574f]">
+          Ownership: {campaign.ownershipStatement}
+        </Text>
+      ) : null}
     </View>
   );
 
-  const pageSections = (() => {
-    switch (heroLayout) {
-      case "gallery-grid":
-        return [heroSection, galleryGridSection, storyAndBreakdownSection];
-      case "text-first":
-        return [
-          <View key="story" className="mb-6">
-            {storyPanel}
-          </View>,
-          heroSection,
-          <View key="breakdown" className="mb-6">
-            {breakdownPanel}
-          </View>,
-          galleryGridSection,
-        ];
-      case "ledger-first":
-        return [
-          <View key="breakdown" className="mb-6">
-            {breakdownPanel}
-          </View>,
-          heroSection,
-          <View key="story" className="mb-6">
-            {storyPanel}
-          </View>,
-          galleryGridSection,
-        ];
-      default:
-        return [heroSection, storyAndBreakdownSection, galleryGridSection];
-    }
-  })();
+  // GoFundMe-style: left = media + story; right = linked donate + updates card.
+  const mainColumn =
+    heroLayout === "text-first" || heroLayout === "ledger-first" ? (
+      <View className="min-w-0 flex-1 gap-5">
+        {whyBlock}
+        {mediaBlock}
+      </View>
+    ) : (
+      <View className="min-w-0 flex-1 gap-5">
+        {mediaBlock}
+        {whyBlock}
+      </View>
+    );
+
+  const pageSections = isWide ? (
+    <View key="gfm-layout" className="mb-6 flex-row items-start gap-6">
+      {mainColumn}
+      <View
+        className="w-80 shrink-0 self-start"
+        style={
+          Platform.OS === "web"
+            ? ({ position: "sticky", top: 16, zIndex: 20 } as const)
+            : undefined
+        }
+      >
+        {donateAndUpdatesCard}
+      </View>
+    </View>
+  ) : (
+    <View key="gfm-layout-narrow" className="mb-6 gap-5">
+      {mediaBlock}
+      {donateAndUpdatesCard}
+      {whyBlock}
+    </View>
+  );
 
   return (
     <AppShell>
@@ -445,59 +441,96 @@ export default function CampaignDetailPage() {
       </Link>
 
       <View className="mb-1.5 flex-row flex-wrap items-center gap-2">
-        <Text className="font-retro-bold text-[28px] uppercase leading-tight text-retro-ink md:text-[34px]">
+        <Text
+          className={cn(
+            "font-retro-display uppercase leading-tight text-retro-ink",
+            isWide ? "max-w-full text-[34px]" : "w-full text-[22px]",
+          )}
+        >
           {campaign.title}
         </Text>
-        {activeMatch ? (
-          <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2.5 py-0.5">
-            <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
-              MATCHED {activeMatch.multiplier}×
-            </Text>
-          </View>
+        {showEditPencil ? (
+          <Link href={`/create?editSlug=${campaign.id}`} asChild>
+            <Pressable
+              accessibilityLabel="Edit campaign"
+              className="h-8 w-8 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream"
+            >
+              <Pencil size={14} color="#211E1A" />
+            </Pressable>
+          </Link>
         ) : null}
-        {campaign.verifications.length > 0 ? (
-          <View
-            className="h-5 w-5 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-mint"
-            accessibilityLabel="Verified campaign"
-          >
-            <Text className="text-[11px] font-bold text-white">✓</Text>
-          </View>
-        ) : null}
+        {/* CR-02a: match window badge removed */}
       </View>
 
-      <View className="mb-6 flex-row items-center gap-2.5">
-        <View className="h-8 w-8 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
-          <Text className="font-retro-bold text-sm text-retro-ink">
-            {creatorInitial}
-          </Text>
-        </View>
-        <View className="flex-1">
-          <Text className="font-retro-bold text-sm text-retro-ink">
-            {campaign.creator.name}
-          </Text>
-          <Text className="font-retro-mono text-[11px] text-[#5c574f]">
-            Deadline {deadlineLabel}
-          </Text>
-          <Text className="mt-1 text-xs leading-relaxed text-[#5c574f]">
-            Donations are paid to this society&apos;s Stripe Connected Account. The
-            Connected Account holder is the Merchant of Record. Dono receives only its
-            platform fee.
-          </Text>
-          {campaign.ownershipStatement ? (
-            <Text className="mt-1 text-xs text-[#5c574f]">
-              Ownership: {campaign.ownershipStatement}
+      <View className="mb-6 w-full gap-2">
+        <View className="w-full flex-row items-center gap-2.5">
+          <View className="h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-retro-ink bg-retro-cream">
+            <Text className="font-retro-bold text-base text-retro-ink">
+              {creatorInitial}
             </Text>
-          ) : null}
+          </View>
+          <View className="min-w-0 flex-1">
+            <Text className="font-retro-bold text-sm text-retro-ink">
+              {campaign.creator.name}
+            </Text>
+            <Text className="font-retro-mono text-[11px] text-[#5c574f]">
+              Deadline {deadlineLabel}
+            </Text>
+          </View>
+          <View className="shrink-0 flex-row items-center gap-1.5">
+            <Pressable
+              onPress={() => void handleToggleLike()}
+              disabled={likeLoading}
+              accessibilityLabel={liked ? "Unlike" : "Like"}
+              className={`retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink ${
+                liked ? "bg-retro-cream" : "bg-retro-paper"
+              }`}
+            >
+              {likeLoading ? (
+                <ActivityIndicator size="small" color="#211E1A" />
+              ) : (
+                <Heart
+                  size={16}
+                  color="#211E1A"
+                  fill={liked ? "#F2542D" : "transparent"}
+                />
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => void handleToggleFollow()}
+              disabled={followLoading}
+              accessibilityLabel={following ? "Unfollow" : "Follow"}
+              className={`retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink ${
+                following ? "bg-retro-cream" : "bg-retro-paper"
+              }`}
+            >
+              {followLoading ? (
+                <ActivityIndicator size="small" color="#211E1A" />
+              ) : (
+                <UserPlus size={16} color="#211E1A" />
+              )}
+            </Pressable>
+            <Pressable
+              onPress={() => void handleShare()}
+              accessibilityLabel="Share campaign"
+              className="retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper"
+            >
+              <Share2 size={16} color="#211E1A" />
+            </Pressable>
+            <Pressable
+              onPress={() =>
+                isAuthenticated ? setReportOpen(true) : router.push("/signin")
+              }
+              accessibilityLabel="Report campaign"
+              className="retro-key h-10 w-10 items-center justify-center rounded-lg border-2 border-retro-ink bg-retro-paper"
+            >
+              <Flag size={16} color="#211E1A" />
+            </Pressable>
+          </View>
         </View>
       </View>
 
       {pageSections}
-
-      <View className="mb-6">
-        <RetroPanel title="Recent donors" accent="mint">
-          <RecentDonorsList donors={recentDonors ?? []} />
-        </RetroPanel>
-      </View>
 
       {campaign.additionalNotes ? (
         <View className="mb-6">
@@ -515,6 +548,7 @@ export default function CampaignDetailPage() {
             ref={commentsSectionRef}
             campaignSlug={campaign.id}
             isAuthenticated={isAuthenticated}
+            canComment={canComment}
             embedded
           />
         </RetroPanel>
@@ -530,10 +564,18 @@ export default function CampaignDetailPage() {
         isAuthenticated={isAuthenticated}
         donorEmail={donorEmail}
         onDonorEmailChange={setDonorEmail}
-        coverFees={coverFees}
-        onCoverFeesChange={setCoverFees}
+        isAnonymous={isAnonymous}
+        onAnonymousChange={setIsAnonymous}
         legalAccepted={legalAccepted}
         onLegalAcceptedChange={setLegalAccepted}
+        ageAttested={ageAttested}
+        onAgeAttestedChange={setAgeAttested}
+        coverFees={coverFees}
+        onCoverFeesChange={setCoverFees}
+        marketingOptIn={marketingOptIn}
+        onMarketingOptInChange={setMarketingOptIn}
+        showSupportPublicly={showSupportPublicly}
+        onShowSupportPubliclyChange={setShowSupportPublicly}
         onClose={() => setDonateSheetOpen(false)}
         onSuccess={(amount, options) => {
           const matchedAmount = computeMatchCredit(amount, activeMatch ?? null);
@@ -544,7 +586,6 @@ export default function CampaignDetailPage() {
             paymentIntentId: options?.paymentIntentId,
           });
         }}
-        frequency={showFrequencyToggle ? frequency : "one_time"}
       />
 
       <DonationThankYouModal
@@ -555,7 +596,32 @@ export default function CampaignDetailPage() {
         campaignSlug={campaign.id}
         pendingConfirmation={thankYou?.pendingConfirmation}
         paymentIntentId={thankYou?.paymentIntentId}
+        legalVersions={(
+          [
+            "donor_terms",
+            "refund_dispute",
+            "terms_of_service",
+            "privacy",
+          ] as LegalDocumentId[]
+        ).map((id) => ({
+          title: LEGAL_DOCUMENT_TITLES[id],
+          version: LEGAL_SUITE_VERSION,
+          href: legalVersionedHref(id),
+        }))}
         onClose={() => setThankYou(null)}
+      />
+
+      <ReportContentModal
+        visible={reportOpen}
+        label="campaign"
+        onClose={() => setReportOpen(false)}
+        onSubmit={async (reason) => {
+          await createReport({
+            targetType: "campaign",
+            campaignSlug: campaign.id,
+            reason,
+          });
+        }}
       />
     </AppShell>
   );

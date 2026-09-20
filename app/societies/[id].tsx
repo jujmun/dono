@@ -1,4 +1,4 @@
-import { Link, useLocalSearchParams, useRouter } from "expo-router";
+import { Link, useLocalSearchParams, useRouter, type Href } from "expo-router";
 import {
   View,
   Text,
@@ -10,32 +10,38 @@ import {
   Image,
 } from "react-native";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
-import { useEffect, useState } from "react";
+import { useState, type ReactNode } from "react";
 import * as ImagePicker from "expo-image-picker";
 import {
   UserPlus,
+  UserMinus,
   ArrowLeft,
-  Target,
   Globe,
   ExternalLink,
   Check,
   X,
-  Banknote,
+  Share2,
+  Pencil,
+  Shield,
+  Flag,
 } from "lucide-react-native";
-import { usePostHog } from "posthog-react-native";
-import * as ExpoLinking from "expo-linking";
 import { AppShell } from "@/components/app-shell";
+import { ReportContentModal } from "@/components/report-content-modal";
+import { SocietyFollowButton } from "@/components/society-follow-button";
+import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
+import { LeaderDonationLedger } from "@/components/leader-donation-ledger";
 import { CampaignImage } from "@/components/ui/campaign-image";
-import { VerificationBadge } from "@/components/ui/verification-badge";
 import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency } from "@/lib/constants";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
+import { getFriendlyPaymentError } from "@/lib/stripe/errors";
 import { initialsFor, normalizeExternalUrl } from "@/lib/utils";
+import { StoryText } from "@/components/story-text";
 import {
   uploadCampaignUpdateMedia,
   type CampaignUpdateMediaUpload,
 } from "@/lib/upload-campaign-update-media";
-import type { Campaign, Community, Society, VerificationType } from "@/lib/types";
+import type { Campaign, Community, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 
@@ -54,9 +60,18 @@ export default function SocietyOrCommunityPage() {
     api.societies.getPublicBySlug,
     id ? { slug: id } : "skip",
   ) as Society | null | undefined;
-  const community = useQuery(api.communities.getBySlug, {
+  const communityLookup = useQuery(api.communities.getBySlug, {
     slug: id ?? "",
-  }) as Community | null | undefined;
+  }) as
+    | { society: Community; membership: unknown }
+    | null
+    | undefined;
+  const community =
+    communityLookup === undefined
+      ? undefined
+      : communityLookup === null
+        ? null
+        : communityLookup.society;
 
   if (society === undefined || (society === null && community === undefined)) {
     return (
@@ -88,7 +103,9 @@ export default function SocietyOrCommunityPage() {
         <Text className="text-center text-dono-muted">Society not found.</Text>
         <Link href="/societies" asChild>
           <Pressable className="mt-4 items-center">
-            <Text className="font-retro-bold text-dono-primary">Back to societies</Text>
+            <Text className="font-retro-bold text-dono-primary">
+              Back to communities
+            </Text>
           </Pressable>
         </Link>
       </View>
@@ -115,6 +132,69 @@ const statusBanners = {
   },
 } as const;
 
+function SocietyEditPencil({
+  slug,
+  orgType,
+}: {
+  slug: string;
+  orgType?: "college" | "society" | null;
+}) {
+  const { isAuthenticated } = useConvexAuth();
+  const editAccess = useQuery(
+    api.societies.getMineForEdit,
+    isAuthenticated ? { slug } : "skip",
+  );
+  if (!editAccess?.requiresApproval) return null;
+  const href = (
+    orgType === "college"
+      ? `/create-college?editSlug=${slug}`
+      : `/create-society?editSlug=${slug}`
+  ) as Href;
+  return (
+    <Link href={href} asChild>
+      <Pressable
+        accessibilityLabel="Edit society"
+        className="h-8 w-8 shrink-0 items-center justify-center rounded-full border border-dono-border bg-white"
+      >
+        <Pencil size={14} color="#56615A" />
+      </Pressable>
+    </Link>
+  );
+}
+
+function SocietyBackLink() {
+  return (
+    <Link href="/societies" asChild>
+      <Pressable className="mb-5 flex-row items-center gap-1 self-start">
+        <ArrowLeft size={16} color="#56615A" />
+        <Text className="text-sm text-dono-muted">Back to communities</Text>
+      </Pressable>
+    </Link>
+  );
+}
+
+function SocietyPageSection({
+  title,
+  subtitle,
+  children,
+}: {
+  title: string;
+  subtitle?: string;
+  children: ReactNode;
+}) {
+  return (
+    <View className="gap-3">
+      <View className="gap-1">
+        <Text className="font-retro-display text-lg text-dono-text">{title}</Text>
+        {subtitle ? (
+          <Text className="text-sm text-dono-muted">{subtitle}</Text>
+        ) : null}
+      </View>
+      {children}
+    </View>
+  );
+}
+
 function SocietyDetail({
   society,
   community,
@@ -131,16 +211,13 @@ function SocietyDetail({
   const banner =
     society.status !== "active" ? statusBanners[society.status] : null;
   const canJoin = society.status === "active" && Boolean(community);
+  const orgLabel =
+    society.orgType === "college" ? "College" : "Student society";
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-7xl px-4 py-6">
-        <Link href="/societies" asChild>
-          <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">Back to societies</Text>
-          </Pressable>
-        </Link>
+      <View className="mx-auto w-full max-w-3xl px-4 py-6 pb-14">
+        <SocietyBackLink />
 
         {banner ? (
           <View className={`mb-6 rounded-2xl border p-4 ${banner.container}`}>
@@ -151,76 +228,52 @@ function SocietyDetail({
           </View>
         ) : null}
 
-        <CampaignImage
-          image={society.coverImageUrl ?? "default"}
-          className="mb-6 h-48 rounded-2xl"
-        />
-
-        <View className="mb-8 gap-4">
+        {/* 1. Identity */}
+        <View className="mb-10 gap-5">
+          <CampaignImage
+            image={society.coverImageUrl ?? "default"}
+            className="h-52 w-full rounded-2xl"
+          />
           <View className="flex-row items-start gap-4">
-            <View className="h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="font-retro-mono-bold text-xl text-white">
+            <View className="h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
+              <Text className="font-retro-mono-bold text-lg text-white">
                 {initialsFor(society.name)}
               </Text>
             </View>
-            <View className="flex-1">
-              <Text className="font-retro-bold text-2xl text-dono-text">
-                {society.name}
-              </Text>
-              <Text className="mt-1 text-sm text-dono-muted">
-                Student society · On Dono since {joinedDate}
-              </Text>
-              <Text className="mt-2 leading-relaxed text-dono-muted">
-                {society.description}
+            <View className="min-w-0 flex-1 gap-1">
+              <View className="flex-row items-start gap-2">
+                <Text className="min-w-0 flex-1 font-retro-display text-2xl leading-tight text-dono-text">
+                  {society.name}
+                </Text>
+                <SocietyEditPencil slug={slug} orgType={society.orgType} />
+              </View>
+              <Text className="text-sm text-dono-muted">
+                {orgLabel} · On Dono since {joinedDate}
               </Text>
             </View>
           </View>
 
-          {society.websiteUrl || society.secondaryLink ? (
-            <View className="flex-row flex-wrap gap-3">
-              {society.websiteUrl ? (
-                <Pressable
-                  onPress={() =>
-                    void Linking.openURL(normalizeExternalUrl(society.websiteUrl))
-                  }
-                  className="flex-row items-center justify-center gap-2 rounded-full bg-dono-primary px-5 py-2.5"
-                >
-                  <Globe size={16} color="#fff" />
-                  <Text className="font-retro-bold text-sm text-white">
-                    Visit website
-                  </Text>
-                </Pressable>
-              ) : null}
-              {society.secondaryLink ? (
-                <Pressable
-                  onPress={() =>
-                    void Linking.openURL(
-                      normalizeExternalUrl(society.secondaryLink ?? ""),
-                    )
-                  }
-                  className="flex-row items-center justify-center gap-2 rounded-full border border-dono-border bg-white px-5 py-2.5"
-                >
-                  <ExternalLink size={16} color="#17211B" />
-                  <Text className="font-retro-bold text-sm text-dono-primary">
-                    More links
-                  </Text>
-                </Pressable>
-              ) : null}
-            </View>
-          ) : null}
-
-          {canJoin ? <MembershipActions slug={slug} community={community!} /> : null}
-          <SocietyPayoutSetupBanner slug={slug} />
+          <SocietyActionHeader
+            slug={slug}
+            websiteUrl={society.websiteUrl}
+            secondaryLink={society.secondaryLink}
+            socialUrl={society.socialUrl}
+            canJoin={canJoin}
+          />
         </View>
 
-        <View className="mb-8">
-          <Text className="mb-3 text-lg font-retro-bold text-dono-text">About</Text>
-          <View className="rounded-2xl border border-dono-border bg-white p-6">
-            <Text className="leading-relaxed text-dono-text">{society.story}</Text>
-          </View>
+        {/* 2. About */}
+        <View className="mb-10">
+          <SocietyPageSection title="About">
+            <StoryText
+              text={society.story}
+              className="leading-relaxed text-dono-text"
+            />
+          </SocietyPageSection>
         </View>
 
-        {canJoin ? <SocietyCampaignsAndLeaderPanels slug={slug} /> : null}
+        {/* 3. Public campaigns, then 4. leader tools, then 5. leave */}
+        {canJoin ? <SocietyBody slug={slug} /> : null}
       </View>
     </AppShell>
   );
@@ -237,333 +290,66 @@ function CommunityDetail({
 
   return (
     <AppShell>
-      <View className="mx-auto w-full max-w-7xl px-4 py-6">
-        <Link href="/societies" asChild>
-          <Pressable className="mb-4 flex-row items-center gap-1">
-            <ArrowLeft size={16} color="#56615A" />
-            <Text className="text-sm text-dono-muted">Back to societies</Text>
-          </Pressable>
-        </Link>
+      <View className="mx-auto w-full max-w-3xl px-4 py-6 pb-14">
+        <SocietyBackLink />
 
-        <CampaignImage image={community.coverImage} className="mb-6 h-48 rounded-2xl" />
-
-        <View className="mb-8 gap-4">
+        <View className="mb-10 gap-5">
+          <CampaignImage
+            image={community.coverImage}
+            className="h-52 w-full rounded-2xl"
+          />
           <View className="flex-row items-start gap-4">
-            <View className="h-16 w-16 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="font-retro-mono-bold text-xl text-white">{community.avatar}</Text>
+            <View className="h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
+              <Text className="font-retro-mono-bold text-lg text-white">
+                {community.avatar}
+              </Text>
             </View>
-            <View className="flex-1">
-              <View className="mb-2 flex-row flex-wrap items-center gap-2">
-                <Text className="font-retro-bold text-2xl text-dono-text">{community.name}</Text>
-                {community.verified && community.verificationType && (
-                  <VerificationBadge
-                    verification={{
-                      type: community.verificationType as VerificationType,
-                      label: "Verified",
-                    }}
-                  />
-                )}
+            <View className="min-w-0 flex-1 gap-1">
+              <View className="flex-row flex-wrap items-center gap-2">
+                <Text className="font-retro-display text-2xl leading-tight text-dono-text">
+                  {community.name}
+                </Text>
               </View>
               <Text className="text-sm text-dono-muted">{community.university}</Text>
-              <Text className="mt-2 leading-relaxed text-dono-muted">
-                {community.description}
+              <Text className="mt-1 font-retro-mono text-xs text-dono-muted">
+                {community.followers.toLocaleString()} followers ·{" "}
+                {community.campaigns} campaigns ·{" "}
+                {formatCurrency(community.totalRaised)} raised
               </Text>
             </View>
           </View>
 
           {isSociety ? (
-            <MembershipActions slug={slug} community={community} showFollow />
+            <SocietyActionHeader slug={slug} canJoin />
           ) : (
-            <FollowOnlyButton community={community} slug={slug} />
+            <SocietyFollowButton
+              slug={slug}
+              name={community.name}
+              university={community.university}
+            />
           )}
-          {isSociety ? <SocietyPayoutSetupBanner slug={slug} /> : null}
         </View>
 
-        <View className="mb-8 flex-row gap-4">
-          {[
-            { label: "Followers", value: community.followers.toLocaleString() },
-            { label: "Campaigns", value: community.campaigns.toString() },
-            {
-              label: "Total Raised",
-              value: formatCurrency(community.totalRaised),
-            },
-          ].map((stat) => (
-            <View
-              key={stat.label}
-              className="flex-1 rounded-2xl border border-dono-border bg-white p-4"
-            >
-              <Text className="text-center font-retro-bold text-xl text-dono-text">
-                {stat.value}
+        {community.description ? (
+          <View className="mb-10">
+            <SocietyPageSection title="About">
+              <Text className="leading-relaxed text-dono-text">
+                {community.description}
               </Text>
-              <Text className="text-center text-xs text-dono-muted">{stat.label}</Text>
-            </View>
-          ))}
-        </View>
+            </SocietyPageSection>
+          </View>
+        ) : null}
 
-        <SocietyCampaignsAndLeaderPanels slug={slug} />
+        {isSociety ? <SocietyBody slug={slug} /> : null}
       </View>
     </AppShell>
   );
 }
 
-function FollowOnlyButton({
-  community,
-  slug,
-}: {
-  community: Community;
-  slug: string;
-}) {
-  const { isAuthenticated } = useConvexAuth();
-  const router = useRouter();
-  const posthog = usePostHog();
-  const followCommunity = useMutation(api.engagement.followCommunity);
-  const unfollowCommunity = useMutation(api.engagement.unfollowCommunity);
-  const engagement = useQuery(
-    api.engagement.isFollowing,
-    slug ? { communitySlug: slug } : "skip",
-  );
-  const [followLoading, setFollowLoading] = useState(false);
-  const following = engagement?.followingCommunity ?? false;
-
-  const handleToggleFollow = async () => {
-    if (!slug || followLoading) return;
-    if (!isAuthenticated) {
-      router.push("/signin");
-      return;
-    }
-    setFollowLoading(true);
-    try {
-      if (following) {
-        await unfollowCommunity({ communitySlug: slug });
-      } else {
-        await followCommunity({ communitySlug: slug });
-        posthog?.capture("community_followed", {
-          community_id: community.id,
-          community_name: community.name,
-          community_university: community.university,
-        });
-      }
-    } finally {
-      setFollowLoading(false);
-    }
-  };
-
-  return (
-    <Pressable
-      onPress={() => void handleToggleFollow()}
-      disabled={followLoading}
-      className={`flex-row items-center justify-center gap-2 rounded-full px-5 py-2.5 ${
-        following ? "border border-dono-primary bg-dono-primary/5" : "bg-dono-primary"
-      }`}
-    >
-      {followLoading ? (
-        <ActivityIndicator size="small" color={following ? "#17211B" : "#fff"} />
-      ) : (
-        <UserPlus size={16} color={following ? "#17211B" : "#fff"} />
-      )}
-      <Text
-        className={`font-retro-bold text-sm ${
-          following ? "text-dono-primary" : "text-white"
-        }`}
-      >
-        {following ? "Following" : "Follow"}
-      </Text>
-    </Pressable>
-  );
-}
-
-function SocietyPayoutSetupBanner({ slug }: { slug: string }) {
-  const { isAuthenticated } = useConvexAuth();
-  const mine = useQuery(
-    api.societies.getMine,
-    isAuthenticated && slug ? { slug } : "skip",
-  );
-  const membership = useQuery(
-    api.societyMembers.getMyMembership,
-    isAuthenticated && slug ? { communitySlug: slug } : "skip",
-  );
-  const connectStatus = useQuery(
-    api.stripeConnectInternal.getSocietyConnectStatus,
-    isAuthenticated && slug ? { communitySlug: slug } : "skip",
-  );
-  const createConnectOnboardingLink = useAction(
-    api.stripeConnect.createConnectOnboardingLink,
-  );
-  const createConnectDashboardLink = useAction(
-    api.stripeConnect.createConnectDashboardLink,
-  );
-  const refreshConnectAccountStatus = useAction(
-    api.stripeConnect.refreshConnectAccountStatus,
-  );
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [dashboardLoginEmail, setDashboardLoginEmail] = useState<string | null>(
-    null,
-  );
-
-  const isCreator = Boolean(mine);
-  const isLeader =
-    membership?.status === "approved" && membership.role === "leader";
-  const canManage = isCreator || isLeader;
-  const needsSetup =
-    canManage &&
-    connectStatus !== undefined &&
-    connectStatus !== null &&
-    (!connectStatus.cardPaymentsActive ||
-      connectStatus.requiresMerchantReonboarding === true);
-  const canOpenDashboard =
-    canManage &&
-    connectStatus !== undefined &&
-    connectStatus !== null &&
-    connectStatus.accountVersion === "v2" &&
-    connectStatus.cardPaymentsActive === true;
-
-  // Refresh status when landing back on this page after Stripe (or on mount).
-  useEffect(() => {
-    if (!isAuthenticated || !slug || !canManage) return;
-    // Only refresh Stripe when a v2 merchant account already exists.
-    if (!connectStatus?.exists || connectStatus.accountVersion !== "v2") {
-      return;
-    }
-    void refreshConnectAccountStatus({ communitySlug: slug }).catch(() => {});
-  }, [
-    isAuthenticated,
-    slug,
-    canManage,
-    connectStatus?.exists,
-    connectStatus?.accountVersion,
-    refreshConnectAccountStatus,
-  ]);
-
-  const handleOpenDashboard = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const { url, loginEmail } = await createConnectDashboardLink({
-        communitySlug: slug,
-      });
-      if (loginEmail) setDashboardLoginEmail(loginEmail);
-      await Linking.openURL(url);
-    } catch (err) {
-      setError(getFriendlyAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleComplete = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const returnUrl =
-        Platform.OS === "web" && typeof window !== "undefined"
-          ? `${window.location.origin}/societies/${encodeURIComponent(slug)}`
-          : ExpoLinking.createURL(`/societies/${slug}`);
-      const { url } = await createConnectOnboardingLink({
-        communitySlug: slug,
-        returnUrl,
-        refreshUrl: returnUrl,
-      });
-      await Linking.openURL(url);
-      void refreshConnectAccountStatus({ communitySlug: slug }).catch(() => {});
-    } catch (err) {
-      setError(getFriendlyAuthError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  if (!needsSetup && !canOpenDashboard) return null;
-
-  // Prefer upgrade/setup CTA whenever merchant onboarding is incomplete.
-  if (needsSetup) {
-    return (
-      <View className="rounded-2xl border border-amber-200 bg-amber-50 p-4">
-        <View className="mb-2 flex-row items-center gap-2">
-          <Banknote size={16} color="#b45309" />
-          <Text className="font-retro-bold text-sm text-amber-900">
-            Complete payout setup
-          </Text>
-        </View>
-        <Text className="mb-3 text-xs leading-relaxed text-amber-800">
-          {connectStatus?.requiresMerchantReonboarding
-            ? "This society still has the old Stripe payout account. Complete the new Stripe merchant setup so it can accept campaign donations directly. Dono will collect a 5% platform fee on each gift."
-            : "Finish connecting a Stripe merchant account so this society can accept campaign donations directly. Dono will collect a 5% platform fee on each gift."}
-        </Text>
-        <Pressable
-          onPress={() => void handleComplete()}
-          disabled={loading}
-          className={`flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2 ${
-            loading ? "opacity-50" : ""
-          }`}
-        >
-          {loading ? (
-            <ActivityIndicator size="small" color="#fff" />
-          ) : (
-            <Text className="font-retro-bold text-xs text-white">
-              {connectStatus?.requiresMerchantReonboarding
-                ? "Upgrade Stripe payment setup"
-                : connectStatus?.exists
-                  ? "Continue payout setup"
-                  : "Set up payouts with Stripe"}
-            </Text>
-          )}
-        </Pressable>
-        {error ? <Text className="mt-2 text-xs text-rose-700">{error}</Text> : null}
-      </View>
-    );
-  }
-
-  return (
-    <View className="rounded-2xl border border-green-200 bg-green-50 p-4">
-      <View className="mb-2 flex-row items-center gap-2">
-        <Banknote size={16} color="#15803d" />
-        <Text className="font-retro-bold text-sm text-green-900">
-          Stripe payments active
-        </Text>
-      </View>
-      <Text className="mb-3 text-xs leading-relaxed text-green-800">
-        This society can accept campaign donations directly. Dono collects a 5%
-        platform fee on each gift.
-      </Text>
-      <Pressable
-        onPress={() => void handleOpenDashboard()}
-        disabled={loading}
-        className={`flex-row items-center justify-center gap-2 self-start rounded-full bg-dono-primary px-4 py-2 ${
-          loading ? "opacity-50" : ""
-        }`}
-      >
-        {loading ? (
-          <ActivityIndicator size="small" color="#fff" />
-        ) : (
-          <Text className="font-retro-bold text-xs text-white">
-            Open Stripe dashboard
-          </Text>
-        )}
-      </Pressable>
-      <Text className="mt-2 text-xs leading-relaxed text-green-800">
-        {dashboardLoginEmail
-          ? `Sign in to Stripe with ${dashboardLoginEmail} (the email used during Connect onboarding).`
-          : "Sign in to Stripe with the email used during Connect onboarding."}
-      </Text>
-      {error ? <Text className="mt-2 text-xs text-rose-700">{error}</Text> : null}
-    </View>
-  );
-}
-
-function MembershipActions({
-  slug,
-  community,
-  showFollow = false,
-}: {
-  slug: string;
-  community: Community;
-  showFollow?: boolean;
-}) {
+function MembershipActions({ slug }: { slug: string }) {
   const { isAuthenticated } = useConvexAuth();
   const router = useRouter();
   const requestJoin = useMutation(api.societyMembers.requestJoin);
-  const leaveSociety = useMutation(api.societyMembers.leaveSociety);
   const membership = useQuery(
     api.societyMembers.getMyMembership,
     isAuthenticated && slug ? { communitySlug: slug } : "skip",
@@ -590,6 +376,64 @@ function MembershipActions({
     }
   };
 
+  if (status === "approved") {
+    return (
+      <View className="flex-row items-center gap-2 rounded-full border border-dono-border bg-dono-surface-muted px-3.5 py-2">
+        <Check size={14} color="#56615A" />
+        <Text className="font-retro-bold text-sm text-dono-muted">
+          {role === "leader" ? "Leader" : "Member"}
+        </Text>
+      </View>
+    );
+  }
+
+  const isPending = status === "pending";
+
+  return (
+    <View className="gap-1.5">
+      <Pressable
+        onPress={() => {
+          if (!isPending) void handleJoin();
+        }}
+        disabled={loading || isPending}
+        accessibilityRole="button"
+        accessibilityLabel={isPending ? "Join request pending" : "Request to join"}
+        className={`flex-row items-center justify-center gap-2 rounded-full border px-4 py-2.5 ${
+          isPending
+            ? "border-amber-300 bg-amber-50 opacity-90"
+            : "border-dono-primary bg-dono-primary"
+        }`}
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color={isPending ? "#17211B" : "#fff"} />
+        ) : (
+          <UserPlus size={14} color={isPending ? "#17211B" : "#fff"} />
+        )}
+        <Text
+          className={`font-retro-bold text-sm ${
+            isPending ? "text-dono-text" : "text-white"
+          }`}
+        >
+          {isPending ? "Join request pending" : "Request to join"}
+        </Text>
+      </Pressable>
+      {error ? <Text className="text-xs text-rose-700">{error}</Text> : null}
+    </View>
+  );
+}
+
+function LeaveSocietyButton({ slug }: { slug: string }) {
+  const { isAuthenticated } = useConvexAuth();
+  const leaveSociety = useMutation(api.societyMembers.leaveSociety);
+  const membership = useQuery(
+    api.societyMembers.getMyMembership,
+    isAuthenticated && slug ? { communitySlug: slug } : "skip",
+  );
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  if (membership?.status !== "approved") return null;
+
   const handleLeave = async () => {
     setLoading(true);
     setError(null);
@@ -602,101 +446,241 @@ function MembershipActions({
     }
   };
 
-  let joinLabel = "Request to join";
-  if (status === "pending") joinLabel = "Join request pending";
-  if (status === "approved") {
-    joinLabel = role === "leader" ? "You're a leader" : "You're a member";
-  }
-
   return (
     <View className="gap-2">
-      <View className="flex-row flex-wrap gap-3">
-        <Pressable
-          onPress={() => {
-            if (status === "approved") {
-              void handleLeave();
-            } else if (status !== "pending") {
-              void handleJoin();
-            }
-          }}
-          disabled={loading || status === "pending"}
-          className={`flex-row items-center justify-center gap-2 rounded-full px-5 py-2.5 ${
-            status === "approved"
-              ? "border border-dono-primary bg-dono-primary/5"
-              : status === "pending"
-                ? "border border-amber-300 bg-amber-50 opacity-80"
-                : "bg-dono-primary"
-          }`}
-        >
-          {loading ? (
-            <ActivityIndicator
-              size="small"
-              color={status === "approved" || status === "pending" ? "#17211B" : "#fff"}
-            />
-          ) : (
-            <UserPlus
-              size={16}
-              color={
-                status === "approved" || status === "pending" ? "#17211B" : "#fff"
-              }
-            />
-          )}
-          <Text
-            className={`font-retro-bold text-sm ${
-              status === "approved" || status === "pending"
-                ? "text-dono-primary"
-                : "text-white"
-            }`}
-          >
-            {status === "approved" ? "Leave society" : joinLabel}
-          </Text>
-        </Pressable>
-        {showFollow ? <FollowOnlyButton community={community} slug={slug} /> : null}
-      </View>
-      {status === "approved" && role === "leader" ? (
-        <Text className="text-xs text-dono-muted">
-          As a leader you can approve join requests and member campaigns below.
-        </Text>
-      ) : null}
+      <Text className="font-retro-mono text-[11px] uppercase tracking-wide text-dono-muted">
+        Membership
+      </Text>
+      <Pressable
+        onPress={() => void handleLeave()}
+        disabled={loading}
+        accessibilityRole="button"
+        accessibilityLabel="Leave society"
+        className="flex-row items-center justify-center gap-2 self-start rounded-full border border-rose-300 bg-rose-50 px-4 py-2"
+      >
+        {loading ? (
+          <ActivityIndicator size="small" color="#be123c" />
+        ) : (
+          <UserMinus size={14} color="#be123c" />
+        )}
+        <Text className="font-retro-bold text-sm text-rose-700">Leave society</Text>
+      </Pressable>
       {error ? <Text className="text-xs text-rose-700">{error}</Text> : null}
     </View>
   );
 }
 
-function SocietyCampaignsAndLeaderPanels({ slug }: { slug: string }) {
+/**
+ * Shared header actions for both society entity types (new `societies` table
+ * and the legacy `communities` catalog). Primary join CTA + secondary links;
+ * existing monthly subscribers can still cancel.
+ */
+function SocietyActionHeader({
+  slug,
+  websiteUrl,
+  secondaryLink,
+  socialUrl,
+  canJoin,
+}: {
+  slug: string;
+  websiteUrl?: string | null;
+  secondaryLink?: string | null;
+  socialUrl?: string | null;
+  /** True when the viewer can join/leave this society (bridged into the membership catalog). */
+  canJoin: boolean;
+}) {
   const { isAuthenticated } = useConvexAuth();
+  const router = useRouter();
+  const [cancelingSubscription, setCancelingSubscription] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
+  const [reportOpen, setReportOpen] = useState(false);
+
+  const mySubscription = useQuery(
+    api.donations.getMySocietySubscription,
+    isAuthenticated ? { communitySlug: slug } : "skip",
+  );
+  const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
+  const createReport = useMutation(api.reports.createReport);
+
+  const handleCancelSubscription = () => {
+    if (!mySubscription) return;
+    setCancelingSubscription(true);
+    setCancelError(null);
+    void cancelSocietySubscription({ societySubscriptionId: mySubscription.id })
+      .catch((err) => setCancelError(getFriendlyPaymentError(err)))
+      .finally(() => setCancelingSubscription(false));
+  };
+
+  const hasLinks = Boolean(websiteUrl || secondaryLink || socialUrl);
+
+  return (
+    <View className="gap-3">
+      {mySubscription ? (
+        <View className="gap-2 rounded-2xl border border-dono-border bg-dono-surface-muted px-4 py-3.5">
+          <View className="flex-row flex-wrap items-center justify-between gap-2">
+            <View className="flex-row items-center gap-2">
+              <Check size={18} color="#17211B" />
+              <Text className="font-retro-bold text-base text-dono-text">
+                Subscribed · £{mySubscription.amount}/month
+              </Text>
+            </View>
+            <Pressable
+              onPress={handleCancelSubscription}
+              disabled={cancelingSubscription}
+              className="rounded-full border border-dono-border bg-white px-3 py-1.5"
+            >
+              <Text className="font-retro-bold text-xs text-dono-muted">
+                {cancelingSubscription ? "Canceling…" : "Cancel subscription"}
+              </Text>
+            </Pressable>
+          </View>
+          {mySubscription.status === "past_due" ? (
+            <Text className="text-xs text-rose-700">
+              Your last payment failed — update your payment method or it will be
+              canceled automatically.
+            </Text>
+          ) : null}
+          {cancelError ? <Text className="text-xs text-rose-700">{cancelError}</Text> : null}
+        </View>
+      ) : null}
+
+      <View className="flex-row flex-wrap items-center gap-2">
+        {canJoin ? <MembershipActions slug={slug} /> : null}
+        {hasLinks ? (
+          <View className="flex-row flex-wrap items-center gap-2">
+            {websiteUrl ? (
+              <Pressable
+                onPress={() => void Linking.openURL(normalizeExternalUrl(websiteUrl))}
+                accessibilityRole="button"
+                accessibilityLabel="Visit website"
+                className="h-10 w-10 items-center justify-center rounded-full border border-dono-border bg-white"
+              >
+                <Globe size={16} color="#56615A" />
+              </Pressable>
+            ) : null}
+            {secondaryLink ? (
+              <Pressable
+                onPress={() =>
+                  void Linking.openURL(normalizeExternalUrl(secondaryLink))
+                }
+                accessibilityRole="button"
+                accessibilityLabel="Donation link"
+                className="h-10 w-10 items-center justify-center rounded-full border border-dono-border bg-white"
+              >
+                <ExternalLink size={16} color="#56615A" />
+              </Pressable>
+            ) : null}
+            {socialUrl ? (
+              <Pressable
+                onPress={() => void Linking.openURL(normalizeExternalUrl(socialUrl))}
+                accessibilityRole="button"
+                accessibilityLabel="Social media"
+                className="h-10 w-10 items-center justify-center rounded-full border border-dono-border bg-white"
+              >
+                <Share2 size={16} color="#56615A" />
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+        <Pressable
+          onPress={() =>
+            isAuthenticated ? setReportOpen(true) : router.push("/signin")
+          }
+          accessibilityRole="button"
+          accessibilityLabel="Report society"
+          className="h-10 w-10 items-center justify-center rounded-full border border-dono-border bg-white"
+        >
+          <Flag size={16} color="#56615A" />
+        </Pressable>
+      </View>
+
+      <ReportContentModal
+        visible={reportOpen}
+        label="society"
+        onClose={() => setReportOpen(false)}
+        onSubmit={async (reason) => {
+          await createReport({
+            targetType: "society",
+            societySlug: slug,
+            reason,
+          });
+        }}
+      />
+    </View>
+  );
+}
+
+/**
+ * Page body below identity/about: public campaigns first, then leadership
+ * tools, then membership leave — so visitors meet content before admin UI.
+ */
+function SocietyBody({ slug }: { slug: string }) {
+  const { isAuthenticated } = useConvexAuth();
+  const mine = useQuery(
+    api.societies.getMine,
+    isAuthenticated && slug ? { slug } : "skip",
+  );
   const membership = useQuery(
     api.societyMembers.getMyMembership,
     isAuthenticated && slug ? { communitySlug: slug } : "skip",
   );
   const isLeader =
     membership?.status === "approved" && membership.role === "leader";
+  const canManage = Boolean(mine) || isLeader;
 
   const communityCampaigns = useQuery(
     api.campaigns.listByCommunity,
     slug ? { communityId: slug } : "skip",
   ) as Campaign[] | undefined;
 
-  return (
-    <View className="gap-8">
-      {isLeader ? <LeaderJoinRequests slug={slug} /> : null}
-      {isLeader ? <LeaderPendingCampaigns slug={slug} /> : null}
-      {isLeader ? <LeaderCampaignUpdates slug={slug} /> : null}
+  const showLeadership = canManage || isLeader;
 
-      <View>
-        <View className="mb-4 flex-row items-center gap-2">
-          <Target size={20} color="#17211B" />
-          <Text className="text-lg font-retro-bold text-dono-text">Active Campaigns</Text>
-        </View>
+  return (
+    <View className="gap-10">
+      <SocietyPageSection
+        title="Campaigns"
+        subtitle="Active fundraising from this community"
+      >
         {communityCampaigns === undefined ? (
           <ActivityIndicator color="#17211B" />
         ) : communityCampaigns.length === 0 ? (
-          <View className="rounded-2xl border border-dono-border bg-white p-8">
-            <Text className="text-center text-dono-muted">No active campaigns yet.</Text>
+          <View className="rounded-2xl border border-dashed border-dono-border bg-white px-5 py-8">
+            <Text className="text-center text-sm text-dono-muted">
+              No active campaigns yet.
+            </Text>
           </View>
         ) : (
           <CampaignCardGrid campaigns={communityCampaigns} />
         )}
+      </SocietyPageSection>
+
+      {showLeadership ? (
+        <View className="gap-5 border-t border-dono-border pt-10">
+          <View className="flex-row items-start gap-3">
+            <View className="mt-0.5 h-9 w-9 items-center justify-center rounded-full border border-dono-border bg-white">
+              <Shield size={16} color="#17211B" />
+            </View>
+            <View className="min-w-0 flex-1 gap-1">
+              <Text className="font-retro-display text-lg text-dono-text">
+                Leadership
+              </Text>
+              <Text className="text-sm text-dono-muted">
+                Approve join requests and member campaigns, post updates, and
+                manage payouts.
+              </Text>
+            </View>
+          </View>
+
+          <SocietyPayoutSetupBanner slug={slug} />
+          {isLeader ? <LeaderJoinRequests slug={slug} /> : null}
+          {isLeader ? <LeaderPendingCampaigns slug={slug} /> : null}
+          {isLeader ? <LeaderCampaignUpdates slug={slug} /> : null}
+          {canManage ? <LeaderDonationLedger slug={slug} /> : null}
+        </View>
+      ) : null}
+
+      <View className="border-t border-dashed border-dono-border pt-8">
+        <LeaveSocietyButton slug={slug} />
       </View>
     </View>
   );
@@ -742,7 +726,7 @@ function LeaderJoinRequests({ slug }: { slug: string }) {
 
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-5">
-      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+      <Text className="mb-3 font-retro-display text-lg text-dono-text">
         Pending join requests
       </Text>
       {error ? <Text className="mb-2 text-xs text-rose-700">{error}</Text> : null}
@@ -760,7 +744,7 @@ function LeaderJoinRequests({ slug }: { slug: string }) {
               <Pressable
                 onPress={() => void handle(req.id as Id<"societyMembers">, "approve")}
                 disabled={busyId === req.id}
-                className="flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
+                className="retro-key flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
               >
                 <Check size={14} color="#fff" />
                 <Text className="font-retro-bold text-xs text-white">Approve</Text>
@@ -832,7 +816,7 @@ function LeaderPendingCampaigns({ slug }: { slug: string }) {
 
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-5">
-      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+      <Text className="mb-3 font-retro-display text-lg text-dono-text">
         Campaigns awaiting your approval
       </Text>
       {error ? <Text className="mb-2 text-xs text-rose-700">{error}</Text> : null}
@@ -865,7 +849,7 @@ function LeaderPendingCampaigns({ slug }: { slug: string }) {
               <Pressable
                 onPress={() => void handleApprove(campaign.id)}
                 disabled={busySlug === campaign.id}
-                className="flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
+                className="retro-key flex-row items-center gap-1 rounded-full bg-dono-primary px-3 py-1.5"
               >
                 {busySlug === campaign.id ? (
                   <ActivityIndicator size="small" color="#fff" />
@@ -1015,7 +999,7 @@ function LeaderCampaignUpdates({ slug }: { slug: string }) {
 
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-5">
-      <Text className="mb-3 font-retro-bold text-lg text-dono-text">
+      <Text className="mb-3 font-retro-display text-lg text-dono-text">
         Post a campaign update
       </Text>
       <View className="gap-4">
@@ -1107,7 +1091,7 @@ function LeaderCampaignUpdates({ slug }: { slug: string }) {
                 <Pressable
                   onPress={() => void handleSubmit(campaign.slug, campaign.raised)}
                   disabled={submitting}
-                  className="flex-row items-center justify-center gap-1 self-start rounded-full bg-dono-primary px-4 py-2"
+                  className="retro-key flex-row items-center justify-center gap-1 self-start rounded-full bg-dono-primary px-4 py-2"
                 >
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />

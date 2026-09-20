@@ -6,6 +6,8 @@ import {
   Pressable,
   ActivityIndicator,
   Image,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useAuthActions } from "@convex-dev/auth/react";
@@ -13,6 +15,7 @@ import { Link, useRouter } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
 import { AppShell } from "@/components/app-shell";
 import { LoginGate } from "@/components/login-gate";
+import { DobSelect } from "@/components/dob-select";
 import { useCurrentProfile, useUpdateProfile } from "@/lib/auth/hooks";
 import { profileDetailsSchema, YEAR_IN_COLLEGE_OPTIONS } from "@/lib/validation/profile";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
@@ -26,9 +29,14 @@ function formatMemberSince(emailVerifiedAt: number | null | undefined) {
   return `MEMBER SINCE ${new Date(emailVerifiedAt).getFullYear()}`;
 }
 
-function formatRole(role: "user" | "admin") {
+function formatRole(
+  role: "user" | "admin",
+  userType?: "student" | "alumni" | null,
+) {
   if (role === "admin") return "Admin";
-  return "Donor";
+  if (userType === "alumni") return "Alumni";
+  if (userType === "student") return "Student";
+  return "User";
 }
 
 function InfoRow({ label, value, mono }: { label: string; value: string; mono?: boolean }) {
@@ -59,7 +67,7 @@ function SectionCard({
 }) {
   return (
     <View className="rounded-2xl border border-dono-border bg-white p-6">
-      <Text className="font-retro-bold text-lg text-dono-text">{title}</Text>
+      <Text className="font-retro-display text-lg text-dono-text">{title}</Text>
       <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
       {children}
     </View>
@@ -73,16 +81,13 @@ export default function AccountPage() {
   const profile = useCurrentProfile();
   const updateProfile = useUpdateProfile();
   const generateAvatarUploadUrl = useMutation(api.users.generateAvatarUploadUrl);
-  const recurringDonations = useQuery(
-    api.donations.listMyRecurringDonations,
+  const societySubscriptions = useQuery(
+    api.donations.listMySocietySubscriptions,
     isAuthenticated ? {} : "skip",
   );
-  const reviewMessages = useQuery(
-    api.reviewMessages.listMine,
-    isAuthenticated ? {} : "skip",
-  );
-  const cancelRecurringDonation = useAction(api.stripe.cancelRecurringDonation);
-  const requestAccountDeletion = useMutation(api.users.requestAccountDeletion);
+  const cancelSocietySubscription = useAction(api.stripe.cancelSocietySubscription);
+  const requestAccountDeletion = useAction(api.users.requestAccountDeletion);
+  const exportMyData = useMutation(api.users.exportMyData);
 
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
@@ -95,13 +100,16 @@ export default function AccountPage() {
   const [profileSuccess, setProfileSuccess] = useState<string | null>(null);
   const [savingProfile, setSavingProfile] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
-  const [cancelingId, setCancelingId] = useState<Id<"recurringDonations"> | null>(
+  const [cancelingId, setCancelingId] = useState<Id<"societySubscriptions"> | null>(
     null,
   );
-  const [recurringError, setRecurringError] = useState<string | null>(null);
+  const [subscriptionError, setSubscriptionError] = useState<string | null>(null);
   const [confirmDeleteAccount, setConfirmDeleteAccount] = useState(false);
   const [deletingAccount, setDeletingAccount] = useState(false);
   const [deleteAccountError, setDeleteAccountError] = useState<string | null>(null);
+  const [exportingData, setExportingData] = useState(false);
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exportPreview, setExportPreview] = useState<string | null>(null);
 
   useEffect(() => {
     if (!profile) return;
@@ -205,11 +213,11 @@ export default function AccountPage() {
     });
   };
 
-  const handleCancelRecurring = (recurringDonationId: Id<"recurringDonations">) => {
-    setCancelingId(recurringDonationId);
-    setRecurringError(null);
-    void cancelRecurringDonation({ recurringDonationId })
-      .catch((err) => setRecurringError(getFriendlyPaymentError(err)))
+  const handleCancelSubscription = (societySubscriptionId: Id<"societySubscriptions">) => {
+    setCancelingId(societySubscriptionId);
+    setSubscriptionError(null);
+    void cancelSocietySubscription({ societySubscriptionId })
+      .catch((err) => setSubscriptionError(getFriendlyPaymentError(err)))
       .finally(() => setCancelingId(null));
   };
 
@@ -230,6 +238,29 @@ export default function AccountPage() {
         setDeleteAccountError(getFriendlyAuthError(err));
         setDeletingAccount(false);
       });
+  };
+
+  const handleExportMyData = () => {
+    setExportingData(true);
+    setExportError(null);
+    setExportPreview(null);
+    void exportMyData({})
+      .then((payload) => {
+        const json = JSON.stringify(payload, null, 2);
+        if (Platform.OS === "web" && typeof document !== "undefined") {
+          const blob = new Blob([json], { type: "application/json" });
+          const url = URL.createObjectURL(blob);
+          const anchor = document.createElement("a");
+          anchor.href = url;
+          anchor.download = `dono-data-export-${new Date().toISOString().slice(0, 10)}.json`;
+          anchor.click();
+          URL.revokeObjectURL(url);
+        } else {
+          setExportPreview(json);
+        }
+      })
+      .catch((err) => setExportError(getFriendlyAuthError(err)))
+      .finally(() => setExportingData(false));
   };
 
   if (isLoading) {
@@ -265,8 +296,8 @@ export default function AccountPage() {
     .charAt(0)
     .toUpperCase();
   const memberSince = formatMemberSince(profile?.emailVerifiedAt);
-  const activeRecurringDonations =
-    recurringDonations?.filter((donation) => donation.status !== "canceled") ?? [];
+  const activeSocietySubscriptions =
+    societySubscriptions?.filter((sub) => sub.status !== "canceled") ?? [];
 
   return (
     <AppShell>
@@ -281,17 +312,17 @@ export default function AccountPage() {
             <Text className="text-sm text-dono-muted">/</Text>
             <Text className="text-sm text-dono-muted">Account settings</Text>
           </View>
-          <Text className="mt-3 font-retro-bold text-2xl text-dono-text">
+          <Text className="mt-3 font-retro-display text-2xl text-dono-text">
             Account settings
           </Text>
           <Text className="mt-1 text-dono-muted">
-            Manage your profile, subscriptions, and campaign feedback.
+            Manage your profile and subscriptions.
           </Text>
         </View>
 
         <View className="rounded-2xl border border-dono-border bg-white p-6">
           <View className="mb-1 flex-row items-center justify-between gap-4">
-            <Text className="font-retro-bold text-lg text-dono-text">Account</Text>
+            <Text className="font-retro-display text-lg text-dono-text">Account</Text>
             {memberSince ? (
               <Text className="font-retro-mono text-xs uppercase tracking-wide text-dono-muted">
                 {memberSince}
@@ -300,7 +331,10 @@ export default function AccountPage() {
           </View>
 
           <InfoRow label="Email" value={profile?.email ?? ""} mono />
-          <InfoRow label="Role" value={formatRole(profile?.role ?? "user")} />
+          <InfoRow
+            label="Role"
+            value={formatRole(profile?.role ?? "user", profile?.userType)}
+          />
           {profile?.phone ? <InfoRow label="Phone" value={profile.phone} mono /> : null}
           {profile?.college ? <InfoRow label="College" value={profile.college} /> : null}
           {profile?.degree ? <InfoRow label="Degree" value={profile.degree} /> : null}
@@ -319,7 +353,7 @@ export default function AccountPage() {
                 />
               ) : (
                 <View className="h-full w-full items-center justify-center">
-                  <Text className="font-retro-bold text-2xl text-dono-text">
+                  <Text className="font-retro-display text-2xl text-dono-text">
                     {initials}
                   </Text>
                 </View>
@@ -383,13 +417,10 @@ export default function AccountPage() {
           <Text className="mt-4 text-xs uppercase tracking-wide text-dono-muted">
             Date of birth
           </Text>
-          <TextInput
+          <DobSelect
             value={dateOfBirth}
-            onChangeText={setDateOfBirth}
-            placeholder="YYYY-MM-DD"
-            placeholderTextColor="#56615A"
-            autoCapitalize="none"
-            className="mt-2 w-full rounded-xl border border-dono-border px-4 py-2.5 text-sm text-dono-text"
+            onChange={setDateOfBirth}
+            className="mt-2"
           />
           <Text className="mt-1 text-xs text-dono-muted">
             You must be at least 18 to use Dono.
@@ -430,7 +461,7 @@ export default function AccountPage() {
           <Pressable
             onPress={saveProfile}
             disabled={savingProfile || uploadingAvatar}
-            className={`mt-4 items-center self-start rounded-full bg-dono-primary px-6 py-2.5 ${
+            className={`retro-key mt-4 items-center self-start rounded-full bg-dono-primary px-6 py-2.5 ${
               savingProfile ? "opacity-50" : ""
             }`}
           >
@@ -441,92 +472,51 @@ export default function AccountPage() {
         </View>
 
         <SectionCard
-          title="Review feedback"
-          subtitle="Comments from the Dono team about your campaigns."
+          title="Society subscriptions"
+          subtitle="Manage your monthly subscriptions to societies."
         >
-          {reviewMessages === undefined ? (
-            <View className="mt-4 items-center rounded-xl border border-dashed border-dono-border bg-dono-bg py-8">
-              <ActivityIndicator color="#17211B" />
-            </View>
-          ) : reviewMessages.length === 0 ? (
-            <View className="mt-4 rounded-xl border border-dashed border-dono-border bg-dono-bg px-4 py-5">
-              <Text className="text-sm text-dono-muted">
-                Nothing to review yet — feedback appears here once a campaign you run
-                is checked.
-              </Text>
-            </View>
-          ) : (
-            <View className="mt-4 gap-3">
-              {reviewMessages.map((message) => (
-                <View
-                  key={message.id}
-                  className="rounded-xl border border-dono-border bg-dono-bg p-4"
-                >
-                  <Text className="font-retro-bold text-dono-text">
-                    {message.campaignTitle}
-                  </Text>
-                  <Text className="mt-2 text-sm text-dono-text">{message.body}</Text>
-                  <Text className="mt-2 text-xs text-dono-muted">
-                    {new Date(message.createdAt).toLocaleString("en-GB", {
-                      day: "numeric",
-                      month: "short",
-                      year: "numeric",
-                      hour: "2-digit",
-                      minute: "2-digit",
-                    })}
-                  </Text>
-                </View>
-              ))}
-            </View>
-          )}
-        </SectionCard>
-
-        <SectionCard
-          title="Recurring donations"
-          subtitle="Manage your monthly campaign subscriptions."
-        >
-          {recurringError ? (
-            <Text className="mt-3 text-sm text-rose-700">{recurringError}</Text>
+          {subscriptionError ? (
+            <Text className="mt-3 text-sm text-rose-700">{subscriptionError}</Text>
           ) : null}
 
-          {recurringDonations === undefined ? (
+          {societySubscriptions === undefined ? (
             <View className="mt-4 items-center rounded-xl border border-dono-border bg-dono-bg py-8">
               <ActivityIndicator color="#17211B" />
             </View>
-          ) : activeRecurringDonations.length === 0 ? (
+          ) : activeSocietySubscriptions.length === 0 ? (
             <View className="mt-4 flex-row items-center justify-between gap-4 rounded-xl border border-dono-border bg-dono-bg px-4 py-5">
               <Text className="flex-1 text-sm text-dono-muted">
-                No active monthly donations.
+                No active society subscriptions.
               </Text>
-              <Link href="/campaigns" asChild>
+              <Link href="/societies" asChild>
                 <Pressable>
                   <Text className="font-retro-bold text-sm text-dono-primary">
-                    Browse campaigns →
+                    Browse societies →
                   </Text>
                 </Pressable>
               </Link>
             </View>
           ) : (
             <View className="mt-4 gap-3">
-              {activeRecurringDonations.map((donation) => (
+              {activeSocietySubscriptions.map((subscription) => (
                 <View
-                  key={donation.id}
+                  key={subscription.id}
                   className="rounded-xl border border-dono-border bg-dono-bg p-4"
                 >
                   <Text className="font-retro-bold text-dono-text">
-                    {donation.campaignTitle}
+                    {subscription.societyName}
                   </Text>
                   <Text className="mt-1 text-sm text-dono-muted">
-                    £{donation.amount}/month · {donation.status.replace("_", " ")}
+                    £{subscription.amount}/month · {subscription.status.replace("_", " ")}
                   </Text>
-                  {donation.status !== "canceled" ? (
+                  {subscription.status !== "canceled" ? (
                     <Pressable
-                      onPress={() => handleCancelRecurring(donation.id)}
-                      disabled={cancelingId === donation.id}
+                      onPress={() => handleCancelSubscription(subscription.id)}
+                      disabled={cancelingId === subscription.id}
                       className="mt-3 items-center self-start rounded-full border border-dono-border px-4 py-2"
                     >
                       <Text className="font-retro-bold text-sm text-dono-muted">
-                        {cancelingId === donation.id
+                        {cancelingId === subscription.id
                           ? "Canceling..."
                           : "Cancel subscription"}
                       </Text>
@@ -541,9 +531,44 @@ export default function AccountPage() {
         <View className="border-t border-dono-border pt-6">
           <View className="flex-row items-start justify-between gap-6">
             <View className="flex-1">
+              <Text className="font-retro-bold text-dono-text">
+                Download my data
+              </Text>
+              <Text className="mt-1 text-sm text-dono-muted">
+                Export your profile, legal acceptances, donations, memberships,
+                reports and uploaded evidence as JSON.
+              </Text>
+              {exportError ? (
+                <Text className="mt-2 text-sm text-rose-700">{exportError}</Text>
+              ) : null}
+            </View>
+            <Pressable
+              onPress={handleExportMyData}
+              disabled={exportingData}
+              className="rounded-full border border-dono-border bg-white px-6 py-2.5"
+            >
+              <Text className="font-retro-bold text-sm text-dono-text">
+                {exportingData ? "Preparing..." : "Download my data"}
+              </Text>
+            </Pressable>
+          </View>
+          {exportPreview ? (
+            <ScrollView className="mt-4 max-h-64 rounded-xl border border-dono-border bg-dono-bg p-3">
+              <Text className="font-retro-mono text-xs text-dono-text">
+                {exportPreview}
+              </Text>
+            </ScrollView>
+          ) : null}
+        </View>
+
+        <View className="border-t border-dono-border pt-6">
+          <View className="flex-row items-start justify-between gap-6">
+            <View className="flex-1">
               <Text className="font-retro-bold text-dono-text">Delete account</Text>
               <Text className="mt-1 text-sm text-dono-muted">
-                Anonymises your profile data. This cannot be undone.
+                Anonymises your profile data, cancels any active recurring
+                donations, and releases your email address. This cannot be
+                undone.
               </Text>
               {confirmDeleteAccount ? (
                 <Text className="mt-2 text-sm text-rose-700">

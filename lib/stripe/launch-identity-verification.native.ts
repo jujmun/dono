@@ -16,7 +16,10 @@ export async function launchIdentityVerification({
   url,
 }: LaunchIdentityVerificationArgs): Promise<LaunchIdentityVerificationResult> {
   if (!url) {
-    return { error: "Verification is not available in this environment." };
+    return {
+      error:
+        "Could not start identity verification. Please try again in a moment.",
+    };
   }
 
   const canOpen = await Linking.canOpenURL(url);

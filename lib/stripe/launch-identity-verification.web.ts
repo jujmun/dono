@@ -12,7 +12,10 @@ export async function launchIdentityVerification({
   clientSecret,
 }: LaunchIdentityVerificationArgs): Promise<LaunchIdentityVerificationResult> {
   if (!clientSecret) {
-    return { error: "Verification is not available in this environment." };
+    return {
+      error:
+        "Could not start identity verification. Please try again in a moment.",
+    };
   }
 
   const stripe = await stripePromise;

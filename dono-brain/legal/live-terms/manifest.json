@@ -1,0 +1,117 @@
+{
+  "version": "3.0",
+  "versionDate": "2026-08-07",
+  "effectiveDate": "2026-08-07",
+  "status": "unapproved-draft-artifacts",
+  "note": "Rendered from legal/suites/v3.0/public/. Public-facing copy only. NOT release-authorised: see legal/publication-handoff/.",
+  "documents": {
+    "terms_of_service": {
+      "id": "terms_of_service",
+      "title": "Dono Terms of Service",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "terms-of-service.md",
+      "htmlPath": "terms-of-service.html",
+      "pdfPath": "terms-of-service.pdf",
+      "markdownHash": "c021f790a34356f3f86b942ca55e6610d1e4a1c6e9f87019648ffd7fd6d7c6a8",
+      "htmlHash": "2edb4f4c0b59173942b79497b6520fa7b00c0bedd9cfef3da5dfffcd596b29d9",
+      "pdfHash": "9255b72fd31a92cead2c5806cf468d3b81e103a6ad2605f2564ce5b690281d80"
+    },
+    "society_campaign_terms": {
+      "id": "society_campaign_terms",
+      "title": "Dono Society Campaign Terms",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "society-campaign-terms.md",
+      "htmlPath": "society-campaign-terms.html",
+      "pdfPath": "society-campaign-terms.pdf",
+      "markdownHash": "b993f692099263f0c7c90e184a53a47e0184dd0f003e1226c7a3a083c2a3610b",
+      "htmlHash": "4da3c593ad1b2e91027b1935d12c31f4f65def0ce5883b86f74f96c86a6c96bf",
+      "pdfHash": "57df9f6d695fd65e2f9b2ebdf5f3e99c61b29afc4e77da84c5e08950206168b4"
+    },
+    "donor_terms": {
+      "id": "donor_terms",
+      "title": "Dono Donor Terms",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "donor-terms.md",
+      "htmlPath": "donor-terms.html",
+      "pdfPath": "donor-terms.pdf",
+      "markdownHash": "b7da39b922db74b2c6333b41b23e9dcf41250991c4f2fc6f83c444dc5fae6f5c",
+      "htmlHash": "4d60c99be1a85f3670a117ca637891a898af18f551899b6f10716f44a0406bea",
+      "pdfHash": "eb5f76b9562ef30f4de95324905edbe474f1498499bd64a003e7ebed4c3a2f69"
+    },
+    "community_guidelines": {
+      "id": "community_guidelines",
+      "title": "Dono Community Guidelines",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "community-guidelines.md",
+      "htmlPath": "community-guidelines.html",
+      "pdfPath": "community-guidelines.pdf",
+      "markdownHash": "7eddd41ad846ea6ce28575102a71692fc4965a5b1c198b0ff0be82edf70b9b83",
+      "htmlHash": "e08a387c9c234d89dbbe0c062e17298a8ccb53e84d1ed7303f40539bee188320",
+      "pdfHash": "5277ccf91e171004f25d7c34c6256a9c44b4143fd06b643fba084ef835972027"
+    },
+    "verification": {
+      "id": "verification",
+      "title": "Dono Verification Notice",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "verification-notice.md",
+      "htmlPath": "verification-notice.html",
+      "pdfPath": "verification-notice.pdf",
+      "markdownHash": "e10d3d64f6aca2f63652dc3c22e17dcde9abc587da21ea50b088eaef21e26f02",
+      "htmlHash": "6a0c48f5a748e40ab54f28e6b1373fffed02845405c282a152e274599e4425bc",
+      "pdfHash": "6a3dcf2c0b4c5d03fb7ea7fab190b1b6adc0cdcbee6b2d65599fce05504a911e"
+    },
+    "refund_dispute": {
+      "id": "refund_dispute",
+      "title": "Dono Refund and Dispute Policy",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "refund-and-dispute-policy.md",
+      "htmlPath": "refund-and-dispute-policy.html",
+      "pdfPath": "refund-and-dispute-policy.pdf",
+      "markdownHash": "6543807e5480695ed7adfb16d42e66bd70476ec0b3553d883d2bc0d50ab0644e",
+      "htmlHash": "e2a7bf86a97666ddbe563898a638e2cb1cc6d80adc5d9f19a406d7b62802073c",
+      "pdfHash": "1cf48e10dd45717d5a1e4b663a856d75927de7cad28e397eb4776f2e47fef246"
+    },
+    "privacy": {
+      "id": "privacy",
+      "title": "Dono Privacy Notice",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "privacy-notice.md",
+      "htmlPath": "privacy-notice.html",
+      "pdfPath": "privacy-notice.pdf",
+      "markdownHash": "577353013c390acfb0b43e013d261dae7dfdf6a67ad0dac218820a101712143a",
+      "htmlHash": "72d6e7af7441b4324c09d92e6f03bd7a073759f2f3baf751d8e9c26643562b8d",
+      "pdfHash": "990f81afaba555502173cd340cc2c394507bc3a1212250c93b4dbdb44dfa384f"
+    },
+    "cookie": {
+      "id": "cookie",
+      "title": "Dono Cookie Notice",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "cookie-notice.md",
+      "htmlPath": "cookie-notice.html",
+      "pdfPath": "cookie-notice.pdf",
+      "markdownHash": "35df6a418cb56cd4cdbdc574ea775ab5c2a5bd4eb75a6d3a0f57b5884d5a2eb4",
+      "htmlHash": "ff8259d5abe5f06d21b3aa74b9cb50408ffbb13a80826f3a66ba8443117987c7",
+      "pdfHash": "4cba952aea1ecd70c5ccf11c9d044da3e9d31776e528dfeacafca6a810c272e2"
+    },
+    "complaints": {
+      "id": "complaints",
+      "title": "Dono Complaints Policy",
+      "version": "3.0",
+      "effectiveDate": "2026-08-07",
+      "markdownPath": "complaints-policy.md",
+      "htmlPath": "complaints-policy.html",
+      "pdfPath": "complaints-policy.pdf",
+      "markdownHash": "b1949f0fe7555d7ca9b5c78e60bd4ac20e0ddb0227c84c1d1486d597ee5cfa72",
+      "htmlHash": "b9303efcc9f76479c803bb298f18c08d20bc9a80c15cfeae2e384a36cd0d1e75",
+      "pdfHash": "fb1597c482316c46ae2949a0ecbe5a1ba9b634c5f49ba8813fd767d618e4a3a4"
+    }
+  }
+}

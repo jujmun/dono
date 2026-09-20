@@ -17,7 +17,6 @@ import {
   Globe,
   Link2,
   Paperclip,
-  IdCard,
   RefreshCw,
 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
@@ -25,13 +24,17 @@ import { AdminShell } from "@/components/admin-shell";
 import { AdminStatsNav } from "@/components/admin-stats-nav";
 import { ReviewTypeToggle, type ReviewType } from "@/components/review-type-toggle";
 import {
+  PendingCampaignEditsSection,
+  PendingSocietyEditsSection,
+} from "@/components/pending-edit-requests";
+import {
   AdminStatusChip,
   selfieMatchChip,
   stripeStatusChip,
   type StripeVerificationStatus,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
@@ -49,7 +52,7 @@ function formatSubmittedAt(ms: number) {
 export default function AdminPortalPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const identityEnabled = isStripeIdentityEnabled();
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
@@ -57,19 +60,26 @@ export default function AdminPortalPage() {
 
   const pendingCampaigns = useQuery(
     api.campaigns.listPendingForAdmin,
-    adminUser && reviewType === "campaigns"
-      ? trimmedSearch
-        ? { search: trimmedSearch }
-        : {}
-      : "skip",
+    adminUser ? {} : "skip",
   ) as
     | (Campaign & { stripeVerificationStatus: StripeVerificationStatus })[]
     | undefined;
 
   const pendingSocieties = useQuery(
     api.societies.listPendingForAdmin,
-    adminUser && reviewType === "societies" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as AdminSociety[] | undefined;
+
+  const filteredCampaigns = (pendingCampaigns ?? []).filter((c) => {
+    if (!trimmedSearch) return true;
+    const q = trimmedSearch.toLowerCase();
+    return (
+      c.title.toLowerCase().includes(q) ||
+      c.university.toLowerCase().includes(q) ||
+      c.creator.name.toLowerCase().includes(q) ||
+      c.description.toLowerCase().includes(q)
+    );
+  });
 
   const filteredSocieties = (pendingSocieties ?? []).filter((s) =>
     trimmedSearch ? s.name.toLowerCase().includes(trimmedSearch.toLowerCase()) : true,
@@ -149,11 +159,11 @@ export default function AdminPortalPage() {
     );
   }
 
-  if (!adminUser || profile === null) {
+  if (!adminUser) {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Text className="mt-2 text-dono-muted">
@@ -169,7 +179,14 @@ export default function AdminPortalPage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="pending" />
 
-        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+        <ReviewTypeToggle
+          value={reviewType}
+          onChange={setReviewType}
+          counts={{
+            campaigns: pendingCampaigns?.length,
+            societies: pendingSocieties?.length,
+          }}
+        />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />
@@ -189,25 +206,34 @@ export default function AdminPortalPage() {
         </View>
 
         {reviewType === "campaigns" ? (
-          pendingCampaigns === undefined ? (
+          <>
+            <PendingCampaignEditsSection enabled={adminUser} />
+            {pendingCampaigns === undefined ? (
             <View className="items-center py-12">
               <ActivityIndicator color="#17211B" />
               <Text className="mt-4 text-dono-muted">Loading posts...</Text>
             </View>
-          ) : pendingCampaigns.length === 0 ? (
+            ) : pendingCampaigns.length === 0 ? (
             <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
               <Text className="font-retro-bold text-base text-dono-text">
-                {trimmedSearch ? "No matches" : "You’re all caught up"}
+                No new submissions
               </Text>
               <Text className="mt-2 text-sm text-dono-muted">
-                {trimmedSearch
-                  ? "Try a different name or title."
-                  : "New student posts will show up here."}
+                New student posts will show up here.
+              </Text>
+            </View>
+          ) : filteredCampaigns.length === 0 ? (
+            <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
+              <Text className="font-retro-bold text-base text-dono-text">
+                No matches
+              </Text>
+              <Text className="mt-2 text-sm text-dono-muted">
+                Try a different name or title.
               </Text>
             </View>
           ) : (
             <View className="gap-4">
-              {pendingCampaigns.map((campaign) => (
+              {filteredCampaigns.map((campaign) => (
                 <Pressable
                   key={campaign.id}
                   onPress={() =>
@@ -228,7 +254,7 @@ export default function AdminPortalPage() {
                         />
                         ) : null}
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {campaign.title}
                       </Text>
                       <Text className="mt-1 text-sm text-dono-muted">
@@ -257,9 +283,11 @@ export default function AdminPortalPage() {
                 </Pressable>
               ))}
             </View>
-          )
+          )}
+          </>
         ) : (
           <>
+            <PendingSocietyEditsSection enabled={adminUser} />
             {societyError ? (
               <View className="mb-4 rounded-xl bg-rose-50 px-4 py-3">
                 <Text className="text-sm text-rose-700">{societyError}</Text>
@@ -279,7 +307,7 @@ export default function AdminPortalPage() {
             ) : filteredSocieties.length === 0 ? (
               <View className="rounded-2xl border border-dono-border bg-white px-6 py-10">
                 <Text className="font-retro-bold text-base text-dono-text">
-                  {trimmedSearch ? "No matches" : "You’re all caught up"}
+                  {trimmedSearch ? "No matches" : "No new submissions"}
                 </Text>
                 <Text className="mt-2 text-sm text-dono-muted">
                   {trimmedSearch
@@ -300,7 +328,7 @@ export default function AdminPortalPage() {
                       <View className="mb-2">
                         <AdminStatusChip label="Pending" tone="pending" />
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {society.name}
                       </Text>
                       <Text className="mt-1 text-xs text-dono-muted">
@@ -368,23 +396,9 @@ export default function AdminPortalPage() {
                           </View>
                         )}
                         <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
-                          {society.idDocumentUrl ? (
-                            <Pressable
-                              onPress={() =>
-                                void Linking.openURL(society.idDocumentUrl!)
-                              }
-                              className="flex-row items-center gap-2"
-                            >
-                              <IdCard size={14} color="#17211B" />
-                              <Text className="text-sm text-dono-primary">
-                                View ID document
-                              </Text>
-                            </Pressable>
-                          ) : (
-                            <Text className="text-sm text-dono-muted">
-                              ID document unavailable.
-                            </Text>
-                          )}
+                          <Text className="text-sm text-dono-muted">
+                            Identity documents are verified by the Payment Provider; Dono does not store them.
+                          </Text>
                           <View className="flex-row items-center gap-2">
                             {identityEnabled ? (
                               <>

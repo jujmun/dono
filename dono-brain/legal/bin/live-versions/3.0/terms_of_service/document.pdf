@@ -1,0 +1,1157 @@
+%PDF-1.4
+1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
+2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj
+3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj
+4 0 obj<< /Length 30137 >>stream
+BT
+/F1 9 Tf
+11 TL
+40 750 Td
+(Terms of Service) Tj
+T*
+() Tj
+T*
+(# Dono Terms of Service) Tj
+T*
+() Tj
+T*
+(**Version:** 3.0) Tj
+T*
+(**Version date:** 7 August 2026) Tj
+T*
+(**Effective from:** on publication approval \(see approval block\)) Tj
+T*
+(**Document type:** Contractual) Tj
+T*
+(**Supersedes:** v2.3 \(6 August 2026\) and all earlier versions, retained unaltered in the versio) Tj
+T*
+(**Status:** Final text, **not yet published**. Publication is gated on the items marked *public) Tj
+T*
+(**Beta scope:** **Society Campaigns only.** Individual Student Campaigns are a future release a) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 1 ? Introduction) Tj
+T*
+() Tj
+T*
+(### 1. Who we are, and how these Terms fit together) Tj
+T*
+() Tj
+T*
+(1.1 Dono is a trading name of **Amrit Kaur Rooprai**, a sole trader. "Dono", "we", "us" and "ou) Tj
+T*
+() Tj
+T*
+(1.2 Our United Kingdom business address is **37 St Giles', Oxford OX1 3LD**. Our single contact) Tj
+T*
+() Tj
+T*
+(1.3 These Terms of Service \(the "**Terms**"\) govern your use of the Platform when you create an) Tj
+T*
+() Tj
+T*
+(1.4 The additional contractual documents that apply depend on what you do:) Tj
+T*
+() Tj
+T*
+(\(a\) create an account ? the **Community Guidelines** apply to your account, content and conduct) Tj
+T*
+(\(b\) make or attempt to make a Donation ? the **Donor Terms** and the **Refund and Dispute Polic) Tj
+T*
+(\(c\) submit or operate an individual Campaign ? the **Student Campaign Terms**, the **Refund and) Tj
+T*
+(\(d\) submit or operate a Campaign for a Society ? the **Society Campaign Terms**, the **Refund a) Tj
+T*
+() Tj
+T*
+(Roles are cumulative. A Campaign Owner who donates to another Campaign also accepts the Donor T) Tj
+T*
+() Tj
+T*
+(1.5 Before you take any of those actions we identify the documents that apply and ask you to ac) Tj
+T*
+() Tj
+T*
+(1.6 The **Privacy Notice**, **Cookie Notice** and **Verification Notice** are information. They) Tj
+T*
+() Tj
+T*
+(1.7 **Which document governs which subject.** Precedence follows subject matter, not document r) Tj
+T*
+() Tj
+T*
+(| Subject | Governing document |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Refunds, refund decisions, disputes, chargebacks and surplus | Refund and Dispute Policy |) Tj
+T*
+(| Content, conduct, moderation, reporting, complaints and appeals | Community Guidelines |) Tj
+T*
+(| Personal data, transparency and your data-protection rights | Privacy Notice |) Tj
+T*
+(| Cookies and similar technologies | Cookie Notice |) Tj
+T*
+(| The obligations of an individual student Campaign Owner | Student Campaign Terms |) Tj
+T*
+(| The obligations of a Society and its Responsible Representative | Society Campaign Terms |) Tj
+T*
+(| The obligations of a Donor | Donor Terms |) Tj
+T*
+(| Everything else, and anything not expressly governed above | These Terms |) Tj
+T*
+() Tj
+T*
+(Where a subject-specific document expressly governs an issue, it prevails over these Terms on t) Tj
+T*
+() Tj
+T*
+(1.8 **Age.** You must be **18 or over** to create an account, to create or operate a Campaign, ) Tj
+T*
+() Tj
+T*
+(1.9 You must comply with all laws that apply to you.) Tj
+T*
+() Tj
+T*
+(### 2. How the contract is made, versions and your durable copy) Tj
+T*
+() Tj
+T*
+(2.1 Contracts are formed electronically. Before you accept, the relevant documents are presente) Tj
+T*
+() Tj
+T*
+(2.2 **Every document has a permanent version number.** Once published, a version is never overw) Tj
+T*
+() Tj
+T*
+(2.3 **Acceptance record.** For every acceptance we record your user or guest identifier, your r) Tj
+T*
+() Tj
+T*
+(2.4 **Durable copy.** After you accept we show an on-screen confirmation of the transaction and) Tj
+T*
+() Tj
+T*
+(2.5 **Notices and time.** A "**Working Day**" is a day other than a Saturday, Sunday or public ) Tj
+T*
+() Tj
+T*
+(### 3. Definitions) Tj
+T*
+() Tj
+T*
+(3.1 In these Terms and the other contractual documents:) Tj
+T*
+() Tj
+T*
+(- "**Campaign**" ? a fundraising page created on the Platform by a Campaign Owner.) Tj
+T*
+(- "**Campaign End Date**" ? the funding-closing date, after which no further Donations may be m) Tj
+T*
+(- "**Campaign Owner**" ? the Student, or the Society, that owns and operates a Campaign and for) Tj
+T*
+(- "**Closure Statement**" ? the final statement required by clause 10 to conclude a Campaign.) Tj
+T*
+(- "**Connected Account**" ? a Stripe connected account established through the Platform to rece) Tj
+T*
+(- "**Content**" ? any text, image, video, document or other material submitted to or displayed ) Tj
+T*
+(- "**Course End Date**" ? the date a Student's course of study ends, which may be earlier than ) Tj
+T*
+(- "**Donation**" ? a conditional contribution made through the Platform in support of a Campaig) Tj
+T*
+(- "**Donor**" ? a person who makes, or attempts to make, a Donation.) Tj
+T*
+(- "**Institution**" or "**Recognised Institution**" ? a UK higher-education institution Dono ha) Tj
+T*
+(- "**Material Change**" ? has the meaning in clause 14.) Tj
+T*
+(- "**Ownership Statement**" ? the statement required by clause 7.1 identifying who will legally) Tj
+T*
+(- "**Payment Provider**" ? Stripe, or any replacement payment provider we notify to you.) Tj
+T*
+(- "**Recipient**" ? the holder of the Connected Account that receives a Donation. **The Recipie) Tj
+T*
+(- "**Responsible Representative**" ? for a Society Campaign, the single named individual regist) Tj
+T*
+(- "**Platform**" and "**Services**" ? the Dono website, applications and related services.) Tj
+T*
+(- "**Project**" ? the activity, purchase or purpose a Campaign states it will fund.) Tj
+T*
+(- "**Secondary Contact**" ? the named second officer registered for a Society Campaign who may ) Tj
+T*
+(- "**Society**" ? a student society, club or similar non-commercial group associated with a Rec) Tj
+T*
+(- "**Student**" ? an individual who satisfies the eligibility requirements in clause 4 and the ) Tj
+T*
+(- "**Surplus Funds**" ? any amount raised that cannot reasonably be used for the stated campaig) Tj
+T*
+(- "**User**" ? a person who creates an account, makes a Donation, submits Content or otherwise ) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 2 ? The Platform) Tj
+T*
+() Tj
+T*
+(### 4. What Dono does; eligibility; geographic scope) Tj
+T*
+() Tj
+T*
+(4.1 Dono is a technology and donation-crowdfunding platform for students at Recognised Institut) Tj
+T*
+() Tj
+T*
+(4.2 **Dono does not receive, hold, safeguard or control donation funds, and holds no payment ac) Tj
+T*
+() Tj
+T*
+(4.3 Dono is not affiliated with, sponsored by or endorsed by any university, college or society) Tj
+T*
+() Tj
+T*
+(4.4 **Geographic scope.** Campaign Owners and Responsible Representatives must be currently enr) Tj
+T*
+() Tj
+T*
+(4.5 To create or operate a Campaign or act as Responsible Representative, a Student must: \(a\) b) Tj
+T*
+() Tj
+T*
+(4.6 **Currency.** All Campaigns, targets, budgets and Donations are denominated, charged and se) Tj
+T*
+() Tj
+T*
+(4.7 **Institutions currently recognised.** Dono recognises the **University of Oxford**. **An a) Tj
+T*
+() Tj
+T*
+(4.8 **Campaign types available during beta.** Beta supports **Society Campaigns only**. An elig) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 3 ? Accounts) Tj
+T*
+() Tj
+T*
+(### 5. Creating an account) Tj
+T*
+() Tj
+T*
+(5.1 **You must be at least 18 to create an account.** You must give accurate, current and compl) Tj
+T*
+() Tj
+T*
+(5.1A **Two kinds of account.**) Tj
+T*
+() Tj
+T*
+(\(a\) A **donor account** may be created by anyone aged 18 or over, using **any email address**. ) Tj
+T*
+(\(b\) A **student account** additionally requires you to verify control of an address at a Recogn) Tj
+T*
+() Tj
+T*
+(**Your account type is fixed when you first choose it** and cannot afterwards be changed to a s) Tj
+T*
+() Tj
+T*
+(5.2 You are responsible for keeping your credentials secure and for activity under your account) Tj
+T*
+() Tj
+T*
+(5.3 You may not create multiple accounts, or an account on behalf of another person, without ou) Tj
+T*
+() Tj
+T*
+(### 6. Eligibility checks) Tj
+T*
+() Tj
+T*
+(6.1 To create a Campaign or a Society, a Student must complete **two separate checks**: a **stu) Tj
+T*
+() Tj
+T*
+(6.2 **The student-status check ? carried out by Dono.** Dono confirms that the applicant contro) Tj
+T*
+() Tj
+T*
+(6.3 **The identity check ? carried out by the Payment Provider.** The applicant completes an id) Tj
+T*
+() Tj
+T*
+(**The verified date of birth is the final creator age gate.** Creation, publication and receipt) Tj
+T*
+() Tj
+T*
+(6.4 **Connected Account onboarding.** The holder of the Connected Account that receives Donatio) Tj
+T*
+() Tj
+T*
+(6.5 **Reverification.** Control of the university email address is reverified each October and ) Tj
+T*
+() Tj
+T*
+(6.5A Dono may request further information at any time. Unless a different period is stated you ) Tj
+T*
+() Tj
+T*
+(6.5B Eligibility expires on graduation or departure. Where the Course End Date falls before the) Tj
+T*
+() Tj
+T*
+(6.6 **No public status indicators.** Dono does **not** display verification badges, ticks, shie) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 4 ? Campaigns) Tj
+T*
+() Tj
+T*
+(### 7. Creating a Campaign) Tj
+T*
+() Tj
+T*
+(7.1 Every Campaign must include: a name; a clear explanation of what is being funded and why; a) Tj
+T*
+() Tj
+T*
+(7.2 By submitting a Campaign the Campaign Owner agrees to: give accurate information; use funds) Tj
+T*
+() Tj
+T*
+(7.3 **One review before publication.** Every Campaign is reviewed by a person against Dono's pu) Tj
+T*
+() Tj
+T*
+(7.4 **The Campaign Owner controls the Campaign.** Funds must be raised for activity owned, appr) Tj
+T*
+() Tj
+T*
+(### 8. Campaign rules and categories) Tj
+T*
+() Tj
+T*
+(8.1 Campaigns must not involve: misleading information; fraud; plagiarism; illegal activity; co) Tj
+T*
+() Tj
+T*
+(8.2 **Permitted purposes.** Campaigns are limited to **personal, community, educational and stu) Tj
+T*
+() Tj
+T*
+(8.3 **Commercial fundraising is not permitted.** Dono does not publish a Campaign operated whol) Tj
+T*
+() Tj
+T*
+(8.4 **Society-purpose and third-party fundraising rule.** A Society Campaign is eligible only w) Tj
+T*
+() Tj
+T*
+(Subject to that official-initiative exception, the following are prohibited:) Tj
+T*
+() Tj
+T*
+(\(a\) fundraising for another individual, household, group or organisation;) Tj
+T*
+(\(b\) fundraising for a registered charity, a charitable cause, or any purpose that is charitable) Tj
+T*
+(\(c\) fundraising whose primary purpose is to benefit the general public or a section of the publ) Tj
+T*
+(\(d\) pass-through campaigns, where funds or funded assets are intended to be transferred onward ) Tj
+T*
+(\(e\) campaigns where the funded property or output is intended to become the property of anyone ) Tj
+T*
+() Tj
+T*
+(**Worked examples.** *Permitted:* a Society buying its own stage lighting; a Society running it) Tj
+T*
+() Tj
+T*
+(A campaign is **not** prohibited merely because the Campaign Owner's own activity happens to fa) Tj
+T*
+() Tj
+T*
+(8.5 **Other prohibited categories:** alcohol-related expenditure; political campaigning; invest) Tj
+T*
+() Tj
+T*
+(8.6 **Declarations and checks.** At creation the Society must declare: the Society activity, me) Tj
+T*
+() Tj
+T*
+(8.7 Dono may amend these categories in accordance with clause 30.) Tj
+T*
+() Tj
+T*
+(### 9. What the pre-publication review does and does not confirm) Tj
+T*
+() Tj
+T*
+(9.1 The review confirms only that a Campaign met the publication requirements described in the ) Tj
+T*
+() Tj
+T*
+(### 10. Campaign Owner obligations, evidence and closure) Tj
+T*
+() Tj
+T*
+(10.1 Campaign Owners must: use funds only in accordance with clause 14 and the applicable Campa) Tj
+T*
+() Tj
+T*
+(10.2 **Evidence is private.** Receipts and evidence are submitted privately to Dono and are **n) Tj
+T*
+() Tj
+T*
+(10.3 **Closure Statement.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Deadline.** The Campaign Owner must submit a Closure Statement within **30 days** after a) Tj
+T*
+(\(b\) **Minimum contents:** how funds were used; a final expenditure breakdown; copies of receipt) Tj
+T*
+(\(c\) **Review.** Dono reviews a complete Closure Statement within **30 days** against a publishe) Tj
+T*
+(\(d\) **One cure cycle.** Dono may reject a Closure Statement only where required information is ) Tj
+T*
+(\(e\) **Administrative closure.** If Dono does not notify acceptance or rejection within 30 days ) Tj
+T*
+(\(f\) **Notifications and appeal.** Donors are notified when a Campaign closes and of the closure) Tj
+T*
+() Tj
+T*
+(Acceptance or administrative closure ends update obligations. Evidence, refund, cooperation and) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 5 ? Donations) Tj
+T*
+() Tj
+T*
+(### 11. Making Donations) Tj
+T*
+() Tj
+T*
+(11.1 Donations are processed by the Payment Provider and charged when you confirm. Donations ar) Tj
+T*
+() Tj
+T*
+(11.2 Donors receive an on-screen receipt and an email confirmation identifying the Campaign, th) Tj
+T*
+() Tj
+T*
+(11.3 **Hiding your name.** A Donor may hide their name from public display on the Platform. The) Tj
+T*
+() Tj
+T*
+(11.4 **Age at checkout.** You must be **18 or over** to donate. Before payment you must confirm) Tj
+T*
+() Tj
+T*
+(11.5 **What checkout must show you.** Payment cannot proceed unless checkout displays a **"You') Tj
+T*
+() Tj
+T*
+(\(a\) the Campaign Owner's legal name;) Tj
+T*
+(\(b\) their legal status \(individual student, unincorporated society, incorporated society, compa) Tj
+T*
+(\(c\) any representative acting on their behalf, named;) Tj
+T*
+(\(d\) the holder of the Connected Account that will receive the funds;) Tj
+T*
+(\(e\) where applicable, who will own property or assets purchased with the Donation; and) Tj
+T*
+(\(f\) a statement that Dono provides the Platform and acts only in the role described in these Te) Tj
+T*
+() Tj
+T*
+(If any mandatory field is missing, payment is blocked. **The exact information displayed is sto) Tj
+T*
+() Tj
+T*
+(*Society example:* "Campaign: Equipment Fund 2026. Campaign Owner: Oxford Robotics Society \(uni) Tj
+T*
+() Tj
+T*
+(### 12. Nature of a Donation; how the contract is formed) Tj
+T*
+() Tj
+T*
+(12.1 A Donation is a **conditional contribution** to the stated campaign purpose ? not an uncon) Tj
+T*
+() Tj
+T*
+(12.2 **Formation.** By publishing a Campaign, the named Campaign Owner makes a **standing offer) Tj
+T*
+() Tj
+T*
+(12.3 **Dono is not a party to that contract.** Dono acts solely as the Campaign Owner's disclos) Tj
+T*
+() Tj
+T*
+(12.4 **Three relationships arise:**) Tj
+T*
+() Tj
+T*
+(\(a\) **Donor and Campaign Owner** ? the conditional contribution. The Campaign Owner must use th) Tj
+T*
+(\(b\) **Donor and Dono** ? the Donor agrees these Terms and the Donor Terms for use of the Platfo) Tj
+T*
+(\(c\) **Campaign Owner and Dono** ? the Campaign Terms govern the Campaign Owner's use of the Pla) Tj
+T*
+() Tj
+T*
+(12.5 A Donation is not automatically repayable because a Donor is dissatisfied with an outcome,) Tj
+T*
+() Tj
+T*
+(### 13. Refunds and Dono's refund mandate) Tj
+T*
+() Tj
+T*
+(13.1 Dono operates an internal refund and appeal process, set out in the **Refund and Dispute P) Tj
+T*
+() Tj
+T*
+(13.2 **Dono decides; Dono may execute.** Dono determines whether, under the Platform's rules, a) Tj
+T*
+() Tj
+T*
+(\(a\) is limited to refunds determined under these Terms and the Refund and Dispute Policy, and m) Tj
+T*
+(\(b\) does not permit Dono to receive, hold, withhold, delay, divert or apply any funds, and does) Tj
+T*
+(\(c\) is exercised only after the Campaign Owner has been notified of the request and given the o) Tj
+T*
+(\(d\) is disclosed to Donors in the Donor Terms and to Campaign Owners in the Campaign Terms, and) Tj
+T*
+(\(e\) does **not** displace the Campaign Owner's own obligation to execute a refund promptly, nor) Tj
+T*
+(\(f\) **never results in Dono receiving money.** The only movement it can cause is from the Conne) Tj
+T*
+() Tj
+T*
+(13.3 **Appeal after the event.** A Campaign Owner may appeal Dono's refund determination within) Tj
+T*
+() Tj
+T*
+(13.4 **Limits, stated honestly.** A refund can only be executed to the extent the Connected Acc) Tj
+T*
+() Tj
+T*
+(13.5 Nothing in these Terms removes a Donor's statutory rights, rights against their card issue) Tj
+T*
+() Tj
+T*
+(### 14. Use of funds; changes; surplus) Tj
+T*
+() Tj
+T*
+(14.1 **Use of funds.** Campaign funds may be used only for the purposes represented to Donors, ) Tj
+T*
+() Tj
+T*
+(14.2 **Partial funding.** If a Campaign does not meet its target the Campaign Owner decides whe) Tj
+T*
+() Tj
+T*
+(14.3 **Material Change ? definition.** A **Material Change** is any change a reasonable donor w) Tj
+T*
+() Tj
+T*
+(14.4 **Material Change ? categories, notice and the spending restriction.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Minor changes** ? no donor consent required \(supplier changes, a different manufacturer, ) Tj
+T*
+(\(b\) **Material but equivalent changes** ? the change must be **submitted to Dono before it is i) Tj
+T*
+(\(c\) **Fundamental changes** ? the Campaign is cancelled and refunds are required unless Donors ) Tj
+T*
+() Tj
+T*
+(**Restriction on spending.** From the moment a Material Change arises until the refund window c) Tj
+T*
+() Tj
+T*
+(14.5 **Surplus Funds.** Any amount that cannot reasonably be used for the stated purpose must b) Tj
+T*
+() Tj
+T*
+(\(a\) **Automatic allocation.** Dono refunds surplus in **reverse chronological order** ? the mos) Tj
+T*
+(\(b\) **Individual right to claim.** Independently of \(a\), **any Donor to a Campaign with unused ) Tj
+T*
+(\(c\) **Over-funding.** A Campaign cannot be funded beyond its target. Once the target is reached) Tj
+T*
+() Tj
+T*
+(14.6 **Funds not used for the stated purpose must be refunded in full.** Where funds have been ) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 6 ? Payments) Tj
+T*
+() Tj
+T*
+(### 15. Payment processing and the Recipient model) Tj
+T*
+() Tj
+T*
+(15.1 Payments are processed using **Stripe Connect Standard accounts and direct charges**. Dona) Tj
+T*
+() Tj
+T*
+(15.2 **Who the Recipient is.** The Recipient is expected to be the Campaign Owner. For an indiv) Tj
+T*
+() Tj
+T*
+(15.3 **Split roles are exceptional.** Dono expects the Campaign Owner, the Recipient and the ow) Tj
+T*
+() Tj
+T*
+(15.4 The Recipient confirms that they are authorised to receive the funds and to run the Campai) Tj
+T*
+() Tj
+T*
+(15.5 **Refund execution.** The Recipient must execute promptly any refund Dono determines is du) Tj
+T*
+() Tj
+T*
+(15.6 **Loss allocation.** Under the live configuration: the **Payment Provider is the losses co) Tj
+T*
+() Tj
+T*
+(15.7 **Dono cannot hold or delay a payout.** Dono has no ability to pause, hold, delay or redir) Tj
+T*
+() Tj
+T*
+(15.8 The Payment Provider's own terms and privacy policy also apply to Connected Account holder) Tj
+T*
+() Tj
+T*
+(### 16. Fees) Tj
+T*
+() Tj
+T*
+(16.1 **Dono has two fixed fee schedules.** A beta/demo Campaign is charged **2% + 20p per Donat) Tj
+T*
+() Tj
+T*
+(16.2 The applicable fee is charged to the Campaign Owner by deduction from Campaign proceeds un) Tj
+T*
+() Tj
+T*
+(16.3 **The Payment Provider's cost is separate.** The Payment Provider charges the Connected Ac) Tj
+T*
+() Tj
+T*
+(16.4 **Fee cover.** A Donor may choose to add the **applicable Dono fee** to their payment so t) Tj
+T*
+() Tj
+T*
+(16.5 **Total shown before you confirm.** Before the Donor confirms, checkout shows the total to) Tj
+T*
+() Tj
+T*
+(16.6 **VAT.** **Dono is not registered for VAT. No amount shown anywhere on the Platform includ) Tj
+T*
+() Tj
+T*
+(16.7 **Fee changes.** Dono may change its fee. **A change applies only to Campaigns created aft) Tj
+T*
+() Tj
+T*
+(16.8 Fee treatment on a refund is in the Refund and Dispute Policy. Dono records its fee revenu) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 7 ? Community, content and safety) Tj
+T*
+() Tj
+T*
+(### 17. Comments) Tj
+T*
+() Tj
+T*
+(17.1 The Platform has no private messaging. **Commenting is restricted.** To post a comment you) Tj
+T*
+() Tj
+T*
+(17.2 **Before publication**, comments pass an automated keyword and pattern filter that blocks ) Tj
+T*
+() Tj
+T*
+(17.3 **Every published comment carries a visible Report control**, and anyone ? including a per) Tj
+T*
+() Tj
+T*
+(17.4 Users may edit or delete their own comments; the interface shows when a comment was edited) Tj
+T*
+() Tj
+T*
+(17.5 **Dono may remove or hide any comment, suspend commenting privileges, or restrict or suspe) Tj
+T*
+() Tj
+T*
+(### 18. Community standards and illegal content) Tj
+T*
+() Tj
+T*
+(18.1 All Users must comply with the **Community Guidelines**, which govern content and conduct ) Tj
+T*
+() Tj
+T*
+(18.2 **How Dono deals with illegal content.** Dono prohibits every category of priority illegal) Tj
+T*
+() Tj
+T*
+(18.3 **Response targets, not guarantees.** Dono *aims* to meet the response times published in ) Tj
+T*
+() Tj
+T*
+(### 19. User Content) Tj
+T*
+() Tj
+T*
+(19.1 **Licence.** You retain ownership of your Content. You grant Dono a worldwide, non-exclusi) Tj
+T*
+() Tj
+T*
+(19.2 **Promotional use is opt-in.** If you opt in, Dono may use your campaign content in promot) Tj
+T*
+() Tj
+T*
+(19.3 **Content warranty.** By uploading Content you warrant that you own it or have all rights,) Tj
+T*
+() Tj
+T*
+(19.4 **Rich media and links.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Every Campaign, including its images, documents, video and external links, is reviewed by) Tj
+T*
+(\(b\) **Campaign videos must be uploaded or linked through the Platform's own controls.** Externa) Tj
+T*
+(\(c\) **Comments permit no attachments, no images and no links** \(clause 17.1\).) Tj
+T*
+(\(d\) Dono applies automated malware and image-safety scanning to uploaded media and periodically) Tj
+T*
+() Tj
+T*
+(### 20. Intellectual property and legal notices) Tj
+T*
+() Tj
+T*
+(20.1 The Platform, the Dono name and branding, and Dono's software belong to Dono or its licens) Tj
+T*
+() Tj
+T*
+(20.2 **One notice-and-action route.** Copyright, trade-mark, impersonation, defamation and priv) Tj
+T*
+() Tj
+T*
+(20.3 **What Dono does with a notice.** Dono acknowledges the notice, triages it by urgency, and) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 8 ? Privacy) Tj
+T*
+() Tj
+T*
+(### 21. Personal data and cookies) Tj
+T*
+() Tj
+T*
+(21.1 The data controller is **Amrit Kaur Rooprai trading as Dono**, of 37 St Giles', Oxford OX1) Tj
+T*
+() Tj
+T*
+(21.2 The Payment Provider processes personal data for payment processing, identity verification) Tj
+T*
+() Tj
+T*
+(21.3 **Institutional disclosure.** Dono does not routinely share identifiable user or donor dat) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 9 ? Enforcement) Tj
+T*
+() Tj
+T*
+(### 22. Suspension and restriction) Tj
+T*
+() Tj
+T*
+(22.1 Dono may warn, restrict, suspend or ban a User, or restrict features, where it reasonably ) Tj
+T*
+() Tj
+T*
+(22.2 **Safeguards.** We separate **emergency suspension** ? immediate action for safety, fraud,) Tj
+T*
+() Tj
+T*
+(### 23. Campaign removal and institutional reports) Tj
+T*
+() Tj
+T*
+(23.1 **Reports from institutions.** Verified representatives of an Institution may **report** c) Tj
+T*
+() Tj
+T*
+(23.2 Before non-emergency action Dono takes reasonable steps to verify the requester's authorit) Tj
+T*
+() Tj
+T*
+(23.3 Dono makes its own decision on the evidence, these Terms, the Community Guidelines and the) Tj
+T*
+() Tj
+T*
+(23.4 For imminent risk of harm, court orders, police requests or legal obligations, Dono may ac) Tj
+T*
+() Tj
+T*
+(23.5 Unless prohibited by law or where it would create a safety risk, Dono notifies the Campaig) Tj
+T*
+() Tj
+T*
+(23.6 **Evidence preservation.** Even where Content is removed, Dono retains what is reasonably ) Tj
+T*
+() Tj
+T*
+(23.7 **Referrals to an Institution** are made only under Dono's **Institutional Referral Protoc) Tj
+T*
+() Tj
+T*
+(23.8 Institutions may confirm factual matters about affiliation. Whether Content stays on the P) Tj
+T*
+() Tj
+T*
+(### 24. Investigations, financial crime and sanctions) Tj
+T*
+() Tj
+T*
+(24.1 The Payment Provider is responsible for payment processing, KYC, payment-level sanctions s) Tj
+T*
+() Tj
+T*
+(24.2 Dono may, on a risk-based basis: refuse, suspend or remove campaigns, accounts or donation) Tj
+T*
+() Tj
+T*
+(### 25. Disclosure of identity) Tj
+T*
+() Tj
+T*
+(25.1 Dono **discloses personal data only where required or permitted by law**. Dono does **not*) Tj
+T*
+() Tj
+T*
+(25.2 Any exceptional disclosure must be approved following legal review, satisfy UK GDPR, be li) Tj
+T*
+() Tj
+T*
+(25.3 This clause governs what **Dono** discloses. It does not affect what the Payment Provider ) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 10 ? Liability) Tj
+T*
+() Tj
+T*
+(### 26. Dono's role and no guarantees) Tj
+T*
+() Tj
+T*
+(26.1 Dono hosts Campaigns, checks student eligibility as described in clause 6, reviews Campaig) Tj
+T*
+() Tj
+T*
+(26.2 **Insurance is limited and is not a guarantee.** Dono holds technology professional-indemn) Tj
+T*
+() Tj
+T*
+(### 27. Limitation of liability) Tj
+T*
+() Tj
+T*
+(27.1 **Non-excludable liabilities.** Nothing in these Terms excludes or limits liability for: d) Tj
+T*
+() Tj
+T*
+(27.2 **How your status is determined.** Your status follows the facts, not a label. **You are a) Tj
+T*
+() Tj
+T*
+(27.3 **Three categories of user.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Consumers.** We are responsible for loss you suffer that is a **reasonably foreseeable** ) Tj
+T*
+() Tj
+T*
+(\(b\) **Non-business organisations ? Societies and similar non-commercial groups.** A Society is ) Tj
+T*
+() Tj
+T*
+(\(c\) **Business users** ? an incorporated entity acting commercially, an Institution, or an indi) Tj
+T*
+() Tj
+T*
+(27.4 **Caps are per claimant.** Any cap applies per claimant. Liability owed to one User does n) Tj
+T*
+() Tj
+T*
+(27.5 **Campaign responsibility.** Campaign Owners are responsible for campaign content, how fun) Tj
+T*
+() Tj
+T*
+(### 28. Indemnity) Tj
+T*
+() Tj
+T*
+(28.1 **Consumers are subject to no indemnity.** This includes Donors, individual student Campai) Tj
+T*
+() Tj
+T*
+(28.2 **Narrow indemnity for non-consumers.** A Society \(and a business user under clause 27.3\(c) Tj
+T*
+() Tj
+T*
+(28.3 **Conduct of a claim.** Dono must notify the indemnifying party promptly, take reasonable ) Tj
+T*
+() Tj
+T*
+(28.4 **Personal liability of a Responsible Representative** is governed by clause 1 of the Soci) Tj
+T*
+() Tj
+T*
+(### 29. Force majeure) Tj
+T*
+() Tj
+T*
+(29.1 If an event outside Dono's reasonable control prevents performance, Dono will use reasonab) Tj
+T*
+() Tj
+T*
+(29.2 If the event continues for more than 30 days either party may terminate the affected agree) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Part 11 ? General) Tj
+T*
+() Tj
+T*
+(### 30. Changes to these Terms) Tj
+T*
+() Tj
+T*
+(30.1 **Reasons.** We change these Terms only where reasonably necessary: to comply with law or ) Tj
+T*
+() Tj
+T*
+(30.2 **Categories of change.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Service and operational changes** may take effect immediately or on reasonable notice; no) Tj
+T*
+(\(b\) **Fee changes** follow clause 16.7: prospective only, existing Donations never repriced, li) Tj
+T*
+(\(c\) **Material contractual changes** ? liability, refund rights, user obligations, suspension p) Tj
+T*
+() Tj
+T*
+(30.3 **Emergency exception.** We may change the Terms immediately where necessary because of la) Tj
+T*
+() Tj
+T*
+(30.4 **Protection of existing transactions.** Changes do not alter completed donations, complet) Tj
+T*
+() Tj
+T*
+(30.5 **Version binding and archive.** Every acceptance is permanently recorded against the exac) Tj
+T*
+() Tj
+T*
+(30.6 **Notice.** We may notify you by email, in-app or dashboard notification, or \(for non-mate) Tj
+T*
+() Tj
+T*
+(### 31. Termination and wind-down) Tj
+T*
+() Tj
+T*
+(31.1 **You may close your account at any time**, subject to continuing obligations. Dono may su) Tj
+T*
+() Tj
+T*
+(31.2 **What happens on termination.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Donors.** Closing your account does not cancel a Donation already made or a contract alre) Tj
+T*
+(\(b\) **Campaign Owners with no live Campaign.** Your account closes on the effective date. Campa) Tj
+T*
+(\(c\) **Campaign Owners with a live Campaign.** The Campaign closes to new Donations on the effec) Tj
+T*
+(\(d\) **Society Campaigns.** Where a Responsible Representative's account closes, clause 6 of the) Tj
+T*
+(\(e\) **Content and licence.** The licence in clause 19.1 ends when your Content is removed, exce) Tj
+T*
+(\(f\) **Data and evidence.** You may request a copy of your personal data and its erasure, subjec) Tj
+T*
+(\(g\) **Outstanding obligations.** Where you have an unmet obligation ? an outstanding refund, ev) Tj
+T*
+() Tj
+T*
+(31.3 **Campaign page archival.** A Campaign page **does not remain publicly discoverable indefi) Tj
+T*
+() Tj
+T*
+(31.4 **If Dono ceases to operate.** Dono maintains a written **Wind-Down Plan**. On a wind-down) Tj
+T*
+() Tj
+T*
+(31.5 **Survival.** The following survive termination: refund obligations and their execution; e) Tj
+T*
+() Tj
+T*
+(### 32. Governing law and jurisdiction) Tj
+T*
+() Tj
+T*
+(32.1 These Terms are governed by the law of England and Wales, and the courts of England and Wa) Tj
+T*
+() Tj
+T*
+(### 33. Complaints and dispute resolution) Tj
+T*
+() Tj
+T*
+(33.1 Dono operates a **Complaints Policy** separate from the refund decision itself. Content an) Tj
+T*
+() Tj
+T*
+(33.2 **Alternative dispute resolution.** Each final response to a consumer complaint contains t) Tj
+T*
+() Tj
+T*
+(### 34. General) Tj
+T*
+() Tj
+T*
+(34.1 If any provision is unenforceable, the remainder continues. A failure to enforce is not a ) Tj
+T*
+() Tj
+T*
+(34.2 **Contact.** Amrit Kaur Rooprai trading as Dono, 37 St Giles', Oxford OX1 3LD. Everything:) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Approval block ? SIGNATURE REQUIRED) Tj
+T*
+() Tj
+T*
+(> **This block is unsigned. This document is prepared for approval and is not approved.**) Tj
+T*
+() Tj
+T*
+(**I confirm that I have reviewed this document in its consolidated v3.0 form, that it states th) Tj
+T*
+() Tj
+T*
+(| Field | Entry |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Approver name | Amrit Kaur Rooprai |) Tj
+T*
+(| Role | Controller, sole trader and accountable owner |) Tj
+T*
+(| Document version approved | 3.0 |) Tj
+T*
+(| Approved for publication | ? Yes, on ____________ ? ? **No** ? publication is gated on the it) Tj
+T*
+(| Signature | ______________________ |) Tj
+T*
+(| Date of approval | ______________________ |) Tj
+T*
+() Tj
+T*
+(**Reviewed by:** Sashank \(deputy\) ? Signature ______________________  Dat) Tj
+T*
+ET
+endstream
+endobj
+5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000111 00000 n 
+0000000235 00000 n 
+0000030423 00000 n 
+trailer<< /Size 6 /Root 1 0 R >>
+startxref
+30491
+%%EOF

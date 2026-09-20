@@ -21,13 +21,34 @@ export default defineSchema({
     college: v.optional(v.string()),
     degree: v.optional(v.string()),
     yearInCollege: v.optional(v.string()),
+    /**
+     * Audience chosen at signup — orthogonal to admin `role`.
+     * Server-enforced; never trust client-only for permissions.
+     */
+    userType: v.optional(v.union(v.literal("student"), v.literal("alumni"))),
+    /** Alumni matriculation / graduation year (e.g. "2019"). */
+    matriculationYear: v.optional(v.string()),
+    /** Society slugs the alumni marked interest in during onboarding. */
+    interestedSocietySlugs: v.optional(v.array(v.string())),
     /** ISO date YYYY-MM-DD — required for 18+ eligibility under the T&Cs. */
     dateOfBirth: v.optional(v.string()),
     ageAttestedAt: v.optional(v.number()),
+    /** Set when the user explicitly skips profile setup — bypasses the
+     * forced /onboarding redirect in app/_layout.tsx until they revisit it. */
+    onboardingSkippedAt: v.optional(v.number()),
     avatarUrl: v.optional(v.string()),
     avatarStorageId: v.optional(v.id("_storage")),
     role: v.union(v.literal("user"), v.literal("admin")),
     emailVerifiedAt: v.optional(v.number()),
+    /** Set by users.requestAccountDeletion. The row is kept as a tombstone so
+     * historical donations/comments still resolve to "Deleted User" — never
+     * patch a tombstoned profile back to a live one. */
+    deletedAt: v.optional(v.number()),
+    /** Soft suspension — blocks verified-user actions until cleared. */
+    suspendedAt: v.optional(v.number()),
+    suspendedReason: v.optional(v.string()),
+    /** Epoch ms; commenting blocked while Date.now() < this value. */
+    commentingRestrictedUntil: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -39,17 +60,40 @@ export default defineSchema({
     guestKey: v.optional(v.string()),
     documentId: v.string(),
     version: v.string(),
+    /** HTML artifact SHA-256 of the accepted bytes (CH-11). */
+    contentHash: v.optional(v.string()),
     context: v.union(
       v.literal("signup"),
-      v.literal("create_campaign"),
+      v.literal("create_campaign"), // legacy — no longer written
       v.literal("create_society"),
       v.literal("donate"),
+      v.literal("donate_guest"),
     ),
+    /** Acceptance Matrix event (CH-05). */
+    event: v.optional(
+      v.union(v.literal("A"), v.literal("B"), v.literal("C")),
+    ),
+    role: v.optional(v.string()),
+    campaignId: v.optional(v.id("campaigns")),
+    donationId: v.optional(v.id("donations")),
+    mechanism: v.optional(v.string()),
+    wordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
+    recipientPanel: v.optional(v.any()),
+    feeBreakdown: v.optional(v.any()),
     acceptedAt: v.number(),
   })
     .index("by_user_document", ["userId", "documentId"])
     .index("by_guest_document", ["guestKey", "documentId"])
-    .index("by_user", ["userId"]),
+    .index("by_user", ["userId"])
+    .index("by_donation", ["donationId"]),
   appRateLimits: defineTable({
     key: v.string(),
     attempts: v.number(),
@@ -135,11 +179,30 @@ export default defineSchema({
     .index("by_campaign", ["campaignSlug"])
     .index("by_user", ["userId"]),
   contentReports: defineTable({
-    reporterUserId: v.id("users"),
-    targetType: v.union(v.literal("comment"), v.literal("campaign")),
+    /** Optional so logged-out / guest reporters (OS-02) can submit. */
+    reporterUserId: v.optional(v.id("users")),
+    reporterEmail: v.optional(v.string()),
+    reporterName: v.optional(v.string()),
+    targetType: v.union(
+      v.literal("comment"),
+      v.literal("campaign"),
+      v.literal("society"),
+      v.literal("update"),
+      v.literal("image"),
+    ),
     campaignSlug: v.optional(v.string()),
     commentId: v.optional(v.id("campaignComments")),
+    societySlug: v.optional(v.string()),
+    updateId: v.optional(v.id("campaignUpdates")),
     reason: v.string(),
+    /** Structured reason — see convex/lib/moderationConstants.ts. Optional for
+     * rows created before OS-03; new reports always set it. */
+    reasonCode: v.optional(v.string()),
+    /** Snapshot of the reported content at report time (OS-01). */
+    contentVersionSnapshot: v.optional(v.string()),
+    /** P1-style triage flag (OS-04). Missing → treat as false. */
+    urgent: v.optional(v.boolean()),
+    evidenceNote: v.optional(v.string()),
     status: v.union(
       v.literal("open"),
       v.literal("resolved"),
@@ -152,7 +215,55 @@ export default defineSchema({
   })
     .index("by_status", ["status"])
     .index("by_reporter", ["reporterUserId"])
-    .index("by_campaign", ["campaignSlug"]),
+    .index("by_campaign", ["campaignSlug"])
+    .index("by_status_urgent", ["status", "urgent"]),
+  /** One-click moderator decisions linked to a report (OS-05, OS-06). */
+  moderationActions: defineTable({
+    reportId: v.id("contentReports"),
+    moderatorUserId: v.id("users"),
+    action: v.union(
+      v.literal("hide_content"),
+      v.literal("remove_content"),
+      v.literal("pause_campaign"),
+      v.literal("restrict_commenting"),
+      v.literal("suspend_account"),
+      v.literal("keep"),
+      v.literal("restore"),
+    ),
+    reasonCode: v.string(),
+    notes: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_report", ["reportId"]),
+  /** Appeal of a moderated report — must be assigned to a different reviewer (OS-07). */
+  moderationAppeals: defineTable({
+    reportId: v.id("contentReports"),
+    appellantUserId: v.id("users"),
+    originalModeratorUserId: v.id("users"),
+    assignedReviewerUserId: v.optional(v.id("users")),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("upheld"),
+      v.literal("overturned"),
+      v.literal("withdrawn"),
+    ),
+    note: v.string(),
+    createdAt: v.number(),
+    decidedAt: v.optional(v.number()),
+  })
+    .index("by_report", ["reportId"])
+    .index("by_status", ["status"])
+    .index("by_reviewer", ["assignedReviewerUserId"]),
+  /** Keyword/pattern filter blocks before publication (OS-09). */
+  moderationFilterEvents: defineTable({
+    userId: v.optional(v.id("users")),
+    source: v.union(
+      v.literal("comment"),
+      v.literal("campaign_story"),
+    ),
+    category: v.string(),
+    matchedPattern: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_user", ["userId"]),
   refundRequests: defineTable({
     donationId: v.id("donations"),
     requesterUserId: v.optional(v.id("users")),
@@ -214,6 +325,62 @@ export default defineSchema({
   })
     .index("by_campaign", ["campaignId"])
     .index("by_status", ["status"]),
+  /** Post-approval campaign content edits — live row stays unchanged until admin approves. */
+  campaignEditRequests: defineTable({
+    campaignId: v.id("campaigns"),
+    requestedBy: v.id("users"),
+    proposed: v.object({
+      title: v.optional(v.string()),
+      description: v.optional(v.string()),
+      story: v.optional(v.string()),
+      category: v.optional(v.string()),
+      goal: v.optional(v.number()),
+      existingFunding: v.optional(v.number()),
+      template: v.optional(v.string()),
+      additionalNotes: v.optional(v.string()),
+      expectedExpenditureDate: v.optional(v.string()),
+      plannedUpdateSchedule: v.optional(v.string()),
+      ownershipStatement: v.optional(v.string()),
+      videoUrl: v.optional(v.string()),
+      impactItems: v.optional(v.array(v.string())),
+    }),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
+  })
+    .index("by_campaign", ["campaignId"])
+    .index("by_status", ["status"]),
+  /** Post-approval society/college profile edits — live + communities stay until approved. */
+  societyEditRequests: defineTable({
+    societyId: v.id("societies"),
+    requestedBy: v.id("users"),
+    proposed: v.object({
+      name: v.optional(v.string()),
+      description: v.optional(v.string()),
+      story: v.optional(v.string()),
+      websiteUrl: v.optional(v.string()),
+      secondaryLink: v.optional(v.string()),
+      socialUrl: v.optional(v.string()),
+      coverImageStorageId: v.optional(v.id("_storage")),
+    }),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("approved"),
+      v.literal("rejected"),
+    ),
+    createdAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.id("users")),
+    reviewNote: v.optional(v.string()),
+  })
+    .index("by_society", ["societyId"])
+    .index("by_status", ["status"]),
   communityFunds: defineTable(fundFields).index("by_slug", ["slug"]),
   activityItems: defineTable(activityFields)
     .index("by_slug", ["slug"])
@@ -233,6 +400,10 @@ export default defineSchema({
     type: v.string(),
     processedAt: v.number(),
   }).index("by_stripeEventId", ["stripeEventId"]),
+  /** Legacy campaign-level recurring donations — creation removed, kept for
+   * historical reporting and so the cancellation migration/webhooks still
+   * resolve existing rows. See convex/societySubscriptions.ts for the
+   * society-level replacement. */
   recurringDonations: defineTable({
     userId: v.id("users"),
     campaignId: v.id("campaigns"),
@@ -251,6 +422,47 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_subscription", ["stripeSubscriptionId"])
     .index("by_campaign", ["campaignId"]),
+  /** Society-level recurring subscriptions. Each successful invoice is split
+   * across the society's currently-active campaigns at charge time — see
+   * societySubscriptionPayments for the per-invoice split record. */
+  societySubscriptions: defineTable({
+    userId: v.id("users"),
+    communitySlug: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    stripeSubscriptionId: v.string(),
+    stripePriceId: v.string(),
+    status: v.union(
+      v.literal("active"),
+      v.literal("past_due"),
+      v.literal("canceled"),
+    ),
+    /** Set when Dono canceled this on the donor's behalf rather than the
+     * donor requesting it themselves — surfaced in the cancellation email. */
+    canceledReason: v.optional(
+      v.union(v.literal("user_requested"), v.literal("no_active_campaigns")),
+    ),
+    createdAt: v.number(),
+    canceledAt: v.optional(v.number()),
+  })
+    .index("by_user", ["userId"])
+    .index("by_subscription", ["stripeSubscriptionId"])
+    .index("by_community", ["communitySlug"]),
+  /** One row per successfully split invoice — doubles as the idempotency
+   * guard for webhook retries and the audit record of how a society
+   * subscription payment was divided across campaigns (or refunded, if the
+   * society had no active campaigns at charge time). */
+  societySubscriptionPayments: defineTable({
+    societySubscriptionId: v.id("societySubscriptions"),
+    stripeInvoiceId: v.string(),
+    totalAmountMinor: v.number(),
+    campaignCount: v.number(),
+    refunded: v.optional(v.boolean()),
+    stripeRefundId: v.optional(v.string()),
+    createdAt: v.number(),
+  })
+    .index("by_invoice", ["stripeInvoiceId"])
+    .index("by_societySubscription", ["societySubscriptionId"]),
   /** Admin-configured match windows. Match credit is a commitment tracker —
    * it does not inflate campaigns.raised or move Stripe funds. */
   campaignMatchWindows: defineTable({
@@ -299,15 +511,47 @@ export default defineSchema({
     ),
     stripeInvoiceId: v.optional(v.string()),
     recurringDonationId: v.optional(v.id("recurringDonations")),
+    /** Set on rows created by the society-subscription fan-out — the
+     * campaign's share of one invoice.paid split. */
+    societySubscriptionId: v.optional(v.id("societySubscriptions")),
+    societySubscriptionPaymentId: v.optional(v.id("societySubscriptionPayments")),
     coverFees: v.optional(v.boolean()),
     intendedCampaignAmountMinor: v.optional(v.number()),
     estimatedStripeFeeMinor: v.optional(v.number()),
+    platformFeeMinor: v.optional(v.number()),
+    amountToCampaignMinor: v.optional(v.number()),
     matchedAmountPounds: v.optional(v.number()),
     matchWindowId: v.optional(v.id("campaignMatchWindows")),
     ageAttested: v.optional(v.boolean()),
+    ageAttestedAt: v.optional(v.number()),
     legalAcceptedAt: v.optional(v.number()),
+    /** CH-14: guest key + acceptance row linkage. */
+    guestKey: v.optional(v.string()),
+    legalAcceptanceIds: v.optional(v.array(v.id("legalAcceptances"))),
+    legalDocumentVersions: v.optional(
+      v.array(
+        v.object({
+          documentId: v.string(),
+          version: v.string(),
+          contentHash: v.string(),
+        }),
+      ),
+    ),
+    recipientPanel: v.optional(v.any()),
+    feeBreakdownSnapshot: v.optional(v.any()),
+    acceptanceWordings: v.optional(
+      v.array(
+        v.object({
+          id: v.string(),
+          text: v.string(),
+          accepted: v.boolean(),
+        }),
+      ),
+    ),
     emailUpdatesOptIn: v.optional(v.boolean()),
     emailUpdatesOptInAt: v.optional(v.number()),
+    marketingOptIn: v.optional(v.boolean()),
+    showSupportPublicly: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_user", ["userId"])
@@ -315,7 +559,8 @@ export default defineSchema({
     .index("by_invoice", ["stripeInvoiceId"])
     .index("by_donorEmail", ["donorEmail"])
     .index("by_fund", ["fundId"])
-    .index("by_campaign", ["campaignId"]),
+    .index("by_campaign", ["campaignId"])
+    .index("by_guestKey", ["guestKey"]),
   /** Per-campaign email-update subscriptions captured from the donation
    * thank-you step. Only opted-in rows are stored — a donor's decision not
    * to opt in lives solely on the donation row (see `donations.emailUpdatesOptIn`). */
@@ -388,6 +633,19 @@ export default defineSchema({
     metadata: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_admin", ["adminUserId"]),
+  /**
+   * Singleton kill-switch document (`key: "global"`). Missing row = all
+   * switches off. Write via platformSettings.setFlags only.
+   */
+  platformSettings: defineTable({
+    key: v.literal("global"),
+    disableNewCampaigns: v.boolean(),
+    disableDonations: v.boolean(),
+    disableRegistration: v.boolean(),
+    disableComments: v.boolean(),
+    updatedAt: v.number(),
+    updatedBy: v.optional(v.id("users")),
+  }).index("by_key", ["key"]),
   stripeConnectAccounts: defineTable({
     userId: v.id("users"),
     communitySlug: v.optional(v.string()),

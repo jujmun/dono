@@ -6,7 +6,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { cn } from "@/lib/utils";
 
@@ -145,7 +145,7 @@ function GroupDetail({ group, onBack }: { group: GroupOverviewRow; onBack: () =>
       </Pressable>
 
       <View className="flex-row items-start justify-between gap-3">
-        <Text className="font-retro-bold text-xl text-dono-text">
+        <Text className="font-retro-display text-xl text-dono-text">
           {detail?.name ?? group.name}
         </Text>
         {isCustom ? (
@@ -306,7 +306,7 @@ function GroupDetail({ group, onBack }: { group: GroupOverviewRow; onBack: () =>
 
 export default function AdminGroupsPage() {
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
 
   const groups = useQuery(api.groups.listOverview, adminUser ? {} : "skip") as
     | GroupOverviewRow[]
@@ -351,7 +351,7 @@ export default function AdminGroupsPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">Access denied</Text>
+          <Text className="font-retro-display text-2xl text-dono-text">Access denied</Text>
         </View>
       </AdminShell>
     );
@@ -363,7 +363,7 @@ export default function AdminGroupsPage() {
   return (
     <AdminShell>
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
-        <Text className="font-retro-bold text-2xl text-retro-ink">Groups</Text>
+        <Text className="font-retro-display text-2xl text-retro-ink">Groups</Text>
         <Text className="mt-1 text-sm text-dono-muted">
           Message the right set of people at once. Automatic groups stay in sync as
           societies, leaders, and campaigns change; custom groups are yours to manage.
@@ -421,7 +421,7 @@ export default function AdminGroupsPage() {
                   <Pressable
                     onPress={() => void handleCreateGroup()}
                     disabled={createBusy || !newGroupName.trim()}
-                    className={cn(
+                    className={cn("retro-key", 
                       "mt-3 items-center rounded-xl bg-dono-primary py-2.5",
                       (createBusy || !newGroupName.trim()) && "opacity-50",
                     )}

@@ -2,7 +2,6 @@ import { ConvexError, v } from "convex/values";
 import { internal } from "./_generated/api";
 import {
   internalMutation,
-  internalQuery,
   mutation,
   query,
   type MutationCtx,
@@ -12,14 +11,20 @@ import type { Doc, Id } from "./_generated/dataModel";
 import {
   requireAdmin,
   requireVerifiedUser,
+  resolveCreatorContact,
 } from "./lib/authz";
+import { createNotification, buildRefundOwnerActionRequiredMessage } from "./lib/notifications";
 
-const MS_DAY = 24 * 60 * 60 * 1000;
-const ORDINARY_WINDOW_DAYS = 60;
-const FRAUD_WINDOW_DAYS = 365;
+export const MS_DAY = 24 * 60 * 60 * 1000;
+export const ORDINARY_WINDOW_DAYS = 60;
+export const FRAUD_WINDOW_DAYS = 365;
 const MAX_GROUNDS = 200;
 const MAX_DETAILS = 5000;
 const MAX_NOTE = 2000;
+/** Placeholder pending a legal decision — Refund and Dispute Policy §10.6
+ * currently states there is no minimum threshold, so surplus of any size is
+ * refunded. Raise this once a real de minimis value is confirmed. */
+const DE_MINIMIS_SURPLUS_THRESHOLD_MINOR = 0;
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -69,7 +74,7 @@ function parseCampaignDeadlineMs(deadline: string): number {
   return ms;
 }
 
-function assertRefundWindow(args: {
+export function assertRefundWindow(args: {
   isFraudClaim: boolean;
   campaignDeadline: string;
   donationCreatedAt: number;
@@ -299,9 +304,34 @@ export const adminDecide = mutation({
       adminDecidedBy: adminUserId,
     });
 
-    await ctx.scheduler.runAfter(0, internal.stripe.processApprovedRefund, {
-      refundRequestId: args.requestId,
-    });
+    // Refund Policy §6.1: Dono decides a refund is owed but does not call
+    // Stripe's refund API itself — the Campaign Owner executes it from their
+    // own Stripe dashboard. Completion is detected via the charge.refunded
+    // webhook (see stripeWebhook.ts), which also refunds Dono's application
+    // fee share regardless of who triggered the underlying refund.
+    const donation = await ctx.db.get(request.donationId);
+    const campaign = await ctx.db.get(request.campaignId);
+    if (donation && campaign?.createdBy) {
+      const contact = await resolveCreatorContact(ctx, campaign.createdBy);
+      if (contact) {
+        await createNotification(ctx, {
+          userId: campaign.createdBy,
+          type: "refund_owner_action_required",
+          message: buildRefundOwnerActionRequiredMessage(campaign.title),
+          relatedEntityType: "campaign",
+          relatedEntityId: campaign.slug,
+        });
+        await ctx.scheduler.runAfter(0, internal.emails.sendRefundOwnerActionRequired, {
+          email: contact.email,
+          name: contact.name,
+          campaignTitle: campaign.title,
+          amount: donation.amount,
+          currency: donation.currency,
+          stripePaymentIntentId: donation.stripePaymentIntentId,
+          stripeChargeId: donation.stripeChargeId,
+        });
+      }
+    }
 
     return null;
   },
@@ -413,7 +443,8 @@ export const listForCampaignOwner = query({
 /**
  * Surplus refund helper (Student Campaign Terms): refund donations newest-first
  * until the surplus amount is exhausted. Creates refund request rows for each
- * donation slice; Stripe processing is left to adminDecide / processApprovedRefund.
+ * donation slice; admin approval and owner-executed Stripe refund happen via
+ * the normal adminDecide flow.
  */
 export const surplusRefundReverseChron = internalMutation({
   args: {
@@ -424,11 +455,11 @@ export const surplusRefundReverseChron = internalMutation({
   handler: async (ctx, args) => {
     if (
       !Number.isFinite(args.surplusAmountMinor) ||
-      args.surplusAmountMinor <= 0
+      args.surplusAmountMinor <= DE_MINIMIS_SURPLUS_THRESHOLD_MINOR
     ) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: "Surplus amount must be a positive minor-unit integer.",
+        message: "Surplus amount must exceed the de minimis threshold.",
       });
     }
 
@@ -490,34 +521,25 @@ export const surplusRefundReverseChron = internalMutation({
   },
 });
 
-export const markRefundProcessed = internalMutation({
+/** Called from the charge.refunded webhook (see stripeWebhook.ts) once Stripe
+ * confirms the Campaign Owner actually executed an approved refund from
+ * their own dashboard — closes the loop without Dono ever calling Stripe's
+ * refund API itself (Refund Policy §6.1). No-ops if there's no matching
+ * approved request, which is the normal case for refunds Dono didn't decide. */
+export const markApprovedRequestRefundedByDonation = internalMutation({
   args: {
-    refundRequestId: v.id("refundRequests"),
+    donationId: v.id("donations"),
     stripeRefundId: v.optional(v.string()),
-    failed: v.optional(v.boolean()),
-    failureNote: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const request = await ctx.db.get(args.refundRequestId);
+    const request = await ctx.db
+      .query("refundRequests")
+      .withIndex("by_donation", (q) => q.eq("donationId", args.donationId))
+      .filter((q) => q.eq(q.field("status"), "approved"))
+      .first();
     if (!request) return null;
 
-    if (args.failed) {
-      await ctx.db.patch(args.refundRequestId, {
-        status: "failed",
-        adminDecisionNote:
-          args.failureNote ?? request.adminDecisionNote ?? "Stripe refund failed.",
-      });
-      return null;
-    }
-
-    if (!args.stripeRefundId) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "stripeRefundId is required when marking a refund as processed.",
-      });
-    }
-
-    await ctx.db.patch(args.refundRequestId, {
+    await ctx.db.patch(request._id, {
       status: "refunded",
       stripeRefundId: args.stripeRefundId,
     });
@@ -525,21 +547,3 @@ export const markRefundProcessed = internalMutation({
   },
 });
 
-export const getRequestForStripe = internalQuery({
-  args: { refundRequestId: v.id("refundRequests") },
-  handler: async (ctx, args) => {
-    const request = await ctx.db.get(args.refundRequestId);
-    if (!request) return null;
-    const donation = await ctx.db.get(request.donationId);
-    if (!donation) return null;
-    return {
-      requestId: request._id,
-      status: request.status,
-      donationId: donation._id,
-      stripePaymentIntentId: donation.stripePaymentIntentId,
-      stripeChargeId: donation.stripeChargeId,
-      stripeConnectedAccountId: donation.stripeConnectedAccountId,
-      paymentStatus: donation.paymentStatus,
-    };
-  },
-});

@@ -17,4 +17,11 @@ crons.daily(
   internal.maintenance.completeExpiredCampaigns,
 );
 
+crons.daily(
+  "expire verified identity PII",
+  { hourUTC: 4, minuteUTC: 0 },
+  internal.maintenance.expireVerifiedIdentityPii,
+  {},
+);
+
 export default crons;

@@ -1,11 +1,14 @@
 import { Link } from "expo-router";
-import { View, Text, Pressable, ActivityIndicator, Linking, Platform } from "react-native";
+import { View, Text, Pressable, ActivityIndicator } from "react-native";
 import { useAction } from "convex/react";
 import { useState } from "react";
-import * as ExpoLinking from "expo-linking";
+import { Building2, Users } from "lucide-react-native";
 import { CampaignImage } from "@/components/ui/campaign-image";
-import { getFriendlyAuthError } from "@/lib/auth/errors";
-import { initialsFor } from "@/lib/utils";
+import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
+import { getFriendlyConnectError } from "@/lib/stripe/errors";
+import { openStripeUrl } from "@/lib/stripe/open-url";
+import { retroKeyClass } from "@/lib/retro-key";
+import { cn, initialsFor } from "@/lib/utils";
 import type { MySociety, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
@@ -34,54 +37,71 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
     isMySociety(society) &&
     !society.connectCardPaymentsActive;
 
+  const isCollege = society.orgType === "college";
+  const TypeIcon = isCollege ? Building2 : Users;
+
   const handleCompletePayoutSetup = async () => {
     setConnectLoading(true);
     setConnectError(null);
     try {
-      const returnUrl =
-        Platform.OS === "web" && typeof window !== "undefined"
-          ? `${window.location.origin}/societies`
-          : ExpoLinking.createURL("/societies");
+      const returnUrl = buildConnectReturnUrl("/societies");
       const { url } = await createConnectOnboardingLink({
         communitySlug: society.slug,
         returnUrl,
         refreshUrl: returnUrl,
       });
-      await Linking.openURL(url);
+      await openStripeUrl(url);
       void refreshConnectAccountStatus({ communitySlug: society.slug }).catch(
         () => {},
       );
     } catch (err) {
-      setConnectError(getFriendlyAuthError(err));
+      setConnectError(getFriendlyConnectError(err));
     } finally {
       setConnectLoading(false);
     }
   };
 
   return (
-    <View className="w-full overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper shadow-[5px_5px_0_#211E1A]">
+    <View
+      className={cn(
+        "w-full overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper",
+        retroKeyClass,
+      )}
+    >
       <Link href={`/societies/${society.slug}`} asChild>
         <Pressable className="active:opacity-95">
           <CampaignImage
             image={society.coverImageUrl ?? "default"}
             className="h-[170px] border-b-[3px] border-retro-ink bg-retro-indigo"
           >
-            <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]">
+            <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint">
               <Text className="font-retro-bold text-sm text-retro-paper">
                 {initialsFor(society.name)}
               </Text>
             </View>
-            {society.status === "pending" ? (
-              <View className="absolute right-3 top-3 rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
+            <View className="absolute right-3 top-3 items-end gap-1.5">
+              <View
+                className={`flex-row items-center gap-1 rounded-full border-2 border-retro-ink px-2 py-0.5 ${
+                  isCollege ? "bg-indigo-100" : "bg-retro-mint"
+                }`}
+              >
+                <TypeIcon size={11} color="#211E1A" />
                 <Text className="font-retro-bold text-[10px] text-retro-ink">
-                  Pending review
+                  {isCollege ? "College" : "Society"}
                 </Text>
               </View>
-            ) : null}
+              {society.status === "pending" ? (
+                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
+                  <Text className="font-retro-bold text-[10px] text-retro-ink">
+                    Pending review
+                  </Text>
+                </View>
+              ) : null}
+            </View>
           </CampaignImage>
           <View className="p-4">
             <Text
-              className="font-retro-bold text-sm text-retro-ink"
+              className="font-retro-display text-sm text-retro-ink"
               numberOfLines={1}
             >
               {society.name}
@@ -94,7 +114,7 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
           <Pressable
             onPress={() => void handleCompletePayoutSetup()}
             disabled={connectLoading}
-            className={`mt-1 items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-2 ${
+            className={`retro-key mt-1 items-center rounded-full border-2 border-retro-ink bg-retro-marigold px-3 py-2 ${
               connectLoading ? "opacity-50" : ""
             }`}
           >

@@ -6,7 +6,6 @@ import {
   Users,
   PiggyBank,
   User,
-  Sparkles,
   Plus,
   Menu,
   X,
@@ -18,8 +17,7 @@ import { useCurrentProfile } from "@/lib/auth/hooks";
 const navItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/campaigns", label: "Campaigns", icon: PiggyBank },
-  { href: "/societies", label: "Societies", icon: Users },
-  { href: "/dashboard", label: "Impact", icon: Sparkles },
+  { href: "/societies", label: "Communities", icon: Users },
   { href: "/account", label: "You", icon: User },
 ] as const;
 
@@ -42,7 +40,7 @@ export function Header() {
         <View className="flex-1 flex-row items-center">
           <Link href="/" asChild>
             <Pressable className="flex-row items-center gap-2">
-              <Text className="font-retro-bold text-xl text-dono-text">Dono</Text>
+              <Text className="font-logo text-xl text-dono-text">Dono</Text>
             </Pressable>
           </Link>
         </View>
@@ -55,8 +53,7 @@ export function Header() {
               return (
                 <Link key={item.href} href={item.href as Href} asChild>
                   <Pressable
-                    className={cn(
-                      "rounded-lg px-3 py-2",
+                    className={cn("retro-key", "rounded-lg px-3 py-2",
                       active ? "bg-dono-primary/10" : "",
                     )}
                   >
@@ -79,7 +76,7 @@ export function Header() {
           {isWide && (
             <>
               <Link href="/create" asChild>
-                <Pressable className="flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
+                <Pressable className="retro-key flex-row items-center gap-1.5 rounded-full bg-dono-accent px-4 py-2">
                   <Plus size={16} color="#fff" />
                   <Text className="font-retro-bold text-sm text-white">
                     Start a Campaign
@@ -89,7 +86,7 @@ export function Header() {
 
               {!isLoading && isAuthenticated && (
                 <Link href="/account" asChild>
-                  <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
+                  <Pressable className="retro-key h-9 w-9 items-center justify-center overflow-hidden rounded-full bg-dono-primary/10">
                     {profile?.avatarUrl ? (
                       <Image
                         source={{ uri: profile.avatarUrl }}
@@ -240,7 +237,7 @@ export function Footer() {
         <View className={cn("gap-8", isWide ? "flex-row flex-wrap" : "")}>
           <View className={cn(isWide ? "w-[22%]" : "w-full")}>
             <View className="mb-4 flex-row items-center gap-2">
-              <Text className="font-retro-bold text-lg text-dono-text">Dono</Text>
+              <Text className="font-logo text-lg text-dono-text">Dono</Text>
             </View>
             <Text className="text-sm text-dono-muted">
               Community infrastructure for transparent university giving.
@@ -254,7 +251,7 @@ export function Footer() {
             {(
               [
                 ["/campaigns", "Campaigns"],
-                ["/societies", "Societies"],
+                ["/societies", "Communities"],
               ] as const
             ).map(([href, label]) => (
               <Link key={href} href={href} asChild>

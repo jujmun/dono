@@ -26,12 +26,51 @@ export function getFriendlyAuthError(error: unknown) {
       }
       return convexPayload.message ?? "Password does not meet security requirements.";
     }
+    if (convexPayload.code === "RATE_LIMITED") {
+      return (
+        convexPayload.message ??
+        "Too many attempts. Please wait a little and try again."
+      );
+    }
   }
 
   const message = rawMessage;
 
-  if (/STRIPE_IDENTITY_DISABLED/i.test(message)) {
+  if (convexPayload?.code === "LEGAL_ACCEPTANCE_REQUIRED") {
+    return (
+      convexPayload.message ??
+      "Please accept the latest Society Campaign Terms before continuing."
+    );
+  }
+  if (convexPayload?.code === "IDENTITY_PROCESSING") {
+    return (
+      convexPayload.message ??
+      "Your identity check is already being reviewed — this usually takes about a minute."
+    );
+  }
+  if (convexPayload?.code === "IDENTITY_ALREADY_VERIFIED") {
+    return convexPayload.message ?? "Your identity is already verified.";
+  }
+  if (
+    convexPayload?.code === "STRIPE_IDENTITY_API_ERROR" ||
+    convexPayload?.code === "STRIPE_IDENTITY_FAILED"
+  ) {
+    return (
+      convexPayload.message ??
+      "Could not start identity verification. Please try again."
+    );
+  }
+  if (
+    /STRIPE_IDENTITY_DISABLED/i.test(message) ||
+    convexPayload?.code === "STRIPE_IDENTITY_DISABLED"
+  ) {
     return "Identity verification is temporarily unavailable.";
+  }
+  if (
+    /STRIPE_NOT_CONFIGURED/i.test(message) ||
+    convexPayload?.code === "STRIPE_NOT_CONFIGURED"
+  ) {
+    return "Payments are not configured on this deployment yet.";
   }
   if (/InvalidAccountId/i.test(message)) {
     return "No password is set for this email yet. We'll send a sign-in code so you can create one.";
@@ -100,7 +139,26 @@ export function getFriendlyAuthError(error: unknown) {
   if (convexPayload?.message) {
     return convexPayload.message;
   }
+  // Client-thrown Error("…") and many Convex ArgumentValidationError strings
+  // are already human-readable — don't swallow them into the generic banner.
+  if (
+    error instanceof Error &&
+    message.trim().length > 0 &&
+    !isRedactedConvexServerError(message)
+  ) {
+    return message;
+  }
   return "Something went wrong. Please try again.";
+}
+
+/** Convex redacts handler errors to this wrapper, including a Request ID line
+ * and "Called by client". Treat the whole banner as opaque. */
+function isRedactedConvexServerError(message: string) {
+  const trimmed = message.trim();
+  if (/^Server Error$/i.test(trimmed)) return true;
+  return /^\[CONVEX[^\]]*\](?:\s*\[Request ID: [^\]]+\])?\s*Server Error(?:\s|$)/i.test(
+    trimmed,
+  );
 }
 
 /**

@@ -1,12 +1,15 @@
 import "../global.css";
 import { Stack, useRouter, useSegments, usePathname, useGlobalSearchParams } from "expo-router";
 import { StatusBar } from "expo-status-bar";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useFonts } from "expo-font";
 import {
-  useFonts,
-  Fredoka_500Medium,
-  Fredoka_700Bold,
-} from "@expo-google-fonts/fredoka";
+  WorkSans_400Regular,
+  WorkSans_400Regular_Italic,
+  WorkSans_700Bold,
+  WorkSans_700Bold_Italic,
+} from "@expo-google-fonts/work-sans";
+import { Fredoka_700Bold } from "@expo-google-fonts/fredoka";
 import {
   SpaceMono_400Regular,
   SpaceMono_700Bold,
@@ -17,9 +20,18 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { PostHogProvider, usePostHog } from "posthog-react-native";
 import { useCurrentProfile } from "@/lib/auth/hooks";
 import { useWelcomeTourStatus } from "@/lib/hooks/use-welcome-tour";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal, isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { isDemoOpenAdminEnabled } from "@/lib/demo-open-admin";
 import { authStorage } from "@/lib/auth-storage";
+import {
+  getAnalyticsConsent,
+  setAnalyticsConsent,
+  type AnalyticsConsent,
+} from "@/lib/analytics-consent";
 import { StripeAppProvider } from "@/lib/stripe/provider";
+import { AnalyticsConsentBanner } from "@/components/analytics-consent-banner";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { RetroKeyFlatLock } from "@/components/retro/retro-key-flat-lock";
 import { api } from "@convex/_generated/api";
 
 const convex = new ConvexReactClient(
@@ -34,8 +46,9 @@ const posthogHost =
 function AuthGuard({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const profile = useCurrentProfile();
+  const welcomeTourVariant = profile?.userType === "alumni" ? "alumni" : "student";
   const { complete: welcomeTourComplete, pending: welcomeTourPending, loading: welcomeTourLoading } =
-    useWelcomeTourStatus(profile?.id);
+    useWelcomeTourStatus(profile?.id, welcomeTourVariant);
   const ensureMyProfile = useMutation(api.users.ensureMyProfile);
   const segments = useSegments();
   const router = useRouter();
@@ -52,7 +65,6 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
     const root = String(segments[0] ?? "");
     const inOnboarding = root === "onboarding";
     const inWelcome = root === "welcome";
-    const inProtected = root === "funds";
     const inAuthPublic =
       root === "signin" ||
       root === "signup" ||
@@ -61,10 +73,12 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       root === "legal";
     const inAdmin = root === "admin";
     const adminUser = isPortalAdmin(profile);
+    const canOpenAdmin = canAccessAdminPortal(profile);
     const needsOnboarding =
       isAuthenticated &&
       profile !== undefined &&
       !profile?.name &&
+      !profile?.onboardingSkippedAt &&
       !adminUser;
     const needsWelcomeTour =
       isAuthenticated &&
@@ -75,7 +89,11 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       welcomeTourComplete === false &&
       welcomeTourPending === true;
 
-    if ((inProtected || inOnboarding || inWelcome || inAdmin) && !isAuthenticated) {
+    // Demo open-admin: allow /admin without a session (Preview + Convex dev only).
+    const blockUnauthenticated =
+      (inOnboarding || inWelcome) ||
+      (inAdmin && !isDemoOpenAdminEnabled());
+    if (blockUnauthenticated && !isAuthenticated) {
       router.replace("/signin");
       return;
     }
@@ -105,7 +123,12 @@ function AuthGuard({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (inAdmin && isAuthenticated && profile !== undefined && !adminUser) {
+    if (
+      inAdmin &&
+      isAuthenticated &&
+      profile !== undefined &&
+      !canOpenAdmin
+    ) {
       router.replace("/dashboard");
       return;
     }
@@ -141,20 +164,39 @@ function AppTree() {
   }, [pathname, params, posthog]);
 
   return (
-    <AuthGuard>
-      <StatusBar style="dark" />
-      <Stack screenOptions={{ headerShown: false }} />
-    </AuthGuard>
+    <ErrorBoundary>
+      <AuthGuard>
+        <RetroKeyFlatLock />
+        <StatusBar style="dark" />
+        <Stack screenOptions={{ headerShown: false }} />
+      </AuthGuard>
+    </ErrorBoundary>
   );
 }
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Fredoka_500Medium,
+    WorkSans_400Regular,
+    WorkSans_400Regular_Italic,
+    WorkSans_700Bold,
+    WorkSans_700Bold_Italic,
     Fredoka_700Bold,
     SpaceMono_400Regular,
     SpaceMono_700Bold,
   });
+  const [analyticsConsent, setAnalyticsConsentState] = useState<
+    AnalyticsConsent | null | undefined
+  >(undefined);
+
+  useEffect(() => {
+    void getAnalyticsConsent().then(setAnalyticsConsentState);
+  }, []);
+
+  const handleConsent = (value: AnalyticsConsent) => {
+    void setAnalyticsConsent(value).then(() => {
+      setAnalyticsConsentState(value);
+    });
+  };
 
   const tree = (
     <ConvexAuthProvider client={convex} storage={authStorage}>
@@ -164,18 +206,22 @@ export default function RootLayout() {
     </ConvexAuthProvider>
   );
 
-  if (!fontsLoaded) {
+  if (!fontsLoaded || analyticsConsent === undefined) {
     return null;
   }
+
+  const showBanner = Boolean(posthogApiKey) && analyticsConsent === null;
+  const mountPostHog = Boolean(posthogApiKey) && analyticsConsent === "granted";
 
   // Touch autocapture feeds heatmaps / interaction insights. Screens are tracked
   // manually via posthog.screen() above. Limit props to testID so input text
   // (email/OTP/password) is not captured; auth fields also use ph-no-capture.
+  // PostHog mounts only after explicit analytics consent.
   return (
     <SafeAreaProvider>
-      {posthogApiKey ? (
+      {mountPostHog ? (
         <PostHogProvider
-          apiKey={posthogApiKey}
+          apiKey={posthogApiKey!}
           options={{
             host: posthogHost,
             enableSessionReplay: false,
@@ -192,6 +238,12 @@ export default function RootLayout() {
       ) : (
         tree
       )}
+      {showBanner ? (
+        <AnalyticsConsentBanner
+          onGrant={() => handleConsent("granted")}
+          onDeny={() => handleConsent("denied")}
+        />
+      ) : null}
     </SafeAreaProvider>
   );
 }

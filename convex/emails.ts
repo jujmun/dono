@@ -64,8 +64,46 @@ export const sendDonationReceipt = internalAction({
     campaignTitle: v.string(),
     amount: v.number(),
     currency: v.string(),
+    donationId: v.optional(v.string()),
+    connectedAccountHolder: v.optional(v.string()),
+    feeLines: v.optional(
+      v.array(v.object({ label: v.string(), amount: v.string() })),
+    ),
+    documentLinks: v.optional(
+      v.array(
+        v.object({
+          title: v.string(),
+          version: v.string(),
+          hash: v.string(),
+          url: v.string(),
+        }),
+      ),
+    ),
+    choices: v.optional(v.array(v.string())),
+    siteOrigin: v.optional(v.string()),
   },
   handler: async (_ctx, args) => {
+    const origin = args.siteOrigin ?? "https://joindono.com";
+    const feeBlock =
+      args.feeLines && args.feeLines.length > 0
+        ? ["", "Fee breakdown:", ...args.feeLines.map((l) => `• ${l.label}: ${l.amount}`)]
+        : [];
+    const docBlock =
+      args.documentLinks && args.documentLinks.length > 0
+        ? [
+            "",
+            "Documents you accepted (permanent archive links):",
+            ...args.documentLinks.map(
+              (d) =>
+                `• ${d.title} v${d.version} (${d.hash.slice(0, 12)}…) — ${d.url.startsWith("http") ? d.url : `${origin}${d.url}`}`,
+            ),
+          ]
+        : [];
+    const choiceBlock =
+      args.choices && args.choices.length > 0
+        ? ["", "Your choices:", ...args.choices.map((c) => `• ${c}`)]
+        : [];
+
     await sendTransactionalEmail({
       to: args.email,
       subject: `Thank you for supporting ${args.campaignTitle}`,
@@ -74,8 +112,19 @@ export const sendDonationReceipt = internalAction({
         "",
         `Campaign: ${args.campaignTitle}`,
         `Amount: ${args.currency.toUpperCase()} ${args.amount.toFixed(2)}`,
+        ...(args.donationId ? [`Donation reference: ${args.donationId}`] : []),
+        ...(args.connectedAccountHolder
+          ? [`Paid to Connected Account holder: ${args.connectedAccountHolder}`]
+          : []),
+        ...feeBlock,
+        ...docBlock,
+        ...choiceBlock,
         "",
-        "Your support helps students bring their projects to life.",
+        "If something goes wrong with your donation, deadlines set by your card provider and by law run independently of Dono's process. Contacting us does not pause them.",
+        "",
+        "Questions or complaints: joindono.team@gmail.com",
+        "",
+        "This email is a durable copy of your donation confirmation. Contract formation does not depend on email delivery.",
       ].join("\n"),
     });
   },
@@ -175,6 +224,72 @@ export const sendSocietyCampaignPending = internalAction({
         `A new campaign "${args.campaignTitle}" needs your approval as a leader of ${args.societyName}.`,
         "",
         "Sign in to Dono to review it.",
+      ].join("\n"),
+    });
+  },
+});
+
+export const sendSocietySubscriptionCanceledNoCampaigns = internalAction({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    societyName: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    charged: v.boolean(),
+  },
+  handler: async (_ctx, args) => {
+    const chargeLine = args.charged
+      ? `You were charged ${args.currency.toUpperCase()} ${args.amount.toFixed(2)} for this cycle, and we've refunded it in full — it may take a few days to appear back on your statement.`
+      : "You were not charged for this cycle.";
+    await sendTransactionalEmail({
+      to: args.email,
+      subject: `Your subscription to ${args.societyName} has been canceled`,
+      text: [
+        `Hi ${args.name},`,
+        "",
+        `"${args.societyName}" doesn't have any active campaigns right now, so we've canceled your monthly subscription to them.`,
+        "",
+        chargeLine,
+        "",
+        "You're welcome to subscribe again once they have an active campaign, or support one of their campaigns directly in the meantime.",
+      ].join("\n"),
+    });
+  },
+});
+
+/** Refund and Dispute Policy §6.1/6.3 — Dono decides a refund is owed, but
+ * the Campaign Owner must execute it themselves from their own Stripe
+ * dashboard. Dono never calls Stripe's refund API on their behalf. */
+export const sendRefundOwnerActionRequired = internalAction({
+  args: {
+    email: v.string(),
+    name: v.string(),
+    campaignTitle: v.string(),
+    amount: v.number(),
+    currency: v.string(),
+    stripePaymentIntentId: v.optional(v.string()),
+    stripeChargeId: v.optional(v.string()),
+  },
+  handler: async (_ctx, args) => {
+    const reference = args.stripePaymentIntentId
+      ? `Payment Intent: ${args.stripePaymentIntentId}`
+      : args.stripeChargeId
+        ? `Charge: ${args.stripeChargeId}`
+        : null;
+
+    await sendTransactionalEmail({
+      to: args.email,
+      subject: `Action needed: refund approved for "${args.campaignTitle}"`,
+      text: [
+        `Hi ${args.name},`,
+        "",
+        `Dono has approved a refund of ${args.currency.toUpperCase()} ${args.amount.toFixed(2)} for a donation to "${args.campaignTitle}".`,
+        "",
+        "Under the Refund and Dispute Policy, Dono does not process this refund itself — you need to issue it from your own Stripe dashboard, on the connected account that received the donation.",
+        ...(reference ? ["", reference] : []),
+        "",
+        "Please action this promptly. We'll update the donor automatically once Stripe confirms the refund. If you're unable to do this, reply to this email or contact us — unresolved approved refunds can affect your account standing.",
       ].join("\n"),
     });
   },

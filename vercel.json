@@ -4,6 +4,17 @@
   "framework": null,
   "rewrites": [
     {
+      "source": "/campaigns/:slug",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|LinkedInBot|WhatsApp|TelegramBot|Discordbot|redditbot|Pinterest|Applebot|SkypeUriPreview|vkShare|Google-InspectionTool).*"
+        }
+      ],
+      "destination": "https://shocking-poodle-569.eu-west-1.convex.site/og/campaigns/:slug"
+    },
+    {
       "source": "/((?!_expo/|assets/|.*\\..*).*)",
       "destination": "/index.html"
     }

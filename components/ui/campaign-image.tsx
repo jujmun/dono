@@ -26,15 +26,29 @@ const gradients: Record<string, [string, string]> = {
 interface CampaignImageProps extends ViewProps {
   image: string;
   className?: string;
+  /** Soft zoom on parent `group-hover` (web). Overlay children are unaffected. */
+  zoomOnHover?: boolean;
   children?: React.ReactNode;
 }
 
-export function CampaignImage({ image, className, children, style, ...rest }: CampaignImageProps) {
+export function CampaignImage({
+  image,
+  className,
+  zoomOnHover = false,
+  children,
+  style,
+  ...rest
+}: CampaignImageProps) {
+  const imageMotionClass = zoomOnHover
+    ? "transition-transform duration-300 ease-out group-hover:scale-105"
+    : undefined;
+
   if (isPhotoImage(image)) {
     return (
       <View className={cn("relative overflow-hidden", className)} style={style} {...rest}>
         <Image
           source={{ uri: image }}
+          className={imageMotionClass}
           style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 0, width: "100%", height: "100%" }}
           resizeMode="cover"
           accessibilityLabel="Campaign image"
@@ -48,7 +62,10 @@ export function CampaignImage({ image, className, children, style, ...rest }: Ca
 
   return (
     <View className={cn("relative overflow-hidden", className)} style={style} {...rest}>
-      <LinearGradient colors={colors} className="absolute inset-0" />
+      <LinearGradient
+        colors={colors}
+        className={cn("absolute inset-0", imageMotionClass)}
+      />
       {children}
     </View>
   );

@@ -13,15 +13,7 @@ import { ConvexError, v } from "convex/values";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { TableNames } from "./_generated/dataModel";
 import { logAdminAction } from "./adminAudit";
-
-const STRIPE_VERIFICATION_CLEAR = {
-  stripeVerificationSessionId: undefined,
-  stripeVerificationStatus: undefined,
-  verifiedName: undefined,
-  verifiedDob: undefined,
-  stripeVerificationLastErrorCode: undefined,
-  stripeVerificationLastErrorReason: undefined,
-} as const;
+import { clearVerificationPatch } from "./lib/verificationRetention";
 
 async function deleteAllRows(ctx: MutationCtx, table: TableNames) {
   const rows = await ctx.db.query(table).collect();
@@ -68,14 +60,14 @@ export const resetAllStripeData = internalMutation({
         raised: 0,
         donors: 0,
         status: nextStatus,
-        ...STRIPE_VERIFICATION_CLEAR,
+        ...clearVerificationPatch,
       });
       campaignsReset += 1;
     }
 
     let societiesReset = 0;
     for (const society of await ctx.db.query("societies").collect()) {
-      await ctx.db.patch(society._id, STRIPE_VERIFICATION_CLEAR);
+      await ctx.db.patch(society._id, clearVerificationPatch);
       societiesReset += 1;
     }
 

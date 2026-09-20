@@ -33,7 +33,7 @@ export function CampaignCardGrid({
   return (
     <View
       className={cn(
-        "flex-row flex-wrap items-start gap-6",
+        "flex-row flex-wrap items-stretch gap-6",
         useFeaturedLayout ? "justify-center" : "justify-between",
       )}
     >
@@ -43,6 +43,7 @@ export function CampaignCardGrid({
           <View
             key={campaign.id}
             className={cn(
+              "h-auto self-stretch",
               useFeaturedLayout
                 ? "w-full md:w-[48%] lg:w-[31%]"
                 : "w-full sm:w-[48%]",

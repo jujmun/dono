@@ -4,15 +4,35 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import {
+  assertCommentingAllowed,
+  getProfileByUserId,
   optionalUserId,
   requireAdmin,
+  requireSocietyMember,
   requireVerifiedUser,
 } from "./lib/authz";
 import { toCampaign } from "./lib/mappers";
 import { clampLimit } from "./lib/pagination";
 import { toActivityItem } from "./lib/mappers";
+import { containsProfanity, containsUrl } from "./lib/commentModeration";
+import { assertPlatformFlagOff } from "./platformSettings";
 
 const MAX_COMMENT_LENGTH = 2000;
+
+function assertCommentAllowed(body: string) {
+  if (containsUrl(body)) {
+    throw new ConvexError({
+      code: "COMMENT_URL_NOT_ALLOWED",
+      message: "Links aren't allowed in comments.",
+    });
+  }
+  if (containsProfanity(body)) {
+    throw new ConvexError({
+      code: "COMMENT_PROFANITY",
+      message: "That comment contains language that isn't allowed here.",
+    });
+  }
+}
 
 function isCommentHiddenByOwner(comment: Doc<"campaignComments">) {
   if (!comment.hiddenByOwnerAt) return false;
@@ -44,6 +64,21 @@ async function assertCanHideCampaignComment(
     code: "FORBIDDEN",
     message: "You cannot hide comments on this campaign.",
   });
+}
+
+/**
+ * Single shared gate for anyone creating/editing/deleting a comment: must be
+ * an approved member of the campaign's OWNING society (not just following it,
+ * not pending/rejected, not a member of some other society). Delegates to the
+ * canonical `requireSocietyMember` (also used by campaign creation) so this
+ * can't drift from that check — no campaign-owner bypass, since owners who
+ * are removed from the society should lose comment rights too.
+ */
+async function requireCampaignCommenter(
+  ctx: MutationCtx,
+  campaign: Doc<"campaigns">,
+) {
+  return await requireSocietyMember(ctx, campaign.creator.communityId);
 }
 
 async function getCampaignBySlug(ctx: QueryCtx | MutationCtx, slug: string) {
@@ -191,19 +226,19 @@ export const unlikeCampaign = mutation({
   },
 });
 
-export const followCommunity = mutation({
-  args: { communitySlug: v.string() },
+export const followSociety = mutation({
+  args: { societySlug: v.string() },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
-    const community = await getCommunityBySlug(ctx, args.communitySlug);
+    const community = await getCommunityBySlug(ctx, args.societySlug);
     if (!community) {
-      throw new ConvexError({ code: "NOT_FOUND", message: "Community not found." });
+      throw new ConvexError({ code: "NOT_FOUND", message: "Society not found." });
     }
 
     const existing = await ctx.db
       .query("communityFollows")
       .withIndex("by_community_user", (q) =>
-        q.eq("communitySlug", args.communitySlug).eq("userId", userId),
+        q.eq("communitySlug", args.societySlug).eq("userId", userId),
       )
       .unique();
 
@@ -211,7 +246,7 @@ export const followCommunity = mutation({
 
     await ctx.db.insert("communityFollows", {
       userId,
-      communitySlug: args.communitySlug,
+      communitySlug: args.societySlug,
       createdAt: Date.now(),
     });
     await ctx.db.patch(community._id, { followers: community.followers + 1 });
@@ -227,19 +262,19 @@ export const followCommunity = mutation({
   },
 });
 
-export const unfollowCommunity = mutation({
-  args: { communitySlug: v.string() },
+export const unfollowSociety = mutation({
+  args: { societySlug: v.string() },
   handler: async (ctx, args) => {
     const { userId } = await requireVerifiedUser(ctx);
     const existing = await ctx.db
       .query("communityFollows")
       .withIndex("by_community_user", (q) =>
-        q.eq("communitySlug", args.communitySlug).eq("userId", userId),
+        q.eq("communitySlug", args.societySlug).eq("userId", userId),
       )
       .unique();
     if (!existing) return { following: false };
 
-    const community = await getCommunityBySlug(ctx, args.communitySlug);
+    const community = await getCommunityBySlug(ctx, args.societySlug);
     await ctx.db.delete(existing._id);
     if (community) {
       await ctx.db.patch(community._id, {
@@ -253,7 +288,19 @@ export const unfollowCommunity = mutation({
 export const addComment = mutation({
   args: { campaignSlug: v.string(), body: v.string() },
   handler: async (ctx, args) => {
-    const { userId } = await requireVerifiedUser(ctx);
+    await assertPlatformFlagOff(
+      ctx,
+      "disableComments",
+      "Commenting is temporarily disabled.",
+    );
+    const campaign = await getCampaignBySlug(ctx, args.campaignSlug);
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    const { userId } = await requireCampaignCommenter(ctx, campaign);
+    const profile = await getProfileByUserId(ctx, userId);
+    assertCommentingAllowed(profile);
+
     const body = args.body.trim();
     if (!body || body.length > MAX_COMMENT_LENGTH) {
       throw new ConvexError({
@@ -261,11 +308,7 @@ export const addComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
-
-    const campaign = await getCampaignBySlug(ctx, args.campaignSlug);
-    if (!campaign) {
-      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
-    }
+    assertCommentAllowed(body);
 
     const commentId = await ctx.db.insert("campaignComments", {
       campaignSlug: args.campaignSlug,
@@ -297,6 +340,13 @@ export const deleteComment = mutation({
     }
 
     const campaign = await getCampaignBySlug(ctx, comment.campaignSlug);
+    if (!isAdmin) {
+      if (!campaign) {
+        throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+      }
+      await requireCampaignCommenter(ctx, campaign);
+    }
+
     await ctx.db.patch(args.commentId, { deletedAt: Date.now() });
     if (campaign) {
       await ctx.db.patch(campaign._id, {
@@ -325,6 +375,12 @@ export const editComment = mutation({
       });
     }
 
+    const campaign = await getCampaignBySlug(ctx, comment.campaignSlug);
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireCampaignCommenter(ctx, campaign);
+
     const body = args.body.trim();
     if (!body || body.length > MAX_COMMENT_LENGTH) {
       throw new ConvexError({
@@ -332,6 +388,7 @@ export const editComment = mutation({
         message: "Comment must be between 1 and 2000 characters.",
       });
     }
+    await assertCommentAllowed(body);
 
     await ctx.db.patch(args.commentId, {
       body,
@@ -438,7 +495,7 @@ export const listFollowedCampaigns = query({
   },
 });
 
-export const listFollowedCommunities = query({
+export const listFollowedSocieties = query({
   args: {},
   handler: async (ctx) => {
     const userId = await optionalUserId(ctx);
@@ -453,7 +510,7 @@ export const listFollowedCommunities = query({
   },
 });
 
-export const countFollowedCommunities = query({
+export const countFollowedSocieties = query({
   args: {},
   handler: async (ctx) => {
     const userId = await optionalUserId(ctx);
@@ -469,16 +526,16 @@ export const countFollowedCommunities = query({
 export const isFollowing = query({
   args: {
     campaignSlug: v.optional(v.string()),
-    communitySlug: v.optional(v.string()),
+    societySlug: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
     const userId = await optionalUserId(ctx);
     if (!userId) {
-      return { followingCampaign: false, followingCommunity: false, liked: false };
+      return { followingCampaign: false, followingSociety: false, liked: false };
     }
 
     let followingCampaign = false;
-    let followingCommunity = false;
+    let followingSociety = false;
     let liked = false;
 
     if (args.campaignSlug) {
@@ -499,16 +556,16 @@ export const isFollowing = query({
       liked = Boolean(cl);
     }
 
-    if (args.communitySlug) {
+    if (args.societySlug) {
       const cm = await ctx.db
         .query("communityFollows")
         .withIndex("by_community_user", (q) =>
-          q.eq("communitySlug", args.communitySlug!).eq("userId", userId),
+          q.eq("communitySlug", args.societySlug!).eq("userId", userId),
         )
         .unique();
-      followingCommunity = Boolean(cm);
+      followingSociety = Boolean(cm);
     }
 
-    return { followingCampaign, followingCommunity, liked };
+    return { followingCampaign, followingSociety, liked };
   },
 });

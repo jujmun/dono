@@ -307,19 +307,7 @@ export async function renderInstagramStoryPngBlob(args: {
   });
 }
 
-export function downloadBlob(blob: Blob, filename: string) {
-  if (typeof document === "undefined") return;
-  const url = URL.createObjectURL(blob);
-  const anchor = document.createElement("a");
-  anchor.href = url;
-  anchor.download = filename;
-  anchor.rel = "noopener";
-  document.body.appendChild(anchor);
-  anchor.click();
-  document.body.removeChild(anchor);
-  URL.revokeObjectURL(url);
-}
-
+import { downloadBlob } from "@/lib/download-blob";
 export function canShareStoryImageFile(): boolean {
   if (typeof navigator === "undefined" || typeof File === "undefined") {
     return false;

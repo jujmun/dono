@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   MAX_ADMIN_MESSAGE_LENGTH,
-  ONBOARDING_MESSAGE,
   buildCampaignActiveMessage,
   buildCampaignPendingMessage,
   buildCampaignRejectedMessage,
@@ -27,9 +26,6 @@ describe("notification message builders", () => {
     );
   });
 
-  it("has a stable onboarding placeholder message", () => {
-    expect(ONBOARDING_MESSAGE).toBe("Click here for onboarding.");
-  });
 });
 
 describe("validateAdminMessageBody", () => {

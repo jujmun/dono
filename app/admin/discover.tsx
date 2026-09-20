@@ -16,7 +16,7 @@ import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { ReviewTypeToggle, type ReviewType } from "@/components/review-type-toggle";
 import { AdminStatusChip } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import type { AdminSociety, Campaign } from "@/lib/types";
 
 function matchesCampaignSearch(campaign: Campaign, query: string) {
@@ -38,17 +38,17 @@ function matchesSocietySearch(society: AdminSociety, query: string) {
 export default function AdminDiscoverPage() {
   const router = useRouter();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();
   const campaigns = (useQuery(
     api.campaigns.list,
-    adminUser && reviewType === "campaigns" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) ?? undefined) as Campaign[] | undefined;
   const societies = useQuery(
     api.societies.listActiveForAdmin,
-    adminUser && reviewType === "societies" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as AdminSociety[] | undefined;
 
   const liveCampaigns = [...(campaigns ?? []).filter((c) =>
@@ -72,7 +72,7 @@ export default function AdminDiscoverPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -85,7 +85,14 @@ export default function AdminDiscoverPage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="live" />
 
-        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+        <ReviewTypeToggle
+          value={reviewType}
+          onChange={setReviewType}
+          counts={{
+            campaigns: campaigns?.length,
+            societies: societies?.length,
+          }}
+        />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />
@@ -106,7 +113,7 @@ export default function AdminDiscoverPage() {
 
         {reviewType === "campaigns" ? (
           <View>
-            <Text className="mb-4 text-lg font-retro-bold text-dono-text">
+            <Text className="mb-4 text-lg font-retro-display text-dono-text">
               {trimmedSearch ? "Matching posts" : "All live posts"}
             </Text>
             {campaigns === undefined ? (
@@ -131,7 +138,7 @@ export default function AdminDiscoverPage() {
           </View>
         ) : (
           <View>
-            <Text className="mb-4 text-lg font-retro-bold text-dono-text">
+            <Text className="mb-4 text-lg font-retro-display text-dono-text">
               {trimmedSearch ? "Matching societies" : "All live societies"}
             </Text>
             {societies === undefined ? (
@@ -163,7 +170,7 @@ export default function AdminDiscoverPage() {
                       <View className="mb-2">
                         <AdminStatusChip label="Live" tone="live" />
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {society.name}
                       </Text>
                       <Text className="mt-1 text-sm text-dono-muted" numberOfLines={2}>

@@ -18,14 +18,17 @@ import {
 import { internal } from "./_generated/api";
 import { validatePasswordRequirements } from "./auth/passwordPolicy";
 import { requireAdmin, requireUserId, requireVerifiedUser } from "./lib/authz";
-import { isAdminIdentityEmail } from "./auth/adminConfig";
+import { isAdminIdentityEmail, isAllowedAuthEmail } from "./auth/adminConfig";
 import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { toCampaign } from "./lib/mappers";
-import { createNotification, ONBOARDING_MESSAGE } from "./lib/notifications";
 import { assertAdultOrThrow } from "./lib/ageGate";
+import { clearVerificationPatch } from "./lib/verificationRetention";
+import { assertPlatformFlagOff } from "./platformSettings";
+
+const userTypeValidator = v.union(v.literal("student"), v.literal("alumni"));
 
 function roleForEmail(email: string): "user" | "admin" {
   return isAdminIdentityEmail(email) ? "admin" : "user";
@@ -98,7 +101,169 @@ export const me = query({
       dateOfBirth: profile.dateOfBirth ?? null,
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
+      userType: profile.userType ?? null,
+      matriculationYear: profile.matriculationYear ?? null,
+      interestedSocietySlugs: profile.interestedSocietySlugs ?? [],
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
+      onboardingSkippedAt: profile.onboardingSkippedAt ?? null,
+    };
+  },
+});
+
+/**
+ * Subject-access export (GV-06 / PR-11). Returns a JSON-serializable dump of
+ * the caller's profile, legal acceptances, donations, memberships, reports
+ * they filed, and evidence they uploaded. Omits admin-only / Stripe-secret
+ * fields from donation rows.
+ */
+export const exportMyData = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const { userId, profile } = await requireVerifiedUser(ctx);
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be found.",
+      });
+    }
+
+    const [
+      legalAcceptances,
+      donations,
+      memberships,
+      reports,
+      evidence,
+      societies,
+      campaignFollows,
+      communityFollows,
+    ] = await Promise.all([
+      ctx.db
+        .query("legalAcceptances")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("donations")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("societyMembers")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("contentReports")
+        .withIndex("by_reporter", (q) => q.eq("reporterUserId", userId))
+        .collect(),
+      ctx.db
+        .query("campaignEvidence")
+        .withIndex("by_uploader", (q) => q.eq("uploadedBy", userId))
+        .collect(),
+      ctx.db
+        .query("societies")
+        .withIndex("by_creatorId", (q) => q.eq("creatorId", userId))
+        .collect(),
+      ctx.db
+        .query("campaignFollows")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+      ctx.db
+        .query("communityFollows")
+        .withIndex("by_user", (q) => q.eq("userId", userId))
+        .collect(),
+    ]);
+
+    const exportedAt = Date.now();
+
+    return {
+      exportedAt,
+      profile: {
+        userId: profile.userId,
+        email: profile.email,
+        name: profile.name ?? null,
+        phone: profile.phone ?? null,
+        college: profile.college ?? null,
+        degree: profile.degree ?? null,
+        yearInCollege: profile.yearInCollege ?? null,
+        userType: profile.userType ?? null,
+        matriculationYear: profile.matriculationYear ?? null,
+        interestedSocietySlugs: profile.interestedSocietySlugs ?? [],
+        dateOfBirth: profile.dateOfBirth ?? null,
+        ageAttestedAt: profile.ageAttestedAt ?? null,
+        onboardingSkippedAt: profile.onboardingSkippedAt ?? null,
+        avatarUrl: profile.avatarUrl ?? null,
+        role: profile.role,
+        emailVerifiedAt: profile.emailVerifiedAt ?? null,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+        suspendedAt: profile.suspendedAt ?? null,
+        commentingRestrictedUntil: profile.commentingRestrictedUntil ?? null,
+      },
+      legalAcceptances: legalAcceptances.map((row) => ({
+        documentId: row.documentId,
+        version: row.version,
+        context: row.context,
+        acceptedAt: row.acceptedAt,
+      })),
+      donations: donations.map((d) => ({
+        id: d._id,
+        campaignId: d.campaignId ?? null,
+        fundId: d.fundId ?? null,
+        amount: d.amount,
+        currency: d.currency,
+        type: d.type,
+        paymentStatus: d.paymentStatus,
+        isAnonymous: d.isAnonymous ?? false,
+        donorEmail: d.donorEmail ?? null,
+        coverFees: d.coverFees ?? null,
+        createdAt: d.createdAt,
+        refundedAmountMinor: d.refundedAmountMinor ?? null,
+        intendedCampaignAmountMinor: d.intendedCampaignAmountMinor ?? null,
+        ageAttested: d.ageAttested ?? null,
+        legalAcceptedAt: d.legalAcceptedAt ?? null,
+        emailUpdatesOptIn: d.emailUpdatesOptIn ?? null,
+      })),
+      memberships: memberships.map((m) => ({
+        communitySlug: m.communitySlug,
+        role: m.role,
+        status: m.status,
+        createdAt: m.createdAt,
+      })),
+      reportsFiled: reports.map((r) => ({
+        id: r._id,
+        targetType: r.targetType,
+        campaignSlug: r.campaignSlug ?? null,
+        commentId: r.commentId ?? null,
+        societySlug: r.societySlug ?? null,
+        reason: r.reason,
+        status: r.status,
+        createdAt: r.createdAt,
+        resolvedAt: r.resolvedAt ?? null,
+      })),
+      evidenceUploaded: evidence.map((e) => ({
+        id: e._id,
+        campaignId: e.campaignId,
+        storageId: e.storageId,
+        description: e.description,
+        expenditureDate: e.expenditureDate,
+        dueAt: e.dueAt,
+        createdAt: e.createdAt,
+      })),
+      societiesCreated: societies.map((s) => ({
+        id: s._id,
+        slug: s.slug,
+        name: s.name,
+        status: s.status,
+        createdAt: s.createdAt,
+      })),
+      follows: {
+        campaigns: campaignFollows.map((f) => ({
+          campaignSlug: f.campaignSlug,
+          createdAt: f.createdAt,
+        })),
+        communities: communityFollows.map((f) => ({
+          communitySlug: f.communitySlug,
+          createdAt: f.createdAt,
+        })),
+      },
     };
   },
 });
@@ -131,6 +296,9 @@ export const getStudentForAdmin = query({
       avatarUrl: storageUrl ?? profile.avatarUrl ?? null,
       role: profile.role,
       emailVerifiedAt: profile.emailVerifiedAt ?? null,
+      suspendedAt: profile.suspendedAt ?? null,
+      suspendedReason: profile.suspendedReason ?? null,
+      commentingRestrictedUntil: profile.commentingRestrictedUntil ?? null,
       createdAt: profile.createdAt,
       campaigns: theirs,
     };
@@ -174,6 +342,48 @@ export const generateAvatarUploadUrl = mutation({
     await assertNotRateLimited(ctx, opts);
     await recordRateLimitAttempt(ctx, opts, false);
     return await ctx.storage.generateUploadUrl();
+  },
+});
+
+/** Event A — persist declared DOB at account creation (AG-02). */
+export const setDateOfBirth = mutation({
+  args: { dateOfBirth: v.string() },
+  handler: async (ctx, args) => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "Sign in to continue.",
+      });
+    }
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be found.",
+      });
+    }
+    // ICO Children's Code S13: no immediate retry with a different date after
+    // an under-18 failure in the same session is enforced client-side; server
+    // still rejects under-18 DOBs.
+    if (profile.dateOfBirth && profile.ageAttestedAt) {
+      // Already locked in — do not silently overwrite.
+      return { ok: true as const, alreadySet: true as const };
+    }
+    assertAdultOrThrow(
+      args.dateOfBirth.trim(),
+      "You must be at least 18 years old.",
+    );
+    const now = Date.now();
+    await ctx.db.patch(profile._id, {
+      dateOfBirth: args.dateOfBirth.trim(),
+      ageAttestedAt: now,
+      updatedAt: now,
+    });
+    return { ok: true as const, alreadySet: false as const };
   },
 });
 
@@ -368,6 +578,9 @@ export const ensureProfile = internalMutation({
       .withIndex("by_userId", (q) => q.eq("userId", args.userId))
       .unique();
     if (existing) {
+      // Tombstone from account deletion — patching it would write the released
+      // email back onto a profile that is only kept for historical records.
+      if (existing.deletedAt) return;
       await ctx.db.patch(existing._id, {
         email: user.email,
         emailVerifiedAt: user.emailVerificationTime ?? existing.emailVerifiedAt,
@@ -376,6 +589,12 @@ export const ensureProfile = internalMutation({
       });
       return;
     }
+
+    await assertPlatformFlagOff(
+      ctx,
+      "disableRegistration",
+      "New account registration is temporarily disabled.",
+    );
 
     const now = Date.now();
     await ctx.db.insert("profiles", {
@@ -405,6 +624,9 @@ export const ensureMyProfile = mutation({
 
     const now = Date.now();
     if (existing) {
+      // Tombstone from account deletion — see ensureProfile. This is the path
+      // that used to un-anonymize a deleted profile on the next app load.
+      if (existing.deletedAt) return;
       await ctx.db.patch(existing._id, {
         email: user.email,
         name: existing.name ?? user.name,
@@ -422,6 +644,12 @@ export const ensureMyProfile = mutation({
       return;
     }
 
+    await assertPlatformFlagOff(
+      ctx,
+      "disableRegistration",
+      "New account registration is temporarily disabled.",
+    );
+
     await ctx.db.insert("profiles", {
       userId,
       email: user.email,
@@ -433,13 +661,222 @@ export const ensureMyProfile = mutation({
       updatedAt: now,
     });
     await linkGuestDonationsForUser(ctx, userId, user.email);
-    // TODO: replace with real onboarding flow — placeholder notification
-    // only, no relatedEntityId (no onboarding route exists yet).
-    await createNotification(ctx, {
-      userId,
-      type: "onboarding",
-      message: ONBOARDING_MESSAGE,
+  },
+});
+
+/** Called when the user explicitly skips profile setup from /onboarding.
+ * Marks the profile so the auth guard stops forcing them back there. */
+export const skipOnboarding = mutation({
+  args: {},
+  handler: async (ctx) => {
+    const userId = await requireUserId(ctx);
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+    if (!profile || profile.onboardingSkippedAt) return;
+
+    await ctx.db.patch(profile._id, { onboardingSkippedAt: Date.now() });
+  },
+});
+
+/**
+ * Persist Student vs Alumni choice chosen on /signup.
+ * Server-only write — callers never get to set admin `role` via this path.
+ * Locked after first set so a client cannot flip audience later.
+ */
+export const setUserType = mutation({
+  args: { userType: userTypeValidator },
+  handler: async (ctx, args) => {
+    const { userId, user } = await requireVerifiedUser(ctx);
+
+    // Students must use Oxford (or allowlisted admin) email — blocks flipping
+    // alumni Gmail sign-up into a student account after the fact.
+    if (
+      args.userType === "student" &&
+      user.email &&
+      !isAllowedAuthEmail(user.email)
+    ) {
+      throw new ConvexError({
+        code: "EMAIL_DOMAIN_NOT_ALLOWED",
+        message: "Student accounts require an Oxford email address (ending in ox.ac.uk).",
+      });
+    }
+
+    let profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
+
+    // Race: auth may return before ensureMyProfile has inserted the row.
+    if (!profile) {
+      if (!user.email) {
+        throw new ConvexError({
+          code: "PROFILE_MISSING",
+          message: "User profile could not be found.",
+        });
+      }
+      await assertPlatformFlagOff(
+        ctx,
+        "disableRegistration",
+        "New account registration is temporarily disabled.",
+      );
+      const now = Date.now();
+      const profileId = await ctx.db.insert("profiles", {
+        userId,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.image,
+        role: roleForEmail(user.email),
+        userType: args.userType,
+        emailVerifiedAt: user.emailVerificationTime ?? undefined,
+        createdAt: now,
+        updatedAt: now,
+      });
+      return { userType: args.userType, profileId };
+    }
+
+    // Tombstone from account deletion — see ensureProfile.
+    if (profile.deletedAt) {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "You do not have permission for this action.",
+      });
+    }
+
+    if (profile.userType && profile.userType !== args.userType) {
+      throw new ConvexError({
+        code: "USER_TYPE_LOCKED",
+        message: "Account type has already been set and cannot be changed.",
+      });
+    }
+    if (profile.userType === args.userType) {
+      return { userType: args.userType };
+    }
+    await ctx.db.patch(profile._id, {
+      userType: args.userType,
+      updatedAt: Date.now(),
     });
+    return { userType: args.userType };
+  },
+});
+
+/**
+ * Completes alumni onboarding. Enforces userType === alumni server-side.
+ */
+export const completeAlumniOnboarding = mutation({
+  args: {
+    name: v.string(),
+    college: v.string(),
+    matriculationYear: v.string(),
+    dateOfBirth: v.string(),
+    interestedSocietySlugs: v.array(v.string()),
+  },
+  handler: async (ctx, args) => {
+    const { userId, profile } = await requireVerifiedUser(ctx);
+    if (!profile) {
+      throw new ConvexError({
+        code: "PROFILE_MISSING",
+        message: "User profile could not be found.",
+      });
+    }
+    if (profile.userType !== "alumni") {
+      throw new ConvexError({
+        code: "FORBIDDEN",
+        message: "Alumni onboarding is only available for alumni accounts.",
+      });
+    }
+
+    const trimmedName = args.name.trim();
+    if (trimmedName.length < 2 || trimmedName.length > 80) {
+      throw new ConvexError({
+        code: "INVALID_NAME",
+        message: "Name must be between 2 and 80 characters.",
+      });
+    }
+
+    const trimmedCollege = args.college.trim();
+    if (trimmedCollege.length < 2 || trimmedCollege.length > 80) {
+      throw new ConvexError({
+        code: "INVALID_COLLEGE",
+        message: "College must be between 2 and 80 characters.",
+      });
+    }
+
+    const year = args.matriculationYear.trim();
+    if (!/^\d{4}$/.test(year)) {
+      throw new ConvexError({
+        code: "INVALID_YEAR",
+        message: "Enter a four-digit matriculation or graduation year.",
+      });
+    }
+    const yearNum = Number(year);
+    const currentYear = new Date().getFullYear();
+    if (yearNum < 1950 || yearNum > currentYear) {
+      throw new ConvexError({
+        code: "INVALID_YEAR",
+        message: `Year must be between 1950 and ${currentYear}.`,
+      });
+    }
+
+    assertAdultOrThrow(
+      args.dateOfBirth.trim(),
+      "You must be at least 18 years old.",
+    );
+
+    if (args.interestedSocietySlugs.length > 40) {
+      throw new ConvexError({
+        code: "INVALID_SOCIETIES",
+        message: "Too many societies selected.",
+      });
+    }
+
+    const uniqueSlugs = [
+      ...new Set(
+        args.interestedSocietySlugs
+          .map((s) => s.trim())
+          .filter((s) => s.length > 0 && s.length <= 80),
+      ),
+    ];
+
+    const now = Date.now();
+    await ctx.db.patch(profile._id, {
+      name: trimmedName,
+      college: trimmedCollege,
+      matriculationYear: year,
+      dateOfBirth: args.dateOfBirth.trim(),
+      ageAttestedAt: now,
+      interestedSocietySlugs: uniqueSlugs,
+      updatedAt: now,
+    });
+
+    // Best-effort follows for active societies that have a communities catalog row.
+    for (const slug of uniqueSlugs) {
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", slug))
+        .unique();
+      if (!community) continue;
+
+      const existing = await ctx.db
+        .query("communityFollows")
+        .withIndex("by_community_user", (q) =>
+          q.eq("communitySlug", slug).eq("userId", userId),
+        )
+        .unique();
+      if (existing) continue;
+
+      await ctx.db.insert("communityFollows", {
+        userId,
+        communitySlug: slug,
+        createdAt: now,
+      });
+      await ctx.db.patch(community._id, {
+        followers: community.followers + 1,
+      });
+    }
+
+    return null;
   },
 });
 
@@ -466,11 +903,77 @@ export const setUserRole = mutation({
   },
 });
 
-export const requestAccountDeletion = mutation({
-  args: {},
-  handler: async (ctx) => {
-    const { userId, profile } = await requireVerifiedUser(ctx);
-    const anonymized = `deleted-${userId}@deleted.dono.app`;
+/**
+ * Releases a deleted account's email so a later signup with the same address
+ * creates a genuinely new account, while keeping the `users` row itself —
+ * donations, subscriptions, payouts, legal acceptances and audit entries all
+ * point at that id and must stay resolvable.
+ *
+ * Both of @convex-dev/auth's re-link paths have to be broken together, or the
+ * next signup lands back on this row:
+ *  - `authAccounts` lookup by (provider, providerAccountId = email);
+ *  - the `users.email` + `emailVerificationTime` lookup it falls back to when
+ *    no account row matches (`uniqueUserWithVerifiedEmail`), which would then
+ *    create a fresh authAccounts row pointing straight back here.
+ *
+ * The email is rewritten to a per-user sentinel rather than cleared because
+ * security.ts looks up `users` by email with `.unique()`, which throws if two
+ * rows ever share an address.
+ */
+export const severAccountIdentity = internalMutation({
+  args: { userId: v.id("users") },
+  handler: async (ctx, args) => {
+    const { userId } = args;
+    const now = Date.now();
+    const anonymized = `deleted-${userId}@deleted.invalid`;
+
+    await ctx.db.patch(userId, {
+      email: anonymized,
+      emailVerificationTime: undefined,
+      name: undefined,
+      image: undefined,
+      phone: undefined,
+      phoneVerificationTime: undefined,
+    });
+
+    // Every credential mapping the old email to this user — a single user can
+    // hold several (password + resend + admin-email).
+    const accounts = await ctx.db
+      .query("authAccounts")
+      .withIndex("userIdAndProvider", (q) => q.eq("userId", userId))
+      .collect();
+    for (const account of accounts) {
+      const codes = await ctx.db
+        .query("authVerificationCodes")
+        .withIndex("accountId", (q) => q.eq("accountId", account._id))
+        .collect();
+      for (const code of codes) {
+        await ctx.db.delete(code._id);
+      }
+      await ctx.db.delete(account._id);
+    }
+
+    // Every live session, not just the caller's device — otherwise another
+    // signed-in device could patch the released email back via ensureMyProfile.
+    const sessions = await ctx.db
+      .query("authSessions")
+      .withIndex("userId", (q) => q.eq("userId", userId))
+      .collect();
+    for (const session of sessions) {
+      const refreshTokens = await ctx.db
+        .query("authRefreshTokens")
+        .withIndex("sessionId", (q) => q.eq("sessionId", session._id))
+        .collect();
+      for (const token of refreshTokens) {
+        await ctx.db.delete(token._id);
+      }
+      await ctx.db.delete(session._id);
+    }
+
+    const profile = await ctx.db
+      .query("profiles")
+      .withIndex("by_userId", (q) => q.eq("userId", userId))
+      .unique();
     if (profile) {
       await ctx.db.patch(profile._id, {
         email: anonymized,
@@ -481,10 +984,81 @@ export const requestAccountDeletion = mutation({
         yearInCollege: undefined,
         avatarUrl: undefined,
         avatarStorageId: undefined,
-        updatedAt: Date.now(),
+        deletedAt: now,
+        updatedAt: now,
       });
     }
-    return { requestedAt: Date.now() };
+
+    // Campaign update emails send to `donorEmail` directly when it is set, so
+    // anonymizing the profile alone would keep mail flowing to the address we
+    // just released.
+    const optIns = await ctx.db
+      .query("campaignUpdateOptIns")
+      .withIndex("by_user", (q) => q.eq("userId", userId))
+      .collect();
+    for (const optIn of optIns) {
+      if (optIn.unsubscribedAt) continue;
+      await ctx.db.patch(optIn._id, { unsubscribedAt: now });
+    }
+
+    // Stripe-Identity-verified name/DOB is government-ID PII — release it
+    // immediately rather than leaving it to the retention-expiry cron, for
+    // every campaign/society this user directly created.
+    const ownedCampaigns = await ctx.db
+      .query("campaigns")
+      .withIndex("by_createdBy", (q) => q.eq("createdBy", userId))
+      .collect();
+    for (const campaign of ownedCampaigns) {
+      if (campaign.verifiedName === undefined && campaign.verifiedDob === undefined) {
+        continue;
+      }
+      await ctx.db.patch(campaign._id, clearVerificationPatch);
+    }
+
+    const ownedSocieties = await ctx.db
+      .query("societies")
+      .withIndex("by_creatorId", (q) => q.eq("creatorId", userId))
+      .collect();
+    for (const society of ownedSocieties) {
+      if (society.verifiedName === undefined && society.verifiedDob === undefined) {
+        continue;
+      }
+      await ctx.db.patch(society._id, clearVerificationPatch);
+    }
+
+    return { deletedAt: now };
+  },
+});
+
+export const requestAccountDeletion = action({
+  args: {},
+  handler: async (ctx): Promise<{ requestedAt: number }> => {
+    const userId = await getAuthUserId(ctx);
+    if (!userId) {
+      throw new ConvexError({
+        code: "UNAUTHENTICATED",
+        message: "You must be signed in to perform this action.",
+      });
+    }
+
+    // Same verified-user gate the mutation form used, via an internal query
+    // since actions have no db access.
+    await ctx.runQuery(internal.stripeInternal.getVerifiedUserContext, {
+      userId,
+    });
+
+    // Money first: cancelling before the identity is released means a Stripe
+    // failure aborts the deletion with the account still usable, rather than
+    // stranding a live subscription on an account nobody can sign in to.
+    await ctx.runAction(internal.stripe.cancelAllSubscriptionsForUser, {
+      userId,
+    });
+
+    const { deletedAt } = await ctx.runMutation(
+      internal.users.severAccountIdentity,
+      { userId },
+    );
+    return { requestedAt: deletedAt };
   },
 });
 

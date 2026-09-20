@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Cookie Notice</title>
+<style>
+body{font-family:Georgia,serif;max-width:42rem;margin:2rem auto;padding:0 1rem;line-height:1.55;color:#17211B}
+h1,h2,h3,h4{font-family:system-ui,sans-serif}
+pre{white-space:pre-wrap;background:#f4f4f0;padding:1rem}
+</style>
+</head>
+<body>
+<article>
+<h1>Dono Cookie Notice</h1>
+<p><strong>Version:</strong> 3.0 <strong>Version date:</strong> 7 August 2026 <strong>Effective from:</strong> on publication approval (see approval block) <strong>Document type:</strong> Notice — information, not contract <strong>Supersedes:</strong> v2.3 (6 August 2026) and all earlier versions, retained unaltered in the version archive at `../../v2.3/`, `../../v2.2/`, `../../v2.1/`, `../../v2.0/` and `../../v1.0/` <strong>Precedence:</strong> This Notice governs cookies and similar technologies (Terms of Service clause 1.7). It sits alongside the Privacy Notice.</p>
+<p>&gt; <strong>This is a Notice, not a contract.</strong> It provides information; it is not something you have to accept.</p>
+<p>---</p>
+<h2>1. What this Notice covers</h2>
+<p>1.1 Cookies are small files placed on your device. Similar technologies — local storage, session storage, secure device storage, pixels and software development kits — do comparable things. In this Notice <strong>&quot;cookies&quot; covers all of them</strong>, because the law treats them the same way.</p>
+<p>1.2 That distinction matters for Dono, because <strong>Dono sets almost no classic cookies of its own.</strong> Your sign-in session, your analytics choice and your interface preferences are stored in your browser's own storage (or, in the app, your device's secure storage) rather than in a cookie sent to us with every request. It is still storage on your device, so it is still covered here.</p>
+<h2>2. The law we work to</h2>
+<p>2.1 Under the Privacy and Electronic Communications Regulations 2003 we may store information on your device, or read it, <strong>without consent only where it is strictly necessary</strong> for a service you asked for. Everything else needs your consent, which must be freely given, specific, informed and <strong>as easy to refuse and to withdraw as it is to give</strong>. <strong>Consent cannot be obtained through terms and conditions.</strong></p>
+<p>2.2 <strong>Why analytics needs your consent.</strong> The rules above apply to *storing or reading anything on your device*, whatever the data is later used for. Our analytics provider stores an identifier on your device, so consent is required regardless of how identifiable the data is. There is a narrow exception for certain privacy-preserving statistical analytics; <strong>Dono does not rely on it</strong>, because our analytics records specific product events rather than aggregate-only measurement.</p>
+<p>2.3 <strong>A point in your favour.</strong> Dono does <strong>not</strong> link analytics events to your account: we never send your identity to the analytics provider, so the identifier it holds stays pseudonymous. That reduces the impact but does not remove the need for consent.</p>
+<h2>3. Categories we use</h2>
+<p>3.1 <strong>Strictly necessary — no consent required.</strong></p>
+<ul>
+<li>your authentication session;</li>
+<li>your record of whether you accepted or rejected analytics, with the timestamp and the version of this Notice you were shown — we have to remember your choice in order to respect it;</li>
+<li>interface state such as whether you have completed the welcome tour, and a temporary key that links a guest donation to the terms accepted; and</li>
+<li>storage set by the Payment Provider during checkout and identity verification.</li>
+</ul>
+<p>3.2 <strong>Analytics — consent required.</strong> We use <strong>PostHog (EU)</strong> to understand how the Platform is used so we can fix problems and improve it. <strong>It is not loaded at all unless you accept it.</strong> When you accept, we collect:</p>
+<ul>
+<li>pages and screens viewed;</li>
+<li>campaign events — viewed, liked, followed, shared;</li>
+<li>the donation funnel — started, amount selected, completed;</li>
+<li>society follows and subscription events;</li>
+<li>sign-in and sign-up events;</li>
+<li>the campaign-creation funnel;</li>
+<li><strong>limited interaction capture</strong> — taps and clicks, recorded only against a component's test identifier, not its content;</li>
+<li><strong>device and browser information</strong> — browser, operating system, device type, screen size;</li>
+<li><strong>approximate location</strong> — your IP address is anonymised as it arrives, and an approximate country and city are derived from it. <strong>We do not receive or store your full IP address in the analytics system</strong>; and</li>
+<li>aggregate interaction and page-performance measurements, including heatmaps and web-vitals data.</li>
+</ul>
+<p>We do <strong>not</strong> use session replay. Authentication fields are excluded from capture, so email addresses, passcodes and passwords are never collected. <strong>We do not send your name, email address or account identity to the analytics provider.</strong></p>
+<p>3.3 <strong>Advertising and cross-site tracking.</strong> Dono uses <strong>none</strong>. There are no advertising pixels and no cross-site or cross-device tracking. If this ever changes, this Notice is updated and consent obtained first.</p>
+<p>3.4 <strong>A/B testing.</strong> Dono does not run A/B tests.</p>
+<p>3.5 <strong>How long analytics data is kept.</strong> Analytics events are retained for <strong>12 months</strong> and then deleted. Consent records are covered in clause 5.3.</p>
+<h2>4. What we actually store on your device</h2>
+<p>&gt; <strong>How this table was produced.</strong> It is compiled from a <strong>source-level audit</strong> of every storage call and every third-party component in the Platform, dated 5 August 2026. <strong>A live clean-browser inspection on desktop and mobile has not yet been run</strong>, so the exact names and expiry times of items set by Stripe are as that provider documents them rather than as observed. That inspection must be completed, and this table corrected against it, <strong>before this Notice is published</strong>. It is re-run whenever the Platform's storage changes.</p>
+<p>| Name / item | Set by | Category | Where it is stored | When it is set | How long it lasts | |---|---|---|---|---|---| | `__convexAuthJWT_*` | Dono (Convex Auth) | Strictly necessary — your signed-in session | Web: session storage. App: secure device storage | On successful sign-in, not before | About 1 hour | | `__convexAuthRefreshToken_*` | Dono (Convex Auth) | Strictly necessary — keeps you signed in | Web: session storage. App: secure device storage | On successful sign-in | About 30 days | | `dono:analyticsConsent` (your choice, the time you made it, and the version of this Notice) | Dono | Strictly necessary — records your choice so we can respect it | Local storage / secure device storage | The moment you action the banner, not before | Until you change it or clear it | | `dono:welcomeTourComplete:*`, `dono:pendingWelcomeTour:*` | Dono | Strictly necessary — interface preference | Local storage / secure device storage | On sign-in, once your profile loads | Until you clear it | | `dono_donate_guest_key` | Dono | Strictly necessary — links a donation made without an account to the terms accepted for it | Local storage (web) | The first time the donation panel is opened | <strong>Until you clear it</strong> | | Create-society / create-college draft key | Dono | Strictly necessary — lets you resume a part-finished form | Session storage (web) | When you open that form | Until the browser tab closes | | PostHog analytics storage — identifier, session identifier, queued events | PostHog (EU) | <strong>Analytics — consent required</strong> | Local storage / device storage | <strong>Only if you accept analytics.</strong> Nothing is set, and nothing is sent, if you decline | Until cleared | | `__stripe_mid`, `__stripe_sid` and similar, set by Stripe | Stripe | Strictly necessary — payment fraud prevention and identity verification | Set by Stripe, on Stripe's domain | <strong>Only when you open a payment or identity-verification flow</strong> — not when you load a page | `__stripe_mid` about 1 year; `__stripe_sid` about 30 minutes; controlled by Stripe |</p>
+<p><strong>Our email provider sets nothing on your device.</strong> Emails are sent from our servers; there is no email tracking script in the Platform.</p>
+<p>4.1 <strong>A note on sign-in.</strong> On the web your session is kept in session storage, which means <strong>closing the browser tab signs you out.</strong> That is a deliberate choice, not a fault.</p>
+<p>4.2 <strong>Before you make a choice about analytics, nothing analytics-related and nothing from Stripe is on your device.</strong> The only things present are the items above that are set by an action you have taken — signing in, opening a form, or opening a payment flow.</p>
+<h2>5. Your choices</h2>
+<p>5.1 <strong>The analytics banner.</strong> Before any analytics loads, we show a banner with <strong>equally prominent &quot;Accept analytics&quot; and &quot;Reject analytics&quot; options.</strong> Neither is emphasised over the other by size, colour, contrast, position or wording. <strong>Nothing optional loads before you choose.</strong> If you reject, the analytics software is never started — it is not merely told to stay quiet.</p>
+<p>5.2 <strong>Changing your mind.</strong> There is a permanent <strong>&quot;Privacy and analytics settings&quot;</strong> link in the footer of every page, alongside a link to this Notice. You can change or withdraw your analytics choice there at any time.</p>
+<p>&gt; <strong>You can withdraw analytics consent at any time through Privacy and analytics settings. Withdrawal takes effect immediately for future collection.</strong></p>
+<p>Withdrawal also revokes consent downstream: the analytics client is stopped, no further events are sent, and we instruct the analytics provider accordingly.</p>
+<p>5.3 <strong>What we record about your choice.</strong> We record <strong>whether you accepted or rejected, when you chose, and which version of this Notice you were shown.</strong> That record is kept while your choice is current and for 12 months afterwards. It is stored on your device, not against your account.</p>
+<p>5.4 <strong>Your browser and device.</strong> You can block or delete stored data through your browser or device settings. Blocking strictly necessary storage stops parts of the Platform working, including signing in.</p>
+<h2>6. Server logs</h2>
+<p>6.1 Dono retains proportionate server logs (IP address, timestamp, requested page, browser and error data) for security, fraud prevention, service availability, fault detection and incident investigation. These are generated by our servers rather than stored on your device, so they do not require consent under clause 2.1; we rely on our legitimate interests, limit retention, restrict access, and do not repurpose security logs for behavioural analytics without reassessing the position. Dono uses no separate error-monitoring product — only the platform logs of its hosting and database providers.</p>
+<h2>7. Third parties, mobile apps, changes and contact</h2>
+<p>7.1 The Payment Provider sets strictly necessary storage during checkout and identity verification, governed by its own policies. Any other third party setting storage must appear in clause 4.</p>
+<p>7.2 <strong>Mobile app.</strong> The Dono app stores the equivalent items in your device's secure storage, as shown in clause 4, and uses the same consent gate for analytics.</p>
+<p>7.3 <strong>Consent management.</strong> Dono's consent banner is built in-house. We use no third-party consent-management platform.</p>
+<p>7.4 We update this Notice when what we store changes, and <strong>every version is permanently numbered, dated and archived</strong>. Questions: <strong>joindono.team@gmail.com</strong>. Dono is a trading name of Amrit Kaur Rooprai, a sole trader, 37 St Giles', Oxford OX1 3LD.</p>
+<p>---</p>
+<h2>Approval block — SIGNATURE REQUIRED</h2>
+<p>&gt; <strong>This block is unsigned. This document is prepared for approval and is not approved.</strong></p>
+<p><strong>I confirm that I have reviewed this document in its consolidated v3.0 form, that it states the current position only, and that I approve it.</strong></p>
+<p>| Field | Entry | |---|---| | Approver name | Amrit Kaur Rooprai | | Role | Controller, sole trader and accountable owner | | Document version approved | 3.0 | | Approved for publication | ☐ Yes, on ____________ · ☑ <strong>No</strong> — publication is gated on the items marked *publication-blocking* in `../../../../engineering/legal-launch/ENGINEERING_IMPLEMENTATION_CHECKLIST_v2.3.md` and on the manifest in `../publication-package/PUBLICATION_APPROVAL_REGISTER.md` | | Signature | ______________________ | | Date of approval | ______________________ |</p>
+<p><strong>Reviewed by:</strong> Sashank (deputy) — Signature ______________________  Date ______________</p>
+<p>---</p>
+<h2>Version control</h2>
+<p>| Field | Entry | |---|---| | Document | Dono Cookie Notice | | Document type | Notice — information, not contract | | Version | 3.0 | | Version date | 7 August 2026 | | Effective from | On publication approval | | Accountable owner | Amrit Kaur Rooprai, sole trader trading as Dono | | Prepared by | Legal consolidation, 7 August 2026 | | Reviewed by | *(signature required — approval block above)* | | Approved by | *(signature required — approval block above)* | | Status | <strong>Not approved.</strong> Clean consolidated document prepared for signature | | Supersedes | v2.3 (6 August 2026) and all earlier versions, retained unaltered in the version archive | | Next scheduled review | 7 February 2027, or on any material change to the Platform, the law, or Dono's payment configuration | | Archive rule | Published versions are never overwritten or deleted. The version in force at the time of acceptance governs the relevant transaction |</p>
+
+</article>
+</body>
+</html>

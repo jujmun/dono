@@ -105,7 +105,7 @@ function OtpRequestFormInner({
       <View className="mx-auto w-full max-w-md">
         <RetroPanel title="AUTH.exe" accent="mint">
           <View className="mb-6 items-center">
-            <Text className="font-retro-bold text-2xl text-retro-ink">{title}</Text>
+            <Text className="font-retro-display text-2xl text-retro-ink">{title}</Text>
             <Text className="mt-1 text-sm text-dono-muted">{subtitle}</Text>
           </View>
 
@@ -122,11 +122,12 @@ function OtpRequestFormInner({
                 autoComplete="email"
                 placeholder="you@st-annes.ox.ac.uk"
                 placeholderTextColor="#8a8478"
-                className="w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro-mono text-sm text-retro-ink outline-none"
+                className="w-full rounded-lg border-2 border-retro-ink bg-white px-4 py-2.5 font-retro text-sm text-retro-ink outline-none"
                 {...({ "ph-no-capture": true } as object)}
               />
               <Text className="mt-1 text-xs text-dono-muted">
-                Use your Oxford email address (ending in ox.ac.uk).
+                Use your Oxford email for student accounts, or any email for
+                existing alumni accounts.
               </Text>
             </View>
 
@@ -139,7 +140,7 @@ function OtpRequestFormInner({
             <Pressable
               onPress={handleSubmit}
               disabled={loading || !canSubmit}
-              className={`items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 shadow-[3px_3px_0_#211E1A] ${
+              className={`retro-key items-center rounded-full border-2 border-retro-ink bg-retro-mint py-3 ${
                 loading || !canSubmit ? "opacity-50" : ""
               }`}
             >

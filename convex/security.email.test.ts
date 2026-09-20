@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
-import { normalizeAndValidateOxfordEmail } from "./security";
+import {
+  normalizeAndValidateEmail,
+  normalizeAndValidateOxfordEmail,
+} from "./security";
 
 describe("Oxford email normalization (auth abuse keying)", () => {
   it("accepts ox.ac.uk and college subdomains", () => {
@@ -11,7 +14,7 @@ describe("Oxford email normalization (auth abuse keying)", () => {
     );
   });
 
-  it("rejects non-Oxford domains", () => {
+  it("rejects non-Oxford domains for Oxford-only helper", () => {
     expect(() => normalizeAndValidateOxfordEmail("user@gmail.com")).toThrow();
     expect(() =>
       normalizeAndValidateOxfordEmail("admin@ox.ac.uk.evil.com"),
@@ -29,5 +32,14 @@ describe("Oxford email normalization (auth abuse keying)", () => {
 
   it("rejects malformed emails", () => {
     expect(() => normalizeAndValidateOxfordEmail("not-an-email")).toThrow();
+    expect(() => normalizeAndValidateEmail("not-an-email")).toThrow();
+  });
+});
+
+describe("any-email normalization (alumni / sign-in)", () => {
+  it("accepts personal email addresses", () => {
+    expect(normalizeAndValidateEmail("  Alumni@Gmail.com ")).toBe(
+      "alumni@gmail.com",
+    );
   });
 });

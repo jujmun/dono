@@ -27,8 +27,7 @@ function GalleryThumbnail({
   return (
     <Pressable
       onPress={onPress}
-      className={cn(
-        "overflow-hidden rounded-lg border-2",
+      className={cn("retro-key", "overflow-hidden rounded-lg border-2",
         selected ? "border-dono-primary" : "border-dono-border",
       )}
     >

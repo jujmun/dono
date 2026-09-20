@@ -19,11 +19,8 @@ import {
   X,
 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
-import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
 import { AdminHardDeleteDialog } from "@/components/admin-hard-delete-dialog";
-import { AdminMatchPanel } from "@/components/admin-match-panel";
-import { AdminMessageThread } from "@/components/admin-message-thread";
 import { CategoryBadge } from "@/components/ui/category-badge";
 import {
   AdminStatusChip,
@@ -35,10 +32,11 @@ import {
   type StripeVerificationStatus,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import { formatCurrency } from "@/lib/constants";
+import { StoryText } from "@/components/story-text";
 import type { Campaign, CampaignCategory } from "@/lib/types";
 
 type AdminReviewPayload = {
@@ -62,6 +60,7 @@ type AdminReviewPayload = {
     stripeVerificationLastErrorReason: string | null;
     verifiedName: string | null;
     verifiedDob: string | null;
+    hasIdDocument: boolean;
   };
   messages: {
     id: string;
@@ -85,7 +84,7 @@ export default function AdminCampaignReviewPage() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const identityEnabled = isStripeIdentityEnabled();
   const detail = useQuery(
     api.campaigns.getForAdmin,
@@ -124,12 +123,12 @@ export default function AdminCampaignReviewPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Pressable
             onPress={() => router.replace("/dashboard")}
-            className="mt-6 items-center rounded-full bg-dono-primary py-3"
+            className="retro-key mt-6 items-center rounded-full bg-dono-primary py-3"
           >
             <Text className="font-retro-bold text-sm text-white">
               Back to dashboard
@@ -280,16 +279,18 @@ export default function AdminCampaignReviewPage() {
           ) : null}
         </View>
 
-        <Text className="font-retro-bold text-2xl text-dono-text">
+        <Text className="font-retro-display text-2xl text-dono-text">
           {campaign.title}
         </Text>
         <Text className="mt-2 text-sm text-dono-muted">
           Goal {formatCurrency(campaign.goal)} · Submitted {campaign.createdAt} ·{" "}
           {campaign.university}
         </Text>
-
-        {isLive ? (
-          <AdminMatchPanel campaignSlug={campaign.id} enabled={adminUser} />
+        {(campaign.existingFunding ?? 0) > 0 ? (
+          <Text className="mt-1 text-sm text-dono-muted">
+            Includes {formatCurrency(campaign.existingFunding ?? 0)} already received
+            outside Dono
+          </Text>
         ) : null}
 
         {moderated && campaign.moderationNote ? (
@@ -427,27 +428,10 @@ export default function AdminCampaignReviewPage() {
           <Text className="mt-6 font-retro-bold text-base text-dono-text">
             Full story
           </Text>
-          <Text className="mt-3 text-sm leading-6 text-dono-text">
-            {campaign.story}
-          </Text>
-        </View>
-
-        <View className="mt-6 rounded-2xl border border-dono-border bg-white p-5">
-          {student ? (
-            <AdminMessageThread
-              userId={student.userId as Id<"users">}
-              campaignContext={{ slug: campaign.id, title: campaign.title }}
-            />
-          ) : (
-            <>
-              <Text className="font-retro-bold text-base text-dono-text">
-                Messages
-              </Text>
-              <Text className="mt-1 text-sm text-dono-muted">
-                Messaging needs a linked student account.
-              </Text>
-            </>
-          )}
+          <StoryText
+            text={campaign.story}
+            className="mt-3 text-sm leading-6 text-dono-text"
+          />
         </View>
 
         {error ? (
@@ -542,7 +526,7 @@ export default function AdminCampaignReviewPage() {
                     void handleApprove();
                   }}
                   disabled={busy !== null}
-                  className={`flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-dono-primary py-3 ${
+                  className={`retro-key flex-1 flex-row items-center justify-center gap-2 rounded-xl bg-dono-primary py-3 ${
                     busy !== null ? "opacity-50" : ""
                   }`}
                 >

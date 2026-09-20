@@ -1,4 +1,5 @@
 import type { Campaign } from "@/lib/types";
+import { getDisplayRaised } from "@/lib/constants";
 import { parseImpactItem } from "@/lib/fund-breakdown";
 
 export interface ReceiptLine {
@@ -7,69 +8,31 @@ export interface ReceiptLine {
   muted?: boolean;
 }
 
-const defaultLabelsByCategory: Record<string, string[]> = {
-  textbooks: ["Core textbook", "Reference set", "Lab materials"],
-  equipment: ["Primary equipment", "Accessories", "Setup costs"],
-  travel: ["Conference fee", "Travel costs", "Accommodation"],
-  welfare: ["Support kits", "Essential supplies", "Distribution"],
-  events: ["Venue costs", "Materials", "Catering"],
-  accessibility: ["Equipment", "Installation", "Support"],
-  sports: ["Kit & gear", "Training costs", "Competition fees"],
-  memorial: ["Memorial fund", "Materials", "Installation"],
-  outreach: ["Program costs", "Materials", "Outreach events"],
-};
-
-function splitAmount(total: number, parts: number): number[] {
-  if (parts <= 0 || total <= 0) return Array.from({ length: parts }, () => 0);
-  const base = Math.floor(total / parts);
-  const amounts = Array.from({ length: parts }, () => base);
-  amounts[parts - 1] += total - base * parts;
-  return amounts;
-}
-
-function goalLabels(campaign: Campaign): string[] {
-  if (campaign.impactItems?.length && campaign.impactItems.length >= 2) {
-    return campaign.impactItems.map((item) => parseImpactItem(item).label);
-  }
-  return (
-    defaultLabelsByCategory[campaign.category] ?? [
-      "Primary cost",
-      "Secondary cost",
-      "Additional costs",
-    ]
-  );
-}
-
-function goalAmountsFromImpactItems(campaign: Campaign): number[] | null {
-  if (!campaign.impactItems?.length || campaign.impactItems.length < 2) {
-    return null;
+/**
+ * Creator-provided cost breakdown line items.
+ * Returns an empty array when the submitter left the breakdown blank —
+ * callers should still show Total goal / raised separately.
+ */
+export function buildGoalLineItems(campaign: Campaign): ReceiptLine[] {
+  if (!campaign.impactItems?.length) {
+    return [];
   }
   const parsed = campaign.impactItems.map((item) => parseImpactItem(item));
-  if (!parsed.every((item) => item.amount !== undefined)) {
-    return null;
+  if (!parsed.every((item) => item.amount !== undefined && item.label.trim())) {
+    return [];
   }
-  return parsed.map((item) => item.amount!);
-}
-
-/** Line items for the campaign goal — uses creator breakdown when available. */
-export function buildGoalLineItems(campaign: Campaign): ReceiptLine[] {
-  const labels = goalLabels(campaign);
-  const itemCount = Math.min(labels.length, 5);
-  const customAmounts = goalAmountsFromImpactItems(campaign);
-  const amounts =
-    customAmounts?.slice(0, itemCount) ?? splitAmount(campaign.goal, itemCount);
-
-  return labels.slice(0, itemCount).map((label, index) => ({
-    label,
-    amount: amounts[index] ?? 0,
+  return parsed.slice(0, 5).map((item) => ({
+    label: item.label.trim(),
+    amount: item.amount!,
   }));
 }
 
 /** Closing ledger row — always present on campaign cards. */
 export function buildReceiptFooter(campaign: Campaign): ReceiptLine {
-  const remaining = Math.max(0, campaign.goal - campaign.raised);
+  const raised = getDisplayRaised(campaign);
+  const remaining = Math.max(0, campaign.goal - raised);
 
-  if (campaign.raised === 0) {
+  if (raised === 0) {
     return { label: "Total goal", amount: campaign.goal };
   }
 

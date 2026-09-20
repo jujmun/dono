@@ -8,7 +8,16 @@ export function formatCurrency(amount: number): string {
 }
 
 export function getProgress(raised: number, goal: number): number {
+  if (!(goal > 0)) return 0;
   return Math.min(Math.round((raised / goal) * 100), 100);
+}
+
+/** Public progress total: Dono donations plus off-platform funds already received. */
+export function getDisplayRaised(campaign: {
+  raised: number;
+  existingFunding?: number;
+}): number {
+  return campaign.raised + (campaign.existingFunding ?? 0);
 }
 
 export const categoryLabels: Record<string, string> = {
@@ -51,8 +60,8 @@ type ApprovalCampaign = {
 
 /**
  * Human-readable approval stage for a non-live campaign, or null if it's already
- * public (active/funded/completed). Society-created campaigns must clear a society
- * leader review before admin review; other creator types skip straight to admin.
+ * public (active/funded/completed). Society-created campaigns must clear identity
+ * verification then society leader review before admin review.
  */
 export function getCampaignApprovalStage(
   campaign: ApprovalCampaign,
@@ -69,15 +78,24 @@ export function getCampaignApprovalStage(
   if (campaign.status !== "pending" && campaign.status !== "changes_requested") {
     return null;
   }
-  if (
-    campaign.creator.type === "society" &&
-    campaign.societyApprovalStatus !== "approved"
-  ) {
-    return { label: "Awaiting society leader approval" };
+  if (campaign.creator.type === "society") {
+    if (campaign.societyApprovalStatus === undefined) {
+      return { label: "Draft" };
+    }
+    if (campaign.societyApprovalStatus !== "approved") {
+      return { label: "Awaiting society leader approval" };
+    }
   }
   return { label: "Awaiting admin approval" };
 }
 
 export function isCampaignRejected(campaign: ApprovalCampaign): boolean {
   return getCampaignApprovalStage(campaign)?.label.startsWith("Rejected") ?? false;
+}
+
+/** Unsubmitted draft: saved, not yet in society or admin review. */
+export function isCampaignDraft(campaign: ApprovalCampaign): boolean {
+  return (
+    campaign.status === "pending" && campaign.societyApprovalStatus === undefined
+  );
 }

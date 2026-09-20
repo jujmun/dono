@@ -1,22 +1,18 @@
 import { useState } from "react";
 import { Link, usePathname } from "expo-router";
-import {
-  View,
-  Text,
-  Pressable,
-  Image,
-  useWindowDimensions,
-} from "react-native";
+import { View, Text, Pressable, useWindowDimensions } from "react-native";
 import { useConvexAuth } from "convex/react";
 import { Menu, X } from "lucide-react-native";
 import { cn } from "@/lib/utils";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { canCreate } from "@/lib/auth/user-type";
 import { NotificationBell } from "@/components/notification-bell";
+import { ProfileMenu } from "@/components/profile-menu";
+import { DonoDino } from "./dono-dino";
 
 const baseNavItems = [
   { href: "/campaigns", label: "Campaigns" },
-  { href: "/societies", label: "Societies" },
-  { href: "/dashboard", label: "Impact" },
+  { href: "/societies", label: "Communities" },
 ] as const;
 
 export function RetroBrowserSitehead() {
@@ -35,9 +31,9 @@ export function RetroBrowserSitehead() {
     <View className="border-b-[3px] border-retro-ink bg-retro-paper">
       <View className="flex-row flex-wrap items-center justify-between gap-3 px-4 py-3.5 md:px-[26px]">
         <Link href="/" asChild>
-          <Pressable className="flex-row items-center gap-2">
-            <View className="h-3.5 w-3.5 rounded-full border-2 border-retro-ink bg-retro-coral" />
-            <Text className="font-retro-bold text-xl text-retro-ink">Dono</Text>
+          <Pressable className="flex-row items-center gap-2" accessibilityLabel="Dono home">
+            <DonoDino height={26} />
+            <Text className="font-logo text-xl text-retro-ink">Dono</Text>
           </Pressable>
         </Link>
 
@@ -49,10 +45,9 @@ export function RetroBrowserSitehead() {
               return (
                 <Link key={item.label} href={item.href} asChild>
                   <Pressable
-                    className={cn(
-                      "rounded-lg border-2 px-3 py-1.5",
+                    className={cn("retro-key", "rounded-lg border-2 px-3 py-1.5",
                       active
-                        ? "border-retro-ink bg-retro-cream shadow-[2px_2px_0_#211E1A]"
+                        ? "border-retro-ink bg-retro-cream"
                         : "border-transparent",
                     )}
                   >
@@ -78,34 +73,21 @@ export function RetroBrowserSitehead() {
         )}
 
         <View className="flex-row items-center gap-2.5">
-          <Link href="/create" asChild>
-            <Pressable className="rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2 shadow-[3px_3px_0_#211E1A]">
-              <Text className="font-retro-bold text-[13px] text-retro-paper">
-                + Start a Campaign
-              </Text>
-            </Pressable>
-          </Link>
-          {!isLoading && isAuthenticated ? <NotificationBell /> : null}
-          {!isLoading && isAuthenticated ? (
-            <Link href="/account" asChild>
-              <Pressable className="h-9 w-9 items-center justify-center overflow-hidden rounded-full border-2 border-retro-ink bg-retro-cream">
-                {profile?.avatarUrl ? (
-                  <Image
-                    source={{ uri: profile.avatarUrl }}
-                    style={{ width: "100%", height: "100%" }}
-                    resizeMode="cover"
-                    accessibilityLabel="Your profile picture"
-                  />
-                ) : (
-                  <Text className="font-retro-mono-bold text-sm text-retro-ink">
-                    {initials}
-                  </Text>
-                )}
+          {canCreate(profile) ? (
+            <Link href="/create" asChild>
+              <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
+                <Text className="font-retro-bold text-[13px] text-retro-paper">
+                  + Start a Campaign
+                </Text>
               </Pressable>
             </Link>
+          ) : null}
+          {!isLoading && isAuthenticated ? <NotificationBell /> : null}
+          {!isLoading && isAuthenticated ? (
+            <ProfileMenu initials={initials} avatarUrl={profile?.avatarUrl} />
           ) : !isLoading ? (
             <Link href="/signin" asChild>
-              <Pressable className="rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2 shadow-[3px_3px_0_#211E1A]">
+              <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
                 <Text className="font-retro-bold text-[13px] text-retro-ink">
                   Sign in
                 </Text>

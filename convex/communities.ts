@@ -53,6 +53,45 @@ function isPublicVerifiedSociety(community: {
   return false;
 }
 
+function isPublicVerifiedCollege(community: {
+  type: string;
+  verified: boolean;
+  verificationStatus?: "pending" | "verified" | "rejected";
+}) {
+  if (community.type !== "college") return false;
+  if (community.verificationStatus === "verified") return true;
+  if (community.verificationStatus === undefined && community.verified) {
+    return true;
+  }
+  return false;
+}
+
+/** Discover-page shape for colleges — matches Society card fields + orgType. */
+function toPublicCollege(community: {
+  slug: string;
+  name: string;
+  description: string;
+  coverImage: string;
+  _creationTime: number;
+}) {
+  const coverImageUrl =
+    community.coverImage && community.coverImage !== "default"
+      ? community.coverImage
+      : null;
+  return {
+    slug: community.slug,
+    name: community.name,
+    description: community.description,
+    story: "",
+    coverImageUrl,
+    websiteUrl: "",
+    secondaryLink: null as string | null,
+    status: "active" as const,
+    createdAt: community._creationTime,
+    orgType: "college" as const,
+  };
+}
+
 export const list = query({
   args: {},
   handler: async (ctx) => {
@@ -60,6 +99,18 @@ export const list = query({
     return communities
       .filter(isPublicVerifiedSociety)
       .map(toCommunity);
+  },
+});
+
+/** Public colleges for Discover (Communities page) — not societies.listActive. */
+export const listPublicColleges = query({
+  args: {},
+  handler: async (ctx) => {
+    const colleges = await ctx.db
+      .query("communities")
+      .withIndex("by_type", (q) => q.eq("type", "college"))
+      .collect();
+    return colleges.filter(isPublicVerifiedCollege).map(toPublicCollege);
   },
 });
 
@@ -101,6 +152,7 @@ export const getBySlug = query({
     const isOwner = userId !== null && community.createdBy === userId;
     const canView =
       isPublicVerifiedSociety(community) ||
+      isPublicVerifiedCollege(community) ||
       isOwner ||
       (membership !== null &&
         (membership.status === "approved" || membership.status === "pending"));

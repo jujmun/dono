@@ -6,10 +6,12 @@ import {
   creatorTypeLabels,
   formatCurrency,
   getCampaignApprovalStage,
+  getDisplayRaised,
   getProgress,
 } from "@/lib/constants";
 import { cn } from "@/lib/utils";
-import { getPrimaryCampaignImage } from "@/lib/campaign-images";
+import { retroKeyClass, retroKeyMintClass } from "@/lib/retro-key";
+import { getPrimaryCampaignImage, CAMPAIGN_IMAGE_ASPECT } from "@/lib/campaign-images";
 import {
   buildGoalLineItems,
   buildReceiptFooter,
@@ -38,7 +40,8 @@ export function RetroCampaignCard({
   matchMultiplier,
   collegeMatch = false,
 }: RetroCampaignCardProps) {
-  const progress = getProgress(campaign.raised, campaign.goal);
+  const displayRaised = getDisplayRaised(campaign);
+  const progress = getProgress(displayRaised, campaign.goal);
   const imageSource = getPrimaryCampaignImage(campaign);
   const goalLines = buildGoalLineItems(campaign).slice(0, 3);
   const footer = buildReceiptFooter(campaign);
@@ -56,26 +59,31 @@ export function RetroCampaignCard({
   return (
     <Link href={destination} asChild>
       <Pressable
-        className={cn("active:opacity-90", approvalStage && "opacity-60")}
+        className={cn(
+          "group h-full active:opacity-90",
+          approvalStage && "opacity-60",
+        )}
       >
         <View
           className={cn(
-            "overflow-hidden rounded-[14px] border-[3px] bg-retro-paper",
+            "h-full overflow-hidden rounded-[14px] border-[3px] bg-retro-paper",
             owned
-              ? "border-retro-mint shadow-[5px_5px_0_#159E88]"
-              : "border-retro-ink shadow-[5px_5px_0_#211E1A]",
+              ? cn("border-retro-mint", retroKeyMintClass)
+              : cn("border-retro-ink", retroKeyClass),
           )}
         >
           <CampaignImage
             image={imageSource}
+            zoomOnHover
             className={cn(
-              "h-[170px] border-b-[3px] border-retro-ink",
+              "w-full border-b-[3px] border-retro-ink",
               accent === "tan" ? "bg-retro-tan" : "bg-retro-indigo",
             )}
+            style={{ aspectRatio: CAMPAIGN_IMAGE_ASPECT }}
           >
             <View
               className={cn(
-                "absolute left-3.5 top-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1 shadow-[3px_3px_0_#211E1A]",
+                "absolute left-3.5 top-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1",
                 tagMarigold ? "bg-retro-marigold" : "bg-retro-paper",
               )}
             >
@@ -85,21 +93,21 @@ export function RetroCampaignCard({
             </View>
             <View className="absolute right-3.5 top-3.5 flex-row flex-wrap justify-end gap-1">
               {matched ? (
-                <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                <View className="rounded-full border-2 border-retro-ink bg-retro-mint px-2 py-0.5">
                   <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
                     {matchMultiplier ? `${matchMultiplier}× MATCH` : "MATCHED"}
                   </Text>
                 </View>
               ) : null}
               {nearGoal ? (
-                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                <View className="rounded-full border-2 border-retro-ink bg-retro-marigold px-2 py-0.5">
                   <Text className="font-retro-mono-bold text-[10px] text-retro-ink">
                     NEAR GOAL
                   </Text>
                 </View>
               ) : null}
               {collegeMatch ? (
-                <View className="rounded-full border-2 border-retro-ink bg-retro-sky px-2 py-0.5 shadow-[2px_2px_0_#211E1A]">
+                <View className="rounded-full border-2 border-retro-ink bg-retro-sky px-2 py-0.5">
                   <Text className="font-retro-mono-bold text-[10px] text-retro-paper">
                     YOUR COLLEGE
                   </Text>
@@ -109,7 +117,7 @@ export function RetroCampaignCard({
             {approvalStage && (
               <View
                 className={cn(
-                  "absolute inset-x-3.5 bottom-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1.5 shadow-[3px_3px_0_#211E1A]",
+                  "absolute inset-x-3.5 bottom-3.5 rounded-full border-2 border-retro-ink px-3.5 py-1.5",
                   approvalStage.label === "Rejected" ||
                     approvalStage.label === "Rejected by society"
                     ? "bg-retro-coral"
@@ -123,56 +131,67 @@ export function RetroCampaignCard({
             )}
           </CampaignImage>
 
-          <View className="px-[18px] pb-[18px] pt-4">
-            <View className="mb-0.5 flex-row items-start justify-between gap-2">
-              <Text
-                className="min-w-0 flex-1 font-retro-bold text-[19px] text-retro-ink"
-                numberOfLines={2}
-              >
-                {campaign.title}
-              </Text>
-              <View className="rounded-lg border-2 border-retro-ink bg-retro-cream px-2 py-0.5">
-                <Text className="font-retro-mono-bold text-[11.5px] text-retro-ink">
-                  {fundedLabel}
-                </Text>
-              </View>
-            </View>
-
-            <Text className="mb-3 text-[12.5px] text-[#5c574f]">
-              {campaign.university} · {creatorType}
-            </Text>
-
-            <View className="mb-3 rounded-lg border-2 border-dashed border-retro-ink bg-retro-paper px-3 py-2.5">
-              {goalLines.map((line) => (
-                <View
-                  key={line.label}
-                  className="flex-row items-center justify-between py-0.5"
+          <View className="flex-1 justify-between px-[18px] pb-[18px] pt-4">
+            <View>
+              <View className="mb-0.5 min-h-[52px] flex-row items-start justify-between gap-2">
+                <Text
+                  className="min-w-0 flex-1 font-retro-display text-[19px] leading-[26px] text-retro-ink"
+                  numberOfLines={2}
                 >
-                  <Text
-                    className="mr-2 flex-1 font-retro-mono text-[12.5px] text-retro-ink"
-                    numberOfLines={1}
-                  >
-                    {line.label}
-                  </Text>
-                  <Text className="font-retro-mono text-[12.5px] text-retro-ink">
-                    {formatCurrency(line.amount)}
+                  {campaign.title}
+                </Text>
+                <View className="rounded-lg border-2 border-retro-ink bg-retro-cream px-2 py-0.5">
+                  <Text className="font-retro-mono-bold text-[11.5px] text-retro-ink">
+                    {fundedLabel}
                   </Text>
                 </View>
-              ))}
-              <View className="my-1.5 border-t border-dashed border-retro-ink" />
-              <View className="flex-row items-center justify-between py-0.5">
-                <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
-                  {footer.label}
-                </Text>
-                <Text className="font-retro-mono-bold text-[12.5px] text-retro-ink">
-                  {formatCurrency(footer.amount)}
-                </Text>
+              </View>
+
+              <Text className="mb-3 text-[12.5px] text-[#5c574f]">
+                {campaign.university} · {creatorType}
+              </Text>
+
+              <View
+                className={cn(
+                  "mb-3 rounded-sm border border-dashed border-retro-ink bg-white px-3 py-2.5",
+                  goalLines.length > 0 && "min-h-[108px]",
+                )}
+              >
+                {goalLines.map((line) => (
+                  <View
+                    key={line.label}
+                    className="flex-row items-end gap-2 py-0.5"
+                  >
+                    <Text
+                      className="max-w-[55%] shrink font-retro-mono text-[12.5px] text-retro-ink"
+                      numberOfLines={1}
+                    >
+                      {line.label}
+                    </Text>
+                    <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
+                    <Text className="shrink-0 font-retro-mono text-[12.5px] text-retro-ink">
+                      {formatCurrency(line.amount)}
+                    </Text>
+                  </View>
+                ))}
+                {goalLines.length > 0 ? (
+                  <View className="my-1.5 border-t border-dashed border-retro-ink" />
+                ) : null}
+                <View className="flex-row items-end gap-2 py-0.5">
+                  <Text className="shrink font-retro-mono-bold text-[12.5px] text-retro-ink">
+                    {footer.label}
+                  </Text>
+                  <View className="mb-1 min-h-[1px] min-w-6 flex-1 border-b border-dotted border-retro-ink/50" />
+                  <Text className="shrink-0 font-retro-mono-bold text-[12.5px] text-retro-ink">
+                    {formatCurrency(footer.amount)}
+                  </Text>
+                </View>
               </View>
             </View>
 
             <View className="flex-row items-center justify-between">
               <Text className="font-retro-mono-bold text-xs text-retro-ink">
-                {formatCurrency(campaign.raised)} of{" "}
+                {formatCurrency(displayRaised)} of{" "}
                 {formatCurrency(campaign.goal)}
               </Text>
               <View className="flex-row gap-3">

@@ -1,5 +1,4 @@
 import Resend from "@auth/core/providers/resend";
-import { Resend as ResendClient } from "resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import {
   getAuthFromAddress,
@@ -7,6 +6,7 @@ import {
   OTP_EXPIRY_NOTE,
   OTP_LENGTH,
 } from "./otpConfig";
+import { sendAuthEmail } from "./authEmailTemplate";
 
 function otpToken() {
   const random: RandomReader = {
@@ -24,13 +24,16 @@ export const ResendOTP = Resend({
     return otpToken();
   },
   async sendVerificationRequest({ identifier: email, provider, token }) {
-    const resend = new ResendClient(provider.apiKey);
     const from = getAuthFromAddress();
 
-    const { error } = await resend.emails.send({
+    const { error } = await sendAuthEmail({
+      apiKey: provider.apiKey,
       from,
-      to: [email],
+      to: email,
       subject: "Verify your Dono email",
+      heading: "Verify your email.",
+      code: token,
+      expiryText: OTP_EXPIRY_NOTE,
       text: `Your Dono verification code is ${token}. ${OTP_EXPIRY_NOTE}`,
     });
 

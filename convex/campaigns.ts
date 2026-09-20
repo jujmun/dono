@@ -4,13 +4,13 @@ import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { toCampaign } from "./lib/mappers";
+import { displayRaised } from "./lib/existingFunding";
 import {
   enrichCampaignWithMedia,
   enrichCampaignsWithMedia,
 } from "./lib/campaignMedia";
 import {
   requireAdmin,
-  requireSocietyMember,
   resolveCreatorContact,
   optionalUserId,
   getProfileByUserId,
@@ -18,26 +18,22 @@ import {
 import { clampLimit } from "./lib/pagination";
 import { insertReviewMessageAndScheduleEmail } from "./reviewMessages";
 import { logAdminAction } from "./adminAudit";
-import { isPublicCampaign, isPublicStatus, isUnderReview } from "./lib/campaignVisibility";
-import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
+import {
+  isPublicCampaign,
+  isPublicStatus,
+  isReadyForAdminReview,
+  isUnderReview,
+} from "./lib/campaignVisibility";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
-import { assertLegalAcceptedForContext } from "./lib/legalAcceptance";
-import { assertAdultOrThrow } from "./lib/ageGate";
 import { buildCampaignVerifications } from "./lib/verificationBadges";
 import { isStripeIdentityEnabled } from "./lib/stripeIdentityEnabled";
+import { insertPendingCampaign } from "./lib/insertPendingCampaign";
+import { deleteCampaignRecord } from "./lib/deleteCampaignRecord";
 import {
   buildCampaignActiveMessage,
-  buildCampaignPendingMessage,
   buildCampaignRejectedMessage,
   createNotification,
 } from "./lib/notifications";
-
-function slugify(title: string) {
-  return title
-    .toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-|-$/g, "");
-}
 
 function isPublicStatusLocal(status: string) {
   return isPublicStatus(status);
@@ -54,6 +50,38 @@ function requireModerationReason(reason: string) {
     });
   }
   return trimmed;
+}
+
+async function claimStorageId(
+  ctx: MutationCtx,
+  userId: Id<"users">,
+  storageId: Id<"_storage">,
+) {
+  const metadata = await ctx.db.system.get("_storage", storageId);
+  if (!metadata) {
+    throw new ConvexError({
+      code: "INVALID_INPUT",
+      message: "Uploaded file was not found.",
+    });
+  }
+
+  const owner = await ctx.db
+    .query("storageOwners")
+    .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
+    .unique();
+  if (owner && owner.userId !== userId) {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "You do not have permission for this action.",
+    });
+  }
+  if (!owner) {
+    await ctx.db.insert("storageOwners", {
+      userId,
+      storageId,
+      createdAt: Date.now(),
+    });
+  }
 }
 
 function matchesSearch(
@@ -82,14 +110,6 @@ const placeholderCampaignSlugs = [
   "sports-equipment",
   "accessibility-ramp",
 ];
-
-const MAX_TITLE_LENGTH = 120;
-const MAX_CATEGORY_LENGTH = 60;
-const MAX_UNIVERSITY_LENGTH = 120;
-const MAX_DESCRIPTION_LENGTH = 500;
-const MAX_STORY_LENGTH = 5000;
-const MIN_GOAL = 1;
-const MAX_GOAL = 1_000_000;
 
 export const list = query({
   args: {},
@@ -167,10 +187,11 @@ export const listNearGoal = query({
       .filter((c) => isPublicCampaign(c))
       .filter((c) => c.status === "active" && c.goal > 0)
       .filter((c) => {
-        const progress = c.raised / c.goal;
-        return progress >= 0.8 && c.raised < c.goal;
+        const shown = displayRaised(c);
+        const progress = shown / c.goal;
+        return progress >= 0.8 && shown < c.goal;
       })
-      .sort((a, b) => b.raised / b.goal - a.raised / a.goal)
+      .sort((a, b) => displayRaised(b) / b.goal - displayRaised(a) / a.goal)
       .slice(0, limit);
     return await enrichCampaignsWithMedia(ctx, nearGoal);
   },
@@ -260,7 +281,7 @@ export const listPendingForAdmin = query({
     await requireAdmin(ctx);
     const campaigns = await ctx.db.query("campaigns").collect();
     return campaigns
-      .filter((c) => c.status === "pending" && matchesSearch(c, args.search))
+      .filter((c) => isReadyForAdminReview(c) && matchesSearch(c, args.search))
       .map((c) => ({
         ...toCampaign(c),
         stripeVerificationStatus: c.stripeVerificationStatus ?? null,
@@ -288,15 +309,23 @@ export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const [campaigns, societies] = await Promise.all([
+    const [campaigns, societies, campaignEdits, societyEdits] = await Promise.all([
       ctx.db.query("campaigns").collect(),
       ctx.db.query("societies").collect(),
+      ctx.db
+        .query("campaignEditRequests")
+        .withIndex("by_status", (q) => q.eq("status", "pending"))
+        .collect(),
+      ctx.db
+        .query("societyEditRequests")
+        .withIndex("by_status", (q) => q.eq("status", "pending"))
+        .collect(),
     ]);
     let pending = 0;
     let live = 0;
     let moderated = 0;
     for (const c of campaigns) {
-      if (c.status === "pending") pending += 1;
+      if (isReadyForAdminReview(c)) pending += 1;
       else if (isPublicStatusLocal(c.status)) live += 1;
       else if (c.status === "rejected") moderated += 1;
     }
@@ -305,7 +334,13 @@ export const getAdminStats = query({
       else if (s.status === "active") live += 1;
       else if (s.status === "rejected") moderated += 1;
     }
-    return { pending, live, moderated };
+    pending += campaignEdits.length + societyEdits.length;
+    return {
+      pending,
+      live,
+      moderated,
+      pendingEdits: campaignEdits.length + societyEdits.length,
+    };
   },
 });
 
@@ -393,6 +428,7 @@ export const getForAdmin = query({
           campaign.stripeVerificationLastErrorReason ?? null,
         verifiedName: campaign.verifiedName ?? null,
         verifiedDob: campaign.verifiedDob ?? null,
+        hasIdDocument: Boolean(campaign.idDocumentStorageId),
       },
       messages: messages
         .filter((m) => !m.deletedAt)
@@ -485,11 +521,9 @@ export const approve = mutation({
       (Boolean(connectAccount?.cardPaymentsActive) ||
         Boolean(connectAccount?.chargesEnabled));
 
+    const now = Date.now();
     const verifications = buildCampaignVerifications(campaign, {
-      studentStatusChecked:
-        !isStripeIdentityEnabled() ||
-        campaign.stripeVerificationStatus === "verified" ||
-        Boolean(campaign.studentStatusCheckedAt),
+      studentStatusChecked: true,
       stripeConnectOnboardingComplete: connectReady,
       institutionallyEndorsed: campaign.institutionallyEndorsed === true,
     });
@@ -497,6 +531,8 @@ export const approve = mutation({
     await ctx.db.patch(campaign._id, {
       status: "active",
       verifications,
+      studentStatusCheckedAt: campaign.studentStatusCheckedAt ?? now,
+      studentStatusCheckedBy: campaign.studentStatusCheckedBy ?? adminUserId,
       ...(campaign.responsibleIndividualUserId
         ? {}
         : { responsibleIndividualUserId }),
@@ -536,6 +572,18 @@ export const approve = mutation({
     }
 
     return null;
+  },
+});
+
+/** EL-01/EL-07: Identity-document / student-card viewing removed from Dono. */
+export const getIdDocumentUrlForAdmin = mutation({
+  args: { slug: v.string() },
+  handler: async () => {
+    throw new ConvexError({
+      code: "FEATURE_REMOVED",
+      message:
+        "Identity documents are not stored or served by Dono. Verification is performed by the Payment Provider.",
+    });
   },
 });
 
@@ -644,220 +692,43 @@ export const create = mutation({
     description: v.string(),
     story: v.string(),
     goal: v.number(),
+    existingFunding: v.optional(v.number()),
     template: v.string(),
     expectedExpenditureDate: v.optional(v.string()),
     plannedUpdateSchedule: v.optional(v.string()),
     ownershipStatement: v.optional(v.string()),
     responsibleIndividualUserId: v.optional(v.id("users")),
+    idDocumentStorageId: v.optional(v.id("_storage")),
   },
   handler: async (ctx, args) => {
-    const communitySlug = args.communitySlug.trim();
-    const { userId, community, membership } = await requireSocietyMember(
+    // EL-01/EL-07: Dono does not accept identity-document uploads.
+    if (args.idDocumentStorageId) {
+      throw new ConvexError({
+        code: "FEATURE_REMOVED",
+        message:
+          "Identity documents are not accepted by Dono. Verification is performed by the Payment Provider.",
+      });
+    }
+    // societyApprovalStatus stays unset until the owner finishes the create
+    // wizard (submitForReview). Identity runs mid-wizard against this row.
+    return await insertPendingCampaign(
       ctx,
-      communitySlug,
-    );
-    await assertLegalAcceptedForContext(ctx, {
-      userId,
-      context: "create_campaign",
-    });
-    const profile = await ctx.db
-      .query("profiles")
-      .withIndex("by_userId", (q) => q.eq("userId", userId))
-      .unique();
-    assertAdultOrThrow(
-      profile?.dateOfBirth,
-      "You must be at least 18 years old to create a campaign.",
-    );
-    const title = args.title.trim();
-    const category = args.category.trim();
-    const description = args.description.trim();
-    const story = args.story.trim();
-    const university = community.university.trim();
-
-    if (!isValidCampaignTemplateId(args.template)) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Invalid template selection.",
-      });
-    }
-
-    if (!title || title.length > MAX_TITLE_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Title is required and must be at most 120 characters.",
-      });
-    }
-    if (!category || category.length > MAX_CATEGORY_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Category is required and must be at most 60 characters.",
-      });
-    }
-    if (!isAllowedCampaignCategory(category)) {
-      throw new ConvexError({
-        code: "PROHIBITED_CATEGORY",
-        message: "This campaign category is not permitted under the Terms.",
-      });
-    }
-    if (!university || university.length > MAX_UNIVERSITY_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "University is required and must be at most 120 characters.",
-      });
-    }
-    if (!description || description.length > MAX_DESCRIPTION_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Description is required and must be at most 500 characters.",
-      });
-    }
-    if (!story || story.length > MAX_STORY_LENGTH) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Story is required and must be at most 5000 characters.",
-      });
-    }
-    if (!Number.isFinite(args.goal) || args.goal < MIN_GOAL || args.goal > MAX_GOAL) {
-      throw new ConvexError({
-        code: "INVALID_INPUT",
-        message: "Goal must be between 1 and 1,000,000.",
-      });
-    }
-
-    const society = await ctx.db
-      .query("societies")
-      .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
-      .unique();
-    const responsibleIndividualUserId =
-      args.responsibleIndividualUserId ??
-      society?.responsibleIndividualUserId ??
-      society?.creatorId ??
-      userId;
-    if (!responsibleIndividualUserId) {
-      throw new ConvexError({
-        code: "RESPONSIBLE_INDIVIDUAL_REQUIRED",
-        message: "A named Responsible Individual is required.",
-      });
-    }
-
-    const creatorName = community.name;
-    const initials = creatorName
-      .split(" ")
-      .map((part) => part[0])
-      .join("")
-      .slice(0, 2)
-      .toUpperCase();
-    const isLeader = membership.role === "leader";
-    const now = Date.now();
-
-    let baseSlug = slugify(title);
-    let slug = baseSlug;
-    let suffix = 1;
-    while (
-      await ctx.db
-        .query("campaigns")
-        .withIndex("by_slug", (q) => q.eq("slug", slug))
-        .unique()
-    ) {
-      slug = `${baseSlug}-${suffix}`;
-      suffix += 1;
-    }
-
-    const today = new Date();
-    const deadline = new Date(today);
-    deadline.setMonth(deadline.getMonth() + 2);
-    const maxDeadline = new Date(today);
-    maxDeadline.setFullYear(maxDeadline.getFullYear() + 1);
-    if (deadline > maxDeadline) {
-      deadline.setTime(maxDeadline.getTime());
-    }
-
-    const expectedExpenditureDate = args.expectedExpenditureDate?.trim();
-    const plannedUpdateSchedule = args.plannedUpdateSchedule?.trim();
-    const ownershipStatement = args.ownershipStatement?.trim();
-
-    const initialVerifications = buildCampaignVerifications({
-      stripeVerificationStatus: undefined,
-      societyApprovalStatus: isLeader ? "approved" : "pending",
-      verifications: [],
-      institutionallyEndorsed: false,
-    });
-
-    const campaignId = await ctx.db.insert("campaigns", {
-      slug,
-      title,
-      description,
-      story,
-      category,
-      goal: args.goal,
-      raised: 0,
-      donors: 0,
-      likes: 0,
-      followers: 0,
-      comments: 0,
-      creator: {
-        name: creatorName,
-        type: "society",
-        avatar: initials || "SO",
-        communityId: communitySlug,
+      {
+        title: args.title,
+        category: args.category,
+        communitySlug: args.communitySlug,
+        description: args.description,
+        story: args.story,
+        goal: args.goal,
+        existingFunding: args.existingFunding,
+        template: args.template,
+        expectedExpenditureDate: args.expectedExpenditureDate,
+        plannedUpdateSchedule: args.plannedUpdateSchedule,
+        ownershipStatement: args.ownershipStatement,
+        responsibleIndividualUserId: args.responsibleIndividualUserId,
       },
-      verifications: initialVerifications,
-      university,
-      image: "default",
-      template: args.template,
-      createdAt: today.toISOString().slice(0, 10),
-      deadline: deadline.toISOString().slice(0, 10),
-      status: "pending",
-      updates: [],
-      impactItems: [],
-      createdBy: userId,
-      responsibleIndividualUserId,
-      ...(expectedExpenditureDate ? { expectedExpenditureDate } : {}),
-      ...(plannedUpdateSchedule ? { plannedUpdateSchedule } : {}),
-      ...(ownershipStatement ? { ownershipStatement } : {}),
-      societyApprovalStatus: isLeader ? ("approved" as const) : ("pending" as const),
-      ...(isLeader
-        ? { societyApprovedAt: now, societyApprovedBy: userId }
-        : {}),
-    });
-
-    // No relatedEntityId here: a "pending" campaign isn't public
-    // (isPublicCampaign requires active/funded/completed) and getBySlug
-    // returns null for it even to its own creator, so there's nowhere for
-    // a link to land yet.
-    await createNotification(ctx, {
-      userId,
-      type: "campaign_pending",
-      message: buildCampaignPendingMessage(title),
-    });
-
-    if (!isLeader) {
-      const leaders = await ctx.db
-        .query("societyMembers")
-        .withIndex("by_community_status", (q) =>
-          q.eq("communitySlug", communitySlug).eq("status", "approved"),
-        )
-        .collect();
-      for (const leader of leaders.filter((m) => m.role === "leader")) {
-        const profile = await ctx.db
-          .query("profiles")
-          .withIndex("by_userId", (q) => q.eq("userId", leader.userId))
-          .unique();
-        if (profile?.email) {
-          await ctx.scheduler.runAfter(
-            0,
-            internal.emails.sendSocietyCampaignPending,
-            {
-              leaderEmail: profile.email,
-              societyName: creatorName,
-              campaignTitle: title,
-            },
-          );
-        }
-      }
-    }
-
-    return { slug, campaignId };
+      { notifyOwner: true },
+    );
   },
 });
 
@@ -897,6 +768,11 @@ export const recordVerificationSessionCreated = internalMutation({
     await ctx.db.patch(campaign._id, {
       stripeVerificationSessionId: args.stripeVerificationSessionId,
       stripeVerificationStatus: args.status,
+      // A session is only (re)handed to the user here when it's fresh or
+      // still resubmittable — any last_error is from a prior attempt and
+      // shouldn't keep showing as "failed" before the new attempt resolves.
+      stripeVerificationLastErrorCode: undefined,
+      stripeVerificationLastErrorReason: undefined,
     });
     return null;
   },
@@ -931,6 +807,9 @@ export const updateVerificationFromWebhook = internalMutation({
       stripeVerificationStatus: args.status,
       ...(args.verifiedName !== undefined ? { verifiedName: args.verifiedName } : {}),
       ...(args.verifiedDob !== undefined ? { verifiedDob: args.verifiedDob } : {}),
+      ...(args.verifiedName !== undefined || args.verifiedDob !== undefined
+        ? { verifiedAt: Date.now() }
+        : {}),
       // Only meaningful on requires_input — clear it on every other status so a
       // stale error message can't linger after a later successful attempt.
       stripeVerificationLastErrorCode:
@@ -938,6 +817,20 @@ export const updateVerificationFromWebhook = internalMutation({
       stripeVerificationLastErrorReason:
         args.status === "requires_input" ? args.lastErrorReason : undefined,
     });
+
+    // Society / admin queues open only when the owner finishes the create
+    // wizard (campaignCreator.submitForReview) — Identity alone must not release.
+    if (args.status === "verified") {
+      const patched = {
+        ...campaign,
+        stripeVerificationStatus: "verified" as const,
+        verifiedName: args.verifiedName ?? campaign.verifiedName,
+      };
+      await ctx.db.patch(campaign._id, {
+        verifications: buildCampaignVerifications(patched),
+      });
+    }
+
     return { updated: true };
   },
 });
@@ -974,52 +867,7 @@ export const hardDelete = mutation({
       });
     }
 
-    const [donations, recurring, payouts] = await Promise.all([
-      ctx.db
-        .query("donations")
-        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
-        .collect(),
-      ctx.db
-        .query("recurringDonations")
-        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
-        .collect(),
-      ctx.db
-        .query("campaignPayouts")
-        .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
-        .collect(),
-    ]);
-    if (donations.length > 0 || recurring.length > 0 || payouts.length > 0) {
-      throw new ConvexError({
-        code: "HAS_FINANCIAL_ACTIVITY",
-        message:
-          "This campaign has donation or payout records and cannot be permanently deleted.",
-      });
-    }
-
-    const [follows, likes, comments, reviewMessages, notifications] =
-      await Promise.all([
-        ctx.db
-          .query("campaignFollows")
-          .withIndex("by_campaign_user", (q) => q.eq("campaignSlug", campaign.slug))
-          .collect(),
-        ctx.db
-          .query("campaignLikes")
-          .withIndex("by_campaign_user", (q) => q.eq("campaignSlug", campaign.slug))
-          .collect(),
-        ctx.db
-          .query("campaignComments")
-          .withIndex("by_campaign", (q) => q.eq("campaignSlug", campaign.slug))
-          .collect(),
-        ctx.db
-          .query("campaignReviewMessages")
-          .withIndex("by_campaign", (q) => q.eq("campaignId", campaign._id))
-          .collect(),
-        ctx.db.query("notifications").collect(),
-      ]);
-    const relatedNotifications = notifications.filter(
-      (n) => n.relatedEntityType === "campaign" && n.relatedEntityId === campaign.slug,
-    );
-
+    const cascade = await deleteCampaignRecord(ctx, campaign);
     await logAdminAction(ctx, {
       adminUserId,
       action: "campaign.hardDelete",
@@ -1027,46 +875,9 @@ export const hardDelete = mutation({
       targetId: args.slug,
       metadata: JSON.stringify({
         title: campaign.title,
-        follows: follows.length,
-        likes: likes.length,
-        comments: comments.length,
-        reviewMessages: reviewMessages.length,
-        notifications: relatedNotifications.length,
+        ...cascade,
       }),
     });
-
-    for (const follow of follows) {
-      await ctx.db.delete(follow._id);
-    }
-    for (const like of likes) {
-      await ctx.db.delete(like._id);
-    }
-    for (const comment of comments) {
-      await ctx.db.delete(comment._id);
-    }
-    for (const message of reviewMessages) {
-      await ctx.db.delete(message._id);
-    }
-    for (const notification of relatedNotifications) {
-      await ctx.db.delete(notification._id);
-    }
-
-    const storageIds = [
-      campaign.imageStorageId,
-      ...(campaign.imageStorageIds ?? []),
-    ].filter((id): id is Id<"_storage"> => Boolean(id));
-    for (const storageId of storageIds) {
-      await ctx.storage.delete(storageId);
-      const owner = await ctx.db
-        .query("storageOwners")
-        .withIndex("by_storageId", (q) => q.eq("storageId", storageId))
-        .unique();
-      if (owner) {
-        await ctx.db.delete(owner._id);
-      }
-    }
-
-    await ctx.db.delete(campaign._id);
     return null;
   },
 });
@@ -1218,5 +1029,136 @@ export const removePlaceholderCampaigns = mutation({
       deleted,
       slugs: placeholderCampaignSlugs,
     };
+  },
+});
+
+/**
+ * CH-01 checkout disclosures for a campaign. Payment must be blocked if any
+ * mandatory recipient-panel field is missing.
+ *
+ * Fail-soft: never throw for missing/duplicate society rows — campaign pages
+ * must still render; incomplete panels only block checkout.
+ */
+export const getDonateDisclosures = query({
+  args: { slug: v.string() },
+  handler: async (ctx, args) => {
+    try {
+      // Never use .unique() here — duplicate slugs must not crash campaign pages.
+      const campaign = await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+        .first();
+      if (!campaign || !isPublicCampaign(campaign)) {
+        return null;
+      }
+
+      const communitySlug = campaign.creator?.communityId ?? "";
+      if (!communitySlug) {
+        return {
+          recipientPanel: {
+            ownerLegalName: campaign.creator?.name?.trim() || "",
+            legalStatus: "an unincorporated student society",
+            representativeName: campaign.creator?.name?.trim() || "",
+            connectedAccountHolder: campaign.creator?.name?.trim() || "",
+            propertyOwner:
+              campaign.ownershipStatement?.trim() ||
+              campaign.creator?.name?.trim() ||
+              "",
+          },
+          panelComplete: Boolean(campaign.creator?.name?.trim()),
+          mayExceedTarget: true,
+          goal: campaign.goal,
+          raised: displayRaised(campaign),
+        };
+      }
+
+      const society = await ctx.db
+        .query("societies")
+        .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+        .first();
+
+      const community = await ctx.db
+        .query("communities")
+        .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+        .first();
+
+      const responsibleUserId =
+        campaign.responsibleIndividualUserId ??
+        society?.responsibleIndividualUserId ??
+        campaign.createdBy ??
+        null;
+
+      let representativeName = "";
+      if (responsibleUserId) {
+        try {
+          const profile = await ctx.db
+            .query("profiles")
+            .withIndex("by_userId", (q) => q.eq("userId", responsibleUserId))
+            .first();
+          representativeName =
+            profile?.name?.trim() ||
+            society?.verifiedName?.trim() ||
+            campaign.verifiedName?.trim() ||
+            campaign.creator?.name?.trim() ||
+            "";
+        } catch {
+          representativeName =
+            society?.verifiedName?.trim() ||
+            campaign.creator?.name?.trim() ||
+            "";
+        }
+      } else {
+        representativeName =
+          society?.verifiedName?.trim() ||
+          campaign.verifiedName?.trim() ||
+          campaign.creator?.name?.trim() ||
+          "";
+      }
+
+      const ownerLegalName =
+        society?.name?.trim() ||
+        community?.name?.trim() ||
+        campaign.creator?.name?.trim() ||
+        "";
+
+      const legalStatus =
+        society?.orgType === "college"
+          ? "a college"
+          : "an unincorporated student society";
+
+      const connectedAccountHolder =
+        society?.verifiedName?.trim() ||
+        ownerLegalName ||
+        representativeName ||
+        "";
+
+      const propertyOwner =
+        campaign.ownershipStatement?.trim() || ownerLegalName || "";
+
+      const recipientPanel = {
+        ownerLegalName,
+        legalStatus,
+        representativeName,
+        connectedAccountHolder,
+        propertyOwner,
+      };
+
+      return {
+        recipientPanel,
+        panelComplete: Boolean(
+          recipientPanel.ownerLegalName &&
+            recipientPanel.legalStatus &&
+            recipientPanel.representativeName &&
+            recipientPanel.connectedAccountHolder &&
+            recipientPanel.propertyOwner,
+        ),
+        mayExceedTarget: true,
+        goal: campaign.goal,
+        raised: displayRaised(campaign),
+      };
+    } catch (error) {
+      console.error("getDonateDisclosures failed", args.slug, error);
+      return null;
+    }
   },
 });

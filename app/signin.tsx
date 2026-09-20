@@ -14,7 +14,8 @@ export default function SignInPage() {
           <Link href={"/signup" as Href} asChild>
             <Pressable className="mt-4 items-center">
               <Text className="text-sm text-dono-muted">
-                Need an account? Sign up
+                Need an account?{" "}
+                <Text className="text-sm text-blue-600 underline">Sign up</Text>
               </Text>
             </Pressable>
           </Link>

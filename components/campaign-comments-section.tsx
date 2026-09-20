@@ -13,6 +13,7 @@ import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { useCurrentProfile } from "@/lib/auth/hooks";
+import { ReportContentModal } from "@/components/report-content-modal";
 import { cn } from "@/lib/utils";
 
 const MAX_COMMENT_LENGTH = 2000;
@@ -20,6 +21,12 @@ const MAX_COMMENT_LENGTH = 2000;
 type CampaignCommentsSectionProps = {
   campaignSlug: string;
   isAuthenticated: boolean;
+  /**
+   * Whether the signed-in user is an approved member of the campaign's owning
+   * society. `undefined` while that's still loading. Purely cosmetic — the
+   * real gate is enforced server-side in convex/engagement.ts.
+   */
+  canComment: boolean | undefined;
   className?: string;
   /** When true, omit outer card chrome and section heading (e.g. inside RetroPanel). */
   embedded?: boolean;
@@ -43,7 +50,7 @@ function formatCommentTime(timestamp: number) {
 
 export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionProps>(
   function CampaignCommentsSection(
-    { campaignSlug, isAuthenticated, className, embedded = false },
+    { campaignSlug, isAuthenticated, canComment, className, embedded = false },
     ref,
   ) {
     const profile = useCurrentProfile();
@@ -63,6 +70,9 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
     const [editingId, setEditingId] = useState<Id<"campaignComments"> | null>(null);
     const [editBody, setEditBody] = useState("");
     const [busyId, setBusyId] = useState<Id<"campaignComments"> | null>(null);
+    const [reportingId, setReportingId] = useState<Id<"campaignComments"> | null>(
+      null,
+    );
 
     const handlePost = async () => {
       const trimmed = body.trim();
@@ -113,21 +123,16 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
       }
     };
 
-    const handleReport = async (commentId: Id<"campaignComments">) => {
-      setBusyId(commentId);
-      setError(null);
-      try {
-        await createReport({
-          targetType: "comment",
-          commentId,
-          campaignSlug,
-          reason: "Reported via campaign comments",
-        });
-      } catch (err) {
-        setError(getFriendlyAuthError(err));
-      } finally {
-        setBusyId(null);
-      }
+    const handleSubmitReport = async (
+      commentId: Id<"campaignComments">,
+      reason: string,
+    ) => {
+      await createReport({
+        targetType: "comment",
+        commentId,
+        campaignSlug,
+        reason,
+      });
     };
 
     const handleHide = async (commentId: Id<"campaignComments">) => {
@@ -154,12 +159,12 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
         )}
       >
         {!embedded ? (
-          <Text className="mb-4 text-lg font-retro-bold text-dono-text">
+          <Text className="mb-4 text-lg font-retro-display text-dono-text">
             Comments
           </Text>
         ) : null}
 
-        {isAuthenticated ? (
+        {isAuthenticated && canComment ? (
           <View className="mb-6">
             <TextInput
               value={body}
@@ -168,7 +173,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               placeholderTextColor="#56615A"
               multiline
               maxLength={MAX_COMMENT_LENGTH}
-              className={cn(
+              className={cn("retro-key", 
                 "min-h-[88px] px-4 py-3 text-sm text-dono-text",
                 embedded
                   ? "rounded-lg border-2 border-retro-ink bg-white"
@@ -188,10 +193,10 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               <Pressable
                 onPress={() => void handlePost()}
                 disabled={posting || !body.trim()}
-                className={cn(
+                className={cn("retro-key", 
                   "px-4 py-2",
                   embedded
-                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[2px_2px_0_#211E1A]"
+                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint"
                     : "rounded-full bg-dono-primary",
                   posting || !body.trim() ? "opacity-50" : "",
                 )}
@@ -214,9 +219,9 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
               </Pressable>
             </View>
           </View>
-        ) : (
+        ) : isAuthenticated && canComment === undefined ? null : (
           <View
-            className={cn(
+            className={cn("retro-key", 
               "mb-6 px-4 py-4",
               embedded
                 ? "rounded-[10px] border-2 border-dashed border-retro-ink bg-retro-cream"
@@ -229,27 +234,30 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                 embedded ? "text-[13.5px] text-retro-ink" : "text-dono-muted",
               )}
             >
-              Sign in to join the conversation.
+              {isAuthenticated
+                ? "Only members of this society can comment on this campaign."
+                : "Sign in to join the conversation."}
             </Text>
-            <Link href="/signin" asChild>
-              <Pressable
-                className={cn(
-                  "mt-3 self-start px-4 py-2",
-                  embedded
-                    ? "rounded-lg border-2 border-retro-ink bg-retro-mint shadow-[3px_3px_0_#211E1A]"
-                    : "rounded-full bg-dono-primary",
-                )}
-              >
-                <Text
-                  className={cn(
-                    "font-retro-bold text-sm",
-                    embedded ? "font-retro-bold text-retro-paper" : "text-white",
+            {isAuthenticated ? null : (
+              <Link href="/signin" asChild>
+                <Pressable
+                  className={cn("retro-key", "mt-3 self-start px-4 py-2",
+                    embedded
+                      ? "rounded-lg border-2 border-retro-ink bg-retro-mint"
+                      : "rounded-full bg-dono-primary",
                   )}
                 >
-                  Sign in
-                </Text>
-              </Pressable>
-            </Link>
+                  <Text
+                    className={cn(
+                      "font-retro-bold text-sm",
+                      embedded ? "font-retro-bold text-retro-paper" : "text-white",
+                    )}
+                  >
+                    Sign in
+                  </Text>
+                </Pressable>
+              </Link>
+            )}
           </View>
         )}
 
@@ -318,8 +326,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                         ) : null}
                         {isAuthenticated && !isOwn ? (
                           <Pressable
-                            onPress={() => void handleReport(comment.id)}
-                            disabled={busyId === comment.id}
+                            onPress={() => setReportingId(comment.id)}
                             className="p-1"
                             accessibilityLabel="Report comment"
                           >
@@ -364,7 +371,7 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
                           <Pressable
                             onPress={() => void handleSaveEdit(comment.id)}
                             disabled={busyId === comment.id}
-                            className="rounded-full bg-dono-primary px-3 py-1.5"
+                            className="retro-key rounded-full bg-dono-primary px-3 py-1.5"
                           >
                             <Text className="text-xs font-retro-bold text-white">
                               Save
@@ -392,6 +399,15 @@ export const CampaignCommentsSection = forwardRef<View, CampaignCommentsSectionP
             })}
           </View>
         )}
+
+        <ReportContentModal
+          visible={reportingId !== null}
+          label="comment"
+          onClose={() => setReportingId(null)}
+          onSubmit={async (reason) => {
+            if (reportingId) await handleSubmitReport(reportingId, reason);
+          }}
+        />
       </View>
     );
   },

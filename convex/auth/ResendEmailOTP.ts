@@ -1,9 +1,8 @@
-import { Resend as ResendClient } from "resend";
 import Resend from "@auth/core/providers/resend";
 import { RandomReader, generateRandomString } from "@oslojs/crypto/random";
 import { ConvexError } from "convex/values";
 import { internal } from "../_generated/api";
-import { isAllowedAuthEmail } from "./adminConfig";
+import { sendAuthEmail } from "./authEmailTemplate";
 
 const OTP_ALPHABET = "0123456789";
 const OTP_LENGTH = 6;
@@ -45,15 +44,6 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-function assertAllowedDomain(email: string) {
-  if (!isAllowedAuthEmail(email)) {
-    throw new ConvexError({
-      code: "EMAIL_DOMAIN_NOT_ALLOWED",
-      message: "Only Oxford email addresses (ending in ox.ac.uk) are allowed.",
-    });
-  }
-}
-
 export const ResendEmailOTP = Resend({
   id: "resend",
   maxAge: OTP_MAX_AGE_SECONDS,
@@ -68,11 +58,15 @@ export const ResendEmailOTP = Resend({
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async sendVerificationRequest(params: any, ctx?: any) {
     const email = normalizeEmail(String(params.identifier));
-    assertAllowedDomain(email);
 
     if (ctx && typeof ctx.runMutation === "function") {
-      // Enforce OTP send rate limits server-side (clients cannot skip/reset).
+      // Domain + rate limits: Oxford/admin always; non-Oxford only if user exists.
       await ctx.runMutation(internal.security.consumeOtpSend, { email });
+    } else {
+      throw new ConvexError({
+        code: "OTP_SEND_FAILED",
+        message: "Unable to send OTP email. Please try again.",
+      });
     }
 
     if (isAdminOtpBypassEnabled() && isBypassAdminEmail(email)) {
@@ -85,16 +79,20 @@ export const ResendEmailOTP = Resend({
       return;
     }
 
-    const resend = new ResendClient(params.provider.apiKey);
     const from = process.env.AUTH_EMAIL_FROM ?? "Dono <auth@dono.app>";
-    const { error } = await resend.emails.send({
+    const { error } = await sendAuthEmail({
+      apiKey: params.provider.apiKey,
       from,
-      to: [email],
+      to: email,
       subject: "Your Dono sign-in code",
+      heading: "Confirm it's you.",
+      code: params.token,
+      expiryText: "Expires in 10 minutes. Didn't request this? Ignore this email.",
       text: `Your Dono code is ${params.token}. It expires in 10 minutes.`,
     });
 
     if (error) {
+      console.error("Resend OTP send failed", error);
       throw new ConvexError({
         code: "OTP_SEND_FAILED",
         message: "Unable to send OTP email. Please try again.",

@@ -19,7 +19,7 @@ import {
   statusChipTone,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { formatCurrency } from "@/lib/constants";
 import type { AdminSociety, Campaign } from "@/lib/types";
 
@@ -52,17 +52,17 @@ function matchesSocietySearch(society: AdminSociety, query: string) {
 export default function AdminArchivePage() {
   const router = useRouter();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const [reviewType, setReviewType] = useState<ReviewType>("campaigns");
   const [search, setSearch] = useState("");
   const trimmedSearch = search.trim();
   const moderated = useQuery(
     api.campaigns.listModeratedForAdmin,
-    adminUser && reviewType === "campaigns" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as Campaign[] | undefined;
   const moderatedSocieties = useQuery(
     api.societies.listModeratedForAdmin,
-    adminUser && reviewType === "societies" ? {} : "skip",
+    adminUser ? {} : "skip",
   ) as AdminSociety[] | undefined;
 
   const filtered = (moderated ?? []).filter((c) =>
@@ -83,11 +83,11 @@ export default function AdminArchivePage() {
     );
   }
 
-  if (!adminUser || profile === null) {
+  if (!adminUser) {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
         </View>
@@ -100,7 +100,14 @@ export default function AdminArchivePage() {
       <View className="mx-auto w-full max-w-3xl px-4 py-8">
         <AdminStatsNav active="removed" />
 
-        <ReviewTypeToggle value={reviewType} onChange={setReviewType} />
+        <ReviewTypeToggle
+          value={reviewType}
+          onChange={setReviewType}
+          counts={{
+            campaigns: moderated?.length,
+            societies: moderatedSocieties?.length,
+          }}
+        />
 
         <View className="mb-6 flex-row items-center gap-2 rounded-xl border border-dono-border bg-white px-3 py-2">
           <Search size={16} color="#56615A" />
@@ -163,7 +170,7 @@ export default function AdminArchivePage() {
                             <Text className="text-xs text-dono-muted">{when}</Text>
                           ) : null}
                         </View>
-                        <Text className="font-retro-bold text-lg text-dono-text">
+                        <Text className="font-retro-display text-lg text-dono-text">
                           {campaign.title}
                         </Text>
                         <Text className="mt-1 text-sm text-dono-muted">
@@ -230,7 +237,7 @@ export default function AdminArchivePage() {
                           <Text className="text-xs text-dono-muted">{when}</Text>
                         ) : null}
                       </View>
-                      <Text className="font-retro-bold text-lg text-dono-text">
+                      <Text className="font-retro-display text-lg text-dono-text">
                         {society.name}
                       </Text>
                       {society.moderationNote ? (

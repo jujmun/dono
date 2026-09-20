@@ -2,7 +2,7 @@ import { useState } from "react";
 import { View, Text, Pressable, ActivityIndicator, TextInput, Linking } from "react-native";
 import { useMutation, useQuery } from "convex/react";
 import { type Href, Link, useLocalSearchParams, useRouter } from "expo-router";
-import { ArrowLeft, Globe, IdCard, Link2, Paperclip, RotateCcw, Trash2 } from "lucide-react-native";
+import { ArrowLeft, Globe, Link2, Paperclip, RotateCcw, Trash2 } from "lucide-react-native";
 import { api } from "@convex/_generated/api";
 import type { Id } from "@convex/_generated/dataModel";
 import { AdminShell } from "@/components/admin-shell";
@@ -17,7 +17,7 @@ import {
   stripeStatusChip,
 } from "@/lib/admin-labels";
 import { useCurrentProfile } from "@/lib/auth/hooks";
-import { isPortalAdmin } from "@/lib/auth/is-portal-admin";
+import { canAccessAdminPortal } from "@/lib/auth/is-portal-admin";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { isStripeIdentityEnabled } from "@/lib/stripe/identity-enabled";
 import type { AdminSociety } from "@/lib/types";
@@ -49,7 +49,7 @@ export default function AdminSocietyReviewPage() {
   const router = useRouter();
   const { slug } = useLocalSearchParams<{ slug: string }>();
   const profile = useCurrentProfile();
-  const adminUser = isPortalAdmin(profile);
+  const adminUser = canAccessAdminPortal(profile);
   const identityEnabled = isStripeIdentityEnabled();
   const detail = useQuery(
     api.societies.getForAdmin,
@@ -79,12 +79,12 @@ export default function AdminSocietyReviewPage() {
     return (
       <AdminShell>
         <View className="mx-auto w-full max-w-lg px-4 py-16">
-          <Text className="font-retro-bold text-2xl text-dono-text">
+          <Text className="font-retro-display text-2xl text-dono-text">
             Access denied
           </Text>
           <Pressable
             onPress={() => router.replace("/dashboard")}
-            className="mt-6 items-center rounded-full bg-dono-primary py-3"
+            className="retro-key mt-6 items-center rounded-full bg-dono-primary py-3"
           >
             <Text className="font-retro-bold text-sm text-white">
               Back to dashboard
@@ -191,7 +191,7 @@ export default function AdminSocietyReviewPage() {
           ) : null}
         </View>
 
-        <Text className="font-retro-bold text-2xl text-dono-text">{society.name}</Text>
+        <Text className="font-retro-display text-2xl text-dono-text">{society.name}</Text>
         <Text className="mt-2 text-sm text-dono-muted">{society.description}</Text>
 
         {moderated && society.moderationNote ? (
@@ -264,17 +264,9 @@ export default function AdminSocietyReviewPage() {
             </View>
           )}
           <View className="mt-2 flex-row flex-wrap items-center justify-between gap-2 border-t border-dono-border pt-2">
-            {society.idDocumentUrl ? (
-              <Pressable
-                onPress={() => void Linking.openURL(society.idDocumentUrl!)}
-                className="flex-row items-center gap-2"
-              >
-                <IdCard size={14} color="#17211B" />
-                <Text className="text-sm text-dono-primary">View ID document</Text>
-              </Pressable>
-            ) : (
-              <Text className="text-sm text-dono-muted">ID document unavailable.</Text>
-            )}
+            <Text className="text-sm text-dono-muted">
+              Identity documents are verified by the Payment Provider; Dono does not store them.
+            </Text>
             {identityEnabled ? (
             <AdminStatusChip
               label={stripeStatusChip(society.stripeVerificationStatus).label}

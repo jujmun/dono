@@ -1,0 +1,777 @@
+%PDF-1.4
+1 0 obj<< /Type /Catalog /Pages 2 0 R >>endobj
+2 0 obj<< /Type /Pages /Kids [3 0 R] /Count 1 >>endobj
+3 0 obj<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>endobj
+4 0 obj<< /Length 23505 >>stream
+BT
+/F1 9 Tf
+11 TL
+40 750 Td
+(Privacy Notice) Tj
+T*
+() Tj
+T*
+(# Dono Privacy Notice) Tj
+T*
+() Tj
+T*
+(**Version:** 3.0) Tj
+T*
+(**Version date:** 7 August 2026) Tj
+T*
+(**Effective from:** on publication approval \(see approval block\)) Tj
+T*
+(**Document type:** Notice ? information, not contract) Tj
+T*
+(**Supersedes:** v2.3 \(6 August 2026\) and all earlier versions, retained unaltered in the versio) Tj
+T*
+(**Precedence:** This Notice governs privacy and data-protection matters across the whole suite ) Tj
+T*
+() Tj
+T*
+(> **This is a Notice, not a contract.** It provides information about how Dono handles personal) Tj
+T*
+() Tj
+T*
+(> **The short version.**) Tj
+T*
+(>) Tj
+T*
+(> - **Dono does not collect student cards, student numbers, government identity documents or fa) Tj
+T*
+(> - **The Payment Provider checks identity** using a government document and a face scan. **It ) Tj
+T*
+(> - **Donating is for adults only.**) Tj
+T*
+(> - **Campaign pages are archived and de-indexed 24 months after closure**, not kept public for) Tj
+T*
+(> - **Moderation records are kept for risk-based periods**, not a flat six years.) Tj
+T*
+(> - **Analytics runs only if you say yes**, and nothing analytics-related loads before you do.) Tj
+T*
+(> - **Dono does not share identifiable donor information with any university, college or instit) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## 1. Who is responsible for your data) Tj
+T*
+() Tj
+T*
+(1.1 The controller is **Amrit Kaur Rooprai trading as Dono**, a sole trader of **37 St Giles', ) Tj
+T*
+() Tj
+T*
+(1.2 **Contact us about anything to do with your data at joindono.team@gmail.com.** This is a si) Tj
+T*
+() Tj
+T*
+(1.3 Dono has assessed its registration position with the Information Commissioner's Office and ) Tj
+T*
+() Tj
+T*
+(1.4 **Insurance is limited and is not a guarantee.** Dono holds technology professional-indemni) Tj
+T*
+() Tj
+T*
+(## 2. What this Notice covers) Tj
+T*
+() Tj
+T*
+(2.1 It covers personal data Dono processes **as a controller**: account holders, Campaign Owner) Tj
+T*
+() Tj
+T*
+(2.2 It does **not** cover: the Payment Provider's processing of your payment and identity data ) Tj
+T*
+() Tj
+T*
+(2.3 The **Cookie Notice** covers cookies, browser storage and analytics. The **Verification Not) Tj
+T*
+() Tj
+T*
+(## 3. Data we collect) Tj
+T*
+() Tj
+T*
+(> **What we do and do not hold about your identity.**) Tj
+T*
+(>) Tj
+T*
+(> **We do not collect student cards.** Dono does not ask for, collect, process or store a stude) Tj
+T*
+(>) Tj
+T*
+(> **We do not hold your identity document or your face scan.** To create a Campaign or a Societ) Tj
+T*
+(>) Tj
+T*
+(> **If you are ever asked to upload an identity document *to Dono*, it is not us ? please repor) Tj
+T*
+() Tj
+T*
+(3.1 **Everyone with an account:** name; email address; authentication credential; declared date) Tj
+T*
+() Tj
+T*
+(3.1A **Donor accounts.** You do not need a university email address to hold an account or to do) Tj
+T*
+() Tj
+T*
+(3.2 **Campaign Owners and Responsible Representatives:** name and declared date of birth; **uni) Tj
+T*
+() Tj
+T*
+(3.2A **Campaign updates.** Where you run a Campaign you may publish updates recording what has ) Tj
+T*
+() Tj
+T*
+(3.3 **Donors, including guest Donors:** name and email address; donation amount, date and Campa) Tj
+T*
+() Tj
+T*
+(3.4 **Everyone who posts:** comments and content \(with edit history\); reports you make and repo) Tj
+T*
+() Tj
+T*
+(3.5 **Visitors who only browse:** server log data \(clause 14.4\) and, **only where you consent**) Tj
+T*
+() Tj
+T*
+(3.6 **People who report content without an account:** the content reported, your description of) Tj
+T*
+() Tj
+T*
+(3.7 **We do not collect card details.** Card numbers, expiry dates and security codes go direct) Tj
+T*
+() Tj
+T*
+(## 4. Why we process it, and our lawful basis) Tj
+T*
+() Tj
+T*
+(| Processing purpose | Who it applies to | Personal data processed | Lawful basis |) Tj
+T*
+(|---|---|---|---|) Tj
+T*
+(| Create and manage an account | Registered users | Name, email, credential, date of birth, set) Tj
+T*
+(| Confirm you are 18+ for an account | Registered users | Declared date of birth | Contract; le) Tj
+T*
+(| **Confirm control of a university email address** | Campaign Owners, Responsible Representati) Tj
+T*
+(| **Verify identity and enforce the creator age gate** | Campaign Owners, Responsible Represent) Tj
+T*
+(| **Run a donor account** | Donors with an account | Name, email, college, matriculation year, ) Tj
+T*
+(| **Publish and send campaign updates** | Campaign Owners; Donors who opt in | Update content, ) Tj
+T*
+(| Create and administer Campaigns | Campaign Owners | Campaign content, budget, updates, receip) Tj
+T*
+(| Review a Campaign before publication | Campaign Owners | Campaign content and media | Legal o) Tj
+T*
+(| **Process a Donation and send a receipt** | Donors | Amount, status, preferences, 18+ confirm) Tj
+T*
+(| Enable payments and payouts | Donors, Campaign Owners | Payment information, Connected Accoun) Tj
+T*
+(| Record which document version you accepted | All users and guest Donors | Identifier, role, c) Tj
+T*
+(| Handle refunds, disputes and chargebacks | Donors, Campaign Owners | Case records, evidence, ) Tj
+T*
+(| Prevent fraud, abuse, misuse and sanctions breaches | All users | Account, device, IP, transa) Tj
+T*
+(| Moderate content; operate reporting, complaints and appeals | All users and reporters | Campa) Tj
+T*
+(| Report child sexual exploitation and abuse content to the National Crime Agency | People whos) Tj
+T*
+(| Refer a serious matter to an Institution | Users concerned | The minimum set in clause 9 | Le) Tj
+T*
+(| Comply with legal obligations and keep records | All users where applicable | As required | L) Tj
+T*
+(| Respond to support requests and complaints | All users | Contact details, correspondence, acc) Tj
+T*
+(| Send essential service communications | Registered users and Donors | Email, account and dona) Tj
+T*
+(| Send optional marketing | Users who opt in | Email, preferences | **Consent** |) Tj
+T*
+(| Promotional use of campaign content | Campaign Owners who opt in | Campaign content | **Conse) Tj
+T*
+(| Analytics | Visitors and users who consent | Cookie and device identifiers, pages viewed, fun) Tj
+T*
+(| Record and respect your cookie choice | Visitors | Choice, timestamp, Cookie Notice version |) Tj
+T*
+(| Keep the Platform secure and diagnose faults | All users | Server logs, error logs, technical) Tj
+T*
+(| Backups, disaster recovery and continuity | All users | Copies of data already processed abov) Tj
+T*
+() Tj
+T*
+(4.1 Where we rely on **legitimate interests** we have weighed your rights and freedoms and docu) Tj
+T*
+() Tj
+T*
+(4.2 **Analytics runs on consent.** Our analytics can link events to an identified user once you) Tj
+T*
+() Tj
+T*
+(4.3 **We do not use your content to train artificial-intelligence or machine-learning models**,) Tj
+T*
+() Tj
+T*
+(## 5. Payment data) Tj
+T*
+() Tj
+T*
+(5.1 Payments are processed by **Stripe** using Stripe Connect **direct charges**. Stripe receiv) Tj
+T*
+() Tj
+T*
+(5.2 Dono receives and stores: the amount and currency; the payment status; Stripe's transaction) Tj
+T*
+() Tj
+T*
+(5.3 **Stripe is an independent controller** for payment processing, Connect onboarding, know-yo) Tj
+T*
+() Tj
+T*
+(5.3A **The identity check.** The government identity document and face scan you submit for the ) Tj
+T*
+() Tj
+T*
+(5.4 Because Donations are charged directly to the Recipient's Connected Account, **Stripe may s) Tj
+T*
+() Tj
+T*
+(## 6. Age) Tj
+T*
+() Tj
+T*
+(6.1 **You must be 18 or over to create an account, to run a Campaign, to act for a Society, to ) Tj
+T*
+() Tj
+T*
+(6.2 **For Donors, age is declared and self-certified, not verified.** We ask for your date of b) Tj
+T*
+() Tj
+T*
+(6.2A **For people who create a Campaign or Society, the verified date of birth is the final age) Tj
+T*
+() Tj
+T*
+(6.3 Because children can still reach public pages, we operate the Platform to be **safe for chi) Tj
+T*
+() Tj
+T*
+(6.4 A parent or guardian may contact us at clause 1.2 to ask about, correct or delete a child's) Tj
+T*
+() Tj
+T*
+(## 7. How long we keep things) Tj
+T*
+() Tj
+T*
+(7.1 We keep each category only as long as necessary for the purpose it was collected for. Perio) Tj
+T*
+() Tj
+T*
+(| Data category | Retention period | Trigger |) Tj
+T*
+(|---|---|---|) Tj
+T*
+(| Account profile \(name, email, university, settings\) | While active, then **2 years** | Accoun) Tj
+T*
+(| Declared date of birth | While active, then **2 years** | Account closure |) Tj
+T*
+(| Eligibility outcome \(checked / not checked, date, institution\) | While active, then **6 years) Tj
+T*
+(| **Identity-check outcome, verified name and verified date of birth** | While the Campaign or ) Tj
+T*
+(| Donor account profile \(college, matriculation year, society interests, picture\) | While activ) Tj
+T*
+(| Campaign updates and the record of update emails sent | **6 years** | Campaign closure |) Tj
+T*
+(| Update-email unsubscribe tokens | Until used or the campaign closes | Campaign closure |) Tj
+T*
+(| Failed or abandoned verification attempts | **30 days** | Attempt |) Tj
+T*
+(| Payment Provider connected-account reference | While active, then **6 years** | Account closu) Tj
+T*
+(| Donation and payment records; receipts and confirmations | **6 years** | Transaction |) Tj
+T*
+(| Record of the checkout disclosure shown to a Donor | **6 years** | Transaction |) Tj
+T*
+(| **Campaign pages \(public version\)** | Public while live and for **24 months after closure**; ) Tj
+T*
+(| Campaign ownership and closure records \(internal\) | **6 years** | Campaign closure |) Tj
+T*
+(| Campaign drafts never published | **90 days** | Last edit |) Tj
+T*
+(| Uploaded expenditure receipts and evidence \(accepted\) | **6 years** | Campaign completion |) Tj
+T*
+(| **Rejected or quarantined receipt uploads** | **30 days**, then automatically deleted | Rejec) Tj
+T*
+(| Public comments | Until deleted by the user or removed by moderation | ? |) Tj
+T*
+(| **Moderation records ? spam and automated filter blocks** | **6 months** | Action |) Tj
+T*
+(| **Moderation records ? ordinary community-rule breaches** | **12 months** | Action |) Tj
+T*
+(| **Moderation records ? repeat-offender and ban-evasion history** | **3 years** | Last relevan) Tj
+T*
+(| **Moderation records ? illegal content other than CSEA** | **3 years** | Action |) Tj
+T*
+(| **Moderation records ? fraud, misleading fundraising, financial misconduct** | **6 years** | ) Tj
+T*
+(| **Moderation records ? safeguarding and child-safety matters** | **6 years** | Case closure |) Tj
+T*
+(| **Moderation records ? matter subject to a live legal dispute, investigation or regulatory pr) Tj
+T*
+(| Reports of content \(including from people without an account\) | The period of the resulting c) Tj
+T*
+(| Complaints and appeals | **6 years** | Closure / final decision |) Tj
+T*
+(| Data-protection complaint register entries | **3 years** | Closure |) Tj
+T*
+(| Fraud and security investigation records | **6 years** | Case closure |) Tj
+T*
+(| Refund and dispute records | **6 years** | Case closure |) Tj
+T*
+(| Support correspondence | **3 years** | Resolution |) Tj
+T*
+(| Authentication logs | **12 months** | Event |) Tj
+T*
+(| Analytics events | **12 months** | Collection |) Tj
+T*
+(| Cookie / analytics consent records \(choice, **timestamp**, **Cookie Notice version**\) | While) Tj
+T*
+(| Terms acceptance records | **6 years** | Acceptance |) Tj
+T*
+(| **Archived copies of published legal document versions** | **Indefinitely** ? never overwritt) Tj
+T*
+(| Institutional referral records | **6 years** | Referral |) Tj
+T*
+(| NCA report reference \(child sexual exploitation and abuse\) | **5 years** | Report submitted |) Tj
+T*
+(| Content and prescribed supporting information in a report to the NCA | **1 year**, in restric) Tj
+T*
+(| Backups | A **fixed rolling period set by our hosting and database providers**. We are confir) Tj
+T*
+() Tj
+T*
+(7.2 **Inactive accounts.** After **24 months** with no login and no activity we notify you and ) Tj
+T*
+() Tj
+T*
+(7.3 **Campaign page archival and depublication.** A campaign page **does not stay publicly disc) Tj
+T*
+() Tj
+T*
+(7.4 **Legal hold.** Where we reasonably believe information is required for litigation, a regul) Tj
+T*
+() Tj
+T*
+(## 8. Who we share it with) Tj
+T*
+() Tj
+T*
+(8.1 **Providers and their roles.**) Tj
+T*
+() Tj
+T*
+(| Function | Provider | Where data is processed | Role | Transfer position and safeguard |) Tj
+T*
+(|---|---|---|---|---|) Tj
+T*
+(| Web and application hosting | **Vercel** | **United States**, and worldwide via sub-processor) Tj
+T*
+(| Database, backend and file storage \(campaign media, evidence\) | **Convex** | **EU** \(`eu-west) Tj
+T*
+(| Authentication | **Convex Auth**, with **Resend** delivering one-time codes | As for Convex a) Tj
+T*
+(| Transactional and campaign-update email | **Resend** \(Plus Five Five, Inc.\) | **United States) Tj
+T*
+(| Analytics ? **only with your consent** | **PostHog Cloud EU** | **European Union** | Processo) Tj
+T*
+(| **Support, complaints and rights requests** | **Google** | To be confirmed | Processor for th) Tj
+T*
+(| Payments, Connect onboarding, identity verification, fraud prevention | **Stripe Payments Eur) Tj
+T*
+(| Error monitoring | **None.** Platform logs of Vercel and Convex only | As for Vercel and Conv) Tj
+T*
+(| Cookie and analytics consent management | **In-house.** No third-party vendor | Your device |) Tj
+T*
+() Tj
+T*
+(8.2 **Article 28 terms.** Every processor above operates under written processing terms require) Tj
+T*
+() Tj
+T*
+(8.3 **International transfers.** For every transfer outside the UK we rely on the **EU Standard) Tj
+T*
+() Tj
+T*
+(8.4 **Others we may share with**, where lawful and reasonably necessary: the police, the Nation) Tj
+T*
+() Tj
+T*
+(8.5 **We do not sell your personal data or your email address, and we do not use your data for ) Tj
+T*
+() Tj
+T*
+(## 9. Universities and other institutions) Tj
+T*
+() Tj
+T*
+(9.1 **Our default position: Dono does not routinely share identifiable user or donor data with ) Tj
+T*
+() Tj
+T*
+(9.2 **The exceptions.** We may disclose the **minimum information necessary** in the following ) Tj
+T*
+() Tj
+T*
+(| Circumstance | What may be disclosed | Lawful basis |) Tj
+T*
+(|---|---|---|) Tj
+T*
+(| **You ask us to, or give consent** | Only what you agree to | **Consent** \(Art. 6\(1\)\(a\)\) |) Tj
+T*
+(| **We need to confirm your eligibility or student status**, where there is a specific reason t) Tj
+T*
+(| **We are investigating suspected fraud, misuse of the Platform or another serious breach of t) Tj
+T*
+(| **A documented safeguarding concern or other serious matter justifies a referral** under clau) Tj
+T*
+(| **We are required to by law** | As required | **Legal obligation** \(Art. 6\(1\)\(c\)\) |) Tj
+T*
+() Tj
+T*
+(9.3 **Every disclosure is governed by the Institutional Referral Protocol**, which requires: a ) Tj
+T*
+() Tj
+T*
+(9.4 **No dashboards, no aggregate donor reporting, no institutional data sharing feature.** No ) Tj
+T*
+() Tj
+T*
+(## 10. Hiding your name) Tj
+T*
+() Tj
+T*
+(10.1 Choosing "hide my name" hides your name **from Dono's public pages only**. It is not the s) Tj
+T*
+() Tj
+T*
+(- your donation amount is still shown publicly, and a unique amount or timing can sometimes ide) Tj
+T*
+(- the Payment Provider has your payment data;) Tj
+T*
+(- Dono always holds your name against the payment; and) Tj
+T*
+(- **because your payment is charged directly to the Recipient's own Stripe account, the person ) Tj
+T*
+() Tj
+T*
+(We explain this when you choose the option. Changing the setting affects future display only. I) Tj
+T*
+() Tj
+T*
+(## 11. Receipts and other people's data in what you upload) Tj
+T*
+() Tj
+T*
+(11.1 Campaign Owners submit receipts and evidence **privately to Dono**; these are never publis) Tj
+T*
+() Tj
+T*
+(11.2 **We require receipts to be redacted before upload.** Guidance is shown before every uploa) Tj
+T*
+() Tj
+T*
+(11.3 **Non-compliant receipts.** A receipt containing unnecessary personal data is **rejected a) Tj
+T*
+() Tj
+T*
+(11.4 **What we keep from an accepted receipt** is the minimum needed for verification: supplier) Tj
+T*
+() Tj
+T*
+(11.5 **Third parties named on a receipt ? our Article 14 position.** Where we hold information ) Tj
+T*
+() Tj
+T*
+(We do not normally give each such person individual notice. We have completed and documented a ) Tj
+T*
+() Tj
+T*
+(If you believe your data appears on a receipt we hold, contact us at clause 1.2 and we will dea) Tj
+T*
+() Tj
+T*
+(## 12. Special category and criminal-offence data) Tj
+T*
+() Tj
+T*
+(12.1 Some campaigns, comments or reports may contain **special category data** \(for example hea) Tj
+T*
+() Tj
+T*
+(12.2 **What you disclose about yourself.** Where a campaign, campaign update or comment you pub) Tj
+T*
+() Tj
+T*
+(12.3 **What is alleged about you by someone else.** A safeguarding concern, a fraud report, a m) Tj
+T*
+() Tj
+T*
+(12.4 **We do not infer characteristics from your behaviour.** We do not derive, tag or record a) Tj
+T*
+() Tj
+T*
+(12.5 **We do not act on unsupported allegations.** Where a report about you has no connection t) Tj
+T*
+() Tj
+T*
+(12.6 **Correcting the record.** If you are the subject of an allegation Dono has acted on, you ) Tj
+T*
+() Tj
+T*
+(12.7 The full condition-by-condition analysis, retention periods and safeguards are documented ) Tj
+T*
+() Tj
+T*
+(## 13. Your rights and how to complain) Tj
+T*
+() Tj
+T*
+(13.1 **Your right to object.** Where we process your personal data on the basis of our legitima) Tj
+T*
+() Tj
+T*
+(13.2 **Your other rights**, and when each applies:) Tj
+T*
+() Tj
+T*
+(| Right | When it applies |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Access a copy of your data | Always |) Tj
+T*
+(| Correct inaccurate data | Always |) Tj
+T*
+(| Erasure | Where we no longer need the data, you withdraw consent we relied on, or you success) Tj
+T*
+(| Restrict processing | Where you contest accuracy, the processing is unlawful, or you have obj) Tj
+T*
+(| Data portability | Only for data you gave us that we process by consent or under a contract, ) Tj
+T*
+(| Withdraw consent | Where we rely on consent ? analytics, marketing and promotional use. **Wit) Tj
+T*
+(| Not be subject to solely automated decisions | We make none |) Tj
+T*
+() Tj
+T*
+(Where we did not obtain data directly from you, we tell you the source and the categories. **So) Tj
+T*
+() Tj
+T*
+(13.3 **How to exercise a right.** Email **joindono.team@gmail.com**. We may ask for information) Tj
+T*
+() Tj
+T*
+(13.3A **What deleting your account actually does.** When you delete your account we sever your ) Tj
+T*
+() Tj
+T*
+(13.3B **Two things to know before you delete an account.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Deleting your account does not end your obligations.** If you owe a Donor a refund, or ow) Tj
+T*
+(\(b\) **Deleting your account removes your ability to sign in**, including your ability to execut) Tj
+T*
+() Tj
+T*
+(13.4 **Complaining to us about how we handle your data.**) Tj
+T*
+() Tj
+T*
+(\(a\) **Email joindono.team@gmail.com and mark it clearly as a data-protection complaint.** There) Tj
+T*
+(\(b\) **You receive an automatic acknowledgement immediately**, and we acknowledge your complaint) Tj
+T*
+(\(c\) A **named person is responsible for the inbox, with a named backup**. Every data-protection) Tj
+T*
+(\(d\) We investigate appropriately, keep the matter under review, and **conclude it without undue) Tj
+T*
+(\(e\) A data-protection complaint is different from a rights request, a refund dispute, a safegua) Tj
+T*
+() Tj
+T*
+(13.5 **Complaining to the regulator.** You may complain to the **Information Commissioner's Off) Tj
+T*
+() Tj
+T*
+(## 14. Cookies, security, incidents and changes) Tj
+T*
+() Tj
+T*
+(14.1 **Cookies and analytics.** The Cookie Notice explains what we store on your device. **Anal) Tj
+T*
+() Tj
+T*
+(> **You can withdraw analytics consent at any time through Privacy and analytics settings. With) Tj
+T*
+() Tj
+T*
+(We record your choice, the time you made it, and the version of the Cookie Notice you were show) Tj
+T*
+() Tj
+T*
+(**What analytics collects, if you consent:** the pages and screens you view; campaign, donation) Tj
+T*
+() Tj
+T*
+(14.2 **Security ? the controls we operate.** These are platform requirements, not aspirations:) Tj
+T*
+() Tj
+T*
+(- **production access is restricted on the principle of least privilege**, and access rights ar) Tj
+T*
+(- **secrets, API keys and credentials are managed securely and are never stored in source code ) Tj
+T*
+(- **everyone with access to production systems or personal data is bound by written confidentia) Tj
+T*
+(- a **documented offboarding procedure** requires prompt removal of access to all production sy) Tj
+T*
+(- data is **encrypted in transit** using TLS and **at rest** by our hosting and database provid) Tj
+T*
+(- access to administrative functions is restricted through server-side role checks;) Tj
+T*
+(- authentication is rate-limited and accounts lock temporarily after repeated failed attempts; ) Tj
+T*
+(- processors are contractually required to notify us without undue delay of any security incide) Tj
+T*
+() Tj
+T*
+(**We describe only the controls we operate.** We hold no security certification. **We do not op) Tj
+T*
+() Tj
+T*
+(14.3 **If something goes wrong.** We maintain a tested **Incident Response Plan** with named ro) Tj
+T*
+() Tj
+T*
+(14.4 **Server logs.** We retain proportionate server logs \(IP address, timestamp, requested pag) Tj
+T*
+() Tj
+T*
+(14.5 **Changes to this Notice.** We update it when what we do changes. **Every version is perma) Tj
+T*
+() Tj
+T*
+(14.6 Questions: **joindono.team@gmail.com**. Dono is a trading name of Amrit Kaur Rooprai, a so) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Approval block ? SIGNATURE REQUIRED) Tj
+T*
+() Tj
+T*
+(> **This block is unsigned. This document is prepared for approval and is not approved.**) Tj
+T*
+() Tj
+T*
+(**I confirm that I have reviewed this document in its consolidated v3.0 form, that it states th) Tj
+T*
+() Tj
+T*
+(| Field | Entry |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Approver name | Amrit Kaur Rooprai |) Tj
+T*
+(| Role | Controller, sole trader and accountable owner |) Tj
+T*
+(| Document version approved | 3.0 |) Tj
+T*
+(| Approved for publication | ? Yes, on ____________ ? ? **No** ? publication is gated on the it) Tj
+T*
+(| Signature | ______________________ |) Tj
+T*
+(| Date of approval | ______________________ |) Tj
+T*
+() Tj
+T*
+(**Reviewed by:** Sashank \(deputy\) ? Signature ______________________  Date ______________) Tj
+T*
+() Tj
+T*
+(---) Tj
+T*
+() Tj
+T*
+(## Version control) Tj
+T*
+() Tj
+T*
+(| Field | Entry |) Tj
+T*
+(|---|---|) Tj
+T*
+(| Document | Dono Privacy Notice |) Tj
+T*
+(| Document type | Notice ? information, not contract |) Tj
+T*
+(| Version | 3.0 |) Tj
+T*
+(| Version date | 7 August 2026 |) Tj
+T*
+(| Effective from | On publication approval |) Tj
+T*
+(| Accountable owner | Amrit Kaur Rooprai, sole trader trading as Dono |) Tj
+T*
+(| Prepared by | Legal consolidation, 7 August 2026 |) Tj
+T*
+(| Reviewed by | *\(signature required ? approval block above\)* |) Tj
+T*
+(| Approved by | *\(signature required ? approval block above\)* |) Tj
+T*
+(| Status | **Not approved.** Clean consolidated document prepared for signature |) Tj
+T*
+(| Solicitor review outstanding on | The Article 14 disproportionate-effort assessment \(clause 1) Tj
+T*
+(| Supersedes | v2.3 \(6 August 2026\) and all earlier versions, retained unaltered in the version) Tj
+T*
+(| Next scheduled review | 7 February 2027, or on any material change to the Platform, the law, ) Tj
+T*
+(| Archive rule | Published versions are never overwritten or deleted. The version in force at t) Tj
+T*
+() Tj
+T*
+ET
+endstream
+endobj
+5 0 obj<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000056 00000 n 
+0000000111 00000 n 
+0000000235 00000 n 
+0000023791 00000 n 
+trailer<< /Size 6 /Root 1 0 R >>
+startxref
+23859
+%%EOF
