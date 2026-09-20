@@ -92,3 +92,10 @@ export function getCampaignApprovalStage(
 export function isCampaignRejected(campaign: ApprovalCampaign): boolean {
   return getCampaignApprovalStage(campaign)?.label.startsWith("Rejected") ?? false;
 }
+
+/** Unsubmitted draft: saved, not yet in society or admin review. */
+export function isCampaignDraft(campaign: ApprovalCampaign): boolean {
+  return (
+    campaign.status === "pending" && campaign.societyApprovalStatus === undefined
+  );
+}

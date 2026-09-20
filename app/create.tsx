@@ -37,7 +37,7 @@ import {
   ReceiptLineRow,
   ReceiptTotalRow,
 } from "@/components/ui/receipt-lines";
-import { categoryLabels, formatCurrency } from "@/lib/constants";
+import { categoryLabels, formatCurrency, isCampaignDraft } from "@/lib/constants";
 import { ALLOWED_CAMPAIGN_CATEGORIES } from "@/lib/campaign-categories";
 import {
   getCampaignImages,
@@ -192,6 +192,7 @@ export default function CreateCampaignPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const createCampaign = useMutation(api.campaigns.create);
   const saveDraft = useMutation(api.campaignCreator.saveDraft);
+  const deleteDraft = useMutation(api.campaignCreator.deleteDraft);
   const updateProfileDateOfBirth = useMutation(api.users.updateProfile);
   const updateCampaign = useMutation(api.campaignCreator.update);
   const proposeCampaignEdit = useMutation(api.campaignEditRequests.propose);
@@ -235,6 +236,8 @@ export default function CreateCampaignPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [savingDraft, setSavingDraft] = useState(false);
+  const [deletingDraft, setDeletingDraft] = useState(false);
+  const [confirmDeleteDraft, setConfirmDeleteDraft] = useState(false);
   const [draftSaved, setDraftSaved] = useState(false);
   const [pickingImage, setPickingImage] = useState(false);
   const [cropQueue, setCropQueue] = useState<CropSourceImage[]>([]);
@@ -667,6 +670,10 @@ export default function CreateCampaignPage() {
     editCampaign?.status === "rejected" ||
     editCampaign?.status === "changes_requested";
   const showSaveDraft = step < 5 && !requiresApproval && !photosOnly;
+  const showDeleteDraft =
+    showSaveDraft &&
+    Boolean(campaignSlug) &&
+    (!isEditMode || (editCampaign != null && isCampaignDraft(editCampaign)));
   const draftFieldArgs = () => {
     const goal = Number(form.goal);
     const hasGoal = Number.isFinite(goal) && goal > 0;
@@ -740,9 +747,10 @@ export default function CreateCampaignPage() {
   };
 
   const handleSaveDraft = () => {
-    if (savingDraft || submitting) return;
+    if (savingDraft || submitting || deletingDraft) return;
     setError(null);
     setDraftSaved(false);
+    setConfirmDeleteDraft(false);
     setSavingDraft(true);
     void (async () => {
       const result = await saveDraft({
@@ -779,6 +787,38 @@ export default function CreateCampaignPage() {
       })
       .finally(() => {
         setSavingDraft(false);
+      });
+  };
+
+  const handleDeleteDraft = () => {
+    if (!campaignSlug || savingDraft || submitting || deletingDraft) return;
+    if (!confirmDeleteDraft) {
+      setConfirmDeleteDraft(true);
+      setError(null);
+      setDraftSaved(false);
+      return;
+    }
+    setDeletingDraft(true);
+    setError(null);
+    void deleteDraft({ slug: campaignSlug })
+      .then(() => {
+        posthog?.capture("campaign_draft_deleted", {
+          campaign_title: form.title,
+          campaign_category: form.category,
+          campaign_community_slug: form.communitySlug,
+          campaign_university: DEFAULT_UNIVERSITY,
+          campaign_goal: Number(form.goal),
+          campaign_template: template,
+          source: "create_wizard",
+        });
+        router.replace("/campaigns?tab=mine");
+      })
+      .catch((err: Error) => {
+        setConfirmDeleteDraft(false);
+        setError(getFriendlyAuthError(err) || "Failed to delete draft.");
+      })
+      .finally(() => {
+        setDeletingDraft(false);
       });
   };
 
@@ -1802,12 +1842,33 @@ export default function CreateCampaignPage() {
             )}
 
             <View className="flex-row flex-wrap items-center justify-end gap-2">
+              {showDeleteDraft ? (
+                <Pressable
+                  onPress={handleDeleteDraft}
+                  disabled={savingDraft || submitting || deletingDraft}
+                  className={`${secondaryBtnClass} ${
+                    savingDraft || submitting || deletingDraft
+                      ? "opacity-50"
+                      : ""
+                  }`}
+                >
+                  <Text className="font-retro-bold text-sm text-rose-700">
+                    {deletingDraft
+                      ? "Deleting…"
+                      : confirmDeleteDraft
+                        ? "Confirm delete"
+                        : "Delete draft"}
+                  </Text>
+                </Pressable>
+              ) : null}
               {showSaveDraft ? (
                 <Pressable
                   onPress={handleSaveDraft}
-                  disabled={savingDraft || submitting}
+                  disabled={savingDraft || submitting || deletingDraft}
                   className={`${secondaryBtnClass} ${
-                    savingDraft || submitting ? "opacity-50" : ""
+                    savingDraft || submitting || deletingDraft
+                      ? "opacity-50"
+                      : ""
                   }`}
                 >
                   <Text className="font-retro-bold text-sm text-[#5c574f]">
@@ -1819,9 +1880,9 @@ export default function CreateCampaignPage() {
             {step < 3 ? (
               <Pressable
                 onPress={() => setStep(step + 1)}
-                disabled={!canProceed() || savingDraft}
+                disabled={!canProceed() || savingDraft || deletingDraft}
                 className={`flex-row ${primaryBtnClass} gap-2 ${
-                  !canProceed() || savingDraft ? "opacity-50" : ""
+                  !canProceed() || savingDraft || deletingDraft ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
@@ -1838,16 +1899,16 @@ export default function CreateCampaignPage() {
                   setError(null);
                   setStep(4);
                 }}
-                disabled={!canProceed() || savingDraft}
+                disabled={!canProceed() || savingDraft || deletingDraft}
                 className={`${requiresApproval || stripeVerified ? primaryBtnClass : accentBtnClass} ${
-                  !canProceed() || savingDraft ? "opacity-50" : ""
+                  !canProceed() || savingDraft || deletingDraft ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">Continue</Text>
               </Pressable>
             ) : step === 4 ? (
               <Pressable
-                disabled={submitting || savingDraft}
+                disabled={submitting || savingDraft || deletingDraft}
                 onPress={() => {
                   setError(null);
                   setDraftSaved(false);
@@ -1989,7 +2050,7 @@ export default function CreateCampaignPage() {
                     });
                 }}
                 className={`${accentBtnClass} ${
-                  submitting || savingDraft ? "opacity-50" : ""
+                  submitting || savingDraft || deletingDraft ? "opacity-50" : ""
                 }`}
               >
                 <Text className="font-retro-bold text-sm text-retro-paper">

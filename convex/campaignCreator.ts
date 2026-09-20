@@ -20,7 +20,8 @@ import {
 import { parseCampaignVideoUrl } from "./lib/videoUrl";
 import { isValidCampaignTemplateId } from "./lib/campaignTemplates";
 import { isAllowedCampaignCategory } from "./lib/campaignCategories";
-import { isEditableByOwner, isPublicStatus, hasCompletedStripeIdentity, isReadyForSocietyReview, requiresSocietyApproval } from "./lib/campaignVisibility";
+import { isEditableByOwner, isPublicStatus, hasCompletedStripeIdentity, isReadyForSocietyReview, requiresSocietyApproval, isUnsubmittedDraft } from "./lib/campaignVisibility";
+import { deleteCampaignRecord } from "./lib/deleteCampaignRecord";
 import { assertExistingFunding } from "./lib/existingFunding";
 import { buildCampaignVerifications } from "./lib/verificationBadges";
 import { notifySocietyLeadersCampaignPending } from "./lib/societyCampaignNotify";
@@ -462,6 +463,30 @@ export const saveDraft = mutation({
       { notifyOwner: false, incomplete: true },
     );
     return { slug };
+  },
+});
+
+export const deleteDraft = mutation({
+  args: { slug: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    await requireVerifiedUser(ctx);
+    const campaign = await ctx.db
+      .query("campaigns")
+      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
+      .unique();
+    if (!campaign) {
+      throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
+    }
+    await requireRecordOwner(ctx, campaign.createdBy);
+    if (!isUnsubmittedDraft(campaign)) {
+      throw new ConvexError({
+        code: "INVALID_STATE",
+        message: "Only unsubmitted drafts can be deleted.",
+      });
+    }
+    await deleteCampaignRecord(ctx, campaign);
+    return null;
   },
 });
 

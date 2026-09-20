@@ -59,3 +59,12 @@ export function isUnderReview(status: string) {
 export function isEditableByOwner(status: string) {
   return status === "pending" || status === "rejected" || status === "changes_requested";
 }
+
+/** Unsubmitted owner draft — pending and never opened for society/admin review. */
+export function isUnsubmittedDraft(
+  campaign: Pick<CampaignDoc, "status" | "societyApprovalStatus">,
+) {
+  return (
+    campaign.status === "pending" && campaign.societyApprovalStatus === undefined
+  );
+}

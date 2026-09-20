@@ -7,6 +7,7 @@ import {
   isReadyForSocietyReview,
   isUnderReview,
   requiresSocietyApproval,
+  isUnsubmittedDraft,
 } from "./campaignVisibility";
 
 describe("campaignVisibility", () => {
@@ -165,5 +166,34 @@ describe("isEditableByOwner", () => {
     expect(isEditableByOwner("active")).toBe(false);
     expect(isEditableByOwner("funded")).toBe(false);
     expect(isEditableByOwner("completed")).toBe(false);
+  });
+});
+
+describe("isUnsubmittedDraft", () => {
+  it("is true only for pending campaigns with no society approval status", () => {
+    expect(
+      isUnsubmittedDraft({
+        status: "pending",
+        societyApprovalStatus: undefined,
+      }),
+    ).toBe(true);
+    expect(
+      isUnsubmittedDraft({
+        status: "pending",
+        societyApprovalStatus: "pending",
+      }),
+    ).toBe(false);
+    expect(
+      isUnsubmittedDraft({
+        status: "rejected",
+        societyApprovalStatus: undefined,
+      }),
+    ).toBe(false);
+    expect(
+      isUnsubmittedDraft({
+        status: "active",
+        societyApprovalStatus: "approved",
+      }),
+    ).toBe(false);
   });
 });

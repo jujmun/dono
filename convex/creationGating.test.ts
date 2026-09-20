@@ -538,4 +538,160 @@ describe("creation mutations without student card", () => {
     expect(campaign?.category).toBe("textbooks");
     expect(campaign?.societyApprovalStatus).toBeUndefined();
   });
+
+  it("campaignCreator.deleteDraft removes the owner's incomplete draft", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "delete-draft@ox.ac.uk",
+      userType: "student",
+    });
+    const asStudent = t.withIdentity({ subject: studentId });
+    const created = await asStudent.mutation(api.campaignCreator.saveDraft, {
+      title: "Throwaway",
+      category: "",
+      communitySlug: "",
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+
+    await asStudent.mutation(api.campaignCreator.deleteDraft, {
+      slug: created.slug,
+    });
+
+    const campaign = await t.run(async (ctx) => {
+      return await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", created.slug))
+        .unique();
+    });
+    expect(campaign).toBeNull();
+  });
+
+  it("campaignCreator.deleteDraft refuses another user", async () => {
+    const t = newTestConvex();
+    const ownerId = await seedUser(t, {
+      email: "draft-owner@ox.ac.uk",
+      userType: "student",
+    });
+    const otherId = await seedUser(t, {
+      email: "draft-other@ox.ac.uk",
+      userType: "student",
+    });
+    const asOwner = t.withIdentity({ subject: ownerId });
+    const created = await asOwner.mutation(api.campaignCreator.saveDraft, {
+      title: "Private draft",
+      category: "",
+      communitySlug: "",
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+
+    const asOther = t.withIdentity({ subject: otherId });
+    await expect(
+      asOther.mutation(api.campaignCreator.deleteDraft, { slug: created.slug }),
+    ).rejects.toThrow();
+  });
+
+  it("campaignCreator.deleteDraft refuses after submitForReview", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "submitted-draft@ox.ac.uk",
+      userType: "student",
+      dateOfBirth: ADULT_DOB,
+    });
+    const societySlug = "submitted-draft-society";
+    await seedVerifiedSocietyCommunity(t, societySlug);
+    await seedApprovedMembership(t, {
+      communitySlug: societySlug,
+      userId: studentId,
+    });
+    await t.run(async (ctx) => {
+      await recordLegalAcceptancesForContext(ctx, {
+        userId: studentId,
+        context: "create_society",
+      });
+    });
+    const asStudent = t.withIdentity({ subject: studentId });
+    const created = await asStudent.mutation(api.campaignCreator.saveDraft, {
+      title: "Ready to submit",
+      category: "textbooks",
+      communitySlug: societySlug,
+      description: "desc",
+      story: "story",
+      goal: 100,
+      template: "classic",
+    });
+    await t.run(async (ctx) => {
+      const campaign = await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", created.slug))
+        .unique();
+      if (!campaign) throw new Error("missing campaign");
+      await ctx.db.patch(campaign._id, {
+        stripeVerificationStatus: "verified",
+      });
+    });
+    await asStudent.mutation(api.campaignCreator.submitForReview, {
+      slug: created.slug,
+    });
+
+    await expect(
+      asStudent.mutation(api.campaignCreator.deleteDraft, {
+        slug: created.slug,
+      }),
+    ).rejects.toThrow(/unsubmitted drafts/i);
+  });
+
+  it("campaignCreator.deleteDraft refuses live or rejected campaigns", async () => {
+    const t = newTestConvex();
+    const studentId = await seedUser(t, {
+      email: "not-a-draft@ox.ac.uk",
+      userType: "student",
+    });
+    const asStudent = t.withIdentity({ subject: studentId });
+    const live = await asStudent.mutation(api.campaignCreator.saveDraft, {
+      title: "Live later",
+      category: "",
+      communitySlug: "",
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+    const rejected = await asStudent.mutation(api.campaignCreator.saveDraft, {
+      title: "Rejected later",
+      category: "",
+      communitySlug: "",
+      description: "",
+      story: "",
+      goal: 0,
+      template: "classic",
+    });
+    await t.run(async (ctx) => {
+      const liveRow = await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", live.slug))
+        .unique();
+      const rejectedRow = await ctx.db
+        .query("campaigns")
+        .withIndex("by_slug", (q) => q.eq("slug", rejected.slug))
+        .unique();
+      if (!liveRow || !rejectedRow) throw new Error("missing campaign");
+      await ctx.db.patch(liveRow._id, { status: "active" });
+      await ctx.db.patch(rejectedRow._id, { status: "rejected" });
+    });
+
+    await expect(
+      asStudent.mutation(api.campaignCreator.deleteDraft, { slug: live.slug }),
+    ).rejects.toThrow(/unsubmitted drafts/i);
+    await expect(
+      asStudent.mutation(api.campaignCreator.deleteDraft, {
+        slug: rejected.slug,
+      }),
+    ).rejects.toThrow(/unsubmitted drafts/i);
+  });
 });

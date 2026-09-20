@@ -8,15 +8,18 @@ import {
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
-import { useConvexAuth, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { usePostHog } from "posthog-react-native";
 import { Search, SlidersHorizontal } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
 import { FilterChip } from "@/components/filter-chip";
 import { LoginGate } from "@/components/login-gate";
 import { RetroCampaignCard } from "@/components/retro";
+import { getFriendlyAuthError } from "@/lib/auth/errors";
 import {
   categoryLabels,
   getCampaignApprovalStage,
+  isCampaignDraft,
   isCampaignRejected,
 } from "@/lib/constants";
 import type { Campaign } from "@/lib/types";
@@ -55,6 +58,13 @@ export default function CampaignsPage() {
   const { isAuthenticated } = useConvexAuth();
   const profile = useCurrentProfile();
   const router = useRouter();
+  const posthog = usePostHog();
+  const deleteDraft = useMutation(api.campaignCreator.deleteDraft);
+  const [confirmDeleteSlug, setConfirmDeleteSlug] = useState<string | null>(
+    null,
+  );
+  const [deletingSlug, setDeletingSlug] = useState<string | null>(null);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   const { tab: tabParam } = useLocalSearchParams<{ tab?: string | string[] }>();
   const requestedTab = tabFromSearchParam(tabParam);
   const [tab, setTab] = useState<CampaignsTab>(requestedTab);
@@ -69,7 +79,36 @@ export default function CampaignsPage() {
 
   const selectTab = (next: CampaignsTab) => {
     setTab(next);
+    setConfirmDeleteSlug(null);
+    setDeleteError(null);
     router.setParams({ tab: next });
+  };
+
+  const handleDeleteDraft = (campaign: Campaign) => {
+    if (deletingSlug) return;
+    if (confirmDeleteSlug !== campaign.id) {
+      setConfirmDeleteSlug(campaign.id);
+      setDeleteError(null);
+      return;
+    }
+    setDeletingSlug(campaign.id);
+    setDeleteError(null);
+    void deleteDraft({ slug: campaign.id })
+      .then(() => {
+        posthog?.capture("campaign_draft_deleted", {
+          campaign_title: campaign.title,
+          campaign_category: campaign.category,
+          campaign_community_slug: campaign.creator.communityId,
+          source: "my_campaigns",
+        });
+        setConfirmDeleteSlug(null);
+      })
+      .catch((err: Error) => {
+        setDeleteError(getFriendlyAuthError(err) || "Failed to delete draft.");
+      })
+      .finally(() => {
+        setDeletingSlug(null);
+      });
   };
   const [discoverSort, setDiscoverSort] = useState<DiscoverSort>("all");
   const campaigns = (useQuery(api.campaigns.list) ?? undefined) as
@@ -332,6 +371,30 @@ export default function CampaignsPage() {
                       : undefined
                   }
                 />
+                {tab === "mine" && isCampaignDraft(campaign) ? (
+                  <View className="mt-2">
+                    <Pressable
+                      onPress={() => handleDeleteDraft(campaign)}
+                      disabled={deletingSlug === campaign.id}
+                      className="retro-key items-center rounded-full border-2 border-retro-ink bg-white px-4 py-2"
+                    >
+                      <Text className="font-retro-bold text-sm text-rose-700">
+                        {deletingSlug === campaign.id
+                          ? "Deleting…"
+                          : confirmDeleteSlug === campaign.id
+                            ? "Confirm delete"
+                            : "Delete draft"}
+                      </Text>
+                    </Pressable>
+                    {confirmDeleteSlug === campaign.id &&
+                    deleteError &&
+                    deletingSlug !== campaign.id ? (
+                      <Text className="mt-1.5 text-sm text-rose-700">
+                        {deleteError}
+                      </Text>
+                    ) : null}
+                  </View>
+                ) : null}
               </View>
             );
           })}
