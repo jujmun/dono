@@ -28,8 +28,14 @@ export const getPublicOgData = internalQuery({
       return null;
     }
 
-    const imageUrl = campaign.ogImageStorageId
-      ? await ctx.storage.getUrl(campaign.ogImageStorageId)
+    // ogImageStorageId would hold a precomputed 1200x630 crop, but generation
+    // is currently disabled (see campaignOgImageActions.generate) so it's
+    // never set — fall back to the same cover image shown on the website
+    // rather than the generic branded default.
+    const coverImageStorageId =
+      campaign.ogImageStorageId ?? campaign.imageStorageIds?.[0] ?? campaign.imageStorageId;
+    const imageUrl = coverImageStorageId
+      ? await ctx.storage.getUrl(coverImageStorageId)
       : null;
 
     return {
