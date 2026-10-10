@@ -14,6 +14,7 @@ type CampaignOverrides = Partial<{
   title: string;
   description: string;
   status: "pending" | "rejected" | "active" | "funded" | "completed" | "changes_requested";
+  image: string;
   imageStorageId: Id<"_storage">;
   ogImageStorageId: Id<"_storage">;
 }>;
@@ -44,7 +45,7 @@ async function seedCampaign(
       },
       verifications: [],
       university: "University of Oxford",
-      image: "",
+      image: overrides.image ?? "",
       imageStorageId: overrides.imageStorageId,
       ogImageStorageId: overrides.ogImageStorageId,
       createdAt: new Date().toISOString(),
@@ -92,6 +93,34 @@ describe("campaignOgPage", () => {
     expect(imageUrl.startsWith("https://")).toBe(true);
     expect(html).toContain('<meta property="og:image:width" content="1200">');
     expect(html).toContain('<meta property="og:image:height" content="630">');
+  });
+
+  it("falls back to the raw image URL for legacy campaigns with no storage id on file", async () => {
+    const t = newTestConvex();
+    const slug = await seedCampaign(t, {
+      title: "Legacy Campaign",
+      image: "https://shocking-poodle-569.eu-west-1.convex.cloud/api/storage/legacy-cover",
+    });
+
+    const res = await t.fetch(`/og/campaigns/${slug}`);
+    expect(res.status).toBe(200);
+    const html = await res.text();
+
+    expect(html).toContain(
+      '<meta property="og:image" content="https://shocking-poodle-569.eu-west-1.convex.cloud/api/storage/legacy-cover">',
+    );
+  });
+
+  it("treats the literal 'default' image placeholder as no cover image", async () => {
+    const t = newTestConvex();
+    const slug = await seedCampaign(t, { title: "Placeholder Campaign", image: "default" });
+
+    const res = await t.fetch(`/og/campaigns/${slug}`);
+    const html = await res.text();
+
+    expect(html).toContain(
+      '<meta property="og:image" content="https://joindono.com/og/default.jpg">',
+    );
   });
 
   it("falls back to the default branded image when there's no cover image", async () => {

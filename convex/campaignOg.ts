@@ -30,13 +30,21 @@ export const getPublicOgData = internalQuery({
 
     // ogImageStorageId would hold a precomputed 1200x630 crop, but generation
     // is currently disabled (see campaignOgImageActions.generate) so it's
-    // never set — fall back to the same cover image shown on the website
-    // rather than the generic branded default.
+    // almost never set — fall back to the same cover image shown on the
+    // website rather than the generic branded default. Mirrors
+    // enrichCampaignWithMedia (convex/lib/campaignMedia.ts): some campaigns
+    // predate imageStorageId/imageStorageIds and only have the resolved
+    // `image` URL string stored directly, so that needs its own fallback too.
     const coverImageStorageId =
       campaign.ogImageStorageId ?? campaign.imageStorageIds?.[0] ?? campaign.imageStorageId;
-    const imageUrl = coverImageStorageId
+    const storageImageUrl = coverImageStorageId
       ? await ctx.storage.getUrl(coverImageStorageId)
       : null;
+    const legacyImageUrl =
+      campaign.image !== "default" && /^https?:\/\//.test(campaign.image)
+        ? campaign.image
+        : null;
+    const imageUrl = storageImageUrl ?? legacyImageUrl;
 
     return {
       title: campaign.title,
