@@ -2,14 +2,14 @@ import { useEffect, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ActivityIndicator,
 } from "react-native";
 import { Link, useLocalSearchParams, useRouter } from "expo-router";
 import { useConvexAuth, useQuery } from "convex/react";
-import { Search, Plus, SlidersHorizontal } from "lucide-react-native";
+import { Plus, SlidersHorizontal } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
+import { ExpandableSearchRow } from "@/components/expandable-search-row";
 import { FilterChip } from "@/components/filter-chip";
 import { LoginGate } from "@/components/login-gate";
 import { SocietyCardGrid } from "@/components/society-card-grid";
@@ -58,7 +58,8 @@ export default function SocietiesPage() {
   const [tab, setTab] = useState<SocietiesTab>(requestedTab);
   const [orgTypeFilter, setOrgTypeFilter] = useState<OrgTypeFilter>("all");
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const { isAuthenticated } = useConvexAuth();
   const profile = useCurrentProfile();
   const canCreateSociety = canCreate(profile);
@@ -115,50 +116,33 @@ export default function SocietiesPage() {
 
   return (
     <AppShell>
-      <View className="mb-6">
-        <Text className="font-retro-display text-[32px] text-retro-ink">
-          Communities
-        </Text>
-      </View>
-
-      <View className="mb-4 flex-row items-center gap-2.5">
-        <View className="min-w-0 flex-1 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5">
-          <Search size={16} color="#8a8478" />
-          <TextInput
-            placeholder="Search colleges & societies…"
-            placeholderTextColor="#8a8478"
-            value={search}
-            onChangeText={setSearch}
-            className="min-w-0 flex-1 font-retro-mono text-[13px] text-retro-ink outline-none"
-          />
-        </View>
-        <Pressable
-          onPress={() => setShowFilters((v) => !v)}
-          className={cn(
-            "retro-key",
-            "shrink-0 flex-row items-center gap-1.5 self-stretch rounded-[10px] border-[3px] border-retro-ink px-3.5",
-            showFilters || filtersActive ? "bg-retro-mint" : "bg-retro-paper",
-          )}
-          accessibilityRole="button"
-          accessibilityLabel="Filters"
-          accessibilityState={{ expanded: showFilters }}
-        >
-          <SlidersHorizontal
-            size={16}
-            color={showFilters || filtersActive ? "#FFF9EF" : "#211E1A"}
-          />
-          <Text
+      <ExpandableSearchRow
+        title="Communities"
+        expanded={showSearch}
+        onToggle={() => setShowSearch((open) => !open)}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search colleges & societies…"
+        active={showSearch || search.trim().length > 0}
+        trailing={
+          <Pressable
+            onPress={() => setShowFilters((open) => !open)}
             className={cn(
-              "font-retro-bold text-[12.5px]",
-              showFilters || filtersActive
-                ? "text-retro-paper"
-                : "text-retro-ink",
+              "retro-key",
+              "h-11 w-11 items-center justify-center rounded-lg border-[3px] border-retro-ink",
+              showFilters || filtersActive ? "bg-retro-mint" : "bg-retro-paper",
             )}
+            accessibilityRole="button"
+            accessibilityLabel="Filters"
+            accessibilityState={{ expanded: showFilters }}
           >
-            Filter
-          </Text>
-        </Pressable>
-      </View>
+            <SlidersHorizontal
+              size={18}
+              color={showFilters || filtersActive ? "#FFF9EF" : "#211E1A"}
+            />
+          </Pressable>
+        }
+      />
 
       {showFilters ? (
         <View className="mb-5 gap-3.5 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4">
@@ -216,11 +200,11 @@ export default function SocietiesPage() {
             </View>
           ) : null}
         </View>
-      ) : (
+      ) : filtersActive ? (
         <Text className="mb-5 font-retro-mono text-[12px] text-[#5c574f]">
           {filterSummary}
         </Text>
-      )}
+      ) : null}
 
       {tab === "discover" && orgTypeFilter === "society" && canCreateSociety ? (
         <View className="mb-4 flex-row justify-end">

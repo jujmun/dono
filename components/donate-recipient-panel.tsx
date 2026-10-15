@@ -1,5 +1,6 @@
-import { View, Text } from "react-native";
-import { LEGAL_WORDINGS } from "@/lib/legal/wordings";
+import { useState } from "react";
+import { Pressable, View, Text } from "react-native";
+import { ChevronDown, ChevronUp } from "lucide-react-native";
 
 export type RecipientPanelData = {
   ownerLegalName: string;
@@ -27,12 +28,20 @@ type Props = {
   className?: string;
 };
 
-/** CH-01 — six-field “You're donating to” panel. */
+function RecipientField({ label, value }: { label: string; value: string }) {
+  return (
+    <View>
+      <Text className="text-xs text-dono-muted">{label}</Text>
+      <Text className="text-sm text-dono-text">{value}</Text>
+    </View>
+  );
+}
+
+/** “You're donating to” panel. Legal status, account holder, and property owner sit under More information. */
 export function DonateRecipientPanel({ panel, className }: Props) {
-  const rows: { label: string; value: string }[] = [
-    { label: "Campaign owner", value: panel.ownerLegalName },
+  const [moreOpen, setMoreOpen] = useState(false);
+  const moreRows: { label: string; value: string }[] = [
     { label: "Legal status", value: panel.legalStatus },
-    { label: "Representative", value: panel.representativeName },
     { label: "Connected Account holder", value: panel.connectedAccountHolder },
     { label: "Owner of purchased property", value: panel.propertyOwner },
   ];
@@ -45,16 +54,30 @@ export function DonateRecipientPanel({ panel, className }: Props) {
         You&apos;re donating to
       </Text>
       <View className="mt-3 gap-2">
-        {rows.map((row) => (
-          <View key={row.label}>
-            <Text className="text-xs text-dono-muted">{row.label}</Text>
-            <Text className="text-sm text-dono-text">{row.value}</Text>
-          </View>
-        ))}
+        <RecipientField label="Campaign owner" value={panel.ownerLegalName} />
+        <RecipientField label="Representative" value={panel.representativeName} />
       </View>
-      <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-        {LEGAL_WORDINGS["W-ROLE-1"]}
-      </Text>
+      <Pressable
+        onPress={() => setMoreOpen((open) => !open)}
+        className="mt-3 flex-row items-center gap-1"
+        accessibilityRole="button"
+        accessibilityState={{ expanded: moreOpen }}
+        accessibilityLabel="More information"
+      >
+        <Text className="text-sm text-dono-muted">More information</Text>
+        {moreOpen ? (
+          <ChevronUp size={14} color="#56615A" />
+        ) : (
+          <ChevronDown size={14} color="#56615A" />
+        )}
+      </Pressable>
+      {moreOpen ? (
+        <View className="mt-2 gap-2">
+          {moreRows.map((row) => (
+            <RecipientField key={row.label} label={row.label} value={row.value} />
+          ))}
+        </View>
+      ) : null}
     </View>
   );
 }

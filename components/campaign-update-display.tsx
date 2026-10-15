@@ -21,7 +21,7 @@ export function CampaignUpdateDisplay({ campaign }: CampaignUpdateDisplayProps) 
   if (!update) {
     if (!eligible) return null;
     return (
-      <RetroPanel title="Updates.log" accent="mint">
+      <RetroPanel title="Updates" accent="mint">
         <View className="flex-row items-center gap-2">
           <Clock size={16} color="#5c574f" />
           <Text className="text-sm text-[#5c574f]">
@@ -40,7 +40,7 @@ export function CampaignUpdateDisplay({ campaign }: CampaignUpdateDisplayProps) 
   });
 
   return (
-    <RetroPanel title="Updates.log" accent="mint">
+    <RetroPanel title="Updates" accent="mint">
       <View className="gap-3">
         {update.mediaUrls.length > 0 ? (
           <ScrollView horizontal showsHorizontalScrollIndicator={false} className="-mx-1">

@@ -60,6 +60,7 @@ import type * as lib_campaignTemplates from "../lib/campaignTemplates.js";
 import type * as lib_campaignVisibility from "../lib/campaignVisibility.js";
 import type * as lib_commentModeration from "../lib/commentModeration.js";
 import type * as lib_csv from "../lib/csv.js";
+import type * as lib_deleteCampaignRecord from "../lib/deleteCampaignRecord.js";
 import type * as lib_demoOpenAdmin from "../lib/demoOpenAdmin.js";
 import type * as lib_donationAmounts from "../lib/donationAmounts.js";
 import type * as lib_emails from "../lib/emails.js";
@@ -178,6 +179,7 @@ declare const fullApi: ApiFromModules<{
   "lib/campaignVisibility": typeof lib_campaignVisibility;
   "lib/commentModeration": typeof lib_commentModeration;
   "lib/csv": typeof lib_csv;
+  "lib/deleteCampaignRecord": typeof lib_deleteCampaignRecord;
   "lib/demoOpenAdmin": typeof lib_demoOpenAdmin;
   "lib/donationAmounts": typeof lib_donationAmounts;
   "lib/emails": typeof lib_emails;

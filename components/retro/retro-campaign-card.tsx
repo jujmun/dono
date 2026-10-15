@@ -1,5 +1,6 @@
 import { type Href, Link } from "expo-router";
 import { View, Text, Pressable } from "react-native";
+import { Heart, Users } from "lucide-react-native";
 import type { Campaign } from "@/lib/types";
 import {
   categoryLabels,
@@ -194,13 +195,19 @@ export function RetroCampaignCard({
                 {formatCurrency(displayRaised)} of{" "}
                 {formatCurrency(campaign.goal)}
               </Text>
-              <View className="flex-row gap-3">
-                <Text className="font-retro-mono text-xs text-[#5c574f]">
-                  ♡ {campaign.likes} like{campaign.likes === 1 ? "" : "s"}
-                </Text>
-                <Text className="font-retro-mono text-xs text-[#5c574f]">
-                  👥 {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
-                </Text>
+              <View className="flex-row items-center gap-3">
+                <View className="flex-row items-center gap-1">
+                  <Heart size={12} color="#5c574f" />
+                  <Text className="font-retro-mono text-xs text-[#5c574f]">
+                    {campaign.likes} like{campaign.likes === 1 ? "" : "s"}
+                  </Text>
+                </View>
+                <View className="flex-row items-center gap-1">
+                  <Users size={12} color="#5c574f" />
+                  <Text className="font-retro-mono text-xs text-[#5c574f]">
+                    {campaign.donors} donor{campaign.donors === 1 ? "" : "s"}
+                  </Text>
+                </View>
               </View>
             </View>
           </View>

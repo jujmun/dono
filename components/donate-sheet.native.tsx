@@ -28,7 +28,6 @@ import {
 } from "@/lib/platform-fee";
 import { LEGAL_WORDINGS, wordingRecord } from "@/lib/legal/wordings";
 import {
-  ReceiptDivider,
   ReceiptLedger,
   ReceiptLineRow,
 } from "@/components/ui/receipt-lines";
@@ -230,10 +229,10 @@ export function DonateSheet({
     }
   };
 
-  // One box drives both flags; hiding the name is the inverse of showing support.
-  const handleShowSupportChange = (value: boolean) => {
-    onShowSupportPubliclyChange(value);
-    onAnonymousChange(!value);
+  // One box drives both flags; showing support publicly is the inverse of anonymity.
+  const handleAnonymousChange = (value: boolean) => {
+    onAnonymousChange(value);
+    onShowSupportPubliclyChange(!value);
   };
 
   const abandonActivePaymentIntent = () => {
@@ -289,10 +288,8 @@ export function DonateSheet({
         wordingRecord("W-AGE-1", ageAttested),
         wordingRecord("W-ACCEPT-1", legalAccepted),
         wordingRecord("W-COVER-1", coverFees),
-        wordingRecord("W-HIDE-1", isAnonymous),
-        wordingRecord("W-HIDE-DISCLOSURE-1", isAnonymous),
+        wordingRecord("W-ANON-1", isAnonymous),
         wordingRecord("W-MKT-1", marketingOptIn),
-        wordingRecord("W-DISPLAY-1", showSupportPublicly),
       ];
       const accepted = await acceptDocuments({
         context,
@@ -431,7 +428,6 @@ export function DonateSheet({
                 amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
                 muted
               />
-              <ReceiptDivider />
               <ReceiptLineRow
                 label="Total you will pay"
                 amount={feeTotalLabel}
@@ -443,19 +439,11 @@ export function DonateSheet({
               />
             </ReceiptLedger>
 
-            <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-              {LEGAL_WORDINGS["W-DEADLINE-1"]}
-            </Text>
-            {mayExceedTarget ? (
-              <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
-                {LEGAL_WORDINGS["W-SURPLUS-1"]}
-              </Text>
-            ) : null}
-
             <View className="mt-4 gap-2">
               <DonateTermsCheckbox
                 accepted={termsAccepted}
                 onAcceptedChange={handleTermsChange}
+                showSurplus={mayExceedTarget}
               />
               <LegalCheckboxRow
                 accepted={coverFees}
@@ -468,20 +456,13 @@ export function DonateSheet({
                 </Text>
               </LegalCheckboxRow>
               <LegalCheckboxRow
-                accepted={showSupportPublicly}
-                onAcceptedChange={handleShowSupportChange}
-                accessibilityLabel={LEGAL_WORDINGS["W-DISPLAY-1"]}
+                accepted={isAnonymous}
+                onAcceptedChange={handleAnonymousChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-ANON-1"]}
               >
-                <View>
-                  <Text className="text-sm leading-5 text-dono-text">
-                    {LEGAL_WORDINGS["W-DISPLAY-1"]}
-                  </Text>
-                  {!showSupportPublicly ? (
-                    <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
-                      {LEGAL_WORDINGS["W-HIDE-DISCLOSURE-1"]}
-                    </Text>
-                  ) : null}
-                </View>
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-ANON-1"]}
+                </Text>
               </LegalCheckboxRow>
               <LegalCheckboxRow
                 accepted={marketingOptIn}

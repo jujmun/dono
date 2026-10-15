@@ -35,7 +35,7 @@ import { CampaignCardGrid } from "@/components/campaign-card-grid";
 import { formatCurrency } from "@/lib/constants";
 import { getFriendlyAuthError } from "@/lib/auth/errors";
 import { getFriendlyPaymentError } from "@/lib/stripe/errors";
-import { initialsFor, normalizeExternalUrl } from "@/lib/utils";
+import { normalizeExternalUrl } from "@/lib/utils";
 import { StoryText } from "@/components/story-text";
 import {
   uploadCampaignUpdateMedia,
@@ -234,12 +234,7 @@ function SocietyDetail({
             image={society.coverImageUrl ?? "default"}
             className="h-52 w-full rounded-2xl"
           />
-          <View className="flex-row items-start gap-4">
-            <View className="h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="font-retro-mono-bold text-lg text-white">
-                {initialsFor(society.name)}
-              </Text>
-            </View>
+          <View className="flex-row items-start">
             <View className="min-w-0 flex-1 gap-1">
               <View className="flex-row items-start gap-2">
                 <Text className="min-w-0 flex-1 font-retro-display text-2xl leading-tight text-dono-text">
@@ -298,12 +293,7 @@ function CommunityDetail({
             image={community.coverImage}
             className="h-52 w-full rounded-2xl"
           />
-          <View className="flex-row items-start gap-4">
-            <View className="h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-dono-primary shadow">
-              <Text className="font-retro-mono-bold text-lg text-white">
-                {community.avatar}
-              </Text>
-            </View>
+          <View className="flex-row items-start">
             <View className="min-w-0 flex-1 gap-1">
               <View className="flex-row flex-wrap items-center gap-2">
                 <Text className="font-retro-display text-2xl leading-tight text-dono-text">
