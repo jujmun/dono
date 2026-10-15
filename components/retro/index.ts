@@ -5,11 +5,11 @@ export { RetroPanel } from "./retro-panel";
 export { DonoDino, DONO_DINO_ASPECT_RATIO, DONO_GREEN, DONO_PINK } from "./dono-dino";
 export { RetroDinoHero } from "./retro-dino-hero";
 export {
-  LandingHeroActions,
   LandingTrustStrip,
   LandingHowItWorks,
   LandingAudienceSplit,
   LandingWhyDono,
+  LandingScrollStory,
   LandingFinalCta,
 } from "./landing-sections";
 export { RetroCampaignCard } from "./retro-campaign-card";

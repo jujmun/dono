@@ -673,7 +673,7 @@ export const markDonationSucceeded = internalMutation({
       const choices: string[] = [];
       if (donation.ageAttested) choices.push("Confirmed 18+ and capacity (W-AGE-1)");
       if (donation.coverFees) choices.push("Covered Dono fee");
-      if (donation.isAnonymous) choices.push("Hide my name");
+      if (donation.isAnonymous) choices.push("Make anonymous");
       if (donation.marketingOptIn) choices.push("Marketing emails opted in");
       if (donation.showSupportPublicly) choices.push("Show support publicly");
 

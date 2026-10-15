@@ -211,26 +211,40 @@ export function DonateAcceptanceCheckbox({
 export function DonateTermsCheckbox({
   accepted,
   onAcceptedChange,
+  showSurplus = true,
   className,
 }: {
   accepted: boolean;
   onAcceptedChange: (v: boolean) => void;
+  showSurplus?: boolean;
   className?: string;
 }) {
+  const disclosures = [
+    LEGAL_WORDINGS["W-DEADLINE-1"],
+    ...(showSurplus ? [LEGAL_WORDINGS["W-SURPLUS-1"]] : []),
+    LEGAL_WORDINGS["W-ROLE-1"],
+  ];
   return (
     <LegalCheckboxRow
       accepted={accepted}
       onAcceptedChange={onAcceptedChange}
-      accessibilityLabel={`${LEGAL_WORDINGS["W-AGE-1"]} ${LEGAL_WORDINGS["W-ACCEPT-1"]}`}
+      accessibilityLabel={`${LEGAL_WORDINGS["W-AGE-1"]} ${LEGAL_WORDINGS["W-ACCEPT-1"]} ${disclosures.join(" ")}`}
       className={className}
     >
-      <Text className="text-sm leading-5 text-dono-text">
-        {LEGAL_WORDINGS["W-AGE-1"]} By continuing, I accept the{" "}
-        <DocLink id="donor_terms" label="Donor Terms" />, the{" "}
-        <DocLink id="refund_dispute" label="Refund and Dispute Policy" /> and the{" "}
-        <DocLink id="terms_of_service" label="Terms of Service" />, and I have
-        read the <DocLink id="privacy" label="Privacy Notice" />.
-      </Text>
+      <View className="min-w-0 flex-1 gap-2">
+        <Text className="text-sm leading-5 text-dono-text">
+          {LEGAL_WORDINGS["W-AGE-1"]} By continuing, I accept the{" "}
+          <DocLink id="donor_terms" label="Donor Terms" />, the{" "}
+          <DocLink id="refund_dispute" label="Refund and Dispute Policy" /> and the{" "}
+          <DocLink id="terms_of_service" label="Terms of Service" />, and I have
+          read the <DocLink id="privacy" label="Privacy Notice" />.
+        </Text>
+        {disclosures.map((text) => (
+          <Text key={text} className="text-xs leading-relaxed text-dono-muted">
+            {text}
+          </Text>
+        ))}
+      </View>
     </LegalCheckboxRow>
   );
 }

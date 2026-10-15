@@ -3,15 +3,15 @@ import { useEffect, useMemo, useState } from "react";
 import {
   View,
   Text,
-  TextInput,
   Pressable,
   ActivityIndicator,
   useWindowDimensions,
 } from "react-native";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { usePostHog } from "posthog-react-native";
-import { Search, SlidersHorizontal } from "lucide-react-native";
+import { SlidersHorizontal } from "lucide-react-native";
 import { AppShell } from "@/components/app-shell";
+import { ExpandableSearchRow } from "@/components/expandable-search-row";
 import { FilterChip } from "@/components/filter-chip";
 import { LoginGate } from "@/components/login-gate";
 import { RetroCampaignCard } from "@/components/retro";
@@ -133,7 +133,8 @@ export default function CampaignsPage() {
   const ownedIds = new Set((myCampaignsRaw ?? []).map((c) => c.id));
 
   const [search, setSearch] = useState("");
-  const [showFilters, setShowFilters] = useState(true);
+  const [showSearch, setShowSearch] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
   const filtersActive =
     tab !== "discover" ||
@@ -193,49 +194,33 @@ export default function CampaignsPage() {
 
   return (
     <AppShell>
-      <Text className="mb-1.5 font-retro-display text-[32px] text-retro-ink">
-        Campaigns
-      </Text>
-      <Text className="mb-5 text-sm text-[#4a453c]">
-        Support specific, tangible projects at universities across the UK
-      </Text>
-
-      <View className="mb-4 flex-row items-center gap-2.5">
-        <View className="min-w-0 flex-1 flex-row items-center gap-2.5 rounded-[10px] border-[3px] border-retro-ink bg-retro-paper px-4 py-2.5">
-          <Search size={16} color="#8a8478" />
-          <TextInput
-            placeholder="Search campaigns, universities…"
-            placeholderTextColor="#8a8478"
-            value={search}
-            onChangeText={setSearch}
-            className="min-w-0 flex-1 font-retro-mono text-[13px] text-retro-ink outline-none"
-          />
-        </View>
-        <Pressable
-          onPress={() => setShowFilters((v) => !v)}
-          className={cn(
-            "retro-key",
-            "shrink-0 flex-row items-center gap-1.5 self-stretch rounded-[10px] border-[3px] border-retro-ink px-3.5",
-            showFilters || filtersActive ? "bg-retro-mint" : "bg-retro-paper",
-          )}
-          accessibilityRole="button"
-          accessibilityLabel="Filters"
-          accessibilityState={{ expanded: showFilters }}
-        >
-          <SlidersHorizontal
-            size={16}
-            color={showFilters || filtersActive ? "#FFF9EF" : "#211E1A"}
-          />
-          <Text
+      <ExpandableSearchRow
+        title="Campaigns"
+        expanded={showSearch}
+        onToggle={() => setShowSearch((open) => !open)}
+        value={search}
+        onChangeText={setSearch}
+        placeholder="Search campaigns, universities…"
+        active={showSearch || search.trim().length > 0}
+        trailing={
+          <Pressable
+            onPress={() => setShowFilters((open) => !open)}
             className={cn(
-              "font-retro-bold text-[12.5px]",
-              showFilters || filtersActive ? "text-retro-paper" : "text-retro-ink",
+              "retro-key",
+              "h-11 w-11 items-center justify-center rounded-lg border-[3px] border-retro-ink",
+              showFilters || filtersActive ? "bg-retro-mint" : "bg-retro-paper",
             )}
+            accessibilityRole="button"
+            accessibilityLabel="Filters"
+            accessibilityState={{ expanded: showFilters }}
           >
-            Filter
-          </Text>
-        </Pressable>
-      </View>
+            <SlidersHorizontal
+              size={18}
+              color={showFilters || filtersActive ? "#FFF9EF" : "#211E1A"}
+            />
+          </Pressable>
+        }
+      />
 
       {showFilters ? (
         <View className="mb-5 gap-3.5 rounded-[14px] border-[3px] border-retro-ink bg-retro-cream p-4">
@@ -317,11 +302,11 @@ export default function CampaignsPage() {
             </View>
           </View>
         </View>
-      ) : (
+      ) : filtersActive ? (
         <Text className="mb-5 font-retro-mono text-[12px] text-[#5c574f]">
           {filterSummary}
         </Text>
-      )}
+      ) : null}
 
       {showMineLoginGate ? null : scoped === undefined ? (
         <ActivityIndicator color="#211E1A" className="py-12" />

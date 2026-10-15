@@ -543,7 +543,7 @@ export default function CampaignDetailPage() {
       ) : null}
 
       <View nativeID="campaign-comments" className="mb-4">
-        <RetroPanel title="Comments.log" accent="marigold">
+        <RetroPanel title="Comments" accent="marigold">
           <CampaignCommentsSection
             ref={commentsSectionRef}
             campaignSlug={campaign.id}

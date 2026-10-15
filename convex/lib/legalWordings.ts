@@ -8,6 +8,7 @@ export type WordingId =
   | "W-COVER-1"
   | "W-HIDE-1"
   | "W-HIDE-DISCLOSURE-1"
+  | "W-ANON-1"
   | "W-MKT-1"
   | "W-DISPLAY-1"
   | "W-ACCT-AGE-1"
@@ -32,6 +33,7 @@ export const LEGAL_WORDINGS: Record<WordingId, string> = {
     "By continuing, I accept the Donor Terms, the Refund and Dispute Policy and the Terms of Service, and I have read the Privacy Notice.",
   "W-COVER-1": "Cover Dono's fee",
   "W-HIDE-1": "Hide my name",
+  "W-ANON-1": "Make anonymous",
   "W-HIDE-DISCLOSURE-1":
     "This hides your name on Dono's public pages. Your donation amount is still shown. It does not hide information Stripe gives to the person or society receiving the money — because your payment goes straight to their own Stripe account, they may be able to see your name there. Dono will not tell them who you are, and our Terms prohibit them from using payment information to identify or contact you.",
   "W-MKT-1": "Email me occasionally about Dono and campaigns I might like.",

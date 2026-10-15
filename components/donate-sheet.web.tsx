@@ -33,10 +33,10 @@ import {
 import {
   calculateDonationFeeBreakdown,
   formatMinorGbp,
+  type DonationFeeBreakdown,
 } from "@/lib/platform-fee";
 import { LEGAL_WORDINGS, wordingRecord } from "@/lib/legal/wordings";
 import {
-  ReceiptDivider,
   ReceiptLedger,
   ReceiptLineRow,
 } from "@/components/ui/receipt-lines";
@@ -174,6 +174,50 @@ function PaymentForm({
   );
 }
 
+function DonateFeeLedger({
+  feeBreakdown,
+  feeTotalLabel,
+  className,
+}: {
+  feeBreakdown: DonationFeeBreakdown;
+  feeTotalLabel: string;
+  className?: string;
+}) {
+  return (
+    <ReceiptLedger className={className}>
+      <ReceiptLineRow
+        label="Campaign contribution"
+        amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
+      />
+      <ReceiptLineRow
+        label={feeBreakdown.donoFeeLabel}
+        amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+        muted={!feeBreakdown.coverFees}
+      />
+      {feeBreakdown.coverFees ? (
+        <ReceiptLineRow
+          label="Fee cover (selected)"
+          amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+        />
+      ) : null}
+      <ReceiptLineRow
+        label="Stripe processing cost (paid by the campaign)"
+        amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
+        muted
+      />
+      <ReceiptLineRow
+        label="Total you will pay"
+        amount={feeTotalLabel}
+        emphasis
+      />
+      <ReceiptLineRow
+        label="Expected proceeds to the campaign"
+        amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
+      />
+    </ReceiptLedger>
+  );
+}
+
 export function DonateSheet({
   visible,
   campaignId,
@@ -249,10 +293,10 @@ export function DonateSheet({
     }
   };
 
-  // One box drives both flags; hiding the name is the inverse of showing support.
-  const handleShowSupportChange = (value: boolean) => {
-    onShowSupportPubliclyChange(value);
-    onAnonymousChange(!value);
+  // One box drives both flags; showing support publicly is the inverse of anonymity.
+  const handleAnonymousChange = (value: boolean) => {
+    onAnonymousChange(value);
+    onShowSupportPubliclyChange(!value);
   };
 
   const abandonActivePaymentIntent = () => {
@@ -309,10 +353,8 @@ export function DonateSheet({
         wordingRecord("W-AGE-1", ageAttested),
         wordingRecord("W-ACCEPT-1", legalAccepted),
         wordingRecord("W-COVER-1", coverFees),
-        wordingRecord("W-HIDE-1", isAnonymous),
-        wordingRecord("W-HIDE-DISCLOSURE-1", isAnonymous),
+        wordingRecord("W-ANON-1", isAnonymous),
         wordingRecord("W-MKT-1", marketingOptIn),
-        wordingRecord("W-DISPLAY-1", showSupportPublicly),
       ];
       const accepted = await acceptDocuments({
         context,
@@ -429,60 +471,35 @@ export function DonateSheet({
             ) : null}
 
             {recipientPanel && panelComplete ? (
-              <DonateRecipientPanel panel={recipientPanel} className="mt-4" />
-            ) : (
-              <Text className="mt-4 text-sm text-red-600">
-                Donation recipient details are incomplete. Payment is blocked until
-                the campaign owner finishes required disclosures.
-              </Text>
-            )}
-
-            <ReceiptLedger className="mt-4">
-              <ReceiptLineRow
-                label="Campaign contribution"
-                amount={formatMinorGbp(feeBreakdown.intendedCampaignAmountMinor)}
-              />
-              <ReceiptLineRow
-                label={feeBreakdown.donoFeeLabel}
-                amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
-                muted={!coverFees}
-              />
-              {coverFees ? (
-                <ReceiptLineRow
-                  label="Fee cover (selected)"
-                  amount={formatMinorGbp(feeBreakdown.platformFeeMinor)}
+              <View className="mt-4 flex-row items-stretch gap-4">
+                <DonateRecipientPanel
+                  panel={recipientPanel}
+                  className="min-w-0 flex-1"
                 />
-              ) : null}
-              <ReceiptLineRow
-                label="Stripe processing cost (paid by the campaign)"
-                amount={formatMinorGbp(feeBreakdown.estimatedStripeFeeMinor)}
-                muted
-              />
-              <ReceiptDivider />
-              <ReceiptLineRow
-                label="Total you will pay"
-                amount={feeTotalLabel}
-                emphasis
-              />
-              <ReceiptLineRow
-                label="Expected proceeds to the campaign"
-                amount={formatMinorGbp(feeBreakdown.amountToCampaignMinor)}
-              />
-            </ReceiptLedger>
-
-            <Text className="mt-3 text-xs leading-relaxed text-dono-muted">
-              {LEGAL_WORDINGS["W-DEADLINE-1"]}
-            </Text>
-            {mayExceedTarget ? (
-              <Text className="mt-2 text-xs leading-relaxed text-dono-muted">
-                {LEGAL_WORDINGS["W-SURPLUS-1"]}
-              </Text>
-            ) : null}
+                <DonateFeeLedger
+                  feeBreakdown={feeBreakdown}
+                  feeTotalLabel={feeTotalLabel}
+                  className="min-w-0 flex-1"
+                />
+              </View>
+            ) : (
+              <View className="mt-4 gap-4">
+                <Text className="text-sm text-red-600">
+                  Donation recipient details are incomplete. Payment is blocked until
+                  the campaign owner finishes required disclosures.
+                </Text>
+                <DonateFeeLedger
+                  feeBreakdown={feeBreakdown}
+                  feeTotalLabel={feeTotalLabel}
+                />
+              </View>
+            )}
 
             <View className="mt-4 gap-2">
               <DonateTermsCheckbox
                 accepted={termsAccepted}
                 onAcceptedChange={handleTermsChange}
+                showSurplus={mayExceedTarget}
               />
               <LegalCheckboxRow
                 accepted={coverFees}
@@ -495,20 +512,13 @@ export function DonateSheet({
                 </Text>
               </LegalCheckboxRow>
               <LegalCheckboxRow
-                accepted={showSupportPublicly}
-                onAcceptedChange={handleShowSupportChange}
-                accessibilityLabel={LEGAL_WORDINGS["W-DISPLAY-1"]}
+                accepted={isAnonymous}
+                onAcceptedChange={handleAnonymousChange}
+                accessibilityLabel={LEGAL_WORDINGS["W-ANON-1"]}
               >
-                <View>
-                  <Text className="text-sm leading-5 text-dono-text">
-                    {LEGAL_WORDINGS["W-DISPLAY-1"]}
-                  </Text>
-                  {!showSupportPublicly ? (
-                    <Text className="mt-1 text-xs leading-relaxed text-dono-muted">
-                      {LEGAL_WORDINGS["W-HIDE-DISCLOSURE-1"]}
-                    </Text>
-                  ) : null}
-                </View>
+                <Text className="text-sm leading-5 text-dono-text">
+                  {LEGAL_WORDINGS["W-ANON-1"]}
+                </Text>
               </LegalCheckboxRow>
               <LegalCheckboxRow
                 accepted={marketingOptIn}

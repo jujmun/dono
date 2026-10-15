@@ -176,48 +176,8 @@
   animation: retro-ticker 28s linear infinite;
 }
 
-/* Hero speech: bubble + tail lift as one; hard shadow lives on the panel. */
-.retro-hero-speech {
-  transition: transform 180ms ease-out;
-}
-
+/* Hero speech: bubble + tail share one outline; hard shadow lives on the panel. */
 .retro-hero-bubble {
   box-shadow: 6px 6px 0 #211e1a;
-  transition: box-shadow 180ms ease-out;
 }
 
-.retro-hero-dino {
-  transition: transform 220ms ease-out;
-  transform-origin: 30% 70%;
-}
-
-@media (hover: hover) and (pointer: fine) {
-  .retro-hero-speech:hover {
-    transform: translate(-3px, -3px);
-  }
-
-  .retro-hero-speech:hover .retro-hero-bubble {
-    box-shadow: 9px 9px 0 #211e1a;
-  }
-
-  .retro-hero-dino:hover {
-    transform: rotate(-4deg) translateY(-4px);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .retro-hero-speech,
-  .retro-hero-bubble,
-  .retro-hero-dino {
-    transition: none;
-  }
-
-  .retro-hero-speech:hover,
-  .retro-hero-dino:hover {
-    transform: none;
-  }
-
-  .retro-hero-speech:hover .retro-hero-bubble {
-    box-shadow: 6px 6px 0 #211e1a;
-  }
-}

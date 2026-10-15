@@ -8,7 +8,7 @@ import { buildConnectReturnUrl } from "@/lib/stripe/connect-return-url";
 import { getFriendlyConnectError } from "@/lib/stripe/errors";
 import { openStripeUrl } from "@/lib/stripe/open-url";
 import { retroKeyClass } from "@/lib/retro-key";
-import { cn, initialsFor } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type { MySociety, Society } from "@/lib/types";
 import { api } from "@convex/_generated/api";
 
@@ -74,11 +74,6 @@ export function SocietyCard({ society, showConnectCta = false }: SocietyCardProp
             image={society.coverImageUrl ?? "default"}
             className="h-[170px] border-b-[3px] border-retro-ink bg-retro-indigo"
           >
-            <View className="absolute left-4 top-4 h-10 w-10 items-center justify-center rounded-xl border-2 border-retro-ink bg-retro-mint">
-              <Text className="font-retro-bold text-sm text-retro-paper">
-                {initialsFor(society.name)}
-              </Text>
-            </View>
             <View className="absolute right-3 top-3 items-end gap-1.5">
               <View
                 className={`flex-row items-center gap-1 rounded-full border-2 border-retro-ink px-2 py-0.5 ${
