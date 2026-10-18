@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Modal, Platform, Pressable, Share, Text, View } from "react-native";
+import { Modal, Pressable, Text, View } from "react-native";
 import { Link } from "expo-router";
 import Animated, {
   Easing,
@@ -19,6 +19,7 @@ import { useMutation } from "convex/react";
 import { api } from "@convex/_generated/api";
 import { formatCurrency } from "@/lib/constants";
 import { EmailUpdateOptInCheckbox } from "@/components/email-update-opt-in-checkbox";
+import { shareCampaignWithThumbnail } from "@/lib/share-campaign";
 import {
   buildInstagramStoryShareUrl,
   getSiteOrigin,
@@ -35,6 +36,7 @@ type DonationThankYouModalProps = {
   matchedAmount?: number;
   campaignTitle: string;
   campaignSlug?: string;
+  campaignImage?: string;
   pendingConfirmation?: boolean;
   paymentIntentId?: string;
   /** CH-07: document versions accepted at checkout */
@@ -96,6 +98,7 @@ export function DonationThankYouModal({
   matchedAmount,
   campaignTitle,
   campaignSlug,
+  campaignImage,
   pendingConfirmation = false,
   paymentIntentId,
   legalVersions,
@@ -174,19 +177,8 @@ export function DonationThankYouModal({
           : getSiteOrigin();
     const message = `I just gave ${amountLabel} to support ${campaignTitle} on Dono. Join me:`;
 
-    try {
-      await Share.share(
-        Platform.OS === "ios"
-          ? { url, message }
-          : { message: `${message}\n${url}` },
-      );
-      setShareHint(null);
-    } catch {
-      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(`${message}\n${url}`);
-        setShareHint("Link copied");
-      }
-    }
+    const result = await shareCampaignWithThumbnail({ url, message, image: campaignImage });
+    setShareHint(result === "copied" ? "Link copied" : null);
   };
 
   useEffect(() => {

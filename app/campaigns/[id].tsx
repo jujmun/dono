@@ -5,7 +5,6 @@ import {
   Pressable,
   ActivityIndicator,
   Platform,
-  Share,
   useWindowDimensions,
 } from "react-native";
 import { useConvexAuth, useQuery, useAction, useMutation } from "convex/react";
@@ -34,6 +33,8 @@ import { buildGoalLineItems } from "@/lib/receipt";
 import { getCampaignTemplate } from "@/lib/campaign-templates";
 import { ENABLE_CAMPAIGN_TEMPLATES } from "@/lib/featureFlags";
 import type { Campaign } from "@/lib/types";
+import { getPrimaryCampaignImage } from "@/lib/campaign-images";
+import { shareCampaignWithThumbnail } from "@/lib/share-campaign";
 import { api } from "@convex/_generated/api";
 import { DonateSheet } from "@/components/donate-sheet";
 import { DonationThankYouModal } from "@/components/donation-thank-you-modal";
@@ -296,17 +297,7 @@ export default function CampaignDetailPage() {
       campaign_category: campaign.category,
     });
 
-    try {
-      await Share.share(
-        Platform.OS === "ios"
-          ? { url, message }
-          : { message: `${message}\n${url}` },
-      );
-    } catch {
-      if (Platform.OS === "web" && typeof navigator !== "undefined" && navigator.clipboard) {
-        await navigator.clipboard.writeText(url);
-      }
-    }
+    await shareCampaignWithThumbnail({ url, message, image: getPrimaryCampaignImage(campaign) });
   };
 
   const openDonateSheet = () => {
@@ -594,6 +585,7 @@ export default function CampaignDetailPage() {
         matchedAmount={thankYou?.matchedAmount}
         campaignTitle={campaign.title}
         campaignSlug={campaign.id}
+        campaignImage={getPrimaryCampaignImage(campaign)}
         pendingConfirmation={thankYou?.pendingConfirmation}
         paymentIntentId={thankYou?.paymentIntentId}
         legalVersions={(
