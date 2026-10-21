@@ -82,7 +82,7 @@ async function validateCampaignAndAmount(
     campaignId: Id<"campaigns">;
     campaignSlug: string;
     title: string;
-    communitySlug: string;
+    communitySlug?: string;
     stripeAccountId: string;
     goal: number;
     raised: number;
@@ -300,7 +300,7 @@ export const createPaymentIntent = action({
           campaignId: campaign.campaignId,
           campaignSlug: campaign.campaignSlug,
           campaignTitle: campaign.title.slice(0, 500),
-          communitySlug: campaign.communitySlug,
+          ...(campaign.communitySlug ? { communitySlug: campaign.communitySlug } : {}),
           donationType: "one_time",
           merchantOfRecord: "connected_account",
         },

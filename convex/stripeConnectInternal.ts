@@ -53,7 +53,9 @@ export const getByUserId = internalQuery({
         accounts.find((a) => a.communitySlug === args.communitySlug) ?? null
       );
     }
-    return accounts[0] ?? null;
+    // A user who also leads a society has a separate, community-scoped row —
+    // don't let that shadow their own personal (individual-poster) account.
+    return accounts.find((a) => !a.communitySlug) ?? null;
   },
 });
 
@@ -190,9 +192,10 @@ export const assertCanManageSocietyConnect = internalQuery({
   },
 });
 
-/** Connect onboarding status for the current user + society slug. */
+/** Connect onboarding status for the current user — scoped to a society
+ * slug, or (when omitted) the caller's own per-user account. */
 export const getMyConnectStatus = query({
-  args: { communitySlug: v.string() },
+  args: { communitySlug: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const userId = await optionalUserId(ctx);
     if (!userId) return null;
@@ -201,8 +204,9 @@ export const getMyConnectStatus = query({
       .query("stripeConnectAccounts")
       .withIndex("by_user", (q) => q.eq("userId", userId))
       .collect();
-    const account =
-      accounts.find((a) => a.communitySlug === args.communitySlug) ?? null;
+    const account = args.communitySlug
+      ? accounts.find((a) => a.communitySlug === args.communitySlug) ?? null
+      : accounts.find((a) => !a.communitySlug) ?? null;
     if (!account) {
       return toPublicConnectStatus({
         exists: false,
@@ -265,31 +269,49 @@ export const getCampaignDonationReadiness = query({
       };
     }
 
-    const connectAccount = await ctx.db
-      .query("stripeConnectAccounts")
-      .withIndex("by_community", (q) =>
-        q.eq("communitySlug", campaign.creator.communityId),
-      )
-      .first();
+    const isIndividual = campaign.creator.type === "student";
+    const notSetUpReason = isIndividual
+      ? "This campaign's creator has not set up Stripe payments yet."
+      : "The beneficiary society has not set up Stripe payments yet.";
+
+    let connectAccount;
+    if (isIndividual) {
+      const creatorUserId = campaign.createdBy;
+      if (!creatorUserId) {
+        return { canAcceptDonations: false as const, reason: notSetUpReason };
+      }
+      connectAccount = await ctx.db
+        .query("stripeConnectAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", creatorUserId))
+        .first();
+    } else {
+      connectAccount = await ctx.db
+        .query("stripeConnectAccounts")
+        .withIndex("by_community", (q) =>
+          q.eq("communitySlug", campaign.creator.communityId),
+        )
+        .first();
+    }
 
     if (!connectAccount) {
-      return {
-        canAcceptDonations: false as const,
-        reason: "The beneficiary society has not set up Stripe payments yet.",
-      };
+      return { canAcceptDonations: false as const, reason: notSetUpReason };
     }
 
     if (connectAccount.accountVersion !== "v2") {
       return {
         canAcceptDonations: false as const,
-        reason: "The beneficiary society must complete the new Stripe payment setup.",
+        reason: isIndividual
+          ? "This campaign's creator must complete the new Stripe payment setup."
+          : "The beneficiary society must complete the new Stripe payment setup.",
       };
     }
 
     if (!isCardPaymentsActive(connectAccount)) {
       return {
         canAcceptDonations: false as const,
-        reason: "The beneficiary society is still completing Stripe payment setup.",
+        reason: isIndividual
+          ? "This campaign's creator is still completing Stripe payment setup."
+          : "The beneficiary society is still completing Stripe payment setup.",
       };
     }
 

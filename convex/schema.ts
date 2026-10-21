@@ -6,6 +6,7 @@ import {
   campaignFields,
   communityFields,
   fundFields,
+  individualPosterFields,
   notificationFields,
   societyFields,
   societyMemberFields,
@@ -110,6 +111,12 @@ export default defineSchema({
     .index("by_user", ["userId"])
     .index("by_community_user", ["communitySlug", "userId"])
     .index("by_community_status", ["communitySlug", "status"]),
+  /** Admin-managed standing permission to post campaigns individually — see
+   * convex/individualPosters.ts. One row per user (re-used across apply/
+   * reject/re-apply cycles, never deleted). */
+  individualPosters: defineTable(individualPosterFields)
+    .index("by_userId", ["userId"])
+    .index("by_status", ["status"]),
   /** New user-facing "Create Society" submissions — distinct from the legacy
    * `communities` catalog (which also has a type: "society" entry) and from
    * `societyMembers` (leadership/membership on those catalog entries). */
@@ -140,7 +147,8 @@ export default defineSchema({
     /** Required only when amountSpent < amountRaised at posting time. */
     reconciliationNote: v.optional(v.string()),
     postedByUserId: v.id("users"),
-    postedByRole: v.literal("leader"),
+    /** "owner" for an individual poster's own campaign (no leader tier). */
+    postedByRole: v.union(v.literal("leader"), v.literal("owner")),
     createdAt: v.number(),
   }).index("by_campaign", ["campaignId"]),
   campaignFollows: defineTable({

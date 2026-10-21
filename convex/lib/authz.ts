@@ -307,3 +307,17 @@ export async function requireCanManageSociety(ctx: CtxWithDb, communitySlug: str
   }
   return { userId };
 }
+
+/** Standing admin-approved permission to post campaigns individually
+ * (no parent society) — see convex/individualPosters.ts. */
+export async function requireIndividualPoster(ctx: CtxWithDb) {
+  const { userId } = await requireStudentCreator(ctx);
+  const application = await ctx.db
+    .query("individualPosters")
+    .withIndex("by_userId", (q) => q.eq("userId", userId))
+    .unique();
+  if (!application || application.status !== "approved" || application.revokedAt) {
+    accessDenied();
+  }
+  return { userId, application };
+}

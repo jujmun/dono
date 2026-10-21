@@ -1,12 +1,37 @@
 import { ConvexError, v } from "convex/values";
+import type { Doc } from "./_generated/dataModel";
 import { mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { getProfileByUserId, requireSocietyLeader } from "./lib/authz";
+import {
+  getProfileByUserId,
+  requireSocietyLeader,
+  requireVerifiedUser,
+} from "./lib/authz";
 import {
   assertNotRateLimited,
   recordRateLimitAttempt,
 } from "./auth/rateLimit";
 import { displayRaised, isCampaignFunded } from "./lib/existingFunding";
+
+/** Society campaigns restrict updates to an approved leader. Individual
+ * posters have no leader tier — the campaign's own owner (or named
+ * Responsible Individual) plays that role instead. */
+async function requireUpdatePoster(ctx: MutationCtx, campaign: Doc<"campaigns">) {
+  const communitySlug = campaign.creator.communityId;
+  if (communitySlug) {
+    const { userId } = await requireSocietyLeader(ctx, communitySlug);
+    return { userId, role: "leader" as const };
+  }
+  const { userId } = await requireVerifiedUser(ctx);
+  if (campaign.createdBy !== userId && campaign.responsibleIndividualUserId !== userId) {
+    throw new ConvexError({
+      code: "FORBIDDEN",
+      message: "You do not have permission for this action.",
+    });
+  }
+  return { userId, role: "owner" as const };
+}
 
 const MAX_HEADLINE_LENGTH = 120;
 const MAX_BODY_LENGTH = 500;
@@ -43,7 +68,7 @@ export const generateUpdateMediaUploadUrl = mutation({
     if (!campaign) {
       throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
     }
-    const { userId } = await requireSocietyLeader(ctx, campaign.creator.communityId);
+    const { userId } = await requireUpdatePoster(ctx, campaign);
 
     const opts = { key: `campaignUpdateMedia:${userId}`, ...UPDATE_MEDIA_UPLOAD_LIMIT };
     await assertNotRateLimited(ctx, opts);
@@ -69,7 +94,7 @@ export const create = mutation({
     if (!campaign) {
       throw new ConvexError({ code: "NOT_FOUND", message: "Campaign not found." });
     }
-    const { userId } = await requireSocietyLeader(ctx, campaign.creator.communityId);
+    const { userId, role } = await requireUpdatePoster(ctx, campaign);
     assertUpdateEligible(campaign);
 
     if (args.mediaStorageIds.length === 0) {
@@ -162,7 +187,7 @@ export const create = mutation({
       amountRaised,
       reconciliationNote,
       postedByUserId: userId,
-      postedByRole: "leader",
+      postedByRole: role,
       createdAt: Date.now(),
     });
 

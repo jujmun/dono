@@ -47,14 +47,17 @@ async function assertCampaignOwnerAccess(
   if (campaign.createdBy === userId) return;
   if (campaign.responsibleIndividualUserId === userId) return;
 
-  const membership = await ctx.db
-    .query("societyMembers")
-    .withIndex("by_community_user", (q) =>
-      q.eq("communitySlug", campaign.creator.communityId).eq("userId", userId),
-    )
-    .unique();
-  if (membership?.status === "approved" && membership.role === "leader") {
-    return;
+  const communitySlug = campaign.creator.communityId;
+  if (communitySlug) {
+    const membership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", communitySlug).eq("userId", userId),
+      )
+      .unique();
+    if (membership?.status === "approved" && membership.role === "leader") {
+      return;
+    }
   }
 
   throw new ConvexError({

@@ -98,7 +98,7 @@ export default function CampaignsPage() {
         posthog?.capture("campaign_draft_deleted", {
           campaign_title: campaign.title,
           campaign_category: campaign.category,
-          campaign_community_slug: campaign.creator.communityId,
+          campaign_community_slug: campaign.creator.communityId ?? null,
           source: "my_campaigns",
         });
         setConfirmDeleteSlug(null);

@@ -41,6 +41,11 @@ const adminNavItems = [
     match: (p: string) => p.startsWith("/admin/groups"),
   },
   {
+    href: "/admin/individual-posters",
+    label: "Posters",
+    match: (p: string) => p.startsWith("/admin/individual-posters"),
+  },
+  {
     href: "/admin/reports",
     label: "Reports",
     match: (p: string) => p.startsWith("/admin/reports"),

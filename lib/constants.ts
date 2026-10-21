@@ -78,13 +78,13 @@ export function getCampaignApprovalStage(
   if (campaign.status !== "pending" && campaign.status !== "changes_requested") {
     return null;
   }
-  if (campaign.creator.type === "society") {
-    if (campaign.societyApprovalStatus === undefined) {
-      return { label: "Draft" };
-    }
-    if (campaign.societyApprovalStatus !== "approved") {
-      return { label: "Awaiting society leader approval" };
-    }
+  // societyApprovalStatus doubles as "has this been submitted for review"
+  // for every creator type, not just society — see campaignCreator.submitForReview.
+  if (campaign.societyApprovalStatus === undefined) {
+    return { label: "Draft" };
+  }
+  if (campaign.creator.type === "society" && campaign.societyApprovalStatus !== "approved") {
+    return { label: "Awaiting society leader approval" };
   }
   return { label: "Awaiting admin approval" };
 }

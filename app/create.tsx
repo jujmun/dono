@@ -7,7 +7,7 @@ import {
   ScrollView,
   ActivityIndicator,
 } from "react-native";
-import { useRouter, useLocalSearchParams, Link } from "expo-router";
+import { useRouter, useLocalSearchParams, Link, type Href } from "expo-router";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import * as ImagePicker from "expo-image-picker";
 import {
@@ -27,6 +27,7 @@ import { StoryTextInput } from "@/components/story-text";
 import { ImageCropModal, type CropSourceImage } from "@/components/image-crop-modal";
 import { LoginGate } from "@/components/login-gate";
 import { DonorCreateGate } from "@/components/donor-create-gate";
+import { IndividualPayoutSetupBanner } from "@/components/individual-payout-setup-banner";
 import { isAlumni } from "@/lib/auth/user-type";
 import { CampaignImage } from "@/components/ui/campaign-image";
 import { CategoryBadge } from "@/components/ui/category-badge";
@@ -224,11 +225,18 @@ export default function CreateCampaignPage() {
   );
   const requiresApproval = Boolean(editCampaign?.requiresApproval);
   const attachedSocietySlug = (editCampaign?.creator.communityId ?? "").trim();
-  const societyLocked = requiresApproval || Boolean(attachedSocietySlug);
+  const attachedAsIndividual = editCampaign?.creator.type === "student";
+  const societyLocked = requiresApproval || Boolean(attachedSocietySlug) || attachedAsIndividual;
   const mySocieties = useQuery(
     api.societyMembers.listMyApprovedSocieties,
     isAuthenticated && !societyLocked ? {} : "skip",
   );
+  const myIndividualStatus = useQuery(
+    api.individualPosters.myStatus,
+    isAuthenticated && !societyLocked ? {} : "skip",
+  );
+  const isApprovedIndividualPoster =
+    myIndividualStatus?.status === "approved" && !myIndividualStatus.revoked;
   const pendingCampaignEdit = useQuery(
     api.campaignEditRequests.getPendingForEntity,
     isAuthenticated && editSlug && requiresApproval ? { slug: editSlug } : "skip",
@@ -244,6 +252,7 @@ export default function CreateCampaignPage() {
   const [cropReplaceIndex, setCropReplaceIndex] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [form, setForm] = useState(initialForm);
+  const [postAsIndividual, setPostAsIndividual] = useState(false);
   const [template, setTemplate] = useState<string>(DEFAULT_CAMPAIGN_TEMPLATE_ID);
   const [pickedImages, setPickedImages] = useState<PickedImage[]>([]);
   const [videoUrl, setVideoUrl] = useState("");
@@ -280,7 +289,7 @@ export default function CreateCampaignPage() {
       setForm({
         title: editCampaign.title,
         category: editCampaign.category,
-        communitySlug: editCampaign.creator.communityId,
+        communitySlug: editCampaign.creator.communityId ?? "",
         description: editCampaign.description,
         story: editCampaign.story,
         goal: String(editCampaign.goal),
@@ -289,6 +298,7 @@ export default function CreateCampaignPage() {
             ? String(editCampaign.existingFunding)
             : "",
       });
+      setPostAsIndividual(editCampaign.creator.type === "student");
       setTemplate(editCampaign.template ?? DEFAULT_CAMPAIGN_TEMPLATE_ID);
       setVideoUrl(editCampaign.videoUrl ?? "");
       setAdditionalNotes(editCampaign.additionalNotes ?? "");
@@ -553,6 +563,7 @@ export default function CreateCampaignPage() {
       expectedExpenditureDate: expectedExpenditureDate.trim(),
       plannedUpdateSchedule: plannedUpdateSchedule.trim(),
       ownershipStatement: ownershipStatement.trim(),
+      postAsIndividual,
     });
     setCampaignSlug(result.slug);
     return result.slug;
@@ -644,8 +655,11 @@ export default function CreateCampaignPage() {
     switch (step) {
       case 0:
         return (
-          Boolean(form.title && form.category && form.communitySlug) &&
-          !videoUrlInvalid
+          Boolean(
+            form.title &&
+              form.category &&
+              (form.communitySlug || postAsIndividual),
+          ) && !videoUrlInvalid
         );
       case 1:
         return form.description && form.story;
@@ -690,6 +704,7 @@ export default function CreateCampaignPage() {
       expectedExpenditureDate: expectedExpenditureDate.trim(),
       plannedUpdateSchedule: plannedUpdateSchedule.trim(),
       ownershipStatement: ownershipStatement.trim(),
+      postAsIndividual,
     };
   };
 
@@ -1208,64 +1223,117 @@ export default function CreateCampaignPage() {
                 {societyLocked ? (
                   <View className="gap-1 rounded-xl border-2 border-retro-ink bg-retro-cream p-4">
                     <Text className="font-retro-bold text-xs text-retro-ink">
-                      {editCampaign?.creator.name ?? "Loading..."}
+                      {attachedAsIndividual
+                        ? "Posting individually"
+                        : editCampaign?.creator.name ?? "Loading..."}
                     </Text>
                     <Text className="text-xs text-[#5c574f]">
-                      The society a campaign posts under can&apos;t be changed.
+                      {attachedAsIndividual
+                        ? "This campaign is posted individually and can't be changed to a society."
+                        : "The society a campaign posts under can't be changed."}
                     </Text>
                   </View>
-                ) : mySocieties === undefined ? (
+                ) : mySocieties === undefined || myIndividualStatus === undefined ? (
                   <ActivityIndicator color="#17211B" />
-                ) : mySocieties.length === 0 ? (
-                  <View className="gap-3 rounded-xl border-2 border-retro-ink bg-retro-cream p-4">
-                    <Text className="text-sm text-[#5c574f]">
-                      Campaigns can only be created by society members. Join a
-                      society or create one first.
-                    </Text>
-                    <View className="flex-row flex-wrap gap-2">
-                      <Link href="/societies" asChild>
-                        <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
-                          <Text className="font-retro-bold text-xs text-retro-ink">
-                            Browse societies
-                          </Text>
-                        </Pressable>
-                      </Link>
-                      <Link href="/create-society" asChild>
-                        <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
-                          <Text className="font-retro-bold text-xs text-retro-paper">
-                            Create a society
-                          </Text>
-                        </Pressable>
-                      </Link>
-                    </View>
-                  </View>
                 ) : (
-                  <View className="flex-row flex-wrap gap-2">
-                    {mySocieties.map((society) => (
-                      <Pressable
-                        key={society.slug}
-                        onPress={() => update("communitySlug", society.slug)}
-                        className={`rounded-lg border-2 px-3 py-2.5 ${
-                          form.communitySlug === society.slug
-                            ? "border-retro-ink bg-retro-mint/10"
-                            : "border-retro-ink"
-                        }`}
-                      >
-                        <Text
-                          className={`font-retro-bold text-xs ${
-                            form.communitySlug === society.slug
-                              ? "text-retro-mint"
-                              : "text-[#5c574f]"
+                  <View className="gap-3">
+                    {mySocieties.length === 0 ? (
+                      <Text className="text-sm text-[#5c574f]">
+                        Campaigns can only be created by society members, or by
+                        admin-approved individual posters.
+                      </Text>
+                    ) : null}
+                    <View className="flex-row flex-wrap gap-2">
+                      {mySocieties.map((society) => (
+                        <Pressable
+                          key={society.slug}
+                          onPress={() => {
+                            update("communitySlug", society.slug);
+                            setPostAsIndividual(false);
+                          }}
+                          className={`rounded-lg border-2 px-3 py-2.5 ${
+                            !postAsIndividual && form.communitySlug === society.slug
+                              ? "border-retro-ink bg-retro-mint/10"
+                              : "border-retro-ink"
                           }`}
                         >
-                          {society.name}
-                          {society.role === "leader" ? " · Leader" : ""}
-                        </Text>
-                      </Pressable>
-                    ))}
+                          <Text
+                            className={`font-retro-bold text-xs ${
+                              !postAsIndividual && form.communitySlug === society.slug
+                                ? "text-retro-mint"
+                                : "text-[#5c574f]"
+                            }`}
+                          >
+                            {society.name}
+                            {society.role === "leader" ? " · Leader" : ""}
+                          </Text>
+                        </Pressable>
+                      ))}
+                      {isApprovedIndividualPoster ? (
+                        <Pressable
+                          onPress={() => {
+                            update("communitySlug", "");
+                            setPostAsIndividual(true);
+                          }}
+                          className={`rounded-lg border-2 px-3 py-2.5 ${
+                            postAsIndividual
+                              ? "border-retro-ink bg-retro-mint/10"
+                              : "border-retro-ink"
+                          }`}
+                        >
+                          <Text
+                            className={`font-retro-bold text-xs ${
+                              postAsIndividual ? "text-retro-mint" : "text-[#5c574f]"
+                            }`}
+                          >
+                            Individually
+                          </Text>
+                        </Pressable>
+                      ) : null}
+                    </View>
+                    <View className="flex-row flex-wrap gap-2">
+                      {mySocieties.length === 0 ? (
+                        <>
+                          <Link href="/societies" asChild>
+                            <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
+                              <Text className="font-retro-bold text-xs text-retro-ink">
+                                Browse societies
+                              </Text>
+                            </Pressable>
+                          </Link>
+                          <Link href="/create-society" asChild>
+                            <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-mint px-4 py-2">
+                              <Text className="font-retro-bold text-xs text-retro-paper">
+                                Create a society
+                              </Text>
+                            </Pressable>
+                          </Link>
+                        </>
+                      ) : null}
+                      {!isApprovedIndividualPoster ? (
+                        <Link href={"/apply-individual-poster" as Href} asChild>
+                          <Pressable className="retro-key rounded-full border-2 border-retro-ink bg-retro-paper px-4 py-2">
+                            <Text className="font-retro-bold text-xs text-retro-ink">
+                              {myIndividualStatus?.status === "pending"
+                                ? "Individual poster application pending"
+                                : "Apply to be an individual poster"}
+                            </Text>
+                          </Pressable>
+                        </Link>
+                      ) : null}
+                    </View>
                   </View>
                 )}
               </View>
+
+              {postAsIndividual || attachedAsIndividual ? (
+                <IndividualPayoutSetupBanner
+                  isOwner
+                  returnPath={
+                    campaignSlug ? `/create?editSlug=${campaignSlug}` : "/create"
+                  }
+                />
+              ) : null}
             </View>
           )}
 
@@ -1975,6 +2043,7 @@ export default function CreateCampaignPage() {
                       expectedExpenditureDate: fields.expectedExpenditureDate,
                       plannedUpdateSchedule: fields.plannedUpdateSchedule,
                       ownershipStatement: fields.ownershipStatement,
+                      postAsIndividual: fields.postAsIndividual,
                       ...(needsResubmit ||
                       editCampaign?.societyApprovalStatus !== undefined
                         ? { logEdit: true }

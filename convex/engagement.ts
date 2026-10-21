@@ -51,14 +51,17 @@ async function assertCanHideCampaignComment(
   userId: Id<"users">,
 ) {
   if (campaign.createdBy === userId) return;
-  const membership = await ctx.db
-    .query("societyMembers")
-    .withIndex("by_community_user", (q) =>
-      q.eq("communitySlug", campaign.creator.communityId).eq("userId", userId),
-    )
-    .unique();
-  if (membership?.status === "approved" && membership.role === "leader") {
-    return;
+  const communitySlug = campaign.creator.communityId;
+  if (communitySlug) {
+    const membership = await ctx.db
+      .query("societyMembers")
+      .withIndex("by_community_user", (q) =>
+        q.eq("communitySlug", communitySlug).eq("userId", userId),
+      )
+      .unique();
+    if (membership?.status === "approved" && membership.role === "leader") {
+      return;
+    }
   }
   throw new ConvexError({
     code: "FORBIDDEN",
@@ -67,17 +70,22 @@ async function assertCanHideCampaignComment(
 }
 
 /**
- * Single shared gate for anyone creating/editing/deleting a comment: must be
- * an approved member of the campaign's OWNING society (not just following it,
- * not pending/rejected, not a member of some other society). Delegates to the
- * canonical `requireSocietyMember` (also used by campaign creation) so this
- * can't drift from that check — no campaign-owner bypass, since owners who
- * are removed from the society should lose comment rights too.
+ * Single shared gate for anyone creating/editing/deleting a comment. Society
+ * campaigns restrict commenting to an approved member of the campaign's
+ * OWNING society (not just following it, not pending/rejected, not a member
+ * of some other society) — delegates to the canonical `requireSocietyMember`
+ * (also used by campaign creation) so this can't drift from that check; no
+ * campaign-owner bypass, since owners who are removed from the society
+ * should lose comment rights too. Individual-poster campaigns have no
+ * society to restrict to, so any verified user may comment.
  */
 async function requireCampaignCommenter(
   ctx: MutationCtx,
   campaign: Doc<"campaigns">,
 ) {
+  if (!campaign.creator.communityId) {
+    return await requireVerifiedUser(ctx);
+  }
   return await requireSocietyMember(ctx, campaign.creator.communityId);
 }
 

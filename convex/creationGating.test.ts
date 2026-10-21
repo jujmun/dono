@@ -452,7 +452,7 @@ describe("creation mutations without student card", () => {
         .unique();
     });
     expect(campaign?.title).toBe("Halfway");
-    expect(campaign?.creator.communityId).toBe("");
+    expect(campaign?.creator.communityId).toBeUndefined();
     expect(campaign?.societyApprovalStatus).toBeUndefined();
   });
 

@@ -45,7 +45,8 @@ export interface Campaign {
     name: string;
     type: CommunityType;
     avatar: string;
-    communityId: string;
+    /** Unset for type "student" — individual posters have no parent community. */
+    communityId?: string;
   };
   verifications: Verification[];
   university: string;
