@@ -150,8 +150,10 @@ export const resolveCampaignMerchantAccount = internalQuery({
       });
     }
 
-    // CR-00: Society-only beta — refuse donations to individual/student campaigns.
-    if (campaign.creator.type !== "society") {
+    // Approved individual posters ("student" creator type) and societies may
+    // both accept donations; every other non-society creator type remains
+    // blocked for the Society-only beta.
+    if (campaign.creator.type !== "society" && campaign.creator.type !== "student") {
       throw new ConvexError({
         code: "FEATURE_REMOVED",
         message:
@@ -167,31 +169,55 @@ export const resolveCampaignMerchantAccount = internalQuery({
       });
     }
 
-    const connectAccount = await ctx.db
-      .query("stripeConnectAccounts")
-      .withIndex("by_community", (q) =>
-        q.eq("communitySlug", campaign.creator.communityId),
-      )
-      .first();
+    let connectAccount;
+    if (campaign.creator.type === "student") {
+      const creatorUserId = campaign.createdBy;
+      if (!creatorUserId) {
+        throw new ConvexError({
+          code: "CONNECT_NOT_READY",
+          message: "This campaign's creator has not set up Stripe payments yet.",
+        });
+      }
+      connectAccount = await ctx.db
+        .query("stripeConnectAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", creatorUserId))
+        .first();
+    } else {
+      connectAccount = await ctx.db
+        .query("stripeConnectAccounts")
+        .withIndex("by_community", (q) =>
+          q.eq("communitySlug", campaign.creator.communityId),
+        )
+        .first();
+    }
 
     if (!connectAccount) {
       throw new ConvexError({
         code: "CONNECT_NOT_READY",
-        message: "The beneficiary society has not set up Stripe payments yet.",
+        message:
+          campaign.creator.type === "student"
+            ? "This campaign's creator has not set up Stripe payments yet."
+            : "The beneficiary society has not set up Stripe payments yet.",
       });
     }
 
     if (connectAccount.accountVersion !== "v2") {
       throw new ConvexError({
         code: "CONNECT_NOT_READY",
-        message: "The beneficiary society must complete the new Stripe payment setup.",
+        message:
+          campaign.creator.type === "student"
+            ? "This campaign's creator must complete the new Stripe payment setup."
+            : "The beneficiary society must complete the new Stripe payment setup.",
       });
     }
 
     if (!(connectAccount.cardPaymentsActive ?? connectAccount.chargesEnabled)) {
       throw new ConvexError({
         code: "CHARGES_DISABLED",
-        message: "The beneficiary society is still completing Stripe payment setup.",
+        message:
+          campaign.creator.type === "student"
+            ? "This campaign's creator is still completing Stripe payment setup."
+            : "The beneficiary society is still completing Stripe payment setup.",
       });
     }
 
@@ -214,6 +240,18 @@ export const getConnectAccountIdForCampaign = internalQuery({
   handler: async (ctx, args) => {
     const campaign = await ctx.db.get(args.campaignId);
     if (!campaign) return null;
+    if (campaign.creator.type === "student") {
+      const creatorUserId = campaign.createdBy;
+      if (!creatorUserId) return null;
+      const connectAccount = await ctx.db
+        .query("stripeConnectAccounts")
+        .withIndex("by_user", (q) => q.eq("userId", creatorUserId))
+        .first();
+      if (!connectAccount || connectAccount.accountVersion !== "v2") {
+        return null;
+      }
+      return { stripeAccountId: connectAccount.stripeAccountId };
+    }
     const connectAccount = await ctx.db
       .query("stripeConnectAccounts")
       .withIndex("by_community", (q) =>
@@ -578,7 +616,9 @@ export const markDonationSucceeded = internalMutation({
       donation.amount,
     );
     await ctx.db.patch(campaign._id, { raised, donors, status });
-    await incrementCommunityRaised(ctx, campaign.creator.communityId, donation.amount);
+    if (campaign.creator.communityId) {
+      await incrementCommunityRaised(ctx, campaign.creator.communityId, donation.amount);
+    }
 
     const donorName = donation.isAnonymous
       ? "Anonymous donor"
@@ -1337,11 +1377,13 @@ export const markDonationRefunded = internalMutation({
             ? Math.max(0, campaign.donors - 1)
             : campaign.donors,
         });
-        await incrementCommunityRaised(
-          ctx,
-          campaign.creator.communityId,
-          -refundPounds,
-        );
+        if (campaign.creator.communityId) {
+          await incrementCommunityRaised(
+            ctx,
+            campaign.creator.communityId,
+            -refundPounds,
+          );
+        }
       }
     }
 
@@ -1440,11 +1482,13 @@ export const markDonationDisputeClosed = internalMutation({
             ? Math.max(0, campaign.donors - 1)
             : campaign.donors,
         });
-        await incrementCommunityRaised(
-          ctx,
-          campaign.creator.communityId,
-          -refundPounds,
-        );
+        if (campaign.creator.communityId) {
+          await incrementCommunityRaised(
+            ctx,
+            campaign.creator.communityId,
+            -refundPounds,
+          );
+        }
       }
     }
 

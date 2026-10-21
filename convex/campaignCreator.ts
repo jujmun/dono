@@ -4,6 +4,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import {
+  requireIndividualPoster,
   requireRecordOwner,
   requireSocietyLeader,
   requireSocietyMember,
@@ -32,6 +33,7 @@ import {
   buildCampaignEditedMessage,
   buildCampaignReadyForAdminMessage,
   buildCampaignResubmittedMessage,
+  buildIndividualCampaignReadyForAdminMessage,
   createNotification,
 } from "./lib/notifications";
 
@@ -242,16 +244,47 @@ async function applyCampaignOwnerPatch(
   }
 }
 
-/** Drafts may be saved before a society is chosen; attach once, never replace. */
-async function attachSocietyIfMissing(
+/** Drafts may be saved before a society/individual choice is made; attach
+ * once, never replace. */
+async function attachCreatorIfMissing(
   ctx: MutationCtx,
   campaign: Doc<"campaigns">,
-  communitySlug: string | undefined,
+  args: { communitySlug?: string; postAsIndividual?: boolean },
 ) {
-  const nextSociety = communitySlug?.trim() ?? "";
-  if (!nextSociety || campaign.creator.communityId) {
+  const alreadyAttached =
+    Boolean(campaign.creator.communityId) || campaign.creator.type === "student";
+  if (alreadyAttached) return;
+
+  if (args.postAsIndividual) {
+    const { userId } = await requireIndividualPoster(ctx);
+    const [user, profile] = await Promise.all([
+      ctx.db.get(userId),
+      ctx.db
+        .query("profiles")
+        .withIndex("by_userId", (q) => q.eq("userId", userId))
+        .unique(),
+    ]);
+    const creatorName =
+      profile?.name?.trim() || user?.name?.trim() || "Individual poster";
+    const initials = creatorName
+      .split(" ")
+      .map((part) => part[0])
+      .join("")
+      .slice(0, 2)
+      .toUpperCase();
+    await ctx.db.patch(campaign._id, {
+      creator: {
+        name: creatorName,
+        type: "student",
+        avatar: initials || "IP",
+        communityId: undefined,
+      },
+    });
     return;
   }
+
+  const nextSociety = args.communitySlug?.trim() ?? "";
+  if (!nextSociety) return;
   const { community } = await requireSocietyMember(ctx, nextSociety);
   const creatorName = community.name;
   const initials = creatorName
@@ -354,6 +387,8 @@ export const update = mutation({
     responsibleIndividualUserId: v.optional(v.id("users")),
     /** Attaches a society only when the draft does not already have one. */
     communitySlug: v.optional(v.string()),
+    /** Attaches as an individual poster instead — see requireIndividualPoster. */
+    postAsIndividual: v.optional(v.boolean()),
     /** True only from app/create.tsx's edit mode (?editSlug=..., reached from
      * an admin-changes-requested notification) — logs a campaign_edited
      * event so admins see it in the review thread. Left unset by the same
@@ -380,7 +415,10 @@ export const update = mutation({
     }
 
     await applyCampaignOwnerPatch(ctx, campaign, args);
-    await attachSocietyIfMissing(ctx, campaign, args.communitySlug);
+    await attachCreatorIfMissing(ctx, campaign, {
+      communitySlug: args.communitySlug,
+      postAsIndividual: args.postAsIndividual,
+    });
     return null;
   },
 });
@@ -398,6 +436,7 @@ const saveDraftFields = {
   expectedExpenditureDate: v.optional(v.string()),
   plannedUpdateSchedule: v.optional(v.string()),
   ownershipStatement: v.optional(v.string()),
+  postAsIndividual: v.optional(v.boolean()),
 };
 
 /** Persist a campaign without opening society/admin review queues. */
@@ -440,7 +479,10 @@ export const saveDraft = mutation({
         ownershipStatement: args.ownershipStatement,
         allowIncomplete: true,
       });
-      await attachSocietyIfMissing(ctx, campaign, args.communitySlug);
+      await attachCreatorIfMissing(ctx, campaign, {
+        communitySlug: args.communitySlug,
+        postAsIndividual: args.postAsIndividual,
+      });
       return { slug: campaign.slug };
     }
 
@@ -459,6 +501,7 @@ export const saveDraft = mutation({
         plannedUpdateSchedule: args.plannedUpdateSchedule,
         ownershipStatement: args.ownershipStatement,
         additionalNotes: args.additionalNotes,
+        postAsIndividual: args.postAsIndividual,
       },
       { notifyOwner: false, incomplete: true },
     );
@@ -615,7 +658,7 @@ export const submitForReview = mutation({
         message: "Set a funding goal before submitting for review.",
       });
     }
-    if (!campaign.creator.communityId) {
+    if (requiresSocietyApproval(campaign.creator.type) && !campaign.creator.communityId) {
       throw new ConvexError({
         code: "INVALID_INPUT",
         message: "Choose a society before submitting for review.",
@@ -644,8 +687,9 @@ export const submitForReview = mutation({
     }
 
     const communitySlug = campaign.creator.communityId;
+    const needsSocietyApproval = requiresSocietyApproval(campaign.creator.type);
     let isLeader = false;
-    if (communitySlug) {
+    if (needsSocietyApproval && communitySlug) {
       const membership = await ctx.db
         .query("societyMembers")
         .withIndex("by_community_user", (q) =>
@@ -655,9 +699,12 @@ export const submitForReview = mutation({
       isLeader =
         membership?.status === "approved" && membership.role === "leader";
     }
+    // Individual posters have no leader tier — their campaigns go straight
+    // to the admin queue, same as a leader's auto-approval.
+    const autoApproved = isLeader || !needsSocietyApproval;
 
     const now = Date.now();
-    const societyApprovalStatus = isLeader
+    const societyApprovalStatus = autoApproved
       ? ("approved" as const)
       : ("pending" as const);
     const patched = {
@@ -666,18 +713,20 @@ export const submitForReview = mutation({
     };
     await ctx.db.patch(campaign._id, {
       societyApprovalStatus,
-      ...(isLeader
+      ...(autoApproved
         ? { societyApprovedAt: now, societyApprovedBy: userId }
         : {}),
       verifications: buildCampaignVerifications(patched),
     });
 
-    if (isLeader) {
+    if (autoApproved) {
       const admins = await ctx.db
         .query("profiles")
         .withIndex("by_role", (q) => q.eq("role", "admin"))
         .collect();
-      const message = buildCampaignReadyForAdminMessage(campaign.title);
+      const message = needsSocietyApproval
+        ? buildCampaignReadyForAdminMessage(campaign.title)
+        : buildIndividualCampaignReadyForAdminMessage(campaign.title);
       for (const admin of admins) {
         await createNotification(ctx, {
           userId: admin.userId,
@@ -1101,7 +1150,14 @@ export const approveBySociety = mutation({
       });
     }
 
-    const { userId } = await requireSocietyLeader(ctx, campaign.creator.communityId);
+    const communitySlug = campaign.creator.communityId;
+    if (!communitySlug) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Pending society campaign not found.",
+      });
+    }
+    const { userId } = await requireSocietyLeader(ctx, communitySlug);
     await ctx.db.patch(campaign._id, {
       societyApprovalStatus: "approved",
       societyApprovedAt: Date.now(),
@@ -1153,7 +1209,14 @@ export const rejectBySociety = mutation({
       });
     }
 
-    const { userId } = await requireSocietyLeader(ctx, campaign.creator.communityId);
+    const communitySlug = campaign.creator.communityId;
+    if (!communitySlug) {
+      throw new ConvexError({
+        code: "NOT_FOUND",
+        message: "Pending society campaign not found.",
+      });
+    }
+    const { userId } = await requireSocietyLeader(ctx, communitySlug);
     await ctx.db.patch(campaign._id, {
       societyApprovalStatus: "rejected",
       societyApprovedAt: Date.now(),

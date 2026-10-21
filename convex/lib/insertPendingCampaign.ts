@@ -2,6 +2,7 @@ import { ConvexError } from "convex/values";
 import type { Id } from "../_generated/dataModel";
 import type { MutationCtx } from "../_generated/server";
 import {
+  requireIndividualPoster,
   requireSocietyMember,
   requireStudentCreator,
 } from "./authz";
@@ -38,6 +39,9 @@ export type PendingCampaignInput = {
   ownershipStatement?: string;
   additionalNotes?: string;
   responsibleIndividualUserId?: Id<"users">;
+  /** Post as an approved individual poster rather than on behalf of a
+   * society — requires an approved convex/individualPosters.ts record. */
+  postAsIndividual?: boolean;
 };
 
 export const UNTITLED_CAMPAIGN_TITLE = "Untitled campaign";
@@ -101,17 +105,22 @@ export async function insertPendingCampaign(
   options: { notifyOwner: boolean; incomplete?: boolean },
 ): Promise<{ slug: string; campaignId: Id<"campaigns"> }> {
   const incomplete = options.incomplete === true;
-  const communitySlug = args.communitySlug.trim();
+  const postAsIndividual = args.postAsIndividual === true;
+  const communitySlug = postAsIndividual ? "" : args.communitySlug.trim();
   const { profile, userId } = await requireStudentCreator(ctx);
 
   const membership = communitySlug
     ? await requireSocietyMember(ctx, communitySlug)
     : null;
+  if (postAsIndividual) {
+    await requireIndividualPoster(ctx);
+  }
   if (!incomplete) {
-    if (!membership) {
+    if (!membership && !postAsIndividual) {
       throw new ConvexError({
         code: "INVALID_INPUT",
-        message: "Choose a society to create a campaign.",
+        message:
+          "Choose a society, or apply to post individually, before submitting.",
       });
     }
     await assertLegalAcceptedForContext(ctx, {
@@ -287,9 +296,11 @@ export async function insertPendingCampaign(
     comments: 0,
     creator: {
       name: creatorName,
-      type: "society",
+      // "student" is the established type for a creator with no parent
+      // society — see creatorTypeLabels / CommunityType in lib/types.ts.
+      type: postAsIndividual ? "student" : "society",
       avatar: initials || "SO",
-      communityId: communitySlug,
+      communityId: communitySlug || undefined,
     },
     verifications: initialVerifications,
     university,

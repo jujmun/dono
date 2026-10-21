@@ -19,7 +19,9 @@ export const creatorValidator = v.object({
   name: v.string(),
   type: v.string(),
   avatar: v.string(),
-  communityId: v.string(),
+  /** Society slug. Unset for creator.type "individual" — individual posters
+   * have no parent community. */
+  communityId: v.optional(v.string()),
 });
 
 export const campaignFields = {
@@ -168,6 +170,25 @@ export const communityFields = {
   moderatedBy: v.optional(v.id("users")),
 };
 
+/** Admin-managed standing permission to post campaigns as an individual
+ * rather than on behalf of a society — see convex/individualPosters.ts. */
+export const individualPosterFields = {
+  userId: v.id("users"),
+  reason: v.string(),
+  status: v.union(
+    v.literal("pending"),
+    v.literal("approved"),
+    v.literal("rejected"),
+  ),
+  createdAt: v.number(),
+  reviewedAt: v.optional(v.number()),
+  reviewedBy: v.optional(v.id("users")),
+  reviewNote: v.optional(v.string()),
+  /** Admin revocation of a previously-approved poster. */
+  revokedAt: v.optional(v.number()),
+  revokedBy: v.optional(v.id("users")),
+};
+
 export const societyMemberFields = {
   communitySlug: v.string(),
   userId: v.id("users"),
@@ -296,6 +317,13 @@ export const notificationFields = {
      * API itself; the owner must execute the refund from their own Stripe
      * dashboard. See convex/refunds.ts adminDecide. */
     v.literal("refund_owner_action_required"),
+    /** Sent to every admin when a student applies to become an individual
+     * poster — see convex/individualPosters.ts apply. */
+    v.literal("individual_poster_pending"),
+    /** Sent to the applicant when an admin approves/rejects their
+     * individual-poster application. */
+    v.literal("individual_poster_approved"),
+    v.literal("individual_poster_rejected"),
     /** Legacy welcome-notification type — no longer written, but existing
      * rows remain in the DB and must pass schema validation. */
     v.literal("onboarding"),

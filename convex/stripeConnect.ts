@@ -289,7 +289,7 @@ export const refreshConnectAccountStatus = action({
 });
 
 export const createConnectDashboardLink = action({
-  args: { communitySlug: v.string() },
+  args: { communitySlug: v.optional(v.string()) },
   handler: async (
     ctx,
     args,
@@ -304,10 +304,14 @@ export const createConnectDashboardLink = action({
 
     await assertSocietyConnectAccess(ctx, userId, args.communitySlug);
 
-    const record = await ctx.runQuery(
-      internal.stripeConnectInternal.getByCommunitySlug,
-      { communitySlug: args.communitySlug },
-    );
+    const record = args.communitySlug
+      ? await ctx.runQuery(internal.stripeConnectInternal.getByCommunitySlug, {
+          communitySlug: args.communitySlug,
+        })
+      : await ctx.runQuery(internal.stripeConnectInternal.getByUserId, {
+          userId,
+          communitySlug: args.communitySlug,
+        });
     if (!record) {
       throw new ConvexError({
         code: "NOT_FOUND",
@@ -317,7 +321,9 @@ export const createConnectDashboardLink = action({
     if (record.accountVersion !== "v2" || !record.cardPaymentsActive) {
       throw new ConvexError({
         code: "CONNECT_NOT_READY",
-        message: "This society must complete the new Stripe payment setup.",
+        message: args.communitySlug
+          ? "This society must complete the new Stripe payment setup."
+          : "You must complete the new Stripe payment setup.",
       });
     }
 

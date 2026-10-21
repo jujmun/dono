@@ -46,6 +46,7 @@ import type * as fixedOtpCleanup from "../fixedOtpCleanup.js";
 import type * as funds from "../funds.js";
 import type * as groups from "../groups.js";
 import type * as http from "../http.js";
+import type * as individualPosters from "../individualPosters.js";
 import type * as legal from "../legal.js";
 import type * as legalInternal from "../legalInternal.js";
 import type * as lib_age from "../lib/age.js";
@@ -165,6 +166,7 @@ declare const fullApi: ApiFromModules<{
   funds: typeof funds;
   groups: typeof groups;
   http: typeof http;
+  individualPosters: typeof individualPosters;
   legal: typeof legal;
   legalInternal: typeof legalInternal;
   "lib/age": typeof lib_age;

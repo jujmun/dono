@@ -26,6 +26,7 @@ import {
 } from "@/lib/legal/documents";
 import type { LegalDocumentId } from "@/lib/legal/documents";
 import { SocietyPayoutSetupBanner } from "@/components/society-payout-setup-banner";
+import { IndividualPayoutSetupBanner } from "@/components/individual-payout-setup-banner";
 import { CampaignCommentsSection } from "@/components/campaign-comments-section";
 import { ReportContentModal } from "@/components/report-content-modal";
 import { CampaignLiveStream } from "@/components/campaign-live-stream";
@@ -110,10 +111,14 @@ export default function CampaignDetailPage() {
   const stripePlatform = useQuery(api.stripePlatform.isConfigured, {});
   const commenterMembership = useQuery(
     api.societyMembers.getMyMembership,
-    campaign ? { communitySlug: campaign.creator.communityId } : "skip",
+    campaign?.creator.communityId
+      ? { communitySlug: campaign.creator.communityId }
+      : "skip",
   );
-  const canComment =
-    commenterMembership === undefined
+  // Individual-poster campaigns have no society to restrict commenting to.
+  const canComment = !campaign?.creator.communityId
+    ? true
+    : commenterMembership === undefined
       ? undefined
       : commenterMembership?.status === "approved";
 
@@ -315,10 +320,17 @@ export default function CampaignDetailPage() {
 
   const donateAndUpdatesCard = (
     <View className="gap-4">
-      <SocietyPayoutSetupBanner
-        slug={campaign.creator.communityId}
-        returnPath={`/campaigns/${encodeURIComponent(campaign.id)}`}
-      />
+      {campaign.creator.communityId ? (
+        <SocietyPayoutSetupBanner
+          slug={campaign.creator.communityId}
+          returnPath={`/campaigns/${encodeURIComponent(campaign.id)}`}
+        />
+      ) : (
+        <IndividualPayoutSetupBanner
+          isOwner={Boolean(mineForEdit)}
+          returnPath={`/campaigns/${encodeURIComponent(campaign.id)}`}
+        />
+      )}
       <View className="overflow-hidden rounded-[14px] border-[3px] border-retro-ink bg-retro-paper">
         <RetroDonateSidebar
           campaign={campaign}

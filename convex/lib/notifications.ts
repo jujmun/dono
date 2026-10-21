@@ -34,6 +34,12 @@ export function buildCampaignReadyForAdminMessage(campaignTitle: string) {
   return `Campaign '${campaignTitle}' was approved by its society and needs admin review.`;
 }
 
+/** Sent to admins when an individual poster submits a campaign — no society
+ * leader tier exists for them, so it goes straight into the admin queue. */
+export function buildIndividualCampaignReadyForAdminMessage(campaignTitle: string) {
+  return `Campaign '${campaignTitle}' was submitted by an individual poster and needs admin review.`;
+}
+
 /** Sent to a donor when Dono cancels their society subscription because the
  * society has no active campaigns — see stripeWebhook.ts. */
 export function buildSocietySubscriptionCanceledMessage(societyName: string) {
@@ -44,6 +50,21 @@ export function buildSocietySubscriptionCanceledMessage(societyName: string) {
  * they must execute the refund themselves from their Stripe dashboard. */
 export function buildRefundOwnerActionRequiredMessage(campaignTitle: string) {
   return `A refund was approved for '${campaignTitle}'. Please refund it from your Stripe dashboard — check your email for the payment reference.`;
+}
+
+/** Sent to every admin when a student applies to become an individual poster. */
+export function buildIndividualPosterPendingMessage(applicantName: string) {
+  return `${applicantName} applied to become an individual poster.`;
+}
+
+export function buildIndividualPosterApprovedMessage() {
+  return "You're approved to post campaigns individually.";
+}
+
+export function buildIndividualPosterRejectedMessage(reviewNote?: string) {
+  return reviewNote
+    ? `Your individual poster application was not approved: ${reviewNote}`
+    : "Your individual poster application was not approved.";
 }
 
 export function validateAdminMessageBody(body: string) {
@@ -71,6 +92,9 @@ interface CreateNotificationArgs {
     | "campaign_resubmitted"
     | "society_subscription_canceled"
     | "refund_owner_action_required"
+    | "individual_poster_pending"
+    | "individual_poster_approved"
+    | "individual_poster_rejected";
 
   message: string;
   relatedEntityType?: "campaign";

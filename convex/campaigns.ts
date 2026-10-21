@@ -475,10 +475,13 @@ export const approve = mutation({
     // Legacy campaigns may predate RI; fall back the same way create does.
     let responsibleIndividualUserId = campaign.responsibleIndividualUserId;
     if (!responsibleIndividualUserId) {
-      const society = await ctx.db
-        .query("societies")
-        .withIndex("by_slug", (q) => q.eq("slug", campaign.creator.communityId))
-        .unique();
+      const communitySlug = campaign.creator.communityId;
+      const society = communitySlug
+        ? await ctx.db
+            .query("societies")
+            .withIndex("by_slug", (q) => q.eq("slug", communitySlug))
+            .unique()
+        : null;
       responsibleIndividualUserId =
         society?.responsibleIndividualUserId ??
         society?.creatorId ??
@@ -699,6 +702,7 @@ export const create = mutation({
     ownershipStatement: v.optional(v.string()),
     responsibleIndividualUserId: v.optional(v.id("users")),
     idDocumentStorageId: v.optional(v.id("_storage")),
+    postAsIndividual: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     // EL-01/EL-07: Dono does not accept identity-document uploads.
@@ -726,6 +730,7 @@ export const create = mutation({
         plannedUpdateSchedule: args.plannedUpdateSchedule,
         ownershipStatement: args.ownershipStatement,
         responsibleIndividualUserId: args.responsibleIndividualUserId,
+        postAsIndividual: args.postAsIndividual,
       },
       { notifyOwner: true },
     );

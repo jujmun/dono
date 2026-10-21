@@ -99,6 +99,7 @@ export const getDonoWrapped = query({
     for (const campaign of campaigns) {
       if (!campaign) continue;
       const id = campaign.creator.communityId;
+      if (!id) continue;
       societyCounts.set(id, (societyCounts.get(id) ?? 0) + 1);
     }
 
