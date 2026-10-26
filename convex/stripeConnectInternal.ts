@@ -280,10 +280,11 @@ export const getCampaignDonationReadiness = query({
       if (!creatorUserId) {
         return { canAcceptDonations: false as const, reason: notSetUpReason };
       }
-      connectAccount = await ctx.db
+      const creatorAccounts = await ctx.db
         .query("stripeConnectAccounts")
         .withIndex("by_user", (q) => q.eq("userId", creatorUserId))
-        .first();
+        .collect();
+      connectAccount = creatorAccounts.find((a) => !a.communitySlug) ?? null;
     } else {
       connectAccount = await ctx.db
         .query("stripeConnectAccounts")

@@ -178,10 +178,11 @@ export const resolveCampaignMerchantAccount = internalQuery({
           message: "This campaign's creator has not set up Stripe payments yet.",
         });
       }
-      connectAccount = await ctx.db
+      const creatorAccounts = await ctx.db
         .query("stripeConnectAccounts")
         .withIndex("by_user", (q) => q.eq("userId", creatorUserId))
-        .first();
+        .collect();
+      connectAccount = creatorAccounts.find((a) => !a.communitySlug) ?? null;
     } else {
       connectAccount = await ctx.db
         .query("stripeConnectAccounts")
@@ -243,10 +244,11 @@ export const getConnectAccountIdForCampaign = internalQuery({
     if (campaign.creator.type === "student") {
       const creatorUserId = campaign.createdBy;
       if (!creatorUserId) return null;
-      const connectAccount = await ctx.db
+      const creatorAccounts = await ctx.db
         .query("stripeConnectAccounts")
         .withIndex("by_user", (q) => q.eq("userId", creatorUserId))
-        .first();
+        .collect();
+      const connectAccount = creatorAccounts.find((a) => !a.communitySlug) ?? null;
       if (!connectAccount || connectAccount.accountVersion !== "v2") {
         return null;
       }
